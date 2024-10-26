@@ -1,30 +1,34 @@
-import DeployButton from "@/components/deploy-button";
-import { ThemeSwitcher } from "@/components/theme-switcher";
+"use client";
+
 import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
-import Link from "next/link";
+import { usePathname } from "next/navigation";
 import "./globals.css";
 import {
   AppSidebar,
   AppSidebarHeader,
 } from "@/components/components-app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { createClient } from "@/utils/supabase/server";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
-
-export const metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: "Next.js and Supabase Starter Kit",
-  description: "The fastest way to build apps with .js and Supabase",
-};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  // Define paths where the sidebar SHOULD be shown (instead of where to hide it)
+  const showSidebar =
+    pathname.startsWith("/tools") ||
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/chatbot") ||
+    pathname.startsWith("/protected");
+
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
@@ -35,9 +39,9 @@ export default function RootLayout({
             enableSystem
             disableTransitionOnChange
           >
-            <AppSidebar />
+            {showSidebar && <AppSidebar />}
             <main className="flex-1 flex flex-col">
-              <AppSidebarHeader />
+              {showSidebar && <AppSidebarHeader />}
               <div className="p-4">{children}</div>
             </main>
           </ThemeProvider>

@@ -1,14 +1,14 @@
 import React from "react";
 
-const ToolsPage = () => {
+const RoomsPage = () => {
   return (
     <div className="flex flex-col gap-16 items-center">
       <div className="flex gap-8 justify-center items-center">
-        <h1>Tools</h1>
-        <p>Welcome to the Tools page!</p>
+        <h1>Rooms</h1>
+        <p>Welcome to the Rooms page!</p>
       </div>
     </div>
   );
 };
 
-export default ToolsPage;
+export default RoomsPage;

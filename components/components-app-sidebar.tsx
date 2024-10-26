@@ -38,6 +38,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { ThemeSwitcher } from "./theme-switcher";
+import { signOutAction } from "@/app/actions";
 
 // This is sample data.
 const data = {
@@ -165,8 +166,12 @@ export function AppSidebar() {
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <LogOut />
-                  Sign out
+                  <form action={signOutAction} className="w-full">
+                    <button type="submit" className="flex w-full items-center">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign out</span>
+                    </button>
+                  </form>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

@@ -4,7 +4,11 @@ import { GeistSans } from "geist/font/sans";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import "./globals.css";
-import { AppSidebar } from "@/components/components-app-sidebar";
+import {
+  AppSidebar,
+  AppSidebarHeader,
+} from "@/components/components-app-sidebar";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -24,16 +28,20 @@ export default function RootLayout({
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
       <body className="bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-        >
-          <AppSidebar />
-          <main className="flex-1 flex flex-col gap-6 px-4">{children}</main>
-          <ThemeSwitcher />
-        </ThemeProvider>
+        <SidebarProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <AppSidebar />
+            <main className="flex-1 flex flex-col">
+              <AppSidebarHeader />
+              <div className="p-4">{children}</div>
+            </main>
+          </ThemeProvider>
+        </SidebarProvider>
       </body>
     </html>
   );

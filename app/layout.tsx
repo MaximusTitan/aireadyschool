@@ -27,7 +27,9 @@ export default function RootLayout({
     pathname.startsWith("/tools") ||
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/chatbot") ||
-    pathname.startsWith("/protected");
+    pathname.startsWith("/protected") ||
+    pathname.startsWith("/history") ||
+    pathname.startsWith("/rooms");
 
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>

@@ -129,7 +129,6 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarImage src="/default-avatar.png" alt="User Avatar" />
                     <AvatarFallback className="rounded-lg">
                       {userEmail.charAt(0).toUpperCase()}
                     </AvatarFallback>

@@ -2,8 +2,6 @@ import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
 export const updateSession = async (request: NextRequest) => {
-  // This `try/catch` block is only here for the interactive tutorial.
-  // Feel free to remove once you have Supabase connected.
   try {
     // Create an unmodified response
     let response = NextResponse.next({
@@ -35,24 +33,32 @@ export const updateSession = async (request: NextRequest) => {
       },
     );
 
-    // This will refresh session if expired - required for Server Components
-    // https://supabase.com/docs/guides/auth/server-side/nextjs
-    const user = await supabase.auth.getUser();
+    // Refresh session if expired - required for Server Components
+    const { data: user, error } = await supabase.auth.getUser();
 
-    // protected routes
-    if (request.nextUrl.pathname.startsWith("/protected") && user.error) {
+    // Define protected routes
+    const isProtectedRoute = (pathname: string) =>
+      pathname.startsWith("/tools") ||
+      pathname.startsWith("/dashboard") ||
+      pathname.startsWith("/chatbot") ||
+      pathname.startsWith("/protected") ||
+      pathname.startsWith("/history") ||
+      pathname.startsWith("/rooms");
+
+    // Redirect to /sign-in if accessing protected routes without authentication
+    if (isProtectedRoute(request.nextUrl.pathname) && error) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    if (request.nextUrl.pathname === "/" && !user.error) {
-      return NextResponse.redirect(new URL("/protected", request.url));
+    // Redirect / to /tools if the user is authenticated
+    if (request.nextUrl.pathname === "/" && !error) {
+      return NextResponse.redirect(new URL("/tools", request.url));
     }
 
+    // Allow the request to proceed for other cases
     return response;
   } catch (e) {
-    // If you are here, a Supabase client could not be created!
-    // This is likely because you have not set up environment variables.
-    // Check out http://localhost:3000 for Next Steps.
+    // Handle errors (e.g., missing environment variables)
     return NextResponse.next({
       request: {
         headers: request.headers,

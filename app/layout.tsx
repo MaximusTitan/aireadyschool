@@ -38,7 +38,7 @@ export default function RootLayout({
         <script
           defer
           data-website-id="67299b2ec3febcb9df03c097"
-          data-domain="igen.studio"
+          data-domain="app.igen.studio"
           src="https://datafa.st/js/script.js"
         ></script>
       </head>

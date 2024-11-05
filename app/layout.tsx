@@ -33,15 +33,6 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={GeistSans.className} suppressHydrationWarning>
-      <head>
-        {/* Tracking script */}
-        <script
-          defer
-          data-website-id="67299b2ec3febcb9df03c097"
-          data-domain="app.igen.studio"
-          src="https://datafa.st/js/script.js"
-        ></script>
-      </head>
       <body className="bg-background text-foreground">
         <SidebarProvider>
           <ThemeProvider

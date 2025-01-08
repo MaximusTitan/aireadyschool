@@ -4,7 +4,7 @@ import { readSiteById } from "@/utils/actions/readSiteById";
 export default async function SitePage({
   params,
 }: {
-  params: { site_id: string };
+  params: Promise<{ site_id: string }>;
 }) {
   const { site_id } = await params;
   const siteId = parseInt(site_id, 10);

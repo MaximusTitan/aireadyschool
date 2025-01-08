@@ -18,12 +18,13 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
+import { addDomainToVercel } from "@/utils/vercel/add-domain";
 
 const supabase = createClient();
 
 const SchoolsPage = () => {
   const form = useForm<SchoolFormData>();
-  const [newSchool, setNewSchool] = useState({ name: "", domain_id: "" });
+  const [newSchool, setNewSchool] = useState({ name: "", site_id: "" });
   const [schools, setSchools] = useState<School[]>([]);
   const [editingSchool, setEditingSchool] = useState<School | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -37,22 +38,25 @@ const SchoolsPage = () => {
   interface School {
     id: number;
     name: string;
-    domain_id: string;
+    site_id: string;
   }
 
   interface SchoolFormData {
     name: string;
-    domain_id: string;
+    site_id: string;
   }
 
   const addSchool = async (data: SchoolFormData): Promise<void> => {
     setIsLoading(true);
+    const subdomain = data.site_id;
+    const fullDomain = `${subdomain}.aireadyschool.com`;
     const { error } = await supabase
       .from("schools")
-      .insert([{ name: data.name, domain_id: data.domain_id }]);
+      .insert([{ name: data.name, site_id: subdomain }]);
     if (error) {
       console.error("Error adding school:", error.message, error.details);
     } else {
+      await addDomainToVercel(fullDomain);
       // Optionally fetch updated schools
       fetchSchools();
       form.reset();
@@ -64,13 +68,16 @@ const SchoolsPage = () => {
   const updateSchool = async (data: SchoolFormData): Promise<void> => {
     setIsLoading(true);
     if (!editingSchool) return;
+    const subdomain = data.site_id;
+    const fullDomain = `${subdomain}.aireadyschool.com`;
     const { error } = await supabase
       .from("schools")
-      .update({ name: data.name, domain_id: data.domain_id })
+      .update({ name: data.name, site_id: subdomain })
       .eq("id", editingSchool.id);
     if (error) {
       console.error("Error updating school:", error.message, error.details);
     } else {
+      await addDomainToVercel(fullDomain);
       fetchSchools();
       form.reset();
       setEditingSchool(null);
@@ -114,7 +121,7 @@ const SchoolsPage = () => {
     setEditingSchool(school);
     form.reset({
       name: school.name,
-      domain_id: school.domain_id,
+      site_id: school.site_id,
     });
     setIsEditModalOpen(true);
   };
@@ -158,18 +165,23 @@ const SchoolsPage = () => {
             </div>
 
             <div className="flex flex-col">
-              <label htmlFor="domain_id" className="font-semibold mb-1">
-                Domain ID
+              <label htmlFor="site_id" className="font-semibold mb-1">
+                Subdomain
               </label>
-              <Input
-                id="domain_id"
-                type="text"
-                placeholder="domainid"
-                {...form.register("domain_id", {
-                  required: true,
-                  pattern: /^[a-z]+$/,
-                })}
-              />
+              <div className="flex">
+                <Input
+                  id="site_id"
+                  type="text"
+                  placeholder="domainid"
+                  {...form.register("site_id", {
+                    required: true,
+                    pattern: /^[a-z]+$/,
+                  })}
+                />
+                <div className="flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
+                  .aireadyschool.com
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end space-x-2">
@@ -213,18 +225,23 @@ const SchoolsPage = () => {
             </div>
 
             <div className="flex flex-col">
-              <label htmlFor="domain_id" className="font-semibold mb-1">
-                Domain ID
+              <label htmlFor="site_id" className="font-semibold mb-1">
+                Subdomain
               </label>
-              <Input
-                id="domain_id"
-                type="text"
-                placeholder="domainid"
-                {...form.register("domain_id", {
-                  required: true,
-                  pattern: /^[a-z]+$/,
-                })}
-              />
+              <div className="flex">
+                <Input
+                  id="site_id"
+                  type="text"
+                  placeholder="domainid"
+                  {...form.register("site_id", {
+                    required: true,
+                    pattern: /^[a-z]+$/,
+                  })}
+                />
+                <div className="flex items-center rounded-r-md border border-l-0 bg-muted px-3 text-sm text-muted-foreground">
+                  .aireadyschool.com
+                </div>
+              </div>
             </div>
 
             <div className="flex justify-end space-x-2">
@@ -272,7 +289,7 @@ const SchoolsPage = () => {
         <thead>
           <tr>
             <th className="text-left">Name</th>
-            <th className="text-left">Domain ID</th>
+            <th className="text-left">Subdomain</th>
             <th className="text-left">Actions</th>
           </tr>
         </thead>
@@ -280,20 +297,21 @@ const SchoolsPage = () => {
           {schools.map((school) => (
             <tr key={school.id} className="border-t">
               <td>{school.name}</td>
-              <td>{school.domain_id}</td>
+              <td>{school.site_id}</td>
               <td>
                 <Button
-                  variant="secondary"
-                  className="mr-2"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleEdit(school)}
                 >
-                  <Edit />
+                  <Edit size={8} />
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => handleDelete(school.id)}
                 >
-                  <Trash />
+                  <Trash size={8} />
                 </Button>
               </td>
             </tr>

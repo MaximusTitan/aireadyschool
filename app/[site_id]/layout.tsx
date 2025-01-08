@@ -22,7 +22,7 @@ export default async function SiteLayout({
     notFound();
   }
 
-  const siteDomain = result.domain_id;
+  const siteDomain = result.site_id;
 
   return (
     <>

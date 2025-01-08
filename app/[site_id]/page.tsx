@@ -27,7 +27,7 @@ export default async function SitePage({
           <strong>ID:</strong> {site.id}
         </li>
         <li>
-          <strong>Domain ID:</strong> {site.domain_id}
+          <strong>Domain ID:</strong> {site.site_id}
         </li>
         {/* Add more details here if available */}
       </ul>

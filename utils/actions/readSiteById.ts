@@ -5,11 +5,11 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-export const readSiteById = async (id: number): Promise<{ id: number; domain_id: string } | null> => {
+export const readSiteById = async (id: number): Promise<{ id: number; site_id: string } | null> => {
   console.log("Querying site with ID:", id); // Logging the query parameter
   const { data, error } = await supabase
     .from('schools')
-    .select('id, domain_id')
+    .select('id, site_id')
     .eq('id', id)
     .maybeSingle(); // Use maybeSingle to handle zero or one result
 

@@ -62,7 +62,7 @@ export const updateSession = async (request: NextRequest) => {
       return NextResponse.next();
     }
 
-    // Fetch domain_id and id from the schools table
+    // Fetch site_id and id from the schools table
     const school = await readDomainId(currentHost);
     console.log("Fetched School:", school); // Logging fetched school
 

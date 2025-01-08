@@ -7,6 +7,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { PasswordInput } from "@/components/PasswordInput"; // Added import
 
 interface LoginProps {
   searchParams: Promise<Message>;
@@ -69,13 +70,11 @@ export default function Login({ searchParams }: LoginProps) {
                 Forgot Password?
               </Link>
             </div>
-            <Input
-              type="password"
+            <PasswordInput
               name="password"
               placeholder="Your password"
               required
               className="border-gray-300 focus:border-rose-500 focus:ring-rose-500"
-              aria-label="Password"
             />
           </div>
 

@@ -32,6 +32,7 @@ import {
   Bot,
   ChevronsUpDown,
   Frame,
+  LayoutDashboard,
   LogOut,
   Map,
   PieChart,
@@ -44,23 +45,9 @@ import { ThemeSwitcher } from "./theme-switcher";
 import { signOutAction } from "@/app/actions";
 import logo from "@/public/logo.webp";
 
-// Dummy data for navigation
-const navData = {
-  navMain: [
-    { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
-    { title: "ChatBot", url: "/chatbot", icon: Bot },
-    { title: "History", url: "/history", icon: BookOpen },
-    { title: "Rooms", url: "/rooms", icon: Settings2 },
-  ],
-  projects: [
-    { name: "Design Engineering", url: "/projects/design", icon: Frame },
-    { name: "Sales & Marketing", url: "/projects/sales", icon: PieChart },
-    { name: "Travel", url: "/projects/travel", icon: Map },
-  ],
-};
-
 export function AppSidebar() {
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
+  const [userRole, setUserRole] = useState<string | null>(null); // User role
 
   // Fetch the user session from Supabase
   useEffect(() => {
@@ -72,11 +59,28 @@ export function AppSidebar() {
 
       if (user) {
         setUserEmail(user.email ?? "guest@example.com"); // Set email from the user session
+        setUserRole(user.user_metadata.role ?? null); // Set role from user metadata
       }
     };
 
     fetchUser();
   }, []);
+
+  // Define navigation data based on user role
+  const navData = {
+    navMain: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "iBuddy", url: "/chatbot", icon: Bot },
+      { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
+      // ...existing navigation items...
+      ...(userRole === "Admin"
+        ? [
+            { title: "Schools", url: "/schools", icon: BookOpen },
+            // Add more Admin-specific items here
+          ]
+        : []),
+    ],
+  };
 
   return (
     <Sidebar collapsible="icon">

@@ -29,6 +29,7 @@ export default function RootLayout({
     pathname.startsWith("/chatbot") ||
     pathname.startsWith("/protected") ||
     pathname.startsWith("/history") ||
+    pathname.startsWith("/schools") ||
     pathname.startsWith("/rooms");
 
   return (

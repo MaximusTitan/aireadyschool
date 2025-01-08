@@ -1,13 +1,19 @@
-import React from "react";
+import { createClient } from "@/utils/supabase/server";
+import RoleSelector from "./RoleSelector";
 
-const DashboardPage: React.FC = () => {
+const DashboardPage = async () => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const userRole = user?.user_metadata.role ?? null;
+
   return (
     <div>
       <h1>Welcome to the App!</h1>
-      <p>
-        We are glad to have you here. Explore the features and enjoy your
-        experience.
-      </p>
+      <p>Your email: {user?.email}</p>
+      <p>Your role: {userRole}</p>
+      <RoleSelector initialRole={userRole} />
     </div>
   );
 };

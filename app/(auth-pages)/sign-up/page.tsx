@@ -4,6 +4,7 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { PasswordInput } from "@/components/PasswordInput"; // Added import
 
 export default async function Signup(props: {
   searchParams: Promise<Message>;
@@ -51,14 +52,30 @@ export default async function Signup(props: {
             <Label htmlFor="password" className="text-gray-700">
               Password
             </Label>
-            <Input
-              type="password"
+            <PasswordInput
               name="password"
               placeholder="Your password"
               minLength={6}
               required
               className="border-gray-300 focus:border-rose-500 focus:ring-rose-500"
             />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="role" className="text-gray-700">
+              Role
+            </Label>
+            <select
+              name="role"
+              required
+              className="border-gray-300 focus:border-rose-500 focus:ring-rose-500 p-2 rounded-md"
+            >
+              <option value="">Select role</option>
+              <option value="Admin">Admin</option>
+              <option value="School">School</option>
+              <option value="Teacher">Teacher</option>
+              <option value="Student">Student</option>
+            </select>
           </div>
 
           <SubmitButton
@@ -68,8 +85,6 @@ export default async function Signup(props: {
           >
             Sign up
           </SubmitButton>
-
-          <FormMessage message={searchParams} />
 
           <p className="text-center text-sm text-gray-600 mt-4">
             By signing up, you agree to our{" "}

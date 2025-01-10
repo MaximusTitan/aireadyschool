@@ -1,11 +1,18 @@
 import { create } from "zustand";
-import { StreamingLog } from "../multimodal-live-types";
+
+interface StreamingLog {
+  date: Date;
+  type: 'user' | 'system' | 'log' | 'tool';
+  message: unknown;
+  count?: number;
+}
 
 interface StoreLoggerState {
   maxLogs: number;
   logs: StreamingLog[];
   log: (streamingLog: StreamingLog) => void;
   clearLogs: () => void;
+  setMaxLogs: (n: number) => void;
 }
 
 function sanitize(value: unknown): unknown {
@@ -30,7 +37,13 @@ export const useLoggerStore = create<StoreLoggerState>((set, get) => ({
     set((state) => {
       const { date, type, message } = sanitize(streamingLog) as StreamingLog;
       const prevLog = state.logs.at(-1);
-      if (prevLog && prevLog.type === type && prevLog.message === message) {
+      
+      // Only combine consecutive messages of the same type and content
+      if (
+        prevLog && 
+        prevLog.type === type && 
+        JSON.stringify(prevLog.message) === JSON.stringify(message)
+      ) {
         return {
           logs: [
             ...state.logs.slice(0, -1),
@@ -38,8 +51,8 @@ export const useLoggerStore = create<StoreLoggerState>((set, get) => ({
               date,
               type,
               message,
-              count: prevLog.count ? prevLog.count + 1 : 1,
-            } as StreamingLog,
+              count: (prevLog.count || 1) + 1,
+            },
           ],
         };
       }
@@ -47,11 +60,7 @@ export const useLoggerStore = create<StoreLoggerState>((set, get) => ({
       return {
         logs: [
           ...state.logs.slice(-(get().maxLogs - 1)),
-          {
-            date,
-            type,
-            message,
-          } as StreamingLog,
+          { date, type, message },
         ],
       };
     });

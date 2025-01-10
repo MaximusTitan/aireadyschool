@@ -53,6 +53,7 @@ interface MultimodalLiveClientEventTypes {
   turncomplete: () => void;
   toolcall: (toolCall: ToolCall) => void;
   toolcallcancellation: (toolcallCancellation: ToolCallCancellation) => void;
+  text: (data: string) => void;
 }
 
 export type MultimodalLiveAPIClientConnection = {
@@ -207,6 +208,21 @@ export class MultimodalLiveClient extends EventEmitter<MultimodalLiveClientEvent
 
       if (isModelTurn(serverContent)) {
         let parts: Part[] = serverContent.modelTurn.parts;
+
+        console.log("All received parts:", parts);
+
+        // Extract text parts
+        const textParts = parts
+          .filter((p) => p.inlineData && p.inlineData.mimeType === "text/plain")
+          .map((p) => p.inlineData?.data);
+
+        if (textParts.length > 0) {
+          console.log("Received text parts:", textParts);
+          this.emit("text", textParts.join("\n"));
+          this.log("server.text", `Received text: ${textParts.join("\n")}`);
+        } else {
+          console.log("No text/plain parts found.");
+        }
 
         // when its audio that is returned for modelTurn
         const audioParts = parts.filter(

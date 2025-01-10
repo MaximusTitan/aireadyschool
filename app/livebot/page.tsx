@@ -18,8 +18,6 @@
 import { useRef, useState, useEffect } from "react";
 import "./live.css";
 import { LiveAPIProvider, useLiveAPIContext } from "./contexts/LiveAPIContext";
-import SidePanel from "./components/side-panel/SidePanel";
-import { Altair } from "./components/altair/Altair";
 import ControlTray from "./components/control-tray/ControlTray";
 import cn from "classnames";
 
@@ -64,10 +62,8 @@ function App() {
   return (
     <div className="font-['Space_Mono'] bg-white" suppressHydrationWarning>
       <div className="flex h-screen w-screen bg-neutral-100 text-gray-900">
-        <SidePanel />
         <main className="relative flex flex-1 flex-col items-center justify-center gap-4 max-w-full overflow-hidden">
           <div className="flex flex-1 items-center justify-center">
-            <Altair talking={isBotTalking} />
             <video
               className={cn("flex-1 max-w-[90%] rounded-3xl", {
                 hidden: !videoRef.current || !videoStream,

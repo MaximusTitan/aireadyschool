@@ -138,10 +138,30 @@ export type ToolCall = {
   functionCalls: LiveFunctionCall[];
 };
 
+export interface MultimodalLiveClientEventTypes {
+  'log': (log: StreamingLog) => void;
+  'system': (message: unknown) => void;
+  'text': (message: string) => void;
+  // Add other event types as needed
+}
+
+export interface LiveAPIClient {
+  on<K extends keyof MultimodalLiveClientEventTypes>(
+    event: K, 
+    listener: MultimodalLiveClientEventTypes[K]
+  ): void;
+  off<K extends keyof MultimodalLiveClientEventTypes>(
+    event: K, 
+    listener: MultimodalLiveClientEventTypes[K]
+  ): void;
+  send(content: Content[]): void;
+}
+
+
 /** log types */
 export type StreamingLog = {
   date: Date;
-  type: string;
+  type: 'user' | 'system' | 'log' | 'tool' | string | any;  // Allow type to be any string
   count?: number;
   message: string | LiveOutgoingMessage | LiveIncomingMessage;
 };

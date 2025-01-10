@@ -225,8 +225,8 @@ const LandingPage = () => {
       {/* Footer */}
       <footer className="bg-white dark:bg-neutral-900 border-t border-gray-100 dark:border-neutral-800">
         <div className="container mx-auto px-4 py-12">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            <div className="space-y-4">
+          <div className="flex flex-col items-center text-center gap-8">
+            <div className="space-y-4 flex flex-col items-center">
               <Image
                 src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/ai-ready-school.webp"
                 alt="AI Ready School"
@@ -236,56 +236,6 @@ const LandingPage = () => {
               <p className="text-gray-600 dark:text-gray-300">
                 Empowering education through artificial intelligence
               </p>
-              <div className="flex space-x-4">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hover:text-rose-500 dark:hover:text-rose-400"
-                >
-                  <Twitter className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hover:text-rose-500 dark:hover:text-rose-400"
-                >
-                  <Github className="h-5 w-5" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="hover:text-rose-500 dark:hover:text-rose-400"
-                >
-                  <Linkedin className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 dark:text-white">Product</h4>
-              <ul className="space-y-2 text-gray-600 dark:text-gray-300">
-                <li>Features</li>
-                <li>Pricing</li>
-                <li>Use Cases</li>
-                <li>Updates</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 dark:text-white">Resources</h4>
-              <ul className="space-y-2 text-gray-600 dark:text-gray-300">
-                <li>Documentation</li>
-                <li>Help Center</li>
-                <li>Blog</li>
-                <li>Community</li>
-              </ul>
-            </div>
-            <div>
-              <h4 className="font-semibold mb-4 dark:text-white">Company</h4>
-              <ul className="space-y-2 text-gray-600 dark:text-gray-300">
-                <li>About Us</li>
-                <li>Careers</li>
-                <li>Contact</li>
-                <li>Privacy Policy</li>
-              </ul>
             </div>
           </div>
           <div className="mt-12 pt-8 border-t border-gray-100 dark:border-neutral-800">

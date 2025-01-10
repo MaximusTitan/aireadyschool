@@ -15,9 +15,9 @@
  */
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import "./live.css";
-import { LiveAPIProvider } from "./contexts/LiveAPIContext";
+import { LiveAPIProvider, useLiveAPIContext } from "./contexts/LiveAPIContext";
 import SidePanel from "./components/side-panel/SidePanel";
 import { Altair } from "./components/altair/Altair";
 import ControlTray from "./components/control-tray/ControlTray";
@@ -38,37 +38,65 @@ function App() {
   // either the screen capture, the video or null, if null we hide it
   const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const [isBotTalking, setIsBotTalking] = useState(false);
+  const { client } = useLiveAPIContext();
+  const [botTranscript, setBotTranscript] = useState("");
+
+  useEffect(() => {
+    const handleContent = (data: any) => {
+      if (data?.modelTurn?.parts) {
+        const textParts = data.modelTurn.parts
+          .filter((p: any) => p.text)
+          .map((p: any) => p.text)
+          .join(" ");
+        if (textParts) {
+          setBotTranscript((prev) =>
+            prev ? prev + "\n" + textParts : textParts
+          );
+        }
+      }
+    };
+    client.on("content", handleContent);
+    return () => {
+      client.off("content", handleContent);
+    };
+  }, [client]);
 
   return (
     <div className="font-['Space_Mono'] bg-white" suppressHydrationWarning>
-      <LiveAPIProvider url={uri} apiKey={API_KEY}>
-        <div className="flex h-screen w-screen bg-neutral-100 text-gray-900">
-          <SidePanel />
-          <main className="relative flex flex-1 flex-col items-center justify-center gap-4 max-w-full overflow-hidden">
-            <div className="flex flex-1 items-center justify-center">
-              <Altair talking={isBotTalking} />
-              <video
-                className={cn("flex-1 max-w-[90%] rounded-3xl", {
-                  hidden: !videoRef.current || !videoStream,
-                })}
-                ref={videoRef}
-                autoPlay
-                playsInline
-              />
-            </div>
-
-            <ControlTray
-              videoRef={videoRef}
-              supportsVideo={true}
-              onVideoStreamChange={setVideoStream}
-            >
-              {/* put your own buttons here */}
-            </ControlTray>
-          </main>
-        </div>
-      </LiveAPIProvider>
+      <div className="flex h-screen w-screen bg-neutral-100 text-gray-900">
+        <SidePanel />
+        <main className="relative flex flex-1 flex-col items-center justify-center gap-4 max-w-full overflow-hidden">
+          <div className="flex flex-1 items-center justify-center">
+            <Altair talking={isBotTalking} />
+            <video
+              className={cn("flex-1 max-w-[90%] rounded-3xl", {
+                hidden: !videoRef.current || !videoStream,
+              })}
+              ref={videoRef}
+              autoPlay
+              playsInline
+            />
+          </div>
+          <div className="p-4 text-sm text-gray-800 whitespace-pre-line">
+            {botTranscript}
+          </div>
+          <ControlTray
+            videoRef={videoRef}
+            supportsVideo={true}
+            onVideoStreamChange={setVideoStream}
+          >
+            {/* put your own buttons here */}
+          </ControlTray>
+        </main>
+      </div>
     </div>
   );
 }
 
-export default App;
+export default function WrappedApp() {
+  return (
+    <LiveAPIProvider url={uri} apiKey={API_KEY}>
+      <App />
+    </LiveAPIProvider>
+  );
+}

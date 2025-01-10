@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Mic, Square, Play } from "lucide-react";
+import { Mic, Square, Play, Loader2 } from "lucide-react";
 import type {
   AudioRecorderRef,
   AudioChunksRef,
@@ -17,8 +17,15 @@ export default function VoiceChat(): JSX.Element {
   const [transcript, setTranscript] = useState<string>("");
   const [response, setResponse] = useState<string>("");
   const [audioUrl, setAudioUrl] = useState<string>("");
+  const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
+  const [hasPlayed, setHasPlayed] = useState<boolean>(false);
+  const [chatHistory, setChatHistory] = useState<
+    { sender: string; message: string }[]
+  >([]);
+  const [textInput, setTextInput] = useState<string>("");
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const startRecording = async (): Promise<void> => {
     try {
@@ -80,6 +87,12 @@ export default function VoiceChat(): JSX.Element {
       if (chatError) throw new Error(chatError);
       setResponse(aiText);
 
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "User", message: text },
+        { sender: "AI", message: aiText },
+      ]);
+
       // Convert response to speech
       const audioResponse = await fetch("/api/text-to-speech", {
         method: "POST",
@@ -104,66 +117,168 @@ export default function VoiceChat(): JSX.Element {
     }
   };
 
-  const playAudioResponse = (): void => {
-    if (audioUrl) {
-      const audio = new Audio(audioUrl);
-      audio
-        .play()
-        .catch((error) => console.error("Error playing audio:", error));
+  const handleTextSubmit = async (): Promise<void> => {
+    if (!textInput.trim()) return;
+    setIsProcessing(true);
+    try {
+      // Get ChatGPT response
+      const aiResponse = await fetch("/api/chat-voice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: textInput }),
+      });
+
+      const { response: aiText, error: chatError }: ChatResponse =
+        await aiResponse.json();
+      if (chatError) throw new Error(chatError);
+      setResponse(aiText);
+
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "User", message: textInput },
+        { sender: "AI", message: aiText },
+      ]);
+
+      // Convert response to speech
+      const audioResponse = await fetch("/api/text-to-speech", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: aiText }),
+      });
+
+      if (!audioResponse.ok) {
+        throw new Error("Failed to generate speech");
+      }
+
+      const responseAudioBlob = await audioResponse.blob();
+      const url = URL.createObjectURL(responseAudioBlob);
+      setAudioUrl(url);
+      setTextInput("");
+    } catch (error) {
+      console.error(
+        "Error processing text input:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    } finally {
+      setIsProcessing(false);
     }
   };
 
+  const playAudioResponse = (): void => {
+    if (audioUrl) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsAudioPlaying(true);
+          setHasPlayed(true);
+        })
+        .catch((error) => console.error("Error playing audio:", error));
+      audioRef.current.onended = () => setIsAudioPlaying(false);
+    }
+  };
+
+  useEffect(() => {
+    if (audioUrl) {
+      playAudioResponse();
+    }
+  }, [audioUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, []);
+
   return (
-    <Card className="w-full max-w-2xl mx-auto mt-8">
-      <CardContent className="p-6">
-        <div className="space-y-4">
-          <div className="flex justify-center gap-4">
-            <Button
-              onClick={isRecording ? stopRecording : startRecording}
-              disabled={isProcessing}
-              variant={isRecording ? "destructive" : "default"}
-              type="button"
-            >
-              {isRecording ? (
-                <Square className="mr-2" />
-              ) : (
-                <Mic className="mr-2" />
-              )}
-              {isRecording ? "Stop Recording" : "Start Recording"}
-            </Button>
-
-            <Button
-              onClick={playAudioResponse}
-              disabled={!audioUrl}
-              variant="outline"
-              type="button"
-            >
-              <Play className="mr-2" />
-              Play Response
-            </Button>
-          </div>
-
-          {transcript && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">Your Message:</h3>
-              <p className="text-gray-700">{transcript}</p>
-            </div>
-          )}
-
-          {response && (
-            <div className="mt-4">
-              <h3 className="text-lg font-semibold mb-2">AI Response:</h3>
-              <p className="text-gray-700">{response}</p>
-            </div>
-          )}
-
-          {isProcessing && (
-            <div className="text-center text-gray-500">
-              Processing your message...
-            </div>
+    <Card className="w-full max-w-4xl mx-auto mt-8 flex flex-col h-screen">
+      <div className="flex flex-1 overflow-hidden">
+        <div className="w-2/3 p-4 overflow-y-auto">
+          {/* Scrollable Chat History */}
+          {chatHistory.map((chat, index) => {
+            const isLastAIMessage =
+              chat.sender === "AI" &&
+              index === chatHistory.map((c) => c.sender).lastIndexOf("AI");
+            return (
+              <div
+                key={index}
+                className={`mb-2 ${
+                  chat.sender === "User" ? "text-right" : "text-left"
+                }`}
+              >
+                <span
+                  className={`inline-block px-3 py-2 rounded ${
+                    chat.sender === "User"
+                      ? "bg-rose-500 text-white"
+                      : "bg-gray-300 text-gray-800"
+                  }`}
+                >
+                  {chat.message}
+                </span>
+                {isLastAIMessage && audioUrl && (
+                  <Button
+                    onClick={playAudioResponse}
+                    className="ml-2"
+                    variant="outline"
+                    type="button"
+                  >
+                    <Play className="mr-2" />
+                    {hasPlayed ? "Replay" : "Play"}
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="w-1/3 flex justify-center items-center p-4">
+          {/* Positioned GIF */}
+          {isAudioPlaying ? (
+            <img
+              src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-videos/o-talking-small.gif"
+              alt="Audio Playing"
+              className="w-48 h-48"
+            />
+          ) : (
+            <img
+              src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/o-constant.gif"
+              alt="Idle"
+              className="w-48 h-48"
+            />
           )}
         </div>
-      </CardContent>
+      </div>
+      <div className="p-4 flex justify-center items-center space-x-4">
+        {/* Voice Input and Play Buttons */}
+        <Button
+          onClick={isRecording ? stopRecording : startRecording}
+          disabled={isProcessing}
+          variant={isRecording ? "destructive" : "default"}
+          type="button"
+        >
+          {isRecording ? <Square className="mr-2" /> : <Mic className="mr-2" />}
+          {isRecording ? "Stop Recording" : "Start Recording"}
+        </Button>
+        <input
+          type="text"
+          value={textInput}
+          onChange={(e) => setTextInput(e.target.value)}
+          placeholder="Type your message"
+          className="border p-2 rounded"
+        />
+        <Button
+          onClick={handleTextSubmit}
+          disabled={isProcessing}
+          variant="default"
+          type="button"
+        >
+          Send
+        </Button>
+      </div>
     </Card>
   );
 }

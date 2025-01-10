@@ -1,9 +1,8 @@
-// Import necessary hooks
 "use client";
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { Search } from 'lucide-react';
 import {
   Card,
   CardContent,
@@ -23,7 +22,7 @@ import { Input } from "@/components/ui/input";
 interface ToolCardProps {
   title: string;
   description: string;
-  route: string; // New route prop
+  route: string;
   isHot?: boolean;
 }
 
@@ -33,9 +32,8 @@ const ToolCard: React.FC<ToolCardProps> = ({
   route,
   isHot = false,
 }) => {
-  const router = useRouter(); // Use router for navigation
+  const router = useRouter();
 
-  // Handle navigation on click
   const handleClick = () => {
     router.push(route);
   };
@@ -105,16 +103,11 @@ const ToolsPage = () => {
       description: "Generate questions and summaries from YouTube videos",
       route: "/tools/youtube-assistant",
     },
-    // {
-    //   title: "Custom ChatBot",
-    //   description: "Build your own chatbot with customizable system prompts",
-    //   route: "/tools/custom-chatbot",
-    // },
-    // {
-    //   title: "Idea Generator",
-    //   description: "Generate and expand creative ideas for your projects",
-    //   route: "/tools/idea-generator",
-    // },
+    {
+      title: "Comic Generator",
+      description: "Generate comics",
+      route: "/tools/comic-generator",
+    },
   ];
 
   return (
@@ -169,7 +162,7 @@ const ToolsPage = () => {
               key={index}
               title={tool.title}
               description={tool.description}
-              route={tool.route} // Pass the route prop
+              route={tool.route}
               isHot={tool.isHot}
             />
           ))}
@@ -180,3 +173,4 @@ const ToolsPage = () => {
 };
 
 export default ToolsPage;
+

@@ -64,6 +64,7 @@ export class AudioStreamer {
       // Add a small delay to ensure the worklet is registered
       await new Promise(resolve => setTimeout(resolve, 100));
 
+      // Attempt to create the AudioWorkletNode
       const worklet = new AudioWorkletNode(this.context, workletName);
       workletsRecord[workletName].node = worklet;
       

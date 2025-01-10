@@ -79,40 +79,48 @@ export default function SidePanel() {
     <div
       className={`side-panel ${
         open ? "open" : ""
-      } bg-gray-800 text-white w-64 transition-width duration-300`}
+      } bg-white text-gray-800 w-64 transition-width duration-300 shadow-lg border-l border-gray-200`}
     >
-      <header className="top flex justify-between items-center p-4 border-b border-gray-700">
-        <h2 className="text-lg font-semibold">Console</h2>
+      <header className="top flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50">
+        <h2 className="text-lg font-semibold text-gray-700">Console</h2>
         {open ? (
-          <button className="opener p-2" onClick={() => setOpen(false)}>
-            <RiSidebarFoldLine color="#b4b8bb" />
+          <button
+            className="opener p-2 hover:bg-gray-100 rounded-lg"
+            onClick={() => setOpen(false)}
+          >
+            <RiSidebarFoldLine className="text-gray-600" />
           </button>
         ) : (
-          <button className="opener p-2" onClick={() => setOpen(true)}>
-            <RiSidebarUnfoldLine color="#b4b8bb" />
+          <button
+            className="opener p-2 hover:bg-gray-100 rounded-lg"
+            onClick={() => setOpen(true)}
+          >
+            <RiSidebarUnfoldLine className="text-gray-600" />
           </button>
         )}
       </header>
-      <section className="indicators flex items-center justify-between p-4">
+      <section className="indicators flex items-center justify-between p-4 bg-gray-50">
         <Select
           className="react-select w-full"
           classNamePrefix="react-select"
           styles={{
             control: (baseStyles) => ({
               ...baseStyles,
-              background: "var(--Neutral-15)",
-              color: "var(--Neutral-90)",
+              background: "white",
+              color: "#374151",
               minHeight: "33px",
               maxHeight: "33px",
-              border: 0,
+              border: "1px solid #E5E7EB",
+              borderRadius: "0.375rem",
             }),
             option: (styles, { isFocused, isSelected }) => ({
               ...styles,
               backgroundColor: isFocused
-                ? "var(--Neutral-30)"
+                ? "#F3F4F6"
                 : isSelected
-                  ? "var(--Neutral-20)"
+                  ? "#E5E7EB"
                   : undefined,
+              color: "#374151",
             }),
           }}
           defaultValue={selectedOption}
@@ -121,27 +129,28 @@ export default function SidePanel() {
             setSelectedOption(e);
           }}
         />
-        <div className={cn("streaming-indicator", { connected })}>
+        <div
+          className={cn("streaming-indicator ml-2 text-sm", {
+            "text-blue-600": connected,
+            "text-gray-500": !connected,
+          })}
+        >
           {connected
             ? `🔵${open ? " Streaming" : ""}`
             : `⏸️${open ? " Paused" : ""}`}
         </div>
       </section>
 
-      {/* <section className="chat-history p-4">
-        {logsArray.map((chat, index) => (
-          <div key={index} className="chat-message">
-            {typeof chat.message === "string"
-              ? chat.message
-              : JSON.stringify(chat.message)}
-          </div>
-        ))}
-      </section> */}
-
-      <div className={cn("input-container", { disabled: !connected }, "p-4")}>
-        <div className="input-content flex items-center">
+      <div
+        className={cn(
+          "input-container mt-auto border-t border-gray-200",
+          { "opacity-50": !connected },
+          "p-4"
+        )}
+      >
+        <div className="input-content flex items-center relative">
           <textarea
-            className="input-area flex-1 bg-gray-700 text-white p-2 rounded"
+            className="input-area flex-1 border border-gray-300 text-gray-700 p-2 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             ref={inputRef}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {
@@ -162,14 +171,15 @@ export default function SidePanel() {
               "absolute left-4 top-2 text-gray-400"
             )}
           >
-            Type&nbsp;something...
+            Type something...
           </span>
 
           <button
-            className="send-button ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded"
+            className="send-button ml-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors duration-200 disabled:bg-gray-300 disabled:cursor-not-allowed"
             onClick={handleSubmit}
+            disabled={!connected}
           >
-            send
+            Send
           </button>
         </div>
       </div>

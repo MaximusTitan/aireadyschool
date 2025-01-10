@@ -1,16 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2 } from "lucide-react";
+import { Loader2, Youtube } from "lucide-react";
 import { toast } from "sonner";
 
 interface Message {
   role: "user" | "assistant";
   content: string;
+  timestamp?: number;
 }
 
 interface VideoData {
@@ -18,7 +19,7 @@ interface VideoData {
   transcript: string;
 }
 
-const YoutubeAssistantPage: React.FC = () => {
+const YoutubeAssistantPage = () => {
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
   const [videoData, setVideoData] = useState<VideoData | null>(null);
@@ -26,10 +27,43 @@ const YoutubeAssistantPage: React.FC = () => {
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
 
+  // Auto-scroll to bottom of chat
+  useEffect(() => {
+    const scrollArea = document.querySelector(".scroll-area-content");
+    if (scrollArea) {
+      scrollArea.scrollTop = scrollArea.scrollHeight;
+    }
+  }, [messages]);
+
+  // URL validation
+  const isValidYoutubeUrl = (url: string) => {
+    try {
+      const parsedUrl = new URL(url);
+      return (
+        parsedUrl.hostname === "youtube.com" ||
+        parsedUrl.hostname === "www.youtube.com" ||
+        parsedUrl.hostname === "youtu.be"
+      );
+    } catch {
+      return false;
+    }
+  };
+
   const handleVideoSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!url.trim()) return;
+    if (!url.trim()) {
+      toast.error("Please enter a YouTube URL");
+      return;
+    }
+
+    if (!isValidYoutubeUrl(url)) {
+      toast.error("Please enter a valid YouTube URL");
+      return;
+    }
+
     setLoading(true);
+    setVideoData(null);
+    setMessages([]);
 
     try {
       const response = await fetch("/api/process-video", {
@@ -45,6 +79,7 @@ const YoutubeAssistantPage: React.FC = () => {
       }
 
       setVideoData(data);
+      toast.success("Video processed successfully");
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to process video"
@@ -58,7 +93,11 @@ const YoutubeAssistantPage: React.FC = () => {
     e.preventDefault();
     if (!input.trim() || !videoData) return;
 
-    const newMessage: Message = { role: "user", content: input };
+    const newMessage: Message = {
+      role: "user",
+      content: input,
+      timestamp: Date.now(),
+    };
     setMessages((prev) => [...prev, newMessage]);
     setInput("");
     setChatLoading(true);
@@ -73,28 +112,25 @@ const YoutubeAssistantPage: React.FC = () => {
         }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error("Failed to get response");
+        throw new Error(data.error || "Failed to get response");
       }
 
-      const data = await response.json();
       setMessages((prev) => [
         ...prev,
         {
           role: "assistant",
           content: data.response,
+          timestamp: Date.now(),
         },
       ]);
     } catch (error) {
       toast.error("Failed to send message");
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content:
-            "Sorry, there was an error processing your message. Please try again.",
-        },
-      ]);
+      setMessages((prev) =>
+        prev.filter((msg) => msg.timestamp !== newMessage.timestamp)
+      );
     } finally {
       setChatLoading(false);
     }
@@ -103,7 +139,8 @@ const YoutubeAssistantPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
       <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-neutral-800 dark:border-neutral-700">
-        <div className="container flex h-16 items-center justify-between">
+        <div className="container flex h-16 items-center space-x-4">
+          <Youtube className="h-6 w-6 text-rose-500" />
           <h1 className="text-2xl font-bold text-rose-500">
             YouTube Assistant
           </h1>
@@ -114,16 +151,19 @@ const YoutubeAssistantPage: React.FC = () => {
         <div className="max-w-5xl mx-auto">
           <form onSubmit={handleVideoSubmit} className="flex gap-4 mb-6">
             <Input
-              type="text"
+              type="url"
               placeholder="Enter YouTube URL..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="flex-1 dark:bg-neutral-950 dark:border-neutral-700"
+              disabled={loading}
+              aria-label="YouTube URL input"
             />
             <Button
               type="submit"
               className="bg-rose-500 hover:bg-rose-600 text-white"
               disabled={loading}
+              aria-label={loading ? "Processing video" : "Analyze video"}
             >
               {loading ? (
                 <>
@@ -160,7 +200,7 @@ const YoutubeAssistantPage: React.FC = () => {
                     <div className="space-y-4">
                       {messages.map((message, index) => (
                         <div
-                          key={index}
+                          key={`${message.timestamp}-${index}`}
                           className={`flex ${
                             message.role === "user"
                               ? "justify-end"
@@ -179,8 +219,10 @@ const YoutubeAssistantPage: React.FC = () => {
                         </div>
                       ))}
                       {chatLoading && (
-                        <div className="flex justify-center">
-                          <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
+                        <div className="flex justify-start">
+                          <div className="bg-gray-100 dark:bg-neutral-950 rounded-lg p-4">
+                            <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
+                          </div>
                         </div>
                       )}
                     </div>
@@ -192,11 +234,14 @@ const YoutubeAssistantPage: React.FC = () => {
                       onChange={(e) => setInput(e.target.value)}
                       placeholder="Ask about the video..."
                       className="flex-1 dark:bg-neutral-950 dark:border-neutral-700"
+                      disabled={chatLoading || !videoData}
+                      aria-label="Chat input"
                     />
                     <Button
                       type="submit"
-                      disabled={chatLoading}
+                      disabled={chatLoading || !input.trim() || !videoData}
                       className="bg-rose-500 hover:bg-rose-600 text-white"
+                      aria-label="Send message"
                     >
                       Send
                     </Button>

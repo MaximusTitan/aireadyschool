@@ -55,6 +55,11 @@ export default function VoiceChat(): JSX.Element {
     if (mediaRecorder.current && isRecording) {
       mediaRecorder.current.stop();
       setIsRecording(false);
+      // Show user's message immediately
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "User", message: transcript || "Recording..." },
+      ]);
     }
   };
 
@@ -74,6 +79,13 @@ export default function VoiceChat(): JSX.Element {
         await transcriptResponse.json();
       if (transcriptError) throw new Error(transcriptError);
       setTranscript(text);
+      setChatHistory((prev) =>
+        prev.map((chat) =>
+          chat.sender === "User" && chat.message === "Recording..."
+            ? { sender: "User", message: text }
+            : chat
+        )
+      );
 
       // Get ChatGPT response
       const aiResponse = await fetch("/api/chat-voice", {
@@ -88,8 +100,8 @@ export default function VoiceChat(): JSX.Element {
       setResponse(aiText);
 
       setChatHistory((prev) => [
+        // Remove the redundant user message addition
         ...prev,
-        { sender: "User", message: text },
         { sender: "AI", message: aiText },
       ]);
 
@@ -196,7 +208,7 @@ export default function VoiceChat(): JSX.Element {
   }, []);
 
   return (
-    <Card className="w-full max-w-4xl mx-auto mt-8 flex flex-col h-screen">
+    <Card className="w-full max-w-4xl mx-auto mt-8 flex flex-col min-h-[38rem] h-auto">
       <div className="flex flex-1 overflow-hidden">
         <div className="w-2/3 p-4 overflow-y-auto">
           {/* Scrollable Chat History */}
@@ -263,6 +275,8 @@ export default function VoiceChat(): JSX.Element {
           {isRecording ? <Square className="mr-2" /> : <Mic className="mr-2" />}
           {isRecording ? "Stop Recording" : "Start Recording"}
         </Button>
+        {/* Add loading indicator */}
+        {isProcessing && <Loader2 className="animate-spin" />}
         <input
           type="text"
           value={textInput}

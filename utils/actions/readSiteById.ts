@@ -6,7 +6,6 @@ const supabase = createClient(
 );
 
 export const readSiteById = async (id: number): Promise<{ id: number; site_id: string } | null> => {
-  console.log("Querying site with ID:", id); // Logging the query parameter
   const { data, error } = await supabase
     .from('schools')
     .select('id, site_id')
@@ -18,6 +17,5 @@ export const readSiteById = async (id: number): Promise<{ id: number; site_id: s
     return null;
   }
 
-  console.log("Site data found:", data); // Logging fetched data
   return data;
 };

@@ -1,8 +1,9 @@
 import React from "react";
+import Image from "next/image";
 import {
   ChevronRight,
   Book,
-  Image,
+  Image as ImageIcon,
   FileText,
   Layout,
   Video,
@@ -24,7 +25,7 @@ const LandingPage = () => {
       description: "Interactive document analysis and retrieval",
     },
     {
-      icon: Image,
+      icon: ImageIcon,
       name: "Image Generator - Flux",
       description: "Create educational visuals and diagrams",
     },
@@ -62,9 +63,13 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <span className="text-2xl font-bold text-rose-500">
-                AI Ready School
-              </span>
+              <Image
+                src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/ai-ready-school.webp"
+                alt="AI Ready School"
+                width={160}
+                height={30}
+                priority
+              />
             </div>
             <div className="flex items-center space-x-4">
               <Link href="/sign-in">
@@ -222,9 +227,12 @@ const LandingPage = () => {
         <div className="container mx-auto px-4 py-12">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div className="space-y-4">
-              <h4 className="text-xl font-bold text-rose-500 dark:text-rose-400">
-                AI Ready School
-              </h4>
+              <Image
+                src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/ai-ready-school.webp"
+                alt="AI Ready School"
+                width={140}
+                height={30}
+              />
               <p className="text-gray-600 dark:text-gray-300">
                 Empowering education through artificial intelligence
               </p>

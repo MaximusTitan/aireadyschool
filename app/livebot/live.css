@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --text: white;
+  --gray-200: #b4b8bb;
+  --gray-300: #80868b;
+  --gray-500: #5f6368;
+  --gray-600: #444444;
+  --gray-700: #202020;
+  --gray-800: #171717;
+  --gray-900: #111111;
+  --gray-1000: #0a0a0a;
+  --accent-blue: rgb(161, 228, 242);
+  --accent-blue-active-bg: #001233;
+  --accent-blue-active: #98beff;
+  --accent-blue-headers: #448dff;
+  --accent-green: rgb(168, 218, 181);
+  --accent-red: #ff4600;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}

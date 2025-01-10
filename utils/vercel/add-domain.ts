@@ -1,8 +1,4 @@
 export const addDomainToVercel = async (domain: string) => {
-    console.log(`Adding domain: ${domain}`);
-
-    console.log(`PROJECT_ID_VERCEL: ${process.env.PROJECT_ID_VERCEL}`);
-    console.log(`AUTH_BEARER_TOKEN: ${process.env.AUTH_BEARER_TOKEN}`);
 
     if (!process.env.PROJECT_ID_VERCEL || !process.env.AUTH_BEARER_TOKEN) {
         throw new Error("Missing Vercel project ID or authorization token.");
@@ -26,6 +22,5 @@ export const addDomainToVercel = async (domain: string) => {
       }
     ).then(async (res) => res.json());
   
-    console.log(`Response: ${JSON.stringify(response)}`);
     return response;
 };

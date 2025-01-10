@@ -42,7 +42,6 @@ export const updateSession = async (request: NextRequest) => {
   
     // Get hostname (e.g., 'mike.com', 'test.mike.com')
     const hostname = request.headers.get("host");
-    console.log("Hostname:", hostname); // Logging hostname
   
     let currentHost;
     if (process.env.NODE_ENV === "production") {
@@ -54,7 +53,6 @@ export const updateSession = async (request: NextRequest) => {
       currentHost = hostname?.replace(`.localhost:3000`, "").toLowerCase();
     }
 
-    console.log("Current Host:", currentHost); // Logging currentHost
   
     // If there's no currentHost, likely accessing the root domain, handle accordingly
     if (!currentHost) {
@@ -64,7 +62,6 @@ export const updateSession = async (request: NextRequest) => {
 
     // Fetch site_id and id from the schools table
     const school = await readDomainId(currentHost);
-    console.log("Fetched School:", school); // Logging fetched school
 
     // Handle the case where no domain data is found
     if (!school) {

@@ -10,7 +10,6 @@ export const readDomainId = async (domain?: string): Promise<{ id: number; site_
     console.error("Domain is undefined or empty");
     return null;
   }
-  console.log("Querying site_id with:", domain.toLowerCase()); // Logging the query parameter
   const { data, error } = await supabase
     .from('schools')
     .select('id, site_id')
@@ -22,6 +21,5 @@ export const readDomainId = async (domain?: string): Promise<{ id: number; site_
     return null;
   }
 
-  console.log("Domain data found:", data); // Logging fetched data
   return data;
 };

@@ -30,6 +30,7 @@ export default function RootLayout({
     pathname.startsWith("/protected") ||
     pathname.startsWith("/history") ||
     pathname.startsWith("/schools") ||
+    // pathname.startsWith("/livebot") ||
     pathname.startsWith("/rooms");
 
   return (

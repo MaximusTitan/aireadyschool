@@ -1,15 +1,16 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
-import { X, Send, ChevronLeft, ChevronRight, Maximize2, FileJson, FileText, FileIcon as FilePresentation } from 'lucide-react';
+import { X, Send, Maximize2, FileJson, FileText, FileIcon as FilePresentation } from 'lucide-react';
 import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 import jsPDF from 'jspdf';
 import pptxgen from 'pptxgenjs';
+
 
 export default function ComicGenerator() {
   const router = useRouter();
@@ -20,31 +21,16 @@ export default function ComicGenerator() {
   }>({ urls: [], descriptions: [] });
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  const preloadedImages = useRef<HTMLImageElement[]>([]);
-
-  useEffect(() => {
-    if (imageData.urls.length > 0) {
-      preloadedImages.current = imageData.urls.map(url => {
-        const img = document.createElement('img');
-        img.src = url;
-        return img;
-      });
-    }
-  }, [imageData.urls]);
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen();
       setIsFullscreen(true);
-      document.addEventListener('keydown', handleKeyDown);
     } else {
       document.exitFullscreen();
       setIsFullscreen(false);
-      document.removeEventListener('keydown', handleKeyDown);
     }
   };
 
@@ -83,28 +69,7 @@ export default function ComicGenerator() {
     }
   };
 
-  const handleNavigation = useCallback((direction: 'left' | 'right') => {
-    setIsTransitioning(true);
-    setCurrentIndex(prevIndex => {
-      const totalImages = imageData.urls.length;
-      if (direction === 'right') {
-        return (prevIndex + 1) % totalImages;
-      } else {
-        return (prevIndex - 1 + totalImages) % totalImages;
-      }
-    });
-    setTimeout(() => setIsTransitioning(false), 300);
-  }, [imageData.urls.length]);
-
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'ArrowLeft') {
-      handleNavigation('left');
-    } else if (e.key === 'ArrowRight') {
-      handleNavigation('right');
-    }
-  }, [handleNavigation]);
-
-  const handleKeyDown2 = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
@@ -193,25 +158,19 @@ export default function ComicGenerator() {
     pptx.writeFile({ fileName: getFileName('pptx') });
   };
 
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyDown]);
-
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <div className="p-4 border-b border-border">
         <div className="max-w-6xl mx-auto flex justify-between items-start">
           <h1 className="text-3xl font-bold">
-            Comic<br />Generator
+            Comic Generator
           </h1>
           <form onSubmit={handleSubmit} className="w-[500px] relative">
             <Textarea
               placeholder="Enter your comic idea here..."
               value={prompt}
               onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown2}
+              onKeyDown={handleKeyDown}
               className="w-full resize-none px-4 py-2 text-base leading-tight h-[calc(1em+8px)]"
             />
             <button
@@ -231,20 +190,6 @@ export default function ComicGenerator() {
         <div ref={containerRef} className="flex-1 flex flex-col">
           <div className="bg-muted p-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleNavigation('left')}
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => handleNavigation('right')}
-              >
-                <ChevronRight className="h-6 w-6" />
-              </Button>
               <Button
                 variant="ghost"
                 onClick={handleFullscreen}
@@ -279,35 +224,38 @@ export default function ComicGenerator() {
               </Button>
             </div>
             <div className="text-foreground">
-              Slide {currentIndex + 1} of {imageData.urls.length}
+              {imageData.urls.length} panels generated
             </div>
           </div>
 
-          <div className="flex-1 flex">
-            <div className="w-1/2 bg-background relative overflow-hidden">
-              <div className="absolute inset-0 flex items-center justify-center p-8">
-                <div className={cn(
-                  "relative w-full h-full transition-opacity duration-300 ease-in-out",
-                  isTransitioning ? "opacity-0" : "opacity-100"
-                )}>
-                  <Image
-                    src={imageData.urls[currentIndex]}
-                    alt={`Comic panel ${currentIndex + 1}`}
-                    fill
-                    className="object-contain rounded-lg"
-                    sizes="50vw"
-                  />
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="max-w-7xl mx-auto space-y-12">
+              {imageData.urls.map((url, index) => (
+                <div key={index} className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden">
+                  <div className="w-1/2 relative">
+                    <div className="aspect-[16/9] relative">
+                      <Image
+                        src={url}
+                        alt={`Comic panel ${index + 1}`}
+                        fill
+                        className="object-contain"
+                        sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
+                      />
+                    </div>
+                  </div>
+                  <div className="w-1/2 p-8 flex items-center">
+                    {index === 0 ? (
+                      <h1 className="text-4xl leading-relaxed text-foreground font-comic-sans">
+                        {imageData.descriptions[index]}
+                      </h1>
+                    ) : (
+                      <p className="text-2xl leading-relaxed text-foreground font-comic-sans">
+                        {imageData.descriptions[index]}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </div>
-
-            <div className={cn(
-              "w-1/2 p-8 flex flex-col justify-center",
-              "bg-primary text-primary-foreground"
-            )}>
-              <p className="text-xl leading-relaxed">
-                {imageData.descriptions[currentIndex]}
-              </p>
+              ))}
             </div>
           </div>
         </div>

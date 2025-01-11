@@ -93,6 +93,11 @@ const ToolsPage = () => {
       isHot: true,
     },
     {
+      title: "Video Generator",
+      description: "Generate videos from images",
+      route: "/tools/video-generator",
+    },
+    {
       title: "Text Tools",
       description:
         "Rewrite, proofread, translate, generate questions, expand, summarize texts",
@@ -153,11 +158,6 @@ const ToolsPage = () => {
       title: "Individualized Education Planner",
       description: "Plan individualized education for students",
       route: "/tools/individualized-education-planner",
-    },
-    {
-      title: "Content Generator",
-      description: "Image, Video and Story Generator",
-      route: "/tools/content-generator",
     },
     {
       title: "Marketing Content Generator",

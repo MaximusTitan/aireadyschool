@@ -70,7 +70,7 @@ export function AppSidebar() {
   const navData = {
     navMain: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "Talk to Buddy", url: "/tools/audiobot", icon: Bot },
+      { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
       { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
       // ...existing navigation items...
       ...(userRole === "Admin"

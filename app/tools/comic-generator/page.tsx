@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import Image from 'next/image';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,6 +8,8 @@ import { useRouter } from "next/navigation";
 import { X, Send, ChevronLeft, ChevronRight, Maximize2, FileJson, FileText, FileIcon as FilePresentation } from 'lucide-react';
 import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
+import jsPDF from 'jspdf';
+import pptxgen from 'pptxgenjs';
 
 export default function ComicGenerator() {
   const router = useRouter();
@@ -20,15 +22,29 @@ export default function ComicGenerator() {
   const [showModal, setShowModal] = useState(false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const preloadedImages = useRef<HTMLImageElement[]>([]);
+
+  useEffect(() => {
+    if (imageData.urls.length > 0) {
+      preloadedImages.current = imageData.urls.map(url => {
+        const img = document.createElement('img');
+        img.src = url;
+        return img;
+      });
+    }
+  }, [imageData.urls]);
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
       containerRef.current?.requestFullscreen();
       setIsFullscreen(true);
+      document.addEventListener('keydown', handleKeyDown);
     } else {
       document.exitFullscreen();
       setIsFullscreen(false);
+      document.removeEventListener('keydown', handleKeyDown);
     }
   };
 
@@ -68,6 +84,7 @@ export default function ComicGenerator() {
   };
 
   const handleNavigation = useCallback((direction: 'left' | 'right') => {
+    setIsTransitioning(true);
     setCurrentIndex(prevIndex => {
       const totalImages = imageData.urls.length;
       if (direction === 'right') {
@@ -76,9 +93,18 @@ export default function ComicGenerator() {
         return (prevIndex - 1 + totalImages) % totalImages;
       }
     });
+    setTimeout(() => setIsTransitioning(false), 300);
   }, [imageData.urls.length]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      handleNavigation('left');
+    } else if (e.key === 'ArrowRight') {
+      handleNavigation('right');
+    }
+  }, [handleNavigation]);
+
+  const handleKeyDown2 = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
@@ -87,6 +113,11 @@ export default function ComicGenerator() {
 
   const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setPrompt(e.target.value);
+  };
+
+  const getFileName = (extension: string) => {
+    const sanitizedPrompt = prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    return `${sanitizedPrompt}.${extension}`;
   };
 
   const downloadJSON = () => {
@@ -100,28 +131,88 @@ export default function ComicGenerator() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'comic-data.json';
+    a.download = getFileName('json');
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
+  const downloadPDF = async () => {
+    const pdf = new jsPDF({
+      orientation: 'landscape',
+      unit: 'px',
+      format: [1024, 576]
+    });
+
+    const pageWidth = 1024;
+    const pageHeight = 576;
+    const margin = 20;
+    const imageWidth = pageWidth - 2 * margin;
+    const imageHeight = pageHeight - 3 * margin; // Leave space for text at the bottom
+
+    for (let i = 0; i < imageData.urls.length; i++) {
+      if (i > 0) {
+        pdf.addPage([1024, 576], 'landscape');
+      }
+
+      // Add image
+      const img = await loadImage(imageData.urls[i]);
+      pdf.addImage(img, 'JPEG', margin, margin, imageWidth, imageHeight, undefined, 'FAST');
+
+      // Add description
+      pdf.setFontSize(12);
+      const splitText = pdf.splitTextToSize(imageData.descriptions[i], imageWidth);
+      pdf.text(splitText, margin, pageHeight - margin, { align: 'left', baseline: 'bottom' });
+    }
+
+    pdf.save(getFileName('pdf'));
+  };
+
+  const loadImage = (url: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = document.createElement('img');
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = url;
+    });
+  };
+
+  const downloadPPT = () => {
+    const pptx = new pptxgen();
+    pptx.layout = 'LAYOUT_WIDE';
+    pptx.defineLayout({ name: 'COMIC_LAYOUT', width: 10.24, height: 5.76 });
+    pptx.layout = 'COMIC_LAYOUT';
+
+    imageData.urls.forEach((url, index) => {
+      const slide = pptx.addSlide();
+      slide.addImage({ path: url, x: 0, y: 0, w: '100%', h: '85%' });
+      slide.addText(imageData.descriptions[index], { x: 0, y: '85%', w: '100%', h: '15%', valign: 'middle', align: 'center', fontSize: 14 });
+    });
+
+    pptx.writeFile({ fileName: getFileName('pptx') });
+  };
+
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
-      {/* Input Form - Restructured */}
       <div className="p-4 border-b border-border">
         <div className="max-w-6xl mx-auto flex justify-between items-start">
           <h1 className="text-3xl font-bold">
-            Comic<br />Generator
+            Comic Generator
           </h1>
           <form onSubmit={handleSubmit} className="w-[500px] relative">
             <Textarea
               placeholder="Enter your comic idea here..."
               value={prompt}
               onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              className="w-full resize-none px-4 py-2 text-base leading-none pr-12"
+              onKeyDown={handleKeyDown2}
+              className="w-full resize-none px-4 py-2 text-base leading-tight h-[calc(1em+8px)]"
             />
             <button
               type="submit"
@@ -136,10 +227,8 @@ export default function ComicGenerator() {
 
       {loading && <Loader />}
 
-      {/* Main Content */}
       {imageData.urls.length > 0 && (
         <div ref={containerRef} className="flex-1 flex flex-col">
-          {/* Navigation Bar */}
           <div className="bg-muted p-2 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Button
@@ -174,6 +263,7 @@ export default function ComicGenerator() {
               </Button>
               <Button
                 variant="ghost"
+                onClick={downloadPDF}
                 className="flex items-center gap-2"
               >
                 <FileText className="h-5 w-5" />
@@ -181,6 +271,7 @@ export default function ComicGenerator() {
               </Button>
               <Button
                 variant="ghost"
+                onClick={downloadPPT}
                 className="flex items-center gap-2"
               >
                 <FilePresentation className="h-5 w-5" />
@@ -192,12 +283,13 @@ export default function ComicGenerator() {
             </div>
           </div>
 
-          {/* Split View */}
           <div className="flex-1 flex">
-            {/* Left Side - Image */}
-            <div className="w-1/2 bg-background relative">
+            <div className="w-1/2 bg-background relative overflow-hidden">
               <div className="absolute inset-0 flex items-center justify-center p-8">
-                <div className="relative w-full h-full">
+                <div className={cn(
+                  "relative w-full h-full transition-opacity duration-300 ease-in-out",
+                  isTransitioning ? "opacity-0" : "opacity-100"
+                )}>
                   <Image
                     src={imageData.urls[currentIndex]}
                     alt={`Comic panel ${currentIndex + 1}`}
@@ -209,7 +301,6 @@ export default function ComicGenerator() {
               </div>
             </div>
 
-            {/* Right Side - Description */}
             <div className={cn(
               "w-1/2 p-8 flex flex-col justify-center",
               "bg-primary text-primary-foreground"
@@ -222,7 +313,6 @@ export default function ComicGenerator() {
         </div>
       )}
 
-      {/* Credits Modal */}
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
           <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">

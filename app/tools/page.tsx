@@ -1,7 +1,6 @@
-// Import necessary hooks
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import {
@@ -23,7 +22,7 @@ import { Input } from "@/components/ui/input";
 interface ToolCardProps {
   title: string;
   description: string;
-  route: string; // New route prop
+  route: string;
   isHot?: boolean;
 }
 
@@ -33,9 +32,8 @@ const ToolCard: React.FC<ToolCardProps> = ({
   route,
   isHot = false,
 }) => {
-  const router = useRouter(); // Use router for navigation
+  const router = useRouter();
 
-  // Handle navigation on click
   const handleClick = () => {
     router.push(route);
   };
@@ -89,6 +87,12 @@ const ToolsPage = () => {
       isHot: true,
     },
     {
+      title: "Presentation Generator",
+      description: "Create presentations",
+      route: "/tools/presentation",
+      isHot: true,
+    },
+    {
       title: "Text Tools",
       description:
         "Rewrite, proofread, translate, generate questions, expand, summarize texts",
@@ -105,17 +109,80 @@ const ToolsPage = () => {
       description: "Generate questions and summaries from YouTube videos",
       route: "/tools/youtube-assistant",
     },
-    // {
-    //   title: "Custom ChatBot",
-    //   description: "Build your own chatbot with customizable system prompts",
-    //   route: "/tools/custom-chatbot",
-    // },
-    // {
-    //   title: "Idea Generator",
-    //   description: "Generate and expand creative ideas for your projects",
-    //   route: "/tools/idea-generator",
-    // },
+    {
+      title: "Comic Generator",
+      description: "Generate comics",
+      route: "/tools/comic-generator",
+    },
+    {
+      title: "Talk with Buddy",
+      description: "Chat with an AI buddy",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Personalized Lessons",
+      description: "Create personalized lessons for students",
+      route: "/tools/personalized-lessons",
+    },
+    {
+      title: "Research Assistant",
+      description: "Get help with your research",
+      route: "/tools/research-assistant",
+    },
+    {
+      title: "Study Planner",
+      description: "Plan your study schedule",
+      route: "/tools/study-planner",
+    },
+    {
+      title: "Evaluator",
+      description: "Evaluate student answers",
+      route: "/tools/evaluator",
+    },
+    {
+      title: "Project Helper",
+      description: "Get help with your projects",
+      route: "/tools/project-helper",
+    },
+    {
+      title: "Lesson Plan Creator",
+      description: "Create lesson plans",
+      route: "/tools/lesson-plan-creator",
+    },
+    {
+      title: "Individualized Education Planner",
+      description: "Plan individualized education for students",
+      route: "/tools/individualized-education-planner",
+    },
+    {
+      title: "Content Generator",
+      description: "Image, Video and Story Generator",
+      route: "/tools/content-generator",
+    },
+    {
+      title: "Marketing Content Generator",
+      description: "Generate marketing content",
+      route: "/tools/marketing-content-generator",
+    },
+    {
+      title: "Report Generator",
+      description: "Generate reports",
+      route: "/tools/report-generator",
+    },
+    {
+      title: "School Intelligence",
+      description: "Get insights about your school",
+      route: "/tools/school-intelligence",
+    },
   ];
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTools = tools.filter(
+    (tool) =>
+      tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -132,6 +199,8 @@ const ToolsPage = () => {
                 className="pl-10 w-64 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
                 placeholder="Search tools..."
                 type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -164,12 +233,12 @@ const ToolsPage = () => {
 
         {/* Tools Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tools.map((tool, index) => (
+          {filteredTools.map((tool, index) => (
             <ToolCard
               key={index}
               title={tool.title}
               description={tool.description}
-              route={tool.route} // Pass the route prop
+              route={tool.route}
               isHot={tool.isHot}
             />
           ))}

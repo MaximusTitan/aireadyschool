@@ -105,14 +105,19 @@ const ToolsPage = () => {
       route: "/tools/mcq-generator",
     },
     {
-      title: "YouTube Assistant",
-      description: "Generate questions and summaries from YouTube videos",
-      route: "/tools/youtube-assistant",
+      title: "Lesson Plan Creator",
+      description: "Create lesson plans",
+      route: "/tools/lesson-planner",
     },
     {
       title: "Comic Generator",
       description: "Generate comics",
       route: "/tools/comic-generator",
+    },
+    {
+      title: "YouTube Assistant",
+      description: "Generate questions and summaries from YouTube videos",
+      route: "/tools/youtube-assistant",
     },
     {
       title: "Talk with Buddy",
@@ -122,57 +127,52 @@ const ToolsPage = () => {
     {
       title: "Personalized Lessons",
       description: "Create personalized lessons for students",
-      route: "/tools/audiobot",
+      route: "/tools/personalized-lessons",
     },
     {
       title: "Research Assistant",
       description: "Get help with your research",
-      route: "/tools/audiobot",
+      route: "/tools/research-assistant",
     },
     {
       title: "Study Planner",
       description: "Plan your study schedule",
-      route: "/tools/audiobot",
+      route: "/tools/study-planner",
     },
     {
       title: "Evaluator",
       description: "Evaluate student answers",
-      route: "/tools/audiobot",
+      route: "/tools/evaluator",
     },
     {
       title: "Project Helper",
       description: "Get help with your projects",
-      route: "/tools/audiobot",
-    },
-    {
-      title: "Lesson Plan Creator",
-      description: "Create lesson plans",
-      route: "/tools/audiobot",
+      route: "/tools/project-helper",
     },
     {
       title: "Individualized Education Planner",
       description: "Plan individualized education for students",
-      route: "/tools/audiobot",
+      route: "/tools/individualized-education-planner",
     },
     {
       title: "Content Generator",
       description: "Image, Video and Story Generator",
-      route: "/tools/audiobot",
+      route: "/tools/content-generator",
     },
     {
       title: "Marketing Content Generator",
       description: "Generate marketing content",
-      route: "/tools/audiobot",
+      route: "/tools/marketing-content-generator",
     },
     {
       title: "Report Generator",
       description: "Generate reports",
-      route: "/tools/audiobot",
+      route: "/tools/report-generator",
     },
     {
       title: "School Intelligence",
       description: "Get insights about your school",
-      route: "/tools/audiobot",
+      route: "/tools/school-intelligence",
     },
   ];
 

@@ -112,6 +112,9 @@ export default function VoiceChat(): JSX.Element {
       const url = URL.createObjectURL(responseAudioBlob);
       setAudioUrl(url);
 
+      // Set isProcessing to false before playing audio
+      setIsProcessing(false);
+
       // Generate image based on AI response
       await generateImage(aiText);
     } catch (error) {
@@ -120,7 +123,7 @@ export default function VoiceChat(): JSX.Element {
         error instanceof Error ? error.message : "Unknown error"
       );
     } finally {
-      setIsProcessing(false);
+      // Remove or retain setIsProcessing(false) based on new placement
     }
   };
 
@@ -197,6 +200,9 @@ export default function VoiceChat(): JSX.Element {
       setAudioUrl(url);
       setTextInput("");
 
+      // Set isProcessing to false before generating image
+      setIsProcessing(false);
+
       // Generate image based on AI response
       await generateImage(aiText);
     } catch (error) {
@@ -205,7 +211,7 @@ export default function VoiceChat(): JSX.Element {
         error instanceof Error ? error.message : "Unknown error"
       );
     } finally {
-      setIsProcessing(false);
+      // Remove or retain setIsProcessing(false) based on new placement
     }
   };
 
@@ -301,21 +307,32 @@ export default function VoiceChat(): JSX.Element {
             {/* Generated Image Container */}
             {isImageLoading ? (
               <Skeleton className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100" />
+            ) : generatedImage ? (
+              <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
+                <img
+                  src={generatedImage}
+                  alt="Generated"
+                  className="w-full h-full object-cover"
+                />
+              </div>
             ) : (
-              generatedImage && (
-                <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
-                  <img
-                    src={generatedImage}
-                    alt="Generated"
-                    className="w-full h-full object-cover"
-                  />
+              <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
+                {/* Placeholder to prevent layout change */}
+                <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                  <span></span>
                 </div>
-              )
+              </div>
             )}
 
             {/* Avatar Container */}
             <div className="w-full aspect-square flex items-center justify-center rounded-lg">
-              {isAudioPlaying ? (
+              {isProcessing ? (
+                <img
+                  src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/O-Thinking.gif"
+                  alt="Loading"
+                  className="w-full h-full object-cover"
+                />
+              ) : isAudioPlaying ? (
                 <img
                   src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-videos/o-talking-small.gif"
                   alt="Audio Playing"
@@ -341,7 +358,7 @@ export default function VoiceChat(): JSX.Element {
           type="button"
         >
           {isRecording ? <Square className="mr-2" /> : <Mic className="mr-2" />}
-          {isRecording ? "Stop Recording" : "Start Recording"}
+          {isRecording ? "Stop Talking" : "Talk to Buddy"}
         </Button>
         {/* Add loading indicator */}
         {isProcessing && <Loader2 className="animate-spin" />}

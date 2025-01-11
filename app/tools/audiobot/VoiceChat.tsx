@@ -23,6 +23,7 @@ export default function VoiceChat(): JSX.Element {
     { sender: string; message: string }[]
   >([]);
   const [textInput, setTextInput] = useState<string>("");
+  const [generatedImage, setGeneratedImage] = useState<string>("");
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -55,11 +56,6 @@ export default function VoiceChat(): JSX.Element {
     if (mediaRecorder.current && isRecording) {
       mediaRecorder.current.stop();
       setIsRecording(false);
-      // Show user's message immediately
-      setChatHistory((prev) => [
-        ...prev,
-        { sender: "User", message: transcript || "Recording..." },
-      ]);
     }
   };
 
@@ -79,13 +75,7 @@ export default function VoiceChat(): JSX.Element {
         await transcriptResponse.json();
       if (transcriptError) throw new Error(transcriptError);
       setTranscript(text);
-      setChatHistory((prev) =>
-        prev.map((chat) =>
-          chat.sender === "User" && chat.message === "Recording..."
-            ? { sender: "User", message: text }
-            : chat
-        )
-      );
+      setChatHistory((prev) => [...prev, { sender: "User", message: text }]);
 
       // Get ChatGPT response
       const aiResponse = await fetch("/api/chat-voice", {
@@ -119,6 +109,9 @@ export default function VoiceChat(): JSX.Element {
       const responseAudioBlob = await audioResponse.blob();
       const url = URL.createObjectURL(responseAudioBlob);
       setAudioUrl(url);
+
+      // Generate image based on AI response
+      await generateImage(aiText);
     } catch (error) {
       console.error(
         "Error processing audio:",
@@ -129,10 +122,44 @@ export default function VoiceChat(): JSX.Element {
     }
   };
 
+  const generateImage = async (prompt: string): Promise<void> => {
+    try {
+      const response = await fetch("/api/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          image_size: "square",
+          num_inference_steps: 4,
+          num_images: 1,
+          enable_safety_checker: true,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.images?.[0]?.url) {
+        setGeneratedImage(data.images[0].url);
+      }
+    } catch (error) {
+      console.error("Error generating image:", error);
+    }
+  };
+
   const handleTextSubmit = async (): Promise<void> => {
     if (!textInput.trim()) return;
     setIsProcessing(true);
+    // Clear previous audio url to prevent auto-play
+    setAudioUrl("");
+
     try {
+      // Add user message immediately
+      setChatHistory((prev) => [
+        ...prev,
+        { sender: "User", message: textInput },
+      ]);
+
       // Get ChatGPT response
       const aiResponse = await fetch("/api/chat-voice", {
         method: "POST",
@@ -145,11 +172,8 @@ export default function VoiceChat(): JSX.Element {
       if (chatError) throw new Error(chatError);
       setResponse(aiText);
 
-      setChatHistory((prev) => [
-        ...prev,
-        { sender: "User", message: textInput },
-        { sender: "AI", message: aiText },
-      ]);
+      // Add AI response to chat history
+      setChatHistory((prev) => [...prev, { sender: "AI", message: aiText }]);
 
       // Convert response to speech
       const audioResponse = await fetch("/api/text-to-speech", {
@@ -166,6 +190,9 @@ export default function VoiceChat(): JSX.Element {
       const url = URL.createObjectURL(responseAudioBlob);
       setAudioUrl(url);
       setTextInput("");
+
+      // Generate image based on AI response
+      await generateImage(aiText);
     } catch (error) {
       console.error(
         "Error processing text input:",
@@ -177,37 +204,31 @@ export default function VoiceChat(): JSX.Element {
   };
 
   const playAudioResponse = (): void => {
-    if (audioUrl) {
-      if (audioRef.current) {
-        if (isAudioPlaying) {
-          audioRef.current.pause();
-          setIsAudioPlaying(false);
-        } else {
-          audioRef.current
-            .play()
-            .then(() => {
-              setIsAudioPlaying(true);
-              setHasPlayed(true);
-            })
-            .catch((error) => console.error("Error playing audio:", error));
-          audioRef.current.onended = () => setIsAudioPlaying(false);
-        }
-      } else {
-        audioRef.current = new Audio(audioUrl);
-        audioRef.current
-          .play()
-          .then(() => {
-            setIsAudioPlaying(true);
-            setHasPlayed(true);
-          })
-          .catch((error) => console.error("Error playing audio:", error));
-        audioRef.current.onended = () => setIsAudioPlaying(false);
-      }
+    if (!audioRef.current) return;
+    if (isAudioPlaying) {
+      audioRef.current.pause();
+      setIsAudioPlaying(false);
+    } else {
+      audioRef.current
+        .play()
+        .then(() => {
+          setIsAudioPlaying(true);
+          setHasPlayed(true);
+        })
+        .catch((error) => console.error("Error playing audio:", error));
+      audioRef.current.onended = () => setIsAudioPlaying(false);
     }
   };
 
   useEffect(() => {
     if (audioUrl) {
+      audioRef.current = new Audio(audioUrl);
+      audioRef.current.onended = () => setIsAudioPlaying(false);
+    }
+  }, [audioUrl]);
+
+  useEffect(() => {
+    if (audioUrl && !textInput) {
       playAudioResponse();
     }
   }, [audioUrl]);
@@ -223,7 +244,7 @@ export default function VoiceChat(): JSX.Element {
   return (
     <Card className="w-full max-w-4xl mx-auto mt-8 flex flex-col min-h-[38rem] h-auto">
       <div className="flex flex-1 overflow-hidden">
-        <div className="w-2/3 p-4 overflow-y-auto">
+        <div className="w-3/5 p-4 overflow-y-auto border-r">
           {/* Scrollable Chat History */}
           {chatHistory.map((chat, index) => {
             const isLastAIMessage =
@@ -269,24 +290,39 @@ export default function VoiceChat(): JSX.Element {
             );
           })}
         </div>
-        <div className="w-1/3 flex justify-center items-center p-4">
-          {/* Positioned GIF */}
-          {isAudioPlaying ? (
-            <img
-              src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-videos/o-talking-small.gif"
-              alt="Audio Playing"
-              className="w-48 h-48"
-            />
-          ) : (
-            <img
-              src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/o-constant.gif"
-              alt="Idle"
-              className="w-48 h-48"
-            />
-          )}
+        <div className="w-2/5 p-4">
+          <div className="flex flex-col items-center space-y-4">
+            {/* Avatar Container */}
+            <div className="w-40 h-40 flex items-center justify-center bg-gray-100 rounded-lg">
+              {isAudioPlaying ? (
+                <img
+                  src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-videos/o-talking-small.gif"
+                  alt="Audio Playing"
+                  className="w-36 h-36 object-cover"
+                />
+              ) : (
+                <img
+                  src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/o-constant.gif"
+                  alt="Idle"
+                  className="w-36 h-36 object-cover"
+                />
+              )}
+            </div>
+
+            {/* Generated Image Container */}
+            {generatedImage && (
+              <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
+                <img
+                  src={generatedImage}
+                  alt="Generated"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+            )}
+          </div>
         </div>
       </div>
-      <div className="p-4 flex justify-center items-center space-x-4">
+      <div className="p-4 border-t flex justify-center items-center space-x-4">
         {/* Voice Input and Play Buttons */}
         <Button
           onClick={isRecording ? stopRecording : startRecording}
@@ -304,7 +340,7 @@ export default function VoiceChat(): JSX.Element {
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           placeholder="Type your message"
-          className="border p-2 rounded"
+          className="flex-1 border p-2 rounded max-w-md"
         />
         <Button
           onClick={handleTextSubmit}

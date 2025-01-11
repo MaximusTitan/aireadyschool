@@ -23,7 +23,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
-      messages: [{ role: 'user', content: message }],
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant. Keep your responses clear and concise, focusing on the most important information. Limit response to 100 words maximum'
+        },
+        { role: 'user', content: message }
+      ],
     });
 
     return NextResponse.json({

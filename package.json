@@ -36,6 +36,7 @@
     "classnames": "^2.5.1",
     "clsx": "^2.1.1",
     "dotenv-flow": "^4.1.0",
+    "elevenlabs": "^1.50.2",
     "eventemitter3": "^5.0.1",
     "geist": "^1.2.1",
     "langchain": "^0.3.10",

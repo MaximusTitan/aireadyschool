@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, Square, Play, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import type {
   AudioRecorderRef,
   AudioChunksRef,
@@ -24,6 +25,7 @@ export default function VoiceChat(): JSX.Element {
   >([]);
   const [textInput, setTextInput] = useState<string>("");
   const [generatedImage, setGeneratedImage] = useState<string>("");
+  const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -144,14 +146,18 @@ export default function VoiceChat(): JSX.Element {
       }
     } catch (error) {
       console.error("Error generating image:", error);
+    } finally {
+      setIsImageLoading(false);
     }
   };
 
   const handleTextSubmit = async (): Promise<void> => {
     if (!textInput.trim()) return;
     setIsProcessing(true);
-    // Clear previous audio url to prevent auto-play
     setAudioUrl("");
+
+    setGeneratedImage("");
+    setIsImageLoading(true);
 
     try {
       // Add user message immediately
@@ -292,33 +298,37 @@ export default function VoiceChat(): JSX.Element {
         </div>
         <div className="w-2/5 p-4">
           <div className="flex flex-col items-center space-y-4">
+            {/* Generated Image Container */}
+            {isImageLoading ? (
+              <Skeleton className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100" />
+            ) : (
+              generatedImage && (
+                <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
+                  <img
+                    src={generatedImage}
+                    alt="Generated"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )
+            )}
+
             {/* Avatar Container */}
-            <div className="w-40 h-40 flex items-center justify-center bg-gray-100 rounded-lg">
+            <div className="w-full aspect-square flex items-center justify-center rounded-lg">
               {isAudioPlaying ? (
                 <img
                   src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-videos/o-talking-small.gif"
                   alt="Audio Playing"
-                  className="w-36 h-36 object-cover"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <img
                   src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/o-constant.gif"
                   alt="Idle"
-                  className="w-36 h-36 object-cover"
+                  className="w-full h-full object-cover"
                 />
               )}
             </div>
-
-            {/* Generated Image Container */}
-            {generatedImage && (
-              <div className="w-full aspect-square rounded-lg overflow-hidden bg-gray-100">
-                <img
-                  src={generatedImage}
-                  alt="Generated"
-                  className="w-full h-full object-contain"
-                />
-              </div>
-            )}
           </div>
         </div>
       </div>

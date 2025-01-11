@@ -122,57 +122,57 @@ const ToolsPage = () => {
     {
       title: "Personalized Lessons",
       description: "Create personalized lessons for students",
-      route: "/tools/personalized-lessons",
+      route: "/tools/audiobot",
     },
     {
       title: "Research Assistant",
       description: "Get help with your research",
-      route: "/tools/research-assistant",
+      route: "/tools/audiobot",
     },
     {
       title: "Study Planner",
       description: "Plan your study schedule",
-      route: "/tools/study-planner",
+      route: "/tools/audiobot",
     },
     {
       title: "Evaluator",
       description: "Evaluate student answers",
-      route: "/tools/evaluator",
+      route: "/tools/audiobot",
     },
     {
       title: "Project Helper",
       description: "Get help with your projects",
-      route: "/tools/project-helper",
+      route: "/tools/audiobot",
     },
     {
       title: "Lesson Plan Creator",
       description: "Create lesson plans",
-      route: "/tools/lesson-plan-creator",
+      route: "/tools/audiobot",
     },
     {
       title: "Individualized Education Planner",
       description: "Plan individualized education for students",
-      route: "/tools/individualized-education-planner",
+      route: "/tools/audiobot",
     },
     {
       title: "Content Generator",
       description: "Image, Video and Story Generator",
-      route: "/tools/content-generator",
+      route: "/tools/audiobot",
     },
     {
       title: "Marketing Content Generator",
       description: "Generate marketing content",
-      route: "/tools/marketing-content-generator",
+      route: "/tools/audiobot",
     },
     {
       title: "Report Generator",
       description: "Generate reports",
-      route: "/tools/report-generator",
+      route: "/tools/audiobot",
     },
     {
       title: "School Intelligence",
       description: "Get insights about your school",
-      route: "/tools/school-intelligence",
+      route: "/tools/audiobot",
     },
   ];
 

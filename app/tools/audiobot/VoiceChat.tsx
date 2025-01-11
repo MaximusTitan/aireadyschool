@@ -179,17 +179,30 @@ export default function VoiceChat(): JSX.Element {
   const playAudioResponse = (): void => {
     if (audioUrl) {
       if (audioRef.current) {
-        audioRef.current.pause();
+        if (isAudioPlaying) {
+          audioRef.current.pause();
+          setIsAudioPlaying(false);
+        } else {
+          audioRef.current
+            .play()
+            .then(() => {
+              setIsAudioPlaying(true);
+              setHasPlayed(true);
+            })
+            .catch((error) => console.error("Error playing audio:", error));
+          audioRef.current.onended = () => setIsAudioPlaying(false);
+        }
+      } else {
+        audioRef.current = new Audio(audioUrl);
+        audioRef.current
+          .play()
+          .then(() => {
+            setIsAudioPlaying(true);
+            setHasPlayed(true);
+          })
+          .catch((error) => console.error("Error playing audio:", error));
+        audioRef.current.onended = () => setIsAudioPlaying(false);
       }
-      audioRef.current = new Audio(audioUrl);
-      audioRef.current
-        .play()
-        .then(() => {
-          setIsAudioPlaying(true);
-          setHasPlayed(true);
-        })
-        .catch((error) => console.error("Error playing audio:", error));
-      audioRef.current.onended = () => setIsAudioPlaying(false);
     }
   };
 
@@ -239,8 +252,17 @@ export default function VoiceChat(): JSX.Element {
                     variant="outline"
                     type="button"
                   >
-                    <Play className="mr-2" />
-                    {hasPlayed ? "Replay" : "Play"}
+                    {isAudioPlaying ? (
+                      <>
+                        <Square className="mr-2" />
+                        Pause
+                      </>
+                    ) : (
+                      <>
+                        <Play className="mr-2" />
+                        {hasPlayed ? "Replay" : "Play"}
+                      </>
+                    )}
                   </Button>
                 )}
               </div>

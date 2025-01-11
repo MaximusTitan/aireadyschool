@@ -204,7 +204,7 @@ export default function ComicGenerator() {
       <div className="p-4 border-b border-border">
         <div className="max-w-6xl mx-auto flex justify-between items-start">
           <h1 className="text-3xl font-bold">
-            Comic Generator
+            Comic<br />Generator
           </h1>
           <form onSubmit={handleSubmit} className="w-[500px] relative">
             <Textarea

@@ -5,11 +5,14 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "wdfrtqeljulkoqnllxad.supabase.co",
-        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "fal.media",
         pathname: "/**",
       },
     ],
-    domains: ['fal.media'],
   },
   experimental: {
     appDir: true,

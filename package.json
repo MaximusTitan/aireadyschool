@@ -39,6 +39,7 @@
     "elevenlabs": "^1.50.2",
     "eventemitter3": "^5.0.1",
     "geist": "^1.2.1",
+    "immediate": "^3.0.6",
     "jspdf": "^2.5.2",
     "langchain": "^0.3.10",
     "lodash": "^4.17.21",

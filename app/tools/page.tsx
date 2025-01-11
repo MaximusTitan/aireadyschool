@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from 'lucide-react';
+import { Search } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -87,6 +87,12 @@ const ToolsPage = () => {
       isHot: true,
     },
     {
+      title: "Presentation Generator",
+      description: "Create presentations",
+      route: "/tools/presentation",
+      isHot: true,
+    },
+    {
       title: "Text Tools",
       description:
         "Rewrite, proofread, translate, generate questions, expand, summarize texts",
@@ -108,7 +114,75 @@ const ToolsPage = () => {
       description: "Generate comics",
       route: "/tools/comic-generator",
     },
+    {
+      title: "Talk with Buddy",
+      description: "Chat with an AI buddy",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Personalized Lessons",
+      description: "Create personalized lessons for students",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Research Assistant",
+      description: "Get help with your research",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Study Planner",
+      description: "Plan your study schedule",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Evaluator",
+      description: "Evaluate student answers",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Project Helper",
+      description: "Get help with your projects",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Lesson Plan Creator",
+      description: "Create lesson plans",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Individualized Education Planner",
+      description: "Plan individualized education for students",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Content Generator",
+      description: "Image, Video and Story Generator",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Marketing Content Generator",
+      description: "Generate marketing content",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "Report Generator",
+      description: "Generate reports",
+      route: "/tools/audiobot",
+    },
+    {
+      title: "School Intelligence",
+      description: "Get insights about your school",
+      route: "/tools/audiobot",
+    },
   ];
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTools = tools.filter(
+    (tool) =>
+      tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
@@ -125,6 +199,8 @@ const ToolsPage = () => {
                 className="pl-10 w-64 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
                 placeholder="Search tools..."
                 type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
           </div>
@@ -157,7 +233,7 @@ const ToolsPage = () => {
 
         {/* Tools Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {tools.map((tool, index) => (
+          {filteredTools.map((tool, index) => (
             <ToolCard
               key={index}
               title={tool.title}
@@ -173,4 +249,3 @@ const ToolsPage = () => {
 };
 
 export default ToolsPage;
-

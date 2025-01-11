@@ -10,6 +10,7 @@ import {
 } from "@/components/components-app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { createClient } from "@/utils/supabase/server";
+import { Toaster } from "@/components/ui/toaster";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -30,7 +31,8 @@ export default function RootLayout({
     pathname.startsWith("/protected") ||
     pathname.startsWith("/history") ||
     pathname.startsWith("/schools") ||
-    // pathname.startsWith("/livebot") ||
+    pathname.startsWith("/livebot") ||
+    pathname.startsWith("/audiobot") ||
     pathname.startsWith("/rooms");
 
   return (
@@ -48,6 +50,7 @@ export default function RootLayout({
               {showSidebar && <AppSidebarHeader />}
               <div className="p-4">{children}</div>
             </main>
+            <Toaster />
           </ThemeProvider>
         </SidebarProvider>
       </body>

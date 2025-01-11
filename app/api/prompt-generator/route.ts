@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   const messages = [
     {
       role: "user",
-      content: `Based on the following prompt, generate 4 prompts for images that would describe a comic sequence in a progressive manner. Each prompt should depict a scene from the story and be returned as a JSON object with keys in the format "Scene N" (where N is a number from 1 to 10). The values should describe the scene: ${prompt}`,
+      content: `Based on the following prompt, generate 4 prompts for images that would describe a comic sequence in a progressive manner.The first prompt should be a catchy title of the story and after that each prompt should depict a scene from the story and be returned as a JSON object with keys in the format "Scene N" (where N is a number from 1 to N). The values should describe the scene: ${prompt}`,
     },
   ];
 

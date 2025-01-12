@@ -12,6 +12,7 @@ import type {
   ChatResponse,
 } from "./types/index";
 import { useRouter } from "next/navigation";
+import ReactMarkdown from "react-markdown";
 
 export default function VoiceChat(): JSX.Element {
   const router = useRouter();
@@ -108,11 +109,13 @@ export default function VoiceChat(): JSX.Element {
         { sender: "AI", message: aiText },
       ]);
 
+      const sanitizedText = aiText.replace(/\*/g, ""); // Remove asterisks
+
       // Convert response to speech
       const audioResponse = await fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: aiText }),
+        body: JSON.stringify({ text: sanitizedText }),
       });
 
       if (!audioResponse.ok) {
@@ -202,11 +205,13 @@ export default function VoiceChat(): JSX.Element {
       // Add AI response to chat history
       setChatHistory((prev) => [...prev, { sender: "AI", message: aiText }]);
 
+      const sanitizedText = aiText.replace(/\*/g, ""); // Remove asterisks
+
       // Convert response to speech
       const audioResponse = await fetch("/api/text-to-speech", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: aiText }),
+        body: JSON.stringify({ text: sanitizedText }),
       });
 
       if (!audioResponse.ok) {
@@ -272,9 +277,9 @@ export default function VoiceChat(): JSX.Element {
   }, []);
 
   return (
-    <Card className="w-full max-w-4xl mx-auto mt-8 flex flex-col min-h-[38rem] h-auto">
-      <div className="flex flex-1 overflow-hidden">
-        <div className="w-3/5 p-4 overflow-y-auto border-r">
+    <Card className="w-full max-w-4xl mx-auto flex flex-col min-h-[30rem] h-auto">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
+        <div className="w-full md:w-3/5 p-4 overflow-y-auto border-r md:border-r-2">
           {/* Scrollable Chat History */}
           {chatHistory.map((chat, index) => {
             const isLastAIMessage =
@@ -294,7 +299,7 @@ export default function VoiceChat(): JSX.Element {
                       : "bg-gray-300 text-gray-800"
                   }`}
                 >
-                  {chat.message}
+                  <ReactMarkdown>{chat.message}</ReactMarkdown>
                 </span>
                 {isLastAIMessage && audioUrl && (
                   <Button
@@ -320,7 +325,7 @@ export default function VoiceChat(): JSX.Element {
             );
           })}
         </div>
-        <div className="w-2/5 p-4">
+        <div className="w-full md:w-2/5 p-4">
           <div className="flex flex-col items-center space-y-4">
             {/* Generated Image Container */}
             {isImageLoading ? (
@@ -367,13 +372,14 @@ export default function VoiceChat(): JSX.Element {
           </div>
         </div>
       </div>
-      <div className="p-4 border-t flex justify-center items-center space-x-4">
+      <div className="p-4 border-t flex flex-col md:flex-row justify-center items-center space-y-4 md:space-y-0 md:space-x-4">
         {/* Voice Input and Play Buttons */}
         <Button
           onClick={isRecording ? stopRecording : startRecording}
           disabled={isProcessing}
           variant={isRecording ? "destructive" : "default"}
           type="button"
+          className="w-full md:w-auto"
         >
           {isRecording ? <Square className="mr-2" /> : <Mic className="mr-2" />}
           {isRecording ? "Stop Talking" : "Talk to Buddy"}
@@ -385,13 +391,14 @@ export default function VoiceChat(): JSX.Element {
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
           placeholder="Type your message"
-          className="flex-1 border p-2 rounded max-w-md"
+          className="w-full max-w-md border p-2 rounded"
         />
         <Button
           onClick={handleTextSubmit}
           disabled={isProcessing}
           variant="default"
           type="button"
+          className="w-full md:w-auto"
         >
           Send
         </Button>

@@ -14,5 +14,6 @@ export interface AudioRecorderRef {
   export interface ChatResponse {
     response: string;
     error?: string;
+    redirect?: string;
   }
   

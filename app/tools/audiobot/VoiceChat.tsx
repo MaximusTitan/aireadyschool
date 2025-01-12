@@ -11,8 +11,10 @@ import type {
   TranscriptionResponse,
   ChatResponse,
 } from "./types/index";
+import { useRouter } from "next/navigation";
 
 export default function VoiceChat(): JSX.Element {
+  const router = useRouter();
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
@@ -86,9 +88,18 @@ export default function VoiceChat(): JSX.Element {
         body: JSON.stringify({ message: text }),
       });
 
-      const { response: aiText, error: chatError }: ChatResponse =
-        await aiResponse.json();
+      const {
+        response: aiText,
+        error: chatError,
+        redirect,
+      }: ChatResponse = await aiResponse.json();
       if (chatError) throw new Error(chatError);
+
+      if (redirect) {
+        router.push(redirect);
+        return;
+      }
+
       setResponse(aiText);
 
       setChatHistory((prev) => [
@@ -176,8 +187,15 @@ export default function VoiceChat(): JSX.Element {
         body: JSON.stringify({ message: textInput }),
       });
 
-      const { response: aiText, error: chatError }: ChatResponse =
-        await aiResponse.json();
+      const {
+        response: aiText,
+        error: chatError,
+        redirect,
+      }: ChatResponse = await aiResponse.json();
+      if (redirect) {
+        router.push(redirect);
+        return;
+      }
       if (chatError) throw new Error(chatError);
       setResponse(aiText);
 

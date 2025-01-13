@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import RoleSelector from "./RoleSelector";
+import { redirect } from "next/navigation";
 
 const DashboardPage = async () => {
   const supabase = await createClient();
@@ -7,6 +8,10 @@ const DashboardPage = async () => {
     data: { user },
   } = await supabase.auth.getUser();
   const userRole = user?.user_metadata.role ?? null;
+
+  if (!user) {
+    return redirect("/");
+  }
 
   return (
     <div>

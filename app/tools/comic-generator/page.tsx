@@ -1,20 +1,27 @@
 "use client";
 
-import { useState, useRef, useEffect } from 'react';
-import Image from 'next/image';
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter } from "next/navigation";
-import { X, Send, Maximize2, FileJson, FileText, FileIcon as FilePresentation } from 'lucide-react';
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  X,
+  Send,
+  Maximize2,
+  FileJson,
+  FileText,
+  FileIcon as FilePresentation,
+} from "lucide-react";
 import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
-import jsPDF from 'jspdf';
-import pptxgen from 'pptxgenjs';
-
+import jsPDF from "jspdf";
+import pptxgen from "pptxgenjs";
 
 export default function ComicGenerator() {
   const router = useRouter();
-  const [prompt, setPrompt] = useState('');
+  const searchParams = useSearchParams();
+  const [prompt, setPrompt] = useState("");
   const [imageData, setImageData] = useState<{
     urls: string[];
     descriptions: string[];
@@ -23,6 +30,19 @@ export default function ComicGenerator() {
   const [showModal, setShowModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const topic = searchParams.get("topic");
+    if (topic) {
+      setPrompt(decodeURIComponent(topic));
+    }
+  }, [searchParams]);
+
+  useEffect(() => {
+    if (prompt) {
+      handleSubmit();
+    }
+  }, [prompt]);
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -34,24 +54,24 @@ export default function ComicGenerator() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     setImageData({ urls: [], descriptions: [] });
     setLoading(true);
 
     try {
-      const promptResponse = await fetch('/api/prompt-generator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const promptResponse = await fetch("/api/prompt-generator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
 
       const promptData = await promptResponse.json();
       if (!promptResponse.ok) throw new Error(promptData.message);
 
-      const imageResponse = await fetch('/api/image-generator', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const imageResponse = await fetch("/api/image-generator", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompts: promptData.prompts }),
       });
 
@@ -60,17 +80,17 @@ export default function ComicGenerator() {
 
       setImageData({
         urls: imageData.imageUrls,
-        descriptions: promptData.prompts
+        descriptions: promptData.prompts,
       });
     } catch (error) {
-      console.error('Error generating comic:', error);
+      console.error("Error generating comic:", error);
     } finally {
       setLoading(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit(e as unknown as React.FormEvent);
     }
@@ -81,7 +101,7 @@ export default function ComicGenerator() {
   };
 
   const getFileName = (extension: string) => {
-    const sanitizedPrompt = prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const sanitizedPrompt = prompt.replace(/[^a-z0-9]/gi, "_").toLowerCase();
     return `${sanitizedPrompt}.${extension}`;
   };
 
@@ -89,14 +109,16 @@ export default function ComicGenerator() {
     const data = {
       images: imageData.urls.map((url, index) => ({
         url,
-        description: imageData.descriptions[index]
-      }))
+        description: imageData.descriptions[index],
+      })),
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
+    const a = document.createElement("a");
     a.href = url;
-    a.download = getFileName('json');
+    a.download = getFileName("json");
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -105,9 +127,9 @@ export default function ComicGenerator() {
 
   const downloadPDF = async () => {
     const pdf = new jsPDF({
-      orientation: 'landscape',
-      unit: 'px',
-      format: [1024, 576]
+      orientation: "landscape",
+      unit: "px",
+      format: [1024, 576],
     });
 
     const pageWidth = 1024;
@@ -118,25 +140,40 @@ export default function ComicGenerator() {
 
     for (let i = 0; i < imageData.urls.length; i++) {
       if (i > 0) {
-        pdf.addPage([1024, 576], 'landscape');
+        pdf.addPage([1024, 576], "landscape");
       }
 
       // Add image
       const img = await loadImage(imageData.urls[i]);
-      pdf.addImage(img, 'JPEG', margin, margin, imageWidth, imageHeight, undefined, 'FAST');
+      pdf.addImage(
+        img,
+        "JPEG",
+        margin,
+        margin,
+        imageWidth,
+        imageHeight,
+        undefined,
+        "FAST"
+      );
 
       // Add description
       pdf.setFontSize(12);
-      const splitText = pdf.splitTextToSize(imageData.descriptions[i], imageWidth);
-      pdf.text(splitText, margin, pageHeight - margin, { align: 'left', baseline: 'bottom' });
+      const splitText = pdf.splitTextToSize(
+        imageData.descriptions[i],
+        imageWidth
+      );
+      pdf.text(splitText, margin, pageHeight - margin, {
+        align: "left",
+        baseline: "bottom",
+      });
     }
 
-    pdf.save(getFileName('pdf'));
+    pdf.save(getFileName("pdf"));
   };
 
   const loadImage = (url: string): Promise<HTMLImageElement> => {
     return new Promise((resolve, reject) => {
-      const img = document.createElement('img');
+      const img = document.createElement("img");
       img.onload = () => resolve(img);
       img.onerror = reject;
       img.src = url;
@@ -145,26 +182,32 @@ export default function ComicGenerator() {
 
   const downloadPPT = () => {
     const pptx = new pptxgen();
-    pptx.layout = 'LAYOUT_WIDE';
-    pptx.defineLayout({ name: 'COMIC_LAYOUT', width: 10.24, height: 5.76 });
-    pptx.layout = 'COMIC_LAYOUT';
+    pptx.layout = "LAYOUT_WIDE";
+    pptx.defineLayout({ name: "COMIC_LAYOUT", width: 10.24, height: 5.76 });
+    pptx.layout = "COMIC_LAYOUT";
 
     imageData.urls.forEach((url, index) => {
       const slide = pptx.addSlide();
-      slide.addImage({ path: url, x: 0, y: 0, w: '100%', h: '85%' });
-      slide.addText(imageData.descriptions[index], { x: 0, y: '85%', w: '100%', h: '15%', valign: 'middle', align: 'center', fontSize: 14 });
+      slide.addImage({ path: url, x: 0, y: 0, w: "100%", h: "85%" });
+      slide.addText(imageData.descriptions[index], {
+        x: 0,
+        y: "85%",
+        w: "100%",
+        h: "15%",
+        valign: "middle",
+        align: "center",
+        fontSize: 14,
+      });
     });
 
-    pptx.writeFile({ fileName: getFileName('pptx') });
+    pptx.writeFile({ fileName: getFileName("pptx") });
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <div className="p-4 border-b border-border">
         <div className="max-w-6xl mx-auto flex justify-between items-start">
-          <h1 className="text-3xl font-bold">
-            Comic Generator
-          </h1>
+          <h1 className="text-3xl font-bold">Comic Generator</h1>
           <form onSubmit={handleSubmit} className="w-[500px] relative">
             <Textarea
               placeholder="Enter your comic idea here..."
@@ -179,7 +222,9 @@ export default function ComicGenerator() {
             >
               <Send className="w-6 h-6" />
             </button>
-            <p className="text-xs text-muted-foreground mt-1">Press Enter to send, Shift + Enter for new line</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Press Enter to send, Shift + Enter for new line
+            </p>
           </form>
         </div>
       </div>
@@ -231,7 +276,10 @@ export default function ComicGenerator() {
           <div className="flex-1 overflow-y-auto p-8">
             <div className="max-w-7xl mx-auto space-y-12">
               {imageData.urls.map((url, index) => (
-                <div key={index} className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden">
+                <div
+                  key={index}
+                  className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
+                >
                   <div className="w-1/2 relative">
                     <div className="aspect-[16/9] relative">
                       <Image
@@ -264,14 +312,20 @@ export default function ComicGenerator() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
           <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">
-            <button onClick={() => setShowModal(false)} className="absolute top-2 right-2 text-muted-foreground hover:text-foreground">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+            >
               <X className="h-6 w-6" />
             </button>
             <h2 className="text-lg mb-4">
               You do not have enough credits to generate a comic. <br />
               Please recharge your credits.
             </h2>
-            <Button onClick={() => router.push('/credits')} className="bg-primary text-primary-foreground">
+            <Button
+              onClick={() => router.push("/credits")}
+              className="bg-primary text-primary-foreground"
+            >
               Buy Credits
             </Button>
           </div>
@@ -280,4 +334,3 @@ export default function ComicGenerator() {
     </div>
   );
 }
-

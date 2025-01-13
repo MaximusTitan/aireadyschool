@@ -53,22 +53,43 @@ export default function VoiceChat(): JSX.Element {
 
   const { messages, append, isLoading, error } = useChat({
     api: "/api/chat-voice",
-    onResponse: (response) => {},
+    onResponse: (response) => {
+      console.log("Raw response:", response);
+      console.log(
+        "Response headers:",
+        Object.fromEntries(response.headers.entries())
+      );
+    },
     onFinish: (message) => {
+      console.log("Message finished:", message);
+      console.log("Tool invocations:", message.toolInvocations);
+
       if (message.toolInvocations && message.toolInvocations.length > 0) {
         const toolInvocation = message.toolInvocations[0];
+        console.log("Processing tool invocation:", toolInvocation);
 
         if (toolInvocation.state === "call" && toolInvocation.toolName) {
-          const redirectUrl =
+          console.log("Executing redirect for tool:", toolInvocation.toolName);
+          const baseRedirectUrl =
             TOOL_ROUTES[toolInvocation.toolName as keyof typeof TOOL_ROUTES];
-          if (redirectUrl) {
-            router.push(redirectUrl);
+          if (baseRedirectUrl) {
+            let fullRedirectUrl = baseRedirectUrl;
+            if (
+              toolInvocation.args &&
+              typeof toolInvocation.args === "object"
+            ) {
+              const { topic } = toolInvocation.args as { topic?: string };
+              if (topic) {
+                fullRedirectUrl += `?topic=${encodeURIComponent(topic)}`;
+              }
+            }
+            console.log("Redirecting to:", fullRedirectUrl);
+            router.push(fullRedirectUrl);
           }
         }
+      } else {
+        processAIResponse(message.content);
       }
-
-      // Process the response for text-to-speech and image generation
-      processAIResponse(message.content);
     },
     onError: (error) => {
       console.error("Chat error:", {
@@ -209,6 +230,7 @@ export default function VoiceChat(): JSX.Element {
     await append({
       role: "user",
       content: message,
+      id: Date.now().toString(),
     });
   };
 

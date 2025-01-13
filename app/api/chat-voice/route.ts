@@ -27,33 +27,39 @@ const TOOL_ROUTES = {
   'marketing-content-generator': '/tools/marketing-content-generator',
   'report-generator': '/tools/report-generator',
   'school-intelligence': '/tools/school-intelligence',
+} as const;
+
+type ToolName = keyof typeof TOOL_ROUTES;
+
+const tools: Record<ToolName, { description: string; parameters: z.ZodType<any> }> = Object.entries(TOOL_ROUTES).reduce((acc, [key, value]) => {
+  acc[key as ToolName] = {
+    description: `Redirects user to ${key.replace('-', ' ')} tool`,
+    parameters: key === 'comic-generator' 
+      ? z.object({ topic: z.string().optional().describe('The topic or character for the comic') })
+      : z.object({}).describe('No parameters needed'),
+  }
+  return acc;
+}, {} as Record<ToolName, { description: string; parameters: z.ZodType<any> }>);
+
+interface ToolCall {
+  name: ToolName;
+  arguments: Record<string, unknown>;
+  id: string;
 }
 
-const tools: Record<string, { description: string; parameters: z.ZodType<any> }> = Object.entries(TOOL_ROUTES).reduce((acc, [key, value]) => {
-  acc[key] = {
-    description: `Redirects user to ${key.replace('-', ' ')} tool`,
-    parameters: z.object({}).describe('No parameters needed'),
-  }
-  return acc
-}, {} as Record<string, { description: string; parameters: z.ZodType<any> }>)
+interface StreamTextOptions {
+  model: string;
+  messages: any[];
+  system: string;
+  tools: Record<ToolName, { description: string; parameters: z.ZodType<any> }>;
+  onToolCall: (toolCall: ToolCall) => Promise<{ redirect: string } | {}>;
+}
 
 export async function POST(req: Request) {
   try {
     const { messages } = await req.json()
 
-    interface ToolCall {
-      name: string;
-      arguments: any;
-      id: string;
-    }
-
-    interface StreamTextOptions {
-      model: string;
-      messages: any[];
-      system: string;
-      tools: Record<string, { description: string; parameters: z.ZodType<any> }>;
-      onToolCall: (toolCall: ToolCall) => Promise<{ redirect: string } | {}>;
-    }
+    console.log('Received request with messages:', messages)
 
     const result: ReturnType<typeof streamText> = streamText({
       model: openai('gpt-4o'),
@@ -84,6 +90,8 @@ export async function POST(req: Request) {
       Always use the appropriate tool to redirect the user after providing a brief response about the tool's functionality.`,
       tools,
     })
+
+    console.log('Stream created with tools:', Object.keys(tools))
 
     return result.toDataStreamResponse()
   } catch (error) {

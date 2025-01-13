@@ -13,25 +13,71 @@ import type {
 } from "./types/index";
 import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
+import { useChat } from "ai/react";
+
+const TOOL_ROUTES = {
+  presentation: "/tools/presentation",
+  "lesson-planner": "/tools/lesson-planner",
+  "comic-generator": "/tools/comic-generator",
+  "chat-with-docs": "/tools/chat-with-docs",
+  "image-generator": "/tools/image-generator",
+  "video-generator": "/tools/video-generator",
+  "text-tools": "/tools/text-tools",
+  "mcq-generator": "/tools/mcq-generator",
+  "youtube-assistant": "/tools/youtube-assistant",
+  audiobot: "/tools/audiobot",
+  "personalized-lessons": "/tools/personalized-lessons",
+  "research-assistant": "/tools/research-assistant",
+  "study-planner": "/tools/study-planner",
+  evaluator: "/tools/evaluator",
+  "project-helper": "/tools/project-helper",
+  "individualized-education-planner": "/tools/individualized-education-planner",
+  "marketing-content-generator": "/tools/marketing-content-generator",
+  "report-generator": "/tools/report-generator",
+  "school-intelligence": "/tools/school-intelligence",
+};
 
 export default function VoiceChat(): JSX.Element {
   const router = useRouter();
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [transcript, setTranscript] = useState<string>("");
-  const [response, setResponse] = useState<string>("");
   const [audioUrl, setAudioUrl] = useState<string>("");
   const [isAudioPlaying, setIsAudioPlaying] = useState<boolean>(false);
   const [hasPlayed, setHasPlayed] = useState<boolean>(false);
-  const [chatHistory, setChatHistory] = useState<
-    { sender: string; message: string }[]
-  >([]);
-  const [textInput, setTextInput] = useState<string>("");
   const [generatedImage, setGeneratedImage] = useState<string>("");
   const [isImageLoading, setIsImageLoading] = useState<boolean>(false);
   const mediaRecorder = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const { messages, append, isLoading, error } = useChat({
+    api: "/api/chat-voice",
+    onResponse: (response) => {},
+    onFinish: (message) => {
+      if (message.toolInvocations && message.toolInvocations.length > 0) {
+        const toolInvocation = message.toolInvocations[0];
+
+        if (toolInvocation.state === "call" && toolInvocation.toolName) {
+          const redirectUrl =
+            TOOL_ROUTES[toolInvocation.toolName as keyof typeof TOOL_ROUTES];
+          if (redirectUrl) {
+            router.push(redirectUrl);
+          }
+        }
+      }
+
+      // Process the response for text-to-speech and image generation
+      processAIResponse(message.content);
+    },
+    onError: (error) => {
+      console.error("Chat error:", {
+        message: error.message,
+        cause: error.cause,
+        stack: error.stack,
+      });
+    },
+  });
 
   const startRecording = async (): Promise<void> => {
     try {
@@ -80,35 +126,24 @@ export default function VoiceChat(): JSX.Element {
         await transcriptResponse.json();
       if (transcriptError) throw new Error(transcriptError);
       setTranscript(text);
-      setChatHistory((prev) => [...prev, { sender: "User", message: text }]);
 
-      // Get ChatGPT response
-      const aiResponse = await fetch("/api/chat-voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text }),
+      // Send transcribed text to chat
+      await append({
+        role: "user",
+        content: text,
       });
+    } catch (error) {
+      console.error(
+        "Error processing audio:",
+        error instanceof Error ? error.message : "Unknown error"
+      );
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
-      const {
-        response: aiText,
-        error: chatError,
-        redirect,
-      }: ChatResponse = await aiResponse.json();
-      if (chatError) throw new Error(chatError);
-
-      if (redirect) {
-        router.push(redirect);
-        return;
-      }
-
-      setResponse(aiText);
-
-      setChatHistory((prev) => [
-        // Remove the redundant user message addition
-        ...prev,
-        { sender: "AI", message: aiText },
-      ]);
-
+  const processAIResponse = async (aiText: string): Promise<void> => {
+    try {
       const sanitizedText = aiText.replace(/\*/g, ""); // Remove asterisks
 
       // Convert response to speech
@@ -126,22 +161,15 @@ export default function VoiceChat(): JSX.Element {
       const url = URL.createObjectURL(responseAudioBlob);
       setAudioUrl(url);
 
-      // Set isProcessing to false before playing audio
-      setIsProcessing(false);
-
       // Generate image based on AI response
       await generateImage(aiText);
     } catch (error) {
-      console.error(
-        "Error processing audio:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
-    } finally {
-      // Remove or retain setIsProcessing(false) based on new placement
+      console.error("Error processing AI response:", error);
     }
   };
 
   const generateImage = async (prompt: string): Promise<void> => {
+    setIsImageLoading(true);
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
@@ -168,74 +196,20 @@ export default function VoiceChat(): JSX.Element {
     }
   };
 
-  const handleTextSubmit = async (): Promise<void> => {
-    if (!textInput.trim()) return;
-    setIsProcessing(true);
-    setAudioUrl("");
+  const handleSubmit = async (e: React.FormEvent): Promise<void> => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const input = form.elements.namedItem("message") as HTMLInputElement;
+    const message = input.value.trim();
 
-    setGeneratedImage("");
-    setIsImageLoading(true);
+    if (!message) return;
 
-    try {
-      // Add user message immediately
-      setChatHistory((prev) => [
-        ...prev,
-        { sender: "User", message: textInput },
-      ]);
+    input.value = "";
 
-      // Get ChatGPT response
-      const aiResponse = await fetch("/api/chat-voice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: textInput }),
-      });
-
-      const {
-        response: aiText,
-        error: chatError,
-        redirect,
-      }: ChatResponse = await aiResponse.json();
-      if (redirect) {
-        router.push(redirect);
-        return;
-      }
-      if (chatError) throw new Error(chatError);
-      setResponse(aiText);
-
-      // Add AI response to chat history
-      setChatHistory((prev) => [...prev, { sender: "AI", message: aiText }]);
-
-      const sanitizedText = aiText.replace(/\*/g, ""); // Remove asterisks
-
-      // Convert response to speech
-      const audioResponse = await fetch("/api/text-to-speech", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: sanitizedText }),
-      });
-
-      if (!audioResponse.ok) {
-        throw new Error("Failed to generate speech");
-      }
-
-      const responseAudioBlob = await audioResponse.blob();
-      const url = URL.createObjectURL(responseAudioBlob);
-      setAudioUrl(url);
-      setTextInput("");
-
-      // Set isProcessing to false before generating image
-      setIsProcessing(false);
-
-      // Generate image based on AI response
-      await generateImage(aiText);
-    } catch (error) {
-      console.error(
-        "Error processing text input:",
-        error instanceof Error ? error.message : "Unknown error"
-      );
-    } finally {
-      // Remove or retain setIsProcessing(false) based on new placement
-    }
+    await append({
+      role: "user",
+      content: message,
+    });
   };
 
   const playAudioResponse = (): void => {
@@ -263,10 +237,14 @@ export default function VoiceChat(): JSX.Element {
   }, [audioUrl]);
 
   useEffect(() => {
-    if (audioUrl && !textInput) {
+    if (
+      audioUrl &&
+      messages.length > 0 &&
+      messages[messages.length - 1].role === "assistant"
+    ) {
       playAudioResponse();
     }
-  }, [audioUrl]);
+  }, [audioUrl, messages]);
 
   useEffect(() => {
     return () => {
@@ -281,27 +259,25 @@ export default function VoiceChat(): JSX.Element {
       <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         <div className="w-full md:w-3/5 p-4 overflow-y-auto border-r md:border-r-2">
           {/* Scrollable Chat History */}
-          {chatHistory.map((chat, index) => {
-            const isLastAIMessage =
-              chat.sender === "AI" &&
-              index === chatHistory.map((c) => c.sender).lastIndexOf("AI");
-            return (
-              <div
-                key={index}
-                className={`mb-2 ${
-                  chat.sender === "User" ? "text-right" : "text-left"
+          {messages.map((m, index) => (
+            <div
+              key={index}
+              className={`mb-2 ${
+                m.role === "user" ? "text-right" : "text-left"
+              }`}
+            >
+              <span
+                className={`inline-block px-3 py-2 rounded ${
+                  m.role === "user"
+                    ? "bg-rose-500 text-white"
+                    : "bg-gray-300 text-gray-800"
                 }`}
               >
-                <span
-                  className={`inline-block px-3 py-2 rounded ${
-                    chat.sender === "User"
-                      ? "bg-rose-500 text-white"
-                      : "bg-gray-300 text-gray-800"
-                  }`}
-                >
-                  <ReactMarkdown>{chat.message}</ReactMarkdown>
-                </span>
-                {isLastAIMessage && audioUrl && (
+                <ReactMarkdown>{m.content}</ReactMarkdown>
+              </span>
+              {m.role === "assistant" &&
+                index === messages.length - 1 &&
+                audioUrl && (
                   <Button
                     onClick={playAudioResponse}
                     className="ml-2"
@@ -321,9 +297,8 @@ export default function VoiceChat(): JSX.Element {
                     )}
                   </Button>
                 )}
-              </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
         <div className="w-full md:w-2/5 p-4">
           <div className="flex flex-col items-center space-y-4">
@@ -349,7 +324,7 @@ export default function VoiceChat(): JSX.Element {
 
             {/* Avatar Container */}
             <div className="w-full aspect-square flex items-center justify-center rounded-lg">
-              {isProcessing ? (
+              {isProcessing || isLoading ? (
                 <img
                   src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/O-Thinking.gif"
                   alt="Loading"
@@ -376,7 +351,7 @@ export default function VoiceChat(): JSX.Element {
         {/* Voice Input and Play Buttons */}
         <Button
           onClick={isRecording ? stopRecording : startRecording}
-          disabled={isProcessing}
+          disabled={isProcessing || isLoading}
           variant={isRecording ? "destructive" : "default"}
           type="button"
           className="w-full md:w-auto"
@@ -385,23 +360,24 @@ export default function VoiceChat(): JSX.Element {
           {isRecording ? "Stop Talking" : "Talk to Buddy"}
         </Button>
         {/* Add loading indicator */}
-        {isProcessing && <Loader2 className="animate-spin" />}
-        <input
-          type="text"
-          value={textInput}
-          onChange={(e) => setTextInput(e.target.value)}
-          placeholder="Type your message"
-          className="w-full max-w-md border p-2 rounded"
-        />
-        <Button
-          onClick={handleTextSubmit}
-          disabled={isProcessing}
-          variant="default"
-          type="button"
-          className="w-full md:w-auto"
-        >
-          Send
-        </Button>
+        {(isProcessing || isLoading) && <Loader2 className="animate-spin" />}
+        <form onSubmit={handleSubmit} className="flex w-full md:w-auto gap-2">
+          <input
+            type="text"
+            name="message"
+            placeholder="Type your message"
+            className="w-full max-w-md border p-2 rounded"
+            disabled={isProcessing || isLoading}
+          />
+          <Button
+            type="submit"
+            disabled={isProcessing || isLoading}
+            variant="default"
+            className="w-full md:w-auto"
+          >
+            Send
+          </Button>
+        </form>
       </div>
     </Card>
   );

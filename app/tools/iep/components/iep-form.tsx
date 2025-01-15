@@ -89,11 +89,27 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
     onSubmit?.(values);
   }
 
-  const steps = [
+  type FormFieldNames =
+    | "name"
+    | "grade"
+    | "country"
+    | "syllabus"
+    | "strengths"
+    | "weaknesses";
+
+  const steps: { title: string; fields: FormFieldNames[] }[] = [
     { title: "Student Info", fields: ["name", "grade", "country", "syllabus"] },
     { title: "Strengths & Improvements", fields: ["strengths", "weaknesses"] },
     { title: "Generated IEP", fields: [] },
   ];
+
+  const handleNext = async () => {
+    const currentStepFields = steps[currentStep].fields;
+    const isValid = await form.trigger(currentStepFields);
+    if (isValid) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -117,7 +133,11 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                       <FormItem>
                         <FormLabel>Student Name</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter student name" {...field} />
+                          <Input
+                            placeholder="Enter student name"
+                            {...field}
+                            required
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -130,7 +150,11 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                       <FormItem>
                         <FormLabel>Grade</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter grade" {...field} />
+                          <Input
+                            placeholder="Enter grade"
+                            {...field}
+                            required
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -143,7 +167,11 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                       <FormItem>
                         <FormLabel>Country</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter country" {...field} />
+                          <Input
+                            placeholder="Enter country"
+                            {...field}
+                            required
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -156,7 +184,11 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                       <FormItem>
                         <FormLabel>Syllabus</FormLabel>
                         <FormControl>
-                          <Input placeholder="Enter syllabus" {...field} />
+                          <Input
+                            placeholder="Enter syllabus"
+                            {...field}
+                            required
+                          />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -181,9 +213,10 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                         <FormLabel>Strengths</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Enter student's strengths"
+                            placeholder="She is smart and has a good grasping power. She is good in Numerical calculations."
                             className="min-h-[100px]"
                             {...field}
+                            required
                           />
                         </FormControl>
                         <FormMessage />
@@ -198,9 +231,10 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                         <FormLabel>Areas for Improvement</FormLabel>
                         <FormControl>
                           <Textarea
-                            placeholder="Enter areas for improvement"
+                            placeholder="Does not submit her assignments despite repeated reminders. She struggles in algebra and word problems."
                             className="min-h-[100px]"
                             {...field}
+                            required
                           />
                         </FormControl>
                         <FormMessage />
@@ -232,10 +266,7 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
               </Button>
             )}
             {currentStep < 1 && (
-              <Button
-                type="button"
-                onClick={() => setCurrentStep(currentStep + 1)}
-              >
+              <Button type="button" onClick={handleNext}>
                 Next
               </Button>
             )}

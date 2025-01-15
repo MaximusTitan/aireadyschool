@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { generateIEP } from "../utils/generateIEP";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import ReactMarkdown from "react-markdown";
@@ -17,31 +15,22 @@ interface StudentInfo {
 
 interface IndividualizedEducationPlanProps {
   studentInfo: StudentInfo;
+  generatedIEP: string | null;
 }
 
-export default function IndividualizedEducationPlan({
+export function IndividualizedEducationPlan({
   studentInfo,
+  generatedIEP,
 }: IndividualizedEducationPlanProps) {
-  const [iepContent, setIepContent] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchIEP = async () => {
-      const generatedIEP = await generateIEP(studentInfo);
-      setIepContent(generatedIEP);
-    };
-
-    fetchIEP();
-  }, [studentInfo]);
-
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle>Individualized Education Plan (IEP)</CardTitle>
       </CardHeader>
       <CardContent>
-        {iepContent ? (
+        {generatedIEP ? (
           <ReactMarkdown className="prose max-w-none">
-            {iepContent}
+            {generatedIEP}
           </ReactMarkdown>
         ) : (
           <div className="space-y-2">

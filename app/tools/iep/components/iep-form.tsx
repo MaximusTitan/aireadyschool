@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2 } from "lucide-react";
 import {
@@ -19,9 +18,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Stepper } from "./stepper";
-import ReactMarkdown from "react-markdown";
+import { IndividualizedEducationPlan } from "./IndividualizedEducationPlan";
 
-// Define formSchema within the same file
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   grade: z.string().min(1, { message: "Grade is required." }),
@@ -34,22 +32,25 @@ const formSchema = z.object({
   strengths: z
     .string()
     .min(10, { message: "Strengths must be at least 10 characters." }),
-  weaknesses: z.string().min(10, {
-    message: "Areas for improvement must be at least 10 characters.",
-  }),
+  weaknesses: z
+    .string()
+    .min(10, {
+      message: "Areas for improvement must be at least 10 characters.",
+    }),
 });
 
-// Define IEPFormProps within the same file
+type FormData = z.infer<typeof formSchema>;
+
 interface IEPFormProps {
-  onSubmit?: (data: z.infer<typeof formSchema>) => void;
+  onSubmit?: (data: FormData) => void;
 }
 
 export default function IEPForm({ onSubmit }: IEPFormProps) {
   const [loading, setLoading] = useState(false);
-  const [generatedIEP, setGeneratedIEP] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
+  const [generatedIEP, setGeneratedIEP] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
@@ -61,15 +62,18 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
     },
   });
 
-  async function onSubmitHandler(values: z.infer<typeof formSchema>) {
-    setLoading(true);
+  const steps = [
+    { title: "Student Info", fields: ["name", "grade", "country", "syllabus"] },
+    { title: "Strengths & Improvements", fields: ["strengths", "weaknesses"] },
+    { title: "Generated IEP", fields: [] },
+  ];
 
+  async function generateIEP(values: FormData) {
+    setLoading(true);
     try {
       const response = await fetch("/api/generate-iep", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
 
@@ -85,40 +89,32 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
     } finally {
       setLoading(false);
     }
-
-    onSubmit?.(values);
   }
 
-  type FormFieldNames =
-    | "name"
-    | "grade"
-    | "country"
-    | "syllabus"
-    | "strengths"
-    | "weaknesses";
-
-  const steps: { title: string; fields: FormFieldNames[] }[] = [
-    { title: "Student Info", fields: ["name", "grade", "country", "syllabus"] },
-    { title: "Strengths & Improvements", fields: ["strengths", "weaknesses"] },
-    { title: "Generated IEP", fields: [] },
-  ];
-
   const handleNext = async () => {
-    const currentStepFields = steps[currentStep].fields;
+    const currentStepFields = steps[currentStep].fields as Array<
+      keyof FormData
+    >;
     const isValid = await form.trigger(currentStepFields);
     if (isValid) {
-      setCurrentStep(currentStep + 1);
+      if (currentStep === 1) {
+        const values = form.getValues();
+        await generateIEP(values);
+      } else {
+        setCurrentStep(currentStep + 1);
+      }
     }
+  };
+
+  const handlePrevious = () => {
+    setCurrentStep(currentStep - 1);
   };
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
       <Stepper steps={steps} currentStep={currentStep} />
       <Form {...form}>
-        <form
-          onSubmit={form.handleSubmit(onSubmitHandler)}
-          className="space-y-8"
-        >
+        <form onSubmit={form.handleSubmit(() => {})} className="space-y-8">
           {currentStep === 0 && (
             <Card>
               <CardHeader>
@@ -126,74 +122,29 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <FormField
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Student Name</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter student name"
-                            {...field}
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="grade"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Grade</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter grade"
-                            {...field}
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="country"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Country</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter country"
-                            {...field}
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="syllabus"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Syllabus</FormLabel>
-                        <FormControl>
-                          <Input
-                            placeholder="Enter syllabus"
-                            {...field}
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {["name", "grade", "country", "syllabus"].map((fieldName) => (
+                    <FormField
+                      key={fieldName}
+                      control={form.control}
+                      name={fieldName as keyof FormData}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {fieldName.charAt(0).toUpperCase() +
+                              fieldName.slice(1)}
+                          </FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder={`Enter ${fieldName}`}
+                              {...field}
+                              required
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -205,80 +156,60 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="strengths"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Strengths</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="She is smart and has a good grasping power. She is good in Numerical calculations."
-                            className="min-h-[100px]"
-                            {...field}
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="weaknesses"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Areas for Improvement</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            placeholder="Does not submit her assignments despite repeated reminders. She struggles in algebra and word problems."
-                            className="min-h-[100px]"
-                            {...field}
-                            required
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  {["strengths", "weaknesses"].map((fieldName) => (
+                    <FormField
+                      key={fieldName}
+                      control={form.control}
+                      name={fieldName as keyof FormData}
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>
+                            {fieldName === "strengths"
+                              ? "Strengths"
+                              : "Areas for Improvement"}
+                          </FormLabel>
+                          <FormControl>
+                            <Textarea
+                              placeholder={
+                                fieldName === "strengths"
+                                  ? "He is smart and has a good grasping power. He is good in Numerical calculations."
+                                  : "Does not submit his assignments despite repeated reminders. He struggles in algebra and word problems."
+                              }
+                              className="min-h-[100px]"
+                              {...field}
+                              required
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>
           )}
-          {currentStep === 2 && generatedIEP && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Generated IEP</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ReactMarkdown>{generatedIEP}</ReactMarkdown>
-              </CardContent>
-            </Card>
+          {currentStep === 2 && (
+            <IndividualizedEducationPlan
+              studentInfo={form.getValues()}
+              generatedIEP={generatedIEP}
+            />
           )}
           <div className="flex justify-between">
-            {currentStep > 0 && currentStep < 2 && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setCurrentStep(currentStep - 1)}
-              >
+            {currentStep > 0 && (
+              <Button type="button" variant="outline" onClick={handlePrevious}>
                 Previous
               </Button>
             )}
-            {currentStep < 1 && (
-              <Button type="button" onClick={handleNext}>
-                Next
-              </Button>
-            )}
-            {currentStep === 1 && (
-              <Button type="submit" disabled={loading}>
+            {currentStep < 2 && (
+              <Button type="button" onClick={handleNext} disabled={loading}>
                 {loading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Generating IEP...
                   </>
                 ) : (
-                  "Generate IEP"
+                  "Next"
                 )}
               </Button>
             )}

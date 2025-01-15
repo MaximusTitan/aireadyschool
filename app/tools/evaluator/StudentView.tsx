@@ -298,8 +298,8 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
           ...prev,
           [questionId]: {
             ...prev[questionId],
-            self_score: feedbackData.self_score ?? null,
-            self_feedback: feedbackData.self_feedback ?? null,
+            self_score: feedbackData?.self_score ?? null,
+            self_feedback: feedbackData?.self_feedback ?? null,
           }
         }));
       } else {

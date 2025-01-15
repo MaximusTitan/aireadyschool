@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Question, Answer, updateAnswer, fetchAIFeedback, updateAIFeedback, AIFeedback, fetchLatestAnswer, fetchQuestionWithRubrics, updateSelfRubrics, updateSelfFeedback } from '@/utils/supabase/operations'
+import { Question, Answer, updateAnswer, fetchAIFeedback, updateAIFeedback, AIFeedback, fetchLatestAnswer, fetchQuestionWithRubrics } from '@/utils/supabase/operations'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Trash2, Pencil, Check, X, Sparkles, BotIcon as Robot } from 'lucide-react'
 import {
@@ -47,7 +47,6 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
   const [editError, setEditError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<Record<string, AIFeedback>>({});
   const [isLoadingFeedback, setIsLoadingFeedback] = useState<Record<string, boolean>>({});
-  const [aiFeedback, setAiFeedback] = useState<string | null>(null);
 
   useEffect(() => {
     Object.values(answers).forEach(answer => {
@@ -262,7 +261,7 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
 
     try {
       let feedbackData = await fetchAIFeedback(answer.id);
-      if (feedbackData && (feedbackData.self_score === null && feedbackData.self_feedback === null)) {
+      if (feedbackData && feedbackData.self_score === null && feedbackData.self_feedback === null) {
         // All fields are null, call /api/ai-feedback
         const question = questions.find(q => q.id === questionId);
         if (question) {
@@ -278,17 +277,19 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
             }),
           });
           if (!response.ok) throw new Error('Failed to generate AI feedback');
-          feedbackData = await response.json();
+          const data: AIFeedback = await response.json();
+          feedbackData = {
+            ...feedbackData,
+            self_score: data.self_score,
+            self_feedback: data.self_feedback,
+          };
         }
       }
 
       if (feedbackData) {
         setFeedback(prev => ({
           ...prev,
-          [questionId]: {
-            ...prev[questionId],
-            ...feedbackData
-          }
+          [questionId]: feedbackData
         }));
       } else {
         throw new Error('No self-generated feedback available');
@@ -298,7 +299,7 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
       setFeedback(prev => ({
         ...prev,
         [questionId]: {
-          ...prev[questionId],
+          ...feedback[questionId],
           self_score: null,
           self_feedback: 'Failed to load or generate self-generated feedback. Please try again.',
         }
@@ -325,7 +326,7 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
       });
 
       if (!response.ok) throw new Error('Failed to generate AI feedback');
-      const data = await response.json();
+      const data: AIFeedback = await response.json();
       
       setFeedback(prev => ({
         ...prev,
@@ -348,6 +349,28 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
       }));
     } finally {
       setIsLoadingFeedback(prev => ({ ...prev, [questionId]: false }));
+    }
+  };
+
+  const deleteFeedback = async (questionId: string, feedbackType: 'human' | 'ai' | 'self') => {
+    const answer = answers[questionId];
+    if (!answer) return;
+
+    try {
+      const updatedFeedback: AIFeedback = {
+        ...feedback[questionId],
+        [`${feedbackType}_obtained_score`]: null,
+        [`${feedbackType}_feedback`]: null,
+      };
+
+      await updateAIFeedback(answer.id, updatedFeedback, feedbackType === 'human');
+
+      setFeedback(prev => ({
+        ...prev,
+        [questionId]: updatedFeedback
+      }));
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
     }
   };
 
@@ -389,13 +412,21 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
                           {isLoadingFeedback[question.id] ? (
                             <p>Generating AI feedback...</p>
                           ) : feedback[question.id] && feedback[question.id].self_score !== null ? (
-                            <>
+                            <div className="relative">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="absolute top-0 right-0"
+                                onClick={() => deleteFeedback(question.id, 'self')}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
                               <p className="font-semibold mb-2">
                                 Score: {feedback[question.id].self_score}/{question.score}
                               </p>
                               <p className="font-semibold mb-2">AI Feedback:</p>
                               <p>{feedback[question.id].self_feedback}</p>
-                            </>
+                            </div>
                           ) : (
                             <p>No AI feedback available. Please try again.</p>
                           )}
@@ -425,22 +456,23 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
                             {isLoadingFeedback[question.id] ? (
                               <p>Loading feedback...</p>
                             ) : feedback[question.id] ? (
-                              <div>
-                                {feedback[question.id].human_obtained_score !== null ? (
+                              <div className="relative">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="absolute top-0 right-0"
+                                  onClick={() => deleteFeedback(question.id, feedback[question.id].human_obtained_score ? 'human' : 'ai')}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                                <p className="font-semibold mb-2">Human Evaluation and Feedback:</p>
+                                {feedback[question.id].human_obtained_score !== null || feedback[question.id].ai_obtained_score !== null ? (
                                   <>
-                                    <p className="font-semibold mb-2">
-                                      Human Score: {feedback[question.id].human_obtained_score}/{question.score}
+                                    <p className="mb-2">
+                                      Score: {feedback[question.id].human_obtained_score || feedback[question.id].ai_obtained_score}/{question.score}
                                     </p>
-                                    <p className="font-semibold mb-2">Human Feedback:</p>
-                                    <p>{feedback[question.id].human_feedback}</p>
-                                  </>
-                                ) : feedback[question.id].ai_obtained_score !== null ? (
-                                  <>
-                                    <p className="font-semibold mb-2">
-                                      AI Score: {feedback[question.id].ai_obtained_score}/{question.score}
-                                    </p>
-                                    <p className="font-semibold mb-2">AI Feedback:</p>
-                                    <p>{feedback[question.id].ai_feedback}</p>
+                                    <p className="mb-2">Feedback:</p>
+                                    <p>{feedback[question.id].human_feedback || feedback[question.id].ai_feedback}</p>
                                   </>
                                 ) : (
                                   <p>No feedback available</p>

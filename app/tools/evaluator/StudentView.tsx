@@ -204,7 +204,14 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
       if (feedbackData) {
         setFeedback(prev => ({
           ...prev,
-          [questionId]: feedbackData
+          [questionId]: {
+            ai_obtained_score: feedbackData.ai_obtained_score ?? null,
+            ai_feedback: feedbackData.ai_feedback ?? null,
+            human_obtained_score: feedbackData.human_obtained_score ?? null,
+            human_feedback: feedbackData.human_feedback ?? null,
+            self_score: feedbackData.self_score ?? null,
+            self_feedback: feedbackData.self_feedback ?? null
+          }
         }));
       } else {
         throw new Error('No feedback available');
@@ -289,7 +296,11 @@ export default function StudentView({ questions, answers, submitAnswer, deleteAn
       if (feedbackData) {
         setFeedback(prev => ({
           ...prev,
-          [questionId]: feedbackData
+          [questionId]: {
+            ...prev[questionId],
+            self_score: feedbackData.self_score ?? null,
+            self_feedback: feedbackData.self_feedback ?? null,
+          }
         }));
       } else {
         throw new Error('No self-generated feedback available');

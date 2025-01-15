@@ -19,7 +19,7 @@ const TOOL_ROUTES = {
   'youtube-assistant': '/tools/youtube-assistant',
   'audiobot': '/tools/audiobot',
   'personalized-lessons': '/tools/personalized-lessons',
-  'research-assistant': '/tools/research-assistant',
+  'research-assistant': '/tools/research',
   'study-planner': '/tools/study-planner',
   'evaluator': '/tools/evaluator',
   'project-helper': '/tools/project-helper',

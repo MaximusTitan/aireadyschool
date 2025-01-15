@@ -1,77 +1,93 @@
 "use client";
 
-import React, { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
+import Header from "./components/Header";
+import ClassSelection from "./components/ClassSelection";
+import SubjectSelection from "./components/SubjectSelection";
+import TopicInput from "./components/TopicInput";
+import AssessmentTypeSelection from "./components/AssessmentTypeSelection";
+import DifficultySelection from "./components/DifficultySelection";
+import QuestionCount from "./components/QuestionCount";
+import GenerateButton from "./components/GenerateButton";
+import Assessment from "./components/Assessment";
+import Footer from "./components/Footer";
+import { createClient } from "@/utils/supabase/client";
 
-const MCQGeneratorPage = () => {
+const supabase = createClient();
+
+export default function Home() {
   const [formData, setFormData] = useState({
-    grade: "",
+    classLevel: "Class 8",
+    subject: "Math",
     topic: "",
-    numberOfQuestions: "",
+    assessmentType: "mcq",
+    difficulty: "Medium",
+    questionCount: 5,
   });
+  const [assessment, setAssessment] = useState<any[] | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [showResults, setShowResults] = useState(false);
+  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
+  const [savedAssessments, setSavedAssessments] = useState<
+    Array<{ id: string; subject: string; topic: string }>
+  >([]);
 
-  interface Question {
-    question: string;
-    options: string[];
-    correctAnswer: string;
-  }
+  useEffect(() => {
+    fetchSavedAssessments();
+  }, []);
 
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<{ [key: number]: string }>({});
-  const [score, setScore] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
+  useEffect(() => {
+    const testDatabaseConnection = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("assessments")
+          .select("id")
+          .limit(1);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-    // Reset states when inputs change
-    setQuestions([]);
-    setAnswers({});
-    setScore(null);
-    setError(null);
-    setSubmitted(false);
+        if (error) {
+          throw error;
+        }
+
+        console.log("Successfully connected to the assessments table:", data);
+      } catch (error) {
+        console.error("Error connecting to the assessments table:", error);
+      }
+    };
+
+    testDatabaseConnection();
+  }, []);
+
+  const fetchSavedAssessments = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        throw error;
+      }
+
+      setSavedAssessments(data || []);
+    } catch (error) {
+      console.error("Error fetching saved assessments:", error);
+      setError("Failed to fetch saved assessments. Please try again.");
+    }
   };
 
-  const validateForm = () => {
-    if (!formData.grade.trim()) return "Please enter a grade level";
-    if (!formData.topic.trim()) return "Please enter a topic";
-    if (!formData.numberOfQuestions.trim())
-      return "Please enter number of questions";
-    if (
-      isNaN(Number(formData.numberOfQuestions)) ||
-      Number(formData.numberOfQuestions) < 1
-    ) {
-      return "Please enter a valid number of questions";
-    }
-    if (Number(formData.numberOfQuestions) > 10) {
-      return "Please enter a maximum of 10 questions";
-    }
-    return null;
-  };
-
-  const generateQuestions = async () => {
-    const validationError = validateForm();
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
+    setAssessment(null);
+    setShowResults(false);
+    setUserAnswers([]);
 
     try {
-      const response = await fetch("/api/generate-mcq", {
+      console.log("Submitting form data:", formData);
+
+      const response = await fetch("/api/generate-assessment", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -79,206 +95,180 @@ const MCQGeneratorPage = () => {
         body: JSON.stringify(formData),
       });
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
+      console.log("Response status:", response.status);
 
       const data = await response.json();
 
-      if (!data.questions && !Array.isArray(data.questions)) {
-        throw new Error("Invalid response format");
+      console.log("Response data:", data);
+
+      if (!response.ok) {
+        throw new Error(data.error || `HTTP error! status: ${response.status}`);
       }
 
-      setQuestions(data.questions);
-      setAnswers({});
-      setScore(null);
-      setSubmitted(false);
+      if (!data.assessment || !Array.isArray(data.assessment)) {
+        throw new Error("Invalid assessment data received");
+      }
+
+      setAssessment(data.assessment);
+      fetchSavedAssessments(); // Refresh the list of saved assessments
     } catch (error) {
+      console.error("Error in handleSubmit:", error);
       setError(
-        error instanceof Error ? error.message : "Failed to generate questions"
+        `An error occurred: ${error instanceof Error ? error.message : "Unknown error"}. Please check the console for more details and try again.`
       );
-      setQuestions([]);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const handleAnswerSelect = (questionId: number, answer: string) => {
-    setAnswers((prev) => ({
-      ...prev,
-      [questionId]: answer,
-    }));
+  interface UserAnswer {
+    questionIndex: number;
+    selectedAnswer: string;
+  }
+
+  const handleAnswerSubmit = (answers: UserAnswer[]): void => {
+    setUserAnswers(answers);
+    setShowResults(true);
   };
 
-  const calculateScore = () => {
-    let correct = 0;
-    questions.forEach((question, index) => {
-      if (answers[index] === question.correctAnswer) {
-        correct++;
+  interface SavedAssessment {
+    id: string;
+    class_level: string;
+    subject: string;
+    topic: string;
+    assessment_type: string;
+    difficulty: string;
+    questions: any[]; // Type can be more specific based on your question structure
+  }
+
+  const handleLoadAssessment = async (id: string): Promise<void> => {
+    try {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", id)
+        .single<SavedAssessment>();
+
+      if (error) {
+        throw error;
       }
-    });
-    setScore((correct / questions.length) * 100);
-    setSubmitted(true);
+
+      setAssessment(data.questions);
+      setFormData({
+        classLevel: data.class_level,
+        subject: data.subject,
+        topic: data.topic,
+        assessmentType: data.assessment_type,
+        difficulty: data.difficulty,
+        questionCount: data.questions.length,
+      });
+      setShowResults(false);
+      setUserAnswers([]);
+    } catch (error: any) {
+      console.error("Error loading assessment:", error);
+      setError(`Failed to load assessment: ${error.message}`);
+    }
   };
 
   return (
-    <div className="container mx-auto p-4 max-w-3xl">
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-rose-500">
-            Multiple Choice Question Generator
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid gap-4">
-            <div>
-              <Label htmlFor="grade">Grade Level</Label>
-              <Input
-                id="grade"
-                name="grade"
-                placeholder="Enter grade (e.g., 10)"
-                value={formData.grade}
-                onChange={handleInputChange}
-                className="dark:bg-neutral-800"
-              />
-            </div>
-            <div>
-              <Label htmlFor="topic">Topic</Label>
-              <Input
-                id="topic"
-                name="topic"
-                placeholder="Enter topic (e.g., World War II)"
-                value={formData.topic}
-                onChange={handleInputChange}
-                className="dark:bg-neutral-800"
-              />
-            </div>
-            <div>
-              <Label htmlFor="numberOfQuestions">
-                Number of Questions (Max 10)
-              </Label>
-              <Input
-                id="numberOfQuestions"
-                name="numberOfQuestions"
-                type="number"
-                min="1"
-                max="10"
-                placeholder="Enter number of questions"
-                value={formData.numberOfQuestions}
-                onChange={handleInputChange}
-                className="dark:bg-neutral-800"
-              />
-            </div>
-          </div>
-
-          {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-
-          <Button
-            onClick={generateQuestions}
-            className="w-full bg-rose-500 hover:bg-rose-600 text-white"
-            disabled={loading}
-          >
-            {loading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Generating Questions
-              </>
-            ) : (
-              "Generate Questions"
-            )}
-          </Button>
-        </CardContent>
-      </Card>
-
-      {questions.length > 0 && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-rose-500">
-              Questions
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {questions.map((question, index) => (
-              <div key={index} className="space-y-4">
-                <p className="font-medium">
-                  {index + 1}. {question.question}
-                </p>
-                <RadioGroup
-                  onValueChange={(value) => handleAnswerSelect(index, value)}
-                  value={answers[index]}
-                  className="space-y-2"
-                >
-                  {question.options.map((option, optIndex) => (
-                    <div key={optIndex} className="flex items-center space-x-2">
-                      <RadioGroupItem
-                        value={option}
-                        id={`q${index}-opt${optIndex}`}
-                        disabled={submitted}
-                      />
-                      <Label
-                        htmlFor={`q${index}-opt${optIndex}`}
-                        className={`
-                          ${submitted && option === question.correctAnswer ? "text-green-500 font-medium" : ""}
-                          ${submitted && answers[index] === option && option !== question.correctAnswer ? "text-red-500 line-through" : ""}
-                        `}
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col justify-between">
+      <Header />
+      <main className="container mx-auto px-4 py-8 flex-grow bg-white">
+        <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 max-w-2xl mx-auto">
+          {!assessment ? (
+            <>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <ClassSelection
+                  value={formData.classLevel}
+                  onChange={(value) =>
+                    setFormData({ ...formData, classLevel: value })
+                  }
+                />
+                <SubjectSelection
+                  value={formData.subject}
+                  onChange={(value) =>
+                    setFormData({ ...formData, subject: value })
+                  }
+                />
+                <TopicInput
+                  value={formData.topic}
+                  onChange={(value) =>
+                    setFormData({ ...formData, topic: value })
+                  }
+                />
+                <AssessmentTypeSelection
+                  value={formData.assessmentType}
+                  onChange={(value) =>
+                    setFormData({ ...formData, assessmentType: value })
+                  }
+                />
+                <DifficultySelection
+                  value={formData.difficulty}
+                  onChange={(value) =>
+                    setFormData({ ...formData, difficulty: value })
+                  }
+                />
+                <QuestionCount
+                  value={formData.questionCount}
+                  onChange={(value) =>
+                    setFormData({ ...formData, questionCount: value })
+                  }
+                />
+                <GenerateButton
+                  isLoading={isLoading}
+                  className="bg-rose-500 hover:bg-rose-600 text-white"
+                />
+              </form>
+              <div className="mt-8">
+                <h2 className="text-xl font-semibold mb-4">
+                  Saved Assessments
+                </h2>
+                {savedAssessments.length > 0 ? (
+                  <ul className="space-y-2">
+                    {savedAssessments.map((savedAssessment) => (
+                      <li
+                        key={savedAssessment.id}
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
                       >
-                        {option}
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-                {submitted && (
-                  <div className="text-sm text-neutral-500">
-                    {answers[index] === question.correctAnswer ? (
-                      <p className="text-green-500">Correct!</p>
-                    ) : (
-                      <p className="text-red-500">
-                        Incorrect. The correct answer is:{" "}
-                        {question.correctAnswer}
-                      </p>
-                    )}
-                  </div>
+                        <span>
+                          {savedAssessment.subject} - {savedAssessment.topic}
+                        </span>
+                        <button
+                          onClick={() =>
+                            handleLoadAssessment(savedAssessment.id)
+                          }
+                          className="bg-rose-500 hover:bg-rose-600 text-white px-2 py-1 rounded"
+                        >
+                          Load
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p>No saved assessments found.</p>
                 )}
               </div>
-            ))}
-            {!submitted && questions.length > 0 && (
-              <Button
-                onClick={calculateScore}
-                className="w-full bg-rose-500 hover:bg-rose-600 text-white"
-                disabled={Object.keys(answers).length !== questions.length}
-              >
-                Submit Answers
-              </Button>
-            )}
-            {score !== null && (
-              <div className="text-center mt-4 space-y-4">
-                <p className="text-2xl font-bold">
-                  Your Score: {score.toFixed(1)}%
-                </p>
-                <Button
-                  onClick={() => {
-                    setQuestions([]);
-                    setAnswers({});
-                    setScore(null);
-                    setSubmitted(false);
-                  }}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Try Another Quiz
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
+            </>
+          ) : (
+            <Assessment
+              assessment={assessment}
+              assessmentType={formData.assessmentType}
+              onSubmit={handleAnswerSubmit}
+              showResults={showResults}
+              userAnswers={userAnswers}
+            />
+          )}
+          {error && (
+            <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+              <p>{error}</p>
+              <p className="mt-2 text-sm">
+                Please check the browser console for more details.
+              </p>
+            </div>
+          )}
+        </div>
+      </main>
+      <Footer />
     </div>
   );
-};
-
-export default MCQGeneratorPage;
+}

@@ -147,7 +147,7 @@ const ToolsPage = () => {
         route: "/tools/text-tools",
       },
       {
-        title: "MCQ Generator",
+        title: "Assessment Generator",
         description:
           "Create and share interactive multiple choice questions for students",
         route: "/tools/mcq-generator",
@@ -180,7 +180,7 @@ const ToolsPage = () => {
       {
         title: "Research Assistant",
         description: "Get help with your research",
-        route: "/tools/research-assistant",
+        route: "/tools/research",
       },
       {
         title: "Study Planner",
@@ -240,7 +240,7 @@ const ToolsPage = () => {
         route: "/tools/evaluator",
       },
       {
-        title: "MCQ Generator",
+        title: "Assessment Generator",
         description: "Create interactive assessments",
         route: "/tools/mcq-generator",
       },

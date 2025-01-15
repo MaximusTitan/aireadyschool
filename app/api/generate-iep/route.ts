@@ -4,17 +4,18 @@ import { openai } from "@ai-sdk/openai";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { name, grade, country, syllabus, strengths, weaknesses } = data;
+    const { name, grade, country, board, strengths, weaknesses } = data;
 
     const prompt = `
       Create a detailed Individualized Education Plan (IEP) for the following student:
       Name: ${name}
       Grade: ${grade}
       Country: ${country}
-      Syllabus: ${syllabus}
+      Board: ${board}
       Strengths: ${strengths}
       Weaknesses: ${weaknesses}
 
+      Give me the actual implementation and activities that can be done to help the student improve in the following areas.
       Please include the following sections:
       1. Student Information
       2. Present Levels of Performance

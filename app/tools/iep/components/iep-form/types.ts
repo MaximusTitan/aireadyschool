@@ -11,9 +11,9 @@ const formSchema = z.object({
   country: z
     .string()
     .min(2, { message: "Country must be at least 2 characters." }),
-  syllabus: z
+  board: z
     .string()
-    .min(2, { message: "Syllabus must be at least 2 characters." }),
+    .min(2, { message: "Board must be at least 2 characters." }),
   strengths: z
     .string()
     .min(10, { message: "Strengths must be at least 10 characters." }),

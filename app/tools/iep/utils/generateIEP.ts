@@ -5,7 +5,7 @@ export async function generateIEP(studentInfo: {
   name: string;
   grade: string;
   country: string;
-  syllabus: string;
+  board: string;
   strengths: string;
   weaknesses: string;
 }) {
@@ -14,7 +14,7 @@ export async function generateIEP(studentInfo: {
     Name: ${studentInfo.name}
     Grade: ${studentInfo.grade}
     Country: ${studentInfo.country}
-    Syllabus: ${studentInfo.syllabus}
+    Board: ${studentInfo.board}
     Strengths: ${studentInfo.strengths}
     Weaknesses: ${studentInfo.weaknesses}
 

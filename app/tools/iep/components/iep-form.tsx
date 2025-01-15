@@ -26,17 +26,13 @@ const formSchema = z.object({
   country: z
     .string()
     .min(2, { message: "Country must be at least 2 characters." }),
-  syllabus: z
-    .string()
-    .min(2, { message: "Syllabus must be at least 2 characters." }),
+  board: z.string().min(2, { message: "Board must be at least 2 characters." }),
   strengths: z
     .string()
     .min(10, { message: "Strengths must be at least 10 characters." }),
-  weaknesses: z
-    .string()
-    .min(10, {
-      message: "Areas for improvement must be at least 10 characters.",
-    }),
+  weaknesses: z.string().min(10, {
+    message: "Areas for improvement must be at least 10 characters.",
+  }),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -56,14 +52,14 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
       name: "",
       grade: "",
       country: "",
-      syllabus: "",
+      board: "",
       strengths: "",
       weaknesses: "",
     },
   });
 
   const steps = [
-    { title: "Student Info", fields: ["name", "grade", "country", "syllabus"] },
+    { title: "Student Info", fields: ["name", "grade", "country", "board"] },
     { title: "Strengths & Improvements", fields: ["strengths", "weaknesses"] },
     { title: "Generated IEP", fields: [] },
   ];
@@ -122,7 +118,7 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
               </CardHeader>
               <CardContent>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {["name", "grade", "country", "syllabus"].map((fieldName) => (
+                  {["name", "grade", "country", "board"].map((fieldName) => (
                     <FormField
                       key={fieldName}
                       control={form.control}

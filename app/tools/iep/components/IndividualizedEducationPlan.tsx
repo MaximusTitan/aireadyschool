@@ -8,7 +8,7 @@ interface StudentInfo {
   name: string;
   grade: string;
   country: string;
-  syllabus: string;
+  board: string;
   strengths: string;
   weaknesses: string;
 }

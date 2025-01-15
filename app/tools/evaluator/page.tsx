@@ -4,24 +4,13 @@ import { useEffect, useState } from 'react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import TeacherView from './TeacherView'
 import StudentView from './StudentView'
-import { fetchQuestions, fetchAnswers, addQuestion, deleteQuestion, submitAnswer, deleteAnswer } from '@/utils/supabase/operations'
+import { fetchQuestions, fetchAnswers, addQuestion, deleteQuestion, submitAnswer, deleteAnswer, Question as QuestionType, Answer as AnswerType } from '@/utils/supabase/operations'
 
-export type Question = {
-  id: string;
-  text: string;
-}
-
-export type Answer = {
-  id: string;
-  question_id: string;
-  text: string;
-}
-
-export type Answers = Record<string, Answer>;
+export type Answers = Record<string, AnswerType>;
 
 export default function EvaluatorPage() {
-  const [userType, setUserType] = useState<'student' | 'teacher'>('student')
-  const [questions, setQuestions] = useState<Question[]>([])
+  const [userType, setUserType] = useState<'student' | 'teacher'>('teacher')
+  const [questions, setQuestions] = useState<QuestionType[]>([])
   const [answers, setAnswers] = useState<Answers>({})
 
   useEffect(() => {
@@ -29,7 +18,7 @@ export default function EvaluatorPage() {
       const fetchedQuestions = await fetchQuestions();
       const fetchedAnswers = await fetchAnswers();
       setQuestions(fetchedQuestions);
-      const answersMap = fetchedAnswers.reduce((acc: Answers, answer: Answer) => {
+      const answersMap = fetchedAnswers.reduce((acc: Answers, answer: AnswerType) => {
         acc[answer.question_id] = answer;
         return acc;
       }, {});
@@ -38,8 +27,8 @@ export default function EvaluatorPage() {
     loadData();
   }, []);
 
-  const handleAddQuestion = async (questionText: string) => {
-    const newQuestion = await addQuestion(questionText);
+  const handleAddQuestion = async (questionText: string, class_: string, score: number) => {
+    const newQuestion = await addQuestion(questionText, class_, score);
     if (newQuestion) {
       setQuestions(prevQuestions => [newQuestion, ...prevQuestions]);
     }
@@ -74,12 +63,25 @@ export default function EvaluatorPage() {
     });
   }
 
+  const handleUpdateQuestion = (updatedQuestion: QuestionType) => {
+    setQuestions(prevQuestions =>
+      prevQuestions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q)
+    );
+  }
+
+  const handleUpdateAnswer = (updatedAnswer: AnswerType) => {
+    setAnswers(prevAnswers => ({
+      ...prevAnswers,
+      [updatedAnswer.question_id]: updatedAnswer
+    }));
+  }
+
   return (
     <div className="p-6">
       <div className="flex justify-end mb-6">
         <Select onValueChange={(value: 'student' | 'teacher') => setUserType(value)}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select user type" />
+            <SelectValue defaultValue="teacher" placeholder="Select user type" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="student">Student</SelectItem>
@@ -93,7 +95,8 @@ export default function EvaluatorPage() {
             questions={questions} 
             answers={answers}
             addQuestion={handleAddQuestion} 
-            deleteQuestion={handleDeleteQuestion} 
+            deleteQuestion={handleDeleteQuestion}
+            updateQuestionList={handleUpdateQuestion}
           />
         ) : (
           <StudentView 
@@ -101,6 +104,7 @@ export default function EvaluatorPage() {
             answers={answers}
             submitAnswer={handleSubmitAnswer}
             deleteAnswer={handleDeleteAnswer}
+            updateAnswerList={handleUpdateAnswer}
           />
         )}
       </div>

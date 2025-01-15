@@ -103,12 +103,13 @@ const YoutubeAssistantPage = () => {
     setChatLoading(true);
 
     try {
-      const response = await fetch("/api/yt-chat", {
+      const response = await fetch("/api/process-video", {
+        // Updated endpoint
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: [...messages, newMessage],
-          videoContext: videoData.transcript,
+          chatMessage: input, // Updated payload
+          url: url, // Include URL if necessary
         }),
       });
 
@@ -122,7 +123,7 @@ const YoutubeAssistantPage = () => {
         ...prev,
         {
           role: "assistant",
-          content: data.response,
+          content: data.reply, // Updated response field
           timestamp: Date.now(),
         },
       ]);

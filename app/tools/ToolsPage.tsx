@@ -200,7 +200,7 @@ const ToolsPage = () => {
       {
         title: "Individualized Education Planner",
         description: "Plan individualized education for students",
-        route: "/tools/individualized-education-planner",
+        route: "/tools/iep",
       },
       {
         title: "Marketing Content Generator",
@@ -232,7 +232,7 @@ const ToolsPage = () => {
       {
         title: "Individualized Education Planner",
         description: "Plan individualized education for students",
-        route: "/tools/individualized-education-planner",
+        route: "/tools/iep",
       },
       {
         title: "Evaluator",

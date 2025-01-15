@@ -49,7 +49,7 @@ export async function POST(request: Request) {
 
     // Generate response using ChatGPT with improved prompt
     const completion = await openai.chat.completions.create({
-      model: "gpt-4-turbo-preview",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

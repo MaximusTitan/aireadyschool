@@ -14,7 +14,7 @@ export async function POST(request: Request) {
   try {
     // Step 1: Generate rubrics
     const rubricsCompletion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         { 
           role: "system", 
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
 
     // Step 3: Generate score and feedback based on the self-generated rubrics
     const feedbackCompletion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

@@ -8,7 +8,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Prompt is required" }, { status: 400 });
   }
 
-  const model = "gpt-4"; // Use the latest model as needed
+  const model = "gpt-4o";
 
   // Prepare a message to generate multiple prompts in one API call
   const messages = [

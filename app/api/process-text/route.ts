@@ -20,7 +20,7 @@ export async function POST(request: Request) {
 
     const completion = await client.chat.completions.create({
       messages: [{ role: "user", content: prompts[operation] }],
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
     })
 
     return NextResponse.json({ 

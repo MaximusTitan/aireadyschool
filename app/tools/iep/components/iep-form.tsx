@@ -19,7 +19,9 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Stepper } from "./stepper";
+import ReactMarkdown from "react-markdown";
 
+// Define formSchema within the same file
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
   grade: z.string().min(1, { message: "Grade is required." }),
@@ -37,7 +39,12 @@ const formSchema = z.object({
   }),
 });
 
-export default function IEPForm() {
+// Define IEPFormProps within the same file
+interface IEPFormProps {
+  onSubmit?: (data: z.infer<typeof formSchema>) => void;
+}
+
+export default function IEPForm({ onSubmit }: IEPFormProps) {
   const [loading, setLoading] = useState(false);
   const [generatedIEP, setGeneratedIEP] = useState("");
   const [currentStep, setCurrentStep] = useState(0);
@@ -45,18 +52,16 @@ export default function IEPForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "Naira Madnani",
-      grade: "7",
-      country: "India",
-      syllabus: "IGCSE",
-      strengths:
-        "She is smart and has a good grasping power. She is good in Numerical calculations.",
-      weaknesses:
-        "Does not submit her assignments despite repeated reminders. She struggles in algebra and word problems.",
+      name: "",
+      grade: "",
+      country: "",
+      syllabus: "",
+      strengths: "",
+      weaknesses: "",
     },
   });
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmitHandler(values: z.infer<typeof formSchema>) {
     setLoading(true);
 
     try {
@@ -80,6 +85,8 @@ export default function IEPForm() {
     } finally {
       setLoading(false);
     }
+
+    onSubmit?.(values);
   }
 
   const steps = [
@@ -92,7 +99,10 @@ export default function IEPForm() {
     <div className="space-y-8 max-w-4xl mx-auto">
       <Stepper steps={steps} currentStep={currentStep} />
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+        <form
+          onSubmit={form.handleSubmit(onSubmitHandler)}
+          className="space-y-8"
+        >
           {currentStep === 0 && (
             <Card>
               <CardHeader>
@@ -207,11 +217,7 @@ export default function IEPForm() {
                 <CardTitle>Generated IEP</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="prose max-w-none dark:prose-invert">
-                  {generatedIEP.split("\n").map((paragraph, index) => (
-                    <p key={index}>{paragraph}</p>
-                  ))}
-                </div>
+                <ReactMarkdown>{generatedIEP}</ReactMarkdown>
               </CardContent>
             </Card>
           )}

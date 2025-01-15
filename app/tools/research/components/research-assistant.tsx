@@ -62,8 +62,8 @@ export function ResearchAssistant() {
         }),
       });
 
-      let data;
-      let responseText;
+      let data: any;
+      let responseText: string = "";
       try {
         responseText = await response.text();
         data = JSON.parse(responseText);

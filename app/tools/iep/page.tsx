@@ -2,6 +2,13 @@ import IEPForm from "./components/iep-form";
 import { ThemeProvider } from "next-themes";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Individualized Education Planner - AI Ready School",
+  description:
+    "Plan individualized education for students with disabilities using our IEP generator. Create, edit, and download IEPs in minutes.",
+};
 
 export default function Home() {
   return (

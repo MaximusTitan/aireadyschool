@@ -44,7 +44,7 @@ export default function SlideEditor({
     try {
       const newImage = await regenerateImage(
         slide.title + (imageType === "right" ? " alternative" : ""),
-        theme // Passed theme as the second argument
+        theme // Passed theme to regenerateImage
       );
       if (imageType === "main") {
         onUpdate({ ...slide, image: newImage });

@@ -186,3 +186,5 @@ export async function generatePresentation(prompt: string, theme: string, slideC
   }
 }
 
+export { generateImagesForSlide as regenerateImage }
+

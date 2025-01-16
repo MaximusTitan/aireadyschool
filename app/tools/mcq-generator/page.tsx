@@ -172,7 +172,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col justify-between">
+    <div className="min-h-screen flex flex-col justify-between">
       <Header />
       <main className="container mx-auto px-4 py-8 flex-grow bg-white">
         <div className="bg-white rounded-lg border border-neutral-200 p-6 md:p-8 max-w-6xl mx-auto">
@@ -217,7 +217,7 @@ export default function Home() {
                 />
                 <GenerateButton
                   isLoading={isLoading}
-                  className="bg-rose-500 hover:bg-rose-600 text-white"
+                  className="bg-neutral-500 hover:bg-neutral-600 text-white"
                 />
               </form>
               <div className="mt-8">
@@ -238,7 +238,7 @@ export default function Home() {
                           onClick={() =>
                             handleLoadAssessment(savedAssessment.id)
                           }
-                          className="bg-white border border-rose-400 hover:bg-rose-500 hover:text-white px-2 py-1 rounded"
+                          className="bg-white border border-neutral-400 hover:bg-black hover:text-white px-2 py-1 rounded"
                         >
                           Load
                         </button>

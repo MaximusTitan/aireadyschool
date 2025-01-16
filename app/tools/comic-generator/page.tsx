@@ -12,11 +12,13 @@ import {
   FileJson,
   FileText,
   FileIcon as FilePresentation,
+  ChevronLeft,
 } from "lucide-react";
 import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
+import Link from "next/link";
 
 function ComicGeneratorContent() {
   const router = useRouter();
@@ -208,11 +210,19 @@ function ComicGeneratorContent() {
     <Suspense fallback={<div>Loading...</div>}>
       <div className="flex flex-col min-h-screen bg-background text-foreground">
         <div className="p-4 border-b border-border">
-          <div className="max-w-6xl mx-auto flex flex-col items-start space-y-4">
-            <h1 className="text-3xl text-rose-500 font-bold">
-              Comic Generator
+          <div className="flex flex-row items-center">
+            <Link
+              href="/tools"
+              className="text-neutral-500 hover:text-neutral-700 "
+            >
+              <ChevronLeft />
+            </Link>
+            <h1 className="text-3xl text-neutral-800 font-bold ml-2">
+              Comic Strip Generator
             </h1>
-            <form onSubmit={handleSubmit} className="w-[500px] relative">
+          </div>
+          <div className="max-w-6xl mx-auto mt-8">
+            <form onSubmit={handleSubmit} className="w-full mt-4 relative">
               <Textarea
                 placeholder="Enter your comic idea here..."
                 value={prompt}

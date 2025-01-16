@@ -21,20 +21,20 @@ export default function ClassSelection({
         htmlFor="class"
         className="block text-sm font-medium text-gray-700 mb-1"
       >
-        Choose the Class
+        Choose the Grade
       </label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger className="w-full">
-          <SelectValue placeholder="Select a class" />
+          <SelectValue placeholder="Select a grade" />
         </SelectTrigger>
         <SelectContent>
           {[...Array(12)].map((_, i) => (
             <SelectItem
               key={i + 1}
-              value={`Class ${i + 1}`}
-              className="text-rose-500 hover:bg-rose-100"
+              value={`Grade ${i + 1}`}
+              className="text-neutral-500 hover:bg-neutral-100"
             >
-              Class {i + 1}
+              Grade {i + 1}
             </SelectItem>
           ))}
         </SelectContent>

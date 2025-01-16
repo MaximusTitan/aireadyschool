@@ -4,6 +4,7 @@ import { ResearchAssistant } from "./components/research-assistant";
 import { Button } from "@/components/ui/button";
 import { ErrorBoundary } from "react-error-boundary";
 import { Inter } from "next/font/google";
+import { ChevronLeft } from "lucide-react";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -15,8 +16,11 @@ function ErrorFallback({
   resetErrorBoundary: () => void;
 }) {
   return (
-    <div role="alert" className="p-4 bg-red-100 border border-red-400 rounded">
-      <p className="font-bold text-red-800">Something went wrong:</p>
+    <div
+      role="alert"
+      className="p-6 bg-gray-100 border border-gray-300 rounded"
+    >
+      <p className="font-bold text-gray-800">Something went wrong:</p>
       <pre className="text-sm text-red-600 mt-2 whitespace-pre-wrap">
         {error.message}
       </pre>
@@ -34,8 +38,11 @@ function ErrorFallback({
 
 export default function Home() {
   return (
-    <div className={`flex flex-col min-h-screen py-2 ${inter.className}`}>
-      <h1 className="text-4xl font-bold mb-8 bg-rose-500 bg-clip-text text-transparent font-sans">
+    <div className={`flex flex-col min-h-screen py-4 px-6 ${inter.className}`}>
+      <h1 className="text-3xl font-bold mb-8 text-neutral-800 font-sans flex items-center">
+        <Link href="/tools" className="mr-2">
+          <ChevronLeft />
+        </Link>
         AI Research Assistant
       </h1>
       <ErrorBoundary
@@ -51,8 +58,10 @@ export default function Home() {
       >
         <ResearchAssistant />
       </ErrorBoundary>
-      <Link href="/history" className="mt-4">
-        <Button variant="outline">View Chat History</Button>
+      <Link href="/tools/research/history">
+        <Button variant="outline" className="px-4 py-2 mt-8 ml-16">
+          View Chat History
+        </Button>
       </Link>
     </div>
   );

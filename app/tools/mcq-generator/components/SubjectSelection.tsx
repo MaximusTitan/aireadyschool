@@ -34,7 +34,7 @@ export default function SubjectSelection({
             <SelectItem
               key={subject}
               value={subject}
-              className="text-rose-500 hover:bg-rose-100"
+              className="text-neutral-500 hover:bg-neutral-100"
             >
               {subject}
             </SelectItem>

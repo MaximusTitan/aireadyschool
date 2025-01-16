@@ -21,9 +21,9 @@ export default function DifficultySelection({
             type="button"
             className={`px-4 py-2 border border-transparent text-sm font-medium rounded-md ${
               value === difficulty
-                ? "text-white bg-rose-500 hover:bg-rose-600"
-                : "text-rose-700 bg-rose-100 hover:bg-rose-200"
-            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rose-500`}
+                ? "text-white bg-black hover:bg-neutral-600"
+                : "text-neutral-700 bg-neutral-100 hover:bg-neutral-200"
+            } focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-neutral-500`}
             onClick={() => onChange(difficulty)}
           >
             {difficulty}

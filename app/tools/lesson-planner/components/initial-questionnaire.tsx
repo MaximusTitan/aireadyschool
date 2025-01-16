@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -68,40 +70,40 @@ export function InitialQuestionnaire({ onComplete }: QuestionnaireProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-rose-500">
-          Lesson Planner
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {inputs.map((input, index) => (
-            <div
-              key={input.id}
-              className={index > currentIndex ? "hidden" : ""}
-            >
-              <Label htmlFor={input.id}>{input.label}</Label>
-              <Input
-                id={input.id}
-                value={input.value}
-                onChange={(e) => handleInputChange(input.id, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(e, index)}
-                ref={(el) => (inputRefs.current[index] = el)}
-                className="mt-1"
-              />
-            </div>
-          ))}
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button
-          onClick={handleSubmit}
-          className="w-full bg-rose-500 hover:bg-rose-600 text-white"
-        >
-          Submit and Proceed
-        </Button>
-      </CardFooter>
-    </Card>
+    <div>
+      <div className="flex items-center gap-2 mb-4">
+        <Link href="/tools">
+          <ChevronLeft className="h-6 w-6 text-neutral-800 hover:text-neutral-600" />
+        </Link>
+        <h1 className="text-3xl font-bold text-neutral-800">Lesson Planner</h1>
+      </div>
+      <Card className="ml-8 mt-10 max-w-6xl">
+        <CardContent>
+          <div className="space-y-4 mt-4">
+            {inputs.map((input, index) => (
+              <div key={input.id}>
+                <Label htmlFor={input.id}>{input.label}</Label>
+                <Input
+                  id={input.id}
+                  value={input.value}
+                  onChange={(e) => handleInputChange(input.id, e.target.value)}
+                  onKeyDown={(e) => handleKeyDown(e, index)}
+                  ref={(el) => (inputRefs.current[index] = el)}
+                  className="mt-1"
+                />
+              </div>
+            ))}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleSubmit}
+            className="w-full bg-black hover:bg-neutral-600 text-white"
+          >
+            Submit and Proceed
+          </Button>
+        </CardFooter>
+      </Card>
+    </div>
   );
 }

@@ -20,7 +20,8 @@ import {
   Question as QuestionType,
   Answer as AnswerType,
 } from "@/utils/supabase/operations";
-import { ChevronLeft, Link } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 
 export type Answers = Record<string, AnswerType>;
 
@@ -111,7 +112,7 @@ export default function EvaluatorPage() {
           >
             <ChevronLeft />
           </Link>
-          <h1 className="text-4xl font-bold text-rose-500">Evaluator</h1>
+          <h1 className="text-3xl font-bold text-neutral-700">Evaluator</h1>
         </div>
         <Select
           onValueChange={(value: "student" | "teacher") => setUserType(value)}

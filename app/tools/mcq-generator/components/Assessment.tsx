@@ -130,7 +130,7 @@ export default function Assessment({
       {!showResults ? (
         <Button
           onClick={handleSubmit}
-          className="w-full bg-rose-500 hover:bg-rose-600"
+          className="w-full bg-neutral-500 hover:bg-neutral-600"
         >
           Submit Answers
         </Button>
@@ -141,14 +141,14 @@ export default function Assessment({
           </h2>
           <Button
             onClick={handleSaveResults}
-            className="mt-4 mr-2 bg-rose-500 hover:bg-rose-600"
+            className="mt-4 mr-2 bg-neutral-500 hover:bg-neutral-600"
             disabled={isSaving}
           >
             {isSaving ? "Saving..." : "Save Results"}
           </Button>
           <Button
             onClick={() => window.location.reload()}
-            className="mt-4 bg-rose-500 hover:bg-rose-600"
+            className="mt-4 bg-neutral-500 hover:bg-neutral-600"
           >
             Start New Assessment
           </Button>

@@ -12,7 +12,7 @@ export default function Header() {
         >
           <ChevronLeft />
         </Link>
-        <h1 className="text-4xl font-bold text-rose-500">
+        <h1 className="text-3xl font-bold text-neutral-700">
           Assessment Generator
         </h1>
       </div>

@@ -81,53 +81,57 @@ export function AdditionalQuestions({ onComplete }: AdditionalQuestionsProps) {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold text-center text-rose-500">
-          Additional Information
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {inputs.map((input, index) => (
-            <div
-              key={input.id}
-              className={index > currentIndex ? "hidden" : ""}
-            >
-              <Label htmlFor={input.id}>{input.label}</Label>
-              {input.type === "input" ? (
-                <Input
-                  id={input.id}
-                  type="number"
-                  value={input.value}
-                  onChange={(e) => handleInputChange(input.id, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
-                  ref={(el) => (inputRefs.current[index] = el)}
-                  className="mt-1"
-                />
-              ) : (
-                <Textarea
-                  id={input.id}
-                  value={input.value}
-                  onChange={(e) => handleInputChange(input.id, e.target.value)}
-                  onKeyDown={(e) => handleKeyDown(e, index)}
-                  ref={(el) => (inputRefs.current[index] = el)}
-                  className="mt-1"
-                  placeholder="Enter any specific areas you want to focus on in this lesson"
-                />
-              )}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-      <CardFooter>
-        <Button
-          onClick={handleSubmit}
-          className="w-full bg-rose-500 hover:bg-rose-600 text-white"
-        >
-          Start Planning
-        </Button>
-      </CardFooter>
-    </Card>
+    <>
+      <h2 className="text-2xl font-bold text-neutral-800 mb-4">
+        Additional Information
+      </h2>
+      <Card className="w-full max-w-md">
+        <CardContent>
+          <div className="space-y-4">
+            {inputs.map((input, index) => (
+              <div
+                key={input.id}
+                className={index > currentIndex ? "hidden" : ""}
+              >
+                <Label htmlFor={input.id}>{input.label}</Label>
+                {input.type === "input" ? (
+                  <Input
+                    id={input.id}
+                    type="number"
+                    value={input.value}
+                    onChange={(e) =>
+                      handleInputChange(input.id, e.target.value)
+                    }
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    className="mt-1"
+                  />
+                ) : (
+                  <Textarea
+                    id={input.id}
+                    value={input.value}
+                    onChange={(e) =>
+                      handleInputChange(input.id, e.target.value)
+                    }
+                    onKeyDown={(e) => handleKeyDown(e, index)}
+                    ref={(el) => (inputRefs.current[index] = el)}
+                    className="mt-1"
+                    placeholder="Enter any specific areas you want to focus on in this lesson"
+                  />
+                )}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleSubmit}
+            className="w-full bg-black hover:bg-neutral-600 text-white"
+          >
+            Start Planning
+          </Button>
+        </CardFooter>
+      </Card>
+    </>
   );
 }

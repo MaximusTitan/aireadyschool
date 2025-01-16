@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/form";
 import { Stepper } from "./stepper";
 import { IndividualizedEducationPlan } from "./IndividualizedEducationPlan";
+import type { IEPData } from "../types/iep";
 
 const formSchema = z.object({
   name: z.string().min(2, { message: "Name must be at least 2 characters." }),
@@ -44,7 +45,7 @@ interface IEPFormProps {
 export default function IEPForm({ onSubmit }: IEPFormProps) {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
-  const [generatedIEP, setGeneratedIEP] = useState<string | null>(null);
+  const [generatedIEP, setGeneratedIEP] = useState<IEPData | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -78,7 +79,7 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
       }
 
       const result = await response.json();
-      setGeneratedIEP(result.content);
+      setGeneratedIEP(result.iep);
       setCurrentStep(2);
     } catch (error) {
       console.error("Error generating IEP:", error);

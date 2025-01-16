@@ -131,7 +131,7 @@ export function DownloadLessonPlan({ lessonPlan }: DownloadLessonPlanProps) {
   return (
     <Button
       onClick={() => generatePDF(lessonPlan)}
-      className="bg-rose-500 hover:bg-rose-600 text-white"
+      className="bg-neutral-500 hover:bg-neutral-600 text-white"
     >
       <Download className="mr-2 h-4 w-4" /> Download Lesson Plan (PDF)
     </Button>

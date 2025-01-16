@@ -1,11 +1,12 @@
-import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { generateText } from "ai";
 
 export async function POST(req: Request) {
   try {
     const data = await req.json();
     const { name, grade, country, board, strengths, weaknesses } = data;
 
+    // Construct the prompt
     const prompt = `
       Create a detailed Individualized Education Plan (IEP) for the following student:
       Name: ${name}
@@ -15,25 +16,92 @@ export async function POST(req: Request) {
       Strengths: ${strengths}
       Weaknesses: ${weaknesses}
 
-      Give me the actual implementation and activities that can be done to help the student improve in the following areas.
-      Please include the following sections:
-      1. Student Information
-      2. Present Levels of Performance
-      3. Annual Goals
-      4. Special Education and Related Services
-      5. Accommodations and Modifications
-      6. Assessment Information
-      7. Progress Monitoring Plan
+      Provide the IEP in the following JSON format:
 
-      For each section, provide specific, actionable, and measurable content tailored to the student's needs.
+      {
+        "studentInformation": {
+          "name": "${name}",
+          "grade": "${grade}",
+          "country": "${country}",
+          "board": "${board}"
+        },
+        "presentLevelsOfPerformance": {
+          "academic": "",
+          "social": "",
+          "behavioral": ""
+        },
+        "annualGoals": [
+          {
+            "goal": "",
+            "objectives": [
+              "Objective 1",
+              "Objective 2"
+            ]
+          }
+        ],
+        "specialEducationServices": [
+          {
+            "service": "",
+            "frequency": ""
+          }
+        ],
+        "accommodationsAndModifications": [
+          "Accommodation 1",
+          "Modification 1"
+        ],
+        "assessmentInformation": {
+          "methods": [],
+          "schedule": ""
+        },
+        "progressMonitoringPlan": {
+          "methods": [],
+          "frequency": ""
+        }
+      }
+
+      Ensure all sections are filled with specific, actionable, and measurable content tailored to the student's needs. Respond only with the JSON structure, no additional text.
     `;
 
+    // Updated OpenAI API call
     const { text } = await generateText({
-      model: openai("gpt-4o"),
-      prompt: prompt,
+       model:openai.chat('gpt-4o'),      
+       messages: [
+        {
+          role: 'system',
+          content: 'You are a special education expert who creates detailed Individualized Education Plans (IEPs). Always respond with valid JSON only.'
+        },
+        {
+          role: 'user',
+          content: prompt.trim(),
+        },
+      ],
+      temperature: 0.7,
     });
 
-    return new Response(JSON.stringify({ content: text }), {
+    // Update response handling to use the new text property
+    let iep;
+    try {
+      const cleanedResponse = text.replace(/^\`\`\`json\s*|\s*\`\`\`$/g, "").trim();
+      iep = JSON.parse(cleanedResponse);
+
+      // Validate the parsed response
+      if (!iep || typeof iep !== "object" || !iep.studentInformation || !iep.annualGoals) {
+        throw new Error("The generated IEP has an invalid structure.");
+      }
+    } catch (error) {
+      console.error("Error parsing IEP:", error);
+      return new Response(
+        JSON.stringify({ 
+          error: "Failed to parse generated IEP. The AI response was not in the expected format.",
+          details: error instanceof Error ? error.message : "Unknown parsing error",
+          rawResponse: text
+        }),
+        { status: 500 }
+      );
+    }
+
+    // Return IEP
+    return new Response(JSON.stringify({ iep }), {
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {

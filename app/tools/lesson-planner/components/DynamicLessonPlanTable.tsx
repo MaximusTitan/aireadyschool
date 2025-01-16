@@ -42,8 +42,8 @@ const ActivitySection: React.FC<{ activities?: Activity[] }> = ({
       <h4 className="font-semibold">Activities:</h4>
       <div className="space-y-4">
         {activities.map((activity, index) => (
-          <div key={index} className="pl-5 border-l-2 border-rose-200 my-2">
-            <h5 className="font-medium text-rose-600">{activity.name}</h5>
+          <div key={index} className="pl-5 border-l-2 border-neutral-200 my-2">
+            <h5 className="font-medium text-neutral-600">{activity.name}</h5>
             <p className="text-sm text-muted-foreground">
               Duration: {activity.duration}
             </p>
@@ -98,7 +98,7 @@ export function DynamicLessonPlanTable({
       </Table>
 
       {lessonPlan.sections.map((section, index) => (
-        <Card key={index} className="border-rose-100">
+        <Card key={index} className="border-neutral-100">
           <CardHeader>
             <CardTitle className="flex justify-between items-center">
               <span>{section.name}</span>
@@ -134,7 +134,7 @@ export function DynamicLessonPlanTable({
       ))}
 
       {lessonPlan.resources && lessonPlan.resources.length > 0 && (
-        <Card className="border-rose-100">
+        <Card className="border-neutral-100">
           <CardHeader>
             <CardTitle>Resources</CardTitle>
           </CardHeader>
@@ -149,7 +149,7 @@ export function DynamicLessonPlanTable({
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-rose-500 hover:underline"
+                        className="text-neutral-500 hover:underline"
                       >
                         {title}
                       </a>

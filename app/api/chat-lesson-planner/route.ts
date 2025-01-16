@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
     const { message, context } = await req.json();
+    console.log('Received message:', message);
+    console.log('Context:', context);
 
-    if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-      throw new Error('NEXT_PUBLIC_GEMINI_API_KEY is not set in environment variables');
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error('OPENAI_API_KEY is not set in environment variables');
     }
 
     const prompt = `You are a lesson plan assistant. Your task is to understand the user's request and provide specific changes or additions to the lesson plan. Format your response in a structured way that can be parsed.
@@ -45,28 +45,49 @@ If multiple changes are requested, provide each change separately with its own C
 
 Ensure all content is appropriate for educational purposes and avoid any potentially harmful or dangerous content.
 
-User: ${message}
-Assistant:`;
+User: ${message}`;
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
-    const result = await model.generateContent(prompt);
-    const responseText = result.response.text();
+    // Call the OpenAI API using fetch
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful lesson plan assistant that provides responses in a structured format.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API error:', errorData);
+      if (errorData.error && errorData.error.message) {
+        throw new Error(`OpenAI API error: ${errorData.error.message}`);
+      } else {
+        throw new Error('An error occurred while calling the OpenAI API');
+      }
+    }
+
+    const completion = await response.json();
+    const responseText = completion.choices[0].message.content;
 
     if (!responseText) {
       throw new Error('The AI model was unable to provide a valid response. Please try again.');
     }
 
-    // Check for safety-related issues
-    const candidates = result.response.candidates;
-    if (candidates && candidates.length > 0 && candidates[0].finishReason === 'SAFETY') {
-      const safetyRatings = candidates[0].safetyRatings;
-      const dangerousContent = safetyRatings?.find(rating => rating.category === 'HARM_CATEGORY_DANGEROUS_CONTENT');
-      
-      if (dangerousContent && dangerousContent.probability === 'MEDIUM') {
-        throw new Error('The AI model flagged the response as potentially inappropriate. Please rephrase your request.');
-      }
-    }
-
+    console.log('AI Response:', responseText);
     return NextResponse.json({ reply: responseText });
   } catch (error) {
     console.error('Error generating chat response:', error);

@@ -211,16 +211,7 @@ const ToolsPage = () => {
         description: "Create interactive assessments",
         route: "/tools/mcq-generator",
       },
-      {
-        title: "Assignment Generator",
-        description: "Generate assignments",
-        route: "/tools/assignment-generator",
-      },
-      {
-        title: "Lesson Content Generator",
-        description: "Create lesson content",
-        route: "/tools/lesson-content-generator",
-      },
+
       {
         title: "Individualized Education Planner",
         description: "Plan individualized education for students",
@@ -237,6 +228,17 @@ const ToolsPage = () => {
         route: "/tools/chat-with-docs",
         isHot: true,
       },
+      {
+        title: "Assignment Generator",
+        description: "Generate assignments",
+        route: "/tools/assignment-generator",
+      },
+      {
+        title: "Lesson Content Generator",
+        description: "Create lesson content",
+        route: "/tools/lesson-content-generator",
+      },
+
       {
         title: "Image Generator",
         description: "Create stunning images",

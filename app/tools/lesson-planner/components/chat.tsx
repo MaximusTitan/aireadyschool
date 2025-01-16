@@ -472,7 +472,7 @@ export function Chat() {
             <AlertDescription>{error}</AlertDescription>
             <Button
               onClick={handleRetry}
-              className="mt-2 bg-rose-500 hover:bg-rose-600 text-white"
+              className="mt-2 bg-neutral-500 hover:bg-neutral-600 text-white"
             >
               Retry
             </Button>
@@ -498,7 +498,7 @@ export function Chat() {
           </details>
           <Button
             onClick={handleRetry}
-            className="mt-2 bg-rose-500 hover:bg-rose-600 text-white"
+            className="mt-2 bg-neutral-500 hover:bg-neutral-600 text-white"
           >
             Retry
           </Button>
@@ -508,17 +508,16 @@ export function Chat() {
         <Button
           onClick={handleRestart}
           variant="outline"
-          className="flex items-center gap-2 border-rose-500 text-rose-500 hover:bg-rose-50 keep-after-print"
+          className="flex items-center gap-2 border-neutral-500 text-neutral-500 hover:bg-neutral-50 keep-after-print"
         >
-          <Home className="w-4 h-4" />
-          Home
+          Restart
         </Button>
         <Button
           onClick={() => {
             window.print();
           }}
           variant="outline"
-          className="flex items-center gap-2 border-rose-500 text-rose-500 hover:bg-rose-50"
+          className="flex items-center gap-2 border-neutral-500 text-neutral-500 hover:bg-neutral-50"
         >
           <Presentation className="w-4 h-4" />
           Print Lesson Plan
@@ -527,7 +526,7 @@ export function Chat() {
       {step === "plan" && (
         <div className="p-4 flex items-center">
           <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
-          <h2 className="text-2xl font-bold text-rose-500">
+          <h2 className="text-2xl font-bold text-neutral-500">
             Generating Lesson Plan...
           </h2>
         </div>
@@ -536,7 +535,7 @@ export function Chat() {
       <div className="flex flex-col flex-grow overflow-auto">
         {lessonPlan && (
           <div className="p-4 space-y-8">
-            <h2 className="text-2xl font-bold mb-6 text-rose-500">
+            <h2 className="text-2xl font-bold mb-6 text-neutral-800">
               Lesson Plan: {lessonPlan.topic}
             </h2>
             <DynamicLessonPlanTable lessonPlan={lessonPlan} />
@@ -544,7 +543,7 @@ export function Chat() {
         )}
 
         <div className="mt-8 p-4 border-t border-border no-print">
-          <div className="mb-4 text-lg font-semibold text-rose-500">
+          <div className="mb-4 text-lg font-semibold text-neutral-800">
             Chat about the lesson plan:
           </div>
           <div className="text-sm text-muted-foreground mb-2">
@@ -564,7 +563,7 @@ export function Chat() {
                 <div
                   className={`inline-block p-3 rounded-lg ${
                     message.role === "user"
-                      ? "bg-rose-500 text-white"
+                      ? "bg-black text-white"
                       : "bg-gray-200 text-black w-full"
                   }`}
                 >
@@ -589,7 +588,7 @@ export function Chat() {
             />
             <Button
               onClick={handleSend}
-              className="bg-rose-500 hover:bg-rose-600 text-white"
+              className="bg-black hover:bg-neutral-600 text-white"
               disabled={isLoading}
             >
               {isLoading ? "Sending..." : "Send"}

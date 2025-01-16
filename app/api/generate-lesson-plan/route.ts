@@ -1,7 +1,4 @@
 import { NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY!);
 
 export async function POST(req: Request) {
   try {
@@ -12,8 +9,9 @@ export async function POST(req: Request) {
       throw new Error("Missing required fields: subject, grade, topic, or duration.");
     }
 
-    if (!process.env.NEXT_PUBLIC_GEMINI_API_KEY) {
-      throw new Error("NEXT_PUBLIC_GEMINI_API_KEY is not set in environment variables.");
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) {
+      throw new Error("OPENAI_API_KEY is not set in environment variables.");
     }
 
     // Construct the prompt
@@ -21,27 +19,27 @@ export async function POST(req: Request) {
       specificFocus ? `The lesson should focus on ${specificFocus}.` : ""
     }
 
-    Provide the plan in the following JSON format:
+Provide the plan in the following JSON format:
 
+{
+  "topic": "${topic}",
+  "objective": "Main learning objective",
+  "duration": "${duration}",
+  "gradeLevel": "${grade}",
+  "subject": "${subject}",
+  "sections": [
     {
-      "topic": "${topic}",
-      "objective": "Main learning objective",
-      "duration": "${duration} minutes",
-      "gradeLevel": "${grade}",
-      "subject": "${subject}",
-      "sections": [
-        {
-          "name": "Introduction",
-          "duration": "5-10 minutes",
-          "description": "Detailed description of the introduction",
-          "keyPoints": [
-            "Key point 1",
-            "Key point 2"
-          ]
-        },
-        {
+      "name": "Introduction",
+      "duration": "5",
+      "description": "Detailed description of the introduction",
+      "keyPoints": [
+        "Key point 1",
+        "Key point 2"
+      ]
+    },
+    {
           "name": "Main Content",
-          "duration": "20-30 minutes",
+          "duration": "20-30",
           "description": "Detailed description of the main content",
           "keyPoints": [
             "Key point 1",
@@ -51,7 +49,7 @@ export async function POST(req: Request) {
         },
         {
           "name": "Activity",
-          "duration": "15-20 minutes",
+          "duration": "15-20",
           "description": "Detailed description of the main activity",
           "activities": [
             {
@@ -68,7 +66,7 @@ export async function POST(req: Request) {
         },
         {
           "name": "Assessment",
-          "duration": "5-10 minutes",
+          "duration": "5-10",
           "methods": [
             "Assessment method 1",
             "Assessment method 2"
@@ -76,37 +74,67 @@ export async function POST(req: Request) {
         },
         {
           "name": "Conclusion",
-          "duration": "5 minutes",
+          "duration": "5",
           "keyPoints": [
             "Summary point 1",
             "Summary point 2"
           ]
         }
       ],
-      "resources": [
-        "Resource 1",
-        "Resource 2",
-        "Resource 3"
-      ]
+  "resources": [
+    "Resource 1",
+    "Resource 2",
+    "Resource 3"
+  ]
+}
+
+Ensure all content is directly related to ${topic} and appropriate for grade ${grade}. The total duration of all sections MUST add up to exactly ${duration} minutes. Respond only with the JSON structure, no additional text.`;
+
+    // Call the OpenAI API using fetch
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a professional educator who creates detailed lesson plans. Always respond with valid JSON only.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API error:', errorData);
+      if (errorData.error && errorData.error.message) {
+        throw new Error(`OpenAI API error: ${errorData.error.message}`);
+      } else {
+        throw new Error('An error occurred while calling the OpenAI API');
+      }
     }
 
-    Ensure all content is directly related to ${topic} and appropriate for grade ${grade}. Do not include any additional text or formatting outside of the JSON structure.`;
+    const completion = await response.json();
+    const responseText = completion.choices[0].message.content;
 
-    // Call the AI model
-    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-    const result = await model.generateContent(prompt);
-
-    if (!result?.response?.text) {
+    if (!responseText) {
       throw new Error("Failed to receive a response from the AI model.");
     }
-
-    const responseText = result.response.text();
 
     // Attempt to parse the AI response
     let lessonPlan;
     try {
       // Remove any potential markdown code block syntax and leading/trailing whitespace
-      const cleanedResponse = responseText.replace(/^```json\s*|\s*```$/g, "").trim();
+      const cleanedResponse = responseText.replace(/^\`\`\`json\s*|\s*\`\`\`$/g, "").trim();
       
       // Attempt to parse the JSON
       lessonPlan = JSON.parse(cleanedResponse);

@@ -87,7 +87,7 @@ export function AdditionalQuestions({ onComplete }: AdditionalQuestionsProps) {
       </h2>
       <Card className="w-full max-w-md">
         <CardContent>
-          <div className="space-y-4">
+          <div className="space-y-4 mt-4">
             {inputs.map((input, index) => (
               <div
                 key={input.id}

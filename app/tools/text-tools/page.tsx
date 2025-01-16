@@ -55,16 +55,10 @@ export default function TextTools() {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-white dark:bg-neutral-950">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold text-rose-500 mb-2">Text Tools</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Transform your text with AI-powered tools
-          </p>
-        </div>
-
-        <div className="flex gap-4 items-center">
+    <div className="max-w-6xl mx-auto space-y-8">
+      <h1 className="text-4xl font-bold text-rose-500 mb-2">Text Tools</h1>
+      <div className="border border-neutral-200 p-4 rounded-md">
+        <div className="flex gap-4 items-center mb-4">
           <Select
             value={operation}
             onValueChange={(value) => setOperation(value as Operation)}
@@ -130,7 +124,7 @@ export default function TextTools() {
           </Card>
         </div>
 
-        <div className="text-center">
+        <div className="text-center mt-4">
           <Button
             onClick={processText}
             disabled={loading || !input.trim()}

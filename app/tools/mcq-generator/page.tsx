@@ -173,12 +173,6 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col justify-between">
-      <Link
-        href="/tools/"
-        className="absolute top-4 left-4 text-blue-500 hover:text-blue-700"
-      >
-        ← Back
-      </Link>
       <Header />
       <main className="container mx-auto px-4 py-8 flex-grow bg-white">
         <div className="bg-white rounded-lg border border-neutral-200 p-6 md:p-8 max-w-6xl mx-auto">

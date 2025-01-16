@@ -117,7 +117,56 @@ const ToolsPage = () => {
   } = {
     Student: [
       {
-        title: "Chat With Docs",
+        title: "Assessment Generator",
+        description:
+          "Create and share interactive multiple choice questions for students",
+        route: "/tools/mcq-generator",
+      },
+      {
+        title: "Study Plan Generator",
+        description: "Plan your study schedule",
+        route: "/tools/study-planner",
+      },
+
+      {
+        title: "Evaluator",
+        description: "Evaluate student answers",
+        route: "/tools/evaluator",
+      },
+      {
+        title: "Text Tools",
+        description:
+          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        route: "/tools/text-tools",
+      },
+      {
+        title: "Comic Strip Generator",
+        description: "Generate comics",
+        route: "/tools/comic-generator",
+      },
+      {
+        title: "Research Assistant",
+        description: "Get help with your research",
+        route: "/tools/research",
+      },
+      {
+        title: "Project Helper",
+        description: "Get help with your projects",
+        route: "/tools/project-helper",
+      },
+      {
+        title: "Lesson Content Generator",
+        description: "Generate lesson content",
+        route: "/tools/lesson-content-generator",
+        isHot: true,
+      },
+      {
+        title: "YouTube Summary",
+        description: "Generate questions and summaries from YouTube videos",
+        route: "/tools/youtube-assistant",
+      },
+      {
+        title: "Talk to PDF Docs",
         description:
           "Powerful RAG-based document chat system for intelligent document interactions",
         route: "/tools/chat-with-docs",
@@ -130,15 +179,27 @@ const ToolsPage = () => {
         isHot: true,
       },
       {
+        title: "Video Generator",
+        description: "Generate videos from images",
+        route: "/tools/video-generator",
+      },
+      {
         title: "Presentation Generator",
         description: "Create presentations",
         route: "/tools/presentation",
         isHot: true,
       },
+    ],
+    Teacher: [
       {
-        title: "Video Generator",
-        description: "Generate videos from images",
-        route: "/tools/video-generator",
+        title: "Lesson Plan Generator",
+        description: "Create lesson plans",
+        route: "/tools/lesson-planner",
+      },
+      {
+        title: "Evaluator",
+        description: "Evaluate student answers",
+        route: "/tools/evaluator",
       },
       {
         title: "Text Tools",
@@ -148,101 +209,34 @@ const ToolsPage = () => {
       },
       {
         title: "Assessment Generator",
-        description:
-          "Create and share interactive multiple choice questions for students",
+        description: "Create interactive assessments",
         route: "/tools/mcq-generator",
       },
       {
-        title: "Lesson Plan Creator",
-        description: "Create lesson plans",
-        route: "/tools/lesson-planner",
+        title: "Assignment Generator",
+        description: "Generate assignments",
+        route: "/tools/assignment-generator",
       },
       {
-        title: "Comic Generator",
-        description: "Generate comics",
-        route: "/tools/comic-generator",
+        title: "Lesson Content Generator",
+        description: "Create lesson content",
+        route: "/tools/lesson-content-generator",
       },
       {
-        title: "YouTube Assistant",
-        description: "Generate questions and summaries from YouTube videos",
+        title: "Individualized Education Planner",
+        description: "Plan individualized education for students",
+        route: "/tools/iep",
+      },
+      {
+        title: "YouTube Summary",
+        description: "Video summaries and questions",
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk with Buddy",
-        description: "Chat with an AI buddy",
-        route: "/tools/audiobot",
-      },
-      {
-        title: "Personalized Lessons",
-        description: "Create personalized lessons for students",
-        route: "/tools/personalized-lessons",
-      },
-      {
-        title: "Research Assistant",
-        description: "Get help with your research",
-        route: "/tools/research",
-      },
-      {
-        title: "Study Planner",
-        description: "Plan your study schedule",
-        route: "/tools/study-planner",
-      },
-      {
-        title: "Evaluator",
-        description: "Evaluate student answers",
-        route: "/tools/evaluator",
-      },
-      {
-        title: "Project Helper",
-        description: "Get help with your projects",
-        route: "/tools/project-helper",
-      },
-      {
-        title: "Individualized Education Planner",
-        description: "Plan individualized education for students",
-        route: "/tools/iep",
-      },
-      {
-        title: "Marketing Content Generator",
-        description: "Generate marketing content",
-        route: "/tools/marketing-content-generator",
-      },
-      {
-        title: "Report Generator",
-        description: "Generate reports",
-        route: "/tools/report-generator",
-      },
-      {
-        title: "School Intelligence",
-        description: "Get insights about your school",
-        route: "/tools/school-intelligence",
-      },
-    ],
-    Teacher: [
-      {
-        title: "Talk with Buddy",
-        description: "Personal AI Assistant",
-        route: "/tools/audiobot",
-      },
-      {
-        title: "Lesson Plan Creator",
-        description: "Create lesson plans",
-        route: "/tools/lesson-planner",
-      },
-      {
-        title: "Individualized Education Planner",
-        description: "Plan individualized education for students",
-        route: "/tools/iep",
-      },
-      {
-        title: "Evaluator",
-        description: "Evaluate student answers",
-        route: "/tools/evaluator",
-      },
-      {
-        title: "Assessment Generator",
-        description: "Create interactive assessments",
-        route: "/tools/mcq-generator",
+        title: "Talk to PDF Docs",
+        description: "Document chat system",
+        route: "/tools/chat-with-docs",
+        isHot: true,
       },
       {
         title: "Image Generator",
@@ -256,33 +250,56 @@ const ToolsPage = () => {
         route: "/tools/video-generator",
       },
       {
+        title: "Video Story Generator",
+        description: "Generate video stories from text",
+        route: "/tools/video-story-generator",
+      },
+      {
         title: "Presentation Generator",
         description: "Create presentations",
         route: "/tools/presentation",
         isHot: true,
       },
+    ],
+    School: [
       {
-        title: "Chat With Docs",
+        title: "Text Tools",
+        description:
+          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        route: "/tools/text-tools",
+      },
+      {
+        title: "YouTube Summary",
+        description: "Video summaries and questions",
+        route: "/tools/youtube-assistant",
+      },
+      {
+        title: "Talk to PDF Docs",
         description: "Document chat system",
         route: "/tools/chat-with-docs",
         isHot: true,
       },
       {
-        title: "YouTube Assistant",
-        description: "Video summaries and questions",
-        route: "/tools/youtube-assistant",
-      },
-    ],
-    School: [
-      {
-        title: "School Intelligence",
-        description: "Get insights about your school",
-        route: "/tools/school-intelligence",
+        title: "Image Generator",
+        description: "Create stunning images",
+        route: "/tools/image-generator",
+        isHot: true,
       },
       {
-        title: "Report Generator",
-        description: "Generate various school reports",
-        route: "/tools/report-generator",
+        title: "Video Generator",
+        description: "Generate videos from images",
+        route: "/tools/video-generator",
+      },
+      {
+        title: "Video Story Generator",
+        description: "Generate video stories from text",
+        route: "/tools/video-story-generator",
+      },
+      {
+        title: "Presentation Generator",
+        description: "Create presentations",
+        route: "/tools/presentation",
+        isHot: true,
       },
       {
         title: "Marketing Content Generator",
@@ -290,9 +307,9 @@ const ToolsPage = () => {
         route: "/tools/marketing-content-generator",
       },
       {
-        title: "Chat With Docs",
-        description: "Universal chat on school datasets",
-        route: "/tools/chat-with-docs",
+        title: "School Intelligence",
+        description: "Get insights about your school",
+        route: "/tools/school-intelligence",
       },
     ],
   };

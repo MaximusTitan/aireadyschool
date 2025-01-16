@@ -116,7 +116,7 @@ export function ResearchAssistant() {
   };
 
   return (
-    <Card className="w-full max-w-4xl">
+    <Card className="w-full">
       <CardContent className="p-4">
         {error && (
           <Alert variant="destructive" className="mb-4">

@@ -12,6 +12,7 @@ import GenerateButton from "./components/GenerateButton";
 import Assessment from "./components/Assessment";
 import Footer from "./components/Footer";
 import { createClient } from "@/utils/supabase/client";
+import Link from "next/link"; // Added import
 
 const supabase = createClient();
 
@@ -172,9 +173,15 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col justify-between">
+      <Link
+        href="/tools/"
+        className="absolute top-4 left-4 text-blue-500 hover:text-blue-700"
+      >
+        ← Back
+      </Link>
       <Header />
       <main className="container mx-auto px-4 py-8 flex-grow bg-white">
-        <div className="bg-white rounded-lg shadow-lg p-6 md:p-8 max-w-2xl mx-auto">
+        <div className="bg-white rounded-lg border border-neutral-200 p-6 md:p-8 max-w-6xl mx-auto">
           {!assessment ? (
             <>
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -224,11 +231,11 @@ export default function Home() {
                   Saved Assessments
                 </h2>
                 {savedAssessments.length > 0 ? (
-                  <ul className="space-y-2">
+                  <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
                     {savedAssessments.map((savedAssessment) => (
-                      <li
+                      <div
                         key={savedAssessment.id}
-                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
+                        className="flex justify-between items-center bg-white border border-neutral-200 p-2 rounded"
                       >
                         <span>
                           {savedAssessment.subject} - {savedAssessment.topic}
@@ -237,13 +244,13 @@ export default function Home() {
                           onClick={() =>
                             handleLoadAssessment(savedAssessment.id)
                           }
-                          className="bg-rose-500 hover:bg-rose-600 text-white px-2 py-1 rounded"
+                          className="bg-white border border-rose-400 hover:bg-rose-500 hover:text-white px-2 py-1 rounded"
                         >
                           Load
                         </button>
-                      </li>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 ) : (
                   <p>No saved assessments found.</p>
                 )}

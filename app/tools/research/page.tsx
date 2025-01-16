@@ -34,10 +34,8 @@ function ErrorFallback({
 
 export default function Home() {
   return (
-    <div
-      className={`flex flex-col items-center justify-center min-h-screen py-2 ${inter.className}`}
-    >
-      <h1 className="text-4xl font-bold mb-8 bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent font-sans">
+    <div className={`flex flex-col min-h-screen py-2 ${inter.className}`}>
+      <h1 className="text-4xl font-bold mb-8 bg-rose-500 bg-clip-text text-transparent font-sans">
         AI Research Assistant
       </h1>
       <ErrorBoundary

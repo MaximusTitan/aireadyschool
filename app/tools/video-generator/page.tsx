@@ -6,9 +6,10 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, ChevronLeft } from "lucide-react";
 import axios, { AxiosError } from "axios";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function VideoGenerator() {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -111,7 +112,7 @@ export default function VideoGenerator() {
   };
 
   return (
-    <div className="container mx-auto py-10 relative">
+    <div className="mx-auto relative">
       {loading && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
           <div className="bg-white p-4 rounded-lg flex items-center gap-2">
@@ -120,17 +121,19 @@ export default function VideoGenerator() {
           </div>
         </div>
       )}
-
-      <Card className="max-w-3xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-rose-500">
-            Image to Video Generator
-          </CardTitle>
-        </CardHeader>
+      <div className="flex h-16 items-center space-x-2 ml-8">
+        <Link href="/tools" className="text-neutral-500 hover:text-neutral-700">
+          <ChevronLeft className="h-6 w-6 text-neutral-800" />
+        </Link>
+        <h1 className="text-3xl font-bold text-neutral-800">
+          Image to Video Generator
+        </h1>
+      </div>
+      <Card className="container max-w-8xl mx-auto mt-8">
         <CardContent className="pt-6 space-y-4">
           {videoUrl && (
             <div id="generated-video" className="mb-6">
-              <h2 className="text-lg font-bold text-rose-500 mb-2">
+              <h2 className="text-lg font-bold text-neutral-500 mb-2">
                 Your Generated Video
               </h2>
               <video
@@ -151,7 +154,7 @@ export default function VideoGenerator() {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
             className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
-              ${selectedImage ? "border-rose-500" : "border-gray-300 hover:border-rose-500"}`}
+              ${selectedImage ? "border-neutral-500" : "border-gray-300 hover:border-neutral-500"}`}
           >
             {selectedImage ? (
               <img
@@ -189,13 +192,13 @@ export default function VideoGenerator() {
               placeholder="Be specific about the movement you want to see. For example: 'Make the flower slowly bloom and sway in the wind' or 'Zoom into the center of the image while adding a subtle rotation'"
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="border-rose-500 focus:ring-rose-500 min-h-[120px]"
+              className="border-neutral-500 focus:ring-neutral-500 min-h-[120px]"
             />
           </div>
 
           <div className="flex gap-2">
             <Button
-              className="w-full bg-rose-500 hover:bg-rose-600 transition-colors"
+              className="w-full bg-neutral-500 hover:bg-neutral-600 transition-colors"
               onClick={handleImageToVideo}
               disabled={loading || !selectedImage || !prompt}
             >

@@ -6,6 +6,8 @@ import PresentationPreview from "./components/PresentationPreview";
 import { Presentation, Slide } from "./types/presentation";
 import { toast } from "@/hooks/use-toast";
 import { ErrorBoundary } from "react-error-boundary";
+import { ChevronLeft } from "lucide-react";
+import Link from "next/link";
 
 function ErrorFallback({
   error,
@@ -60,10 +62,15 @@ export default function Home() {
 
   return (
     <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-      <main className="container mx-auto p-4">
-        <h1 className="text-3xl font-bold mb-8">
-          AI-Powered Presentation Generator
+      <div className="flex h-16 items-center space-x-2 ml-8">
+        <Link href="/tools" className="text-neutral-500 hover:text-neutral-700">
+          <ChevronLeft className="h-6 w-6 text-neutral-800" />
+        </Link>
+        <h1 className="text-3xl font-bold text-neutral-800">
+          Presentation Generator
         </h1>
+      </div>
+      <main className="container mx-auto p-4 border border-neutral-200 rounded-lg mt-8">
         <PresentationForm onGenerated={handlePresentationGenerated} />
         {presentation && (
           <PresentationPreview

@@ -5,8 +5,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Loader2, Youtube } from "lucide-react";
+import { ChevronLeft, Loader2, Youtube } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 
 interface Message {
   role: "user" | "assistant";
@@ -18,6 +19,21 @@ interface VideoData {
   summary: string;
   transcript: string;
 }
+
+const getYouTubeEmbedUrl = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    let videoId = "";
+    if (parsedUrl.hostname === "youtu.be") {
+      videoId = parsedUrl.pathname.slice(1);
+    } else {
+      videoId = parsedUrl.searchParams.get("v") || "";
+    }
+    return `https://www.youtube.com/embed/${videoId}`;
+  } catch {
+    return "";
+  }
+};
 
 const YoutubeAssistantPage = () => {
   const [url, setUrl] = useState("");
@@ -139,10 +155,15 @@ const YoutubeAssistantPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      <header className="sticky top-0 z-50 w-full border-b bg-white dark:bg-neutral-800 dark:border-neutral-700">
-        <div className="container flex h-16 items-center space-x-4">
-          <Youtube className="h-6 w-6 text-rose-500" />
-          <h1 className="text-2xl font-bold text-rose-500">
+      <header className="sticky top-0 z-50 w-full dark:bg-neutral-800 dark:border-neutral-700">
+        <div className="ml-4 flex h-16 items-center space-x-2">
+          <Link
+            href="/tools"
+            className="text-neutral-500 hover:text-neutral-700"
+          >
+            <ChevronLeft className="h-6 w-6 text-neutral-800" />
+          </Link>
+          <h1 className="text-3xl font-bold text-neutral-800">
             YouTube Assistant
           </h1>
         </div>
@@ -162,7 +183,7 @@ const YoutubeAssistantPage = () => {
             />
             <Button
               type="submit"
-              className="bg-rose-500 hover:bg-rose-600 text-white"
+              className="bg-neutral-800 hover:bg-neutral-600 text-white"
               disabled={loading}
               aria-label={loading ? "Processing video" : "Analyze video"}
             >
@@ -178,21 +199,41 @@ const YoutubeAssistantPage = () => {
           </form>
 
           {videoData && (
-            <div className="grid md:grid-cols-2 gap-6">
-              <Card className="dark:bg-neutral-800">
-                <CardHeader>
-                  <CardTitle className="text-rose-500">Video Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="prose dark:prose-invert max-w-none">
-                    <p className="whitespace-pre-wrap">{videoData.summary}</p>
+            <div className="flex flex-col gap-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card className="dark:bg-neutral-800">
+                  <CardHeader>
+                    <CardTitle className="text-neutral-700">
+                      Video Summary
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="pneutral dark:pneutral-invert max-w-none">
+                      <p className="whitespace-pre-wrap">{videoData.summary}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <div className="md:col-span-1">
+                  <div
+                    className="relative w-full"
+                    style={{ paddingBottom: "56.25%" }}
+                  >
+                    <iframe
+                      className="absolute top-0 left-0 w-full h-full rounded-lg"
+                      width="100%"
+                      height="575"
+                      src={getYouTubeEmbedUrl(url)}
+                      title="YouTube Video Player"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
 
               <Card className="dark:bg-neutral-800">
                 <CardHeader>
-                  <CardTitle className="text-rose-500">
+                  <CardTitle className="text-neutral-700">
                     Chat with Video
                   </CardTitle>
                 </CardHeader>
@@ -211,7 +252,7 @@ const YoutubeAssistantPage = () => {
                           <div
                             className={`max-w-[80%] px-4 py-2 rounded-lg ${
                               message.role === "user"
-                                ? "bg-rose-500 text-white"
+                                ? "bg-neutral-500 text-white"
                                 : "bg-gray-100 dark:bg-neutral-950"
                             }`}
                           >
@@ -222,7 +263,7 @@ const YoutubeAssistantPage = () => {
                       {chatLoading && (
                         <div className="flex justify-start">
                           <div className="bg-gray-100 dark:bg-neutral-950 rounded-lg p-4">
-                            <Loader2 className="h-6 w-6 animate-spin text-rose-500" />
+                            <Loader2 className="h-6 w-6 animate-spin text-neutral-500" />
                           </div>
                         </div>
                       )}
@@ -241,7 +282,7 @@ const YoutubeAssistantPage = () => {
                     <Button
                       type="submit"
                       disabled={chatLoading || !input.trim() || !videoData}
-                      className="bg-rose-500 hover:bg-rose-600 text-white"
+                      className="bg-neutral-800 hover:bg-neutral-600 text-white"
                       aria-label="Send message"
                     >
                       Send

@@ -20,7 +20,8 @@ import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronLeft } from "lucide-react";
+import Link from "next/link";
 
 const ImageGeneratorPage = () => {
   const [loading, setLoading] = useState(false);
@@ -59,13 +60,18 @@ const ImageGeneratorPage = () => {
   };
 
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-b from-rose-50 to-white dark:from-neutral-900 dark:to-neutral-800">
-      <div className="max-w-4xl mx-auto space-y-8">
-        <Card className="border-rose-500/20">
+    <div className="min-h-screen p-8 bg-gray-50 dark:from-neutral-900 dark:to-neutral-800 ">
+      <div className="ml-4 flex h-16 items-center space-x-2">
+        <Link href="/tools" className="text-neutral-500 hover:text-neutral-700">
+          <ChevronLeft className="h-6 w-6 text-neutral-800" />
+        </Link>
+        <h1 className="text-3xl font-bold text-neutral-800">
+          AI Image Generator
+        </h1>
+      </div>
+      <div className="max-w-8xl mx-auto space-y-8 m-8">
+        <Card className="border-neutral-500/20 ml-4 mr-4">
           <CardHeader>
-            <CardTitle className="text-3xl font-bold text-rose-500">
-              AI Image Generator
-            </CardTitle>
             <CardDescription>
               Create stunning images using artificial intelligence
             </CardDescription>
@@ -152,28 +158,32 @@ const ImageGeneratorPage = () => {
             </div>
 
             {/* Generate Button */}
-            <Button
-              onClick={handleGenerate}
-              disabled={loading || !prompt.trim()}
-              className="w-full bg-rose-500 hover:bg-rose-600 text-white"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Generating...
-                </>
-              ) : (
-                "Generate Image"
-              )}
-            </Button>
+            <div className="flex justify-end">
+              <Button
+                onClick={handleGenerate}
+                disabled={loading || !prompt.trim()}
+                className="bg-neutral-800 hover:bg-neutral-600 text-white min-w-52"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate Image"
+                )}
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
         {/* Generated Image Display */}
         {generatedImage && (
-          <Card className="border-rose-500/20">
+          <Card className="border-neutral-500/20">
             <CardHeader>
-              <CardTitle className="text-rose-500">Generated Image</CardTitle>
+              <CardTitle className="text-neutral-500">
+                Generated Image
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <img

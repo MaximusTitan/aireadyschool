@@ -18,7 +18,7 @@ const layouts: SlideLayout[] = [
 
 async function generateImagesForSlide(slide: any, theme: string): Promise<string> {
   console.log('Generating image for slide:', slide.title)
-  
+
   const basePrompt = slide.title
   const stylePrompts = {
     modern: 'sleek, minimalist design with bold colors',
@@ -29,7 +29,7 @@ async function generateImagesForSlide(slide: any, theme: string): Promise<string
   }
 
   const style = stylePrompts[theme as keyof typeof stylePrompts] || stylePrompts.modern
-  
+
   try {
     console.log('Generating image for layout:', slide.layout)
     const image = await generateImage(`${basePrompt}, ${style}`)
@@ -48,11 +48,14 @@ async function generateImagesForSlide(slide: any, theme: string): Promise<string
 
 export async function generatePresentation(prompt: string, theme: string, slideCount: number): Promise<Presentation> {
   console.log('Starting presentation generation for prompt:', prompt, 'theme:', theme, 'slideCount:', slideCount)
-  
+
+  // Ensure slideCount is within the allowed range
+  const validSlideCount = Math.max(2, Math.min(8, slideCount))
+
   try {
     console.log('Generating text content with OpenAI...')
     const { text } = await generateText({
-      model: openai('gpt-4o'),
+      model: openai('gpt-4-turbo'),
       prompt: `Create an engaging and educational presentation about ${prompt} for students. Format the response as JSON with the following structure:
       {
         "slides": [
@@ -75,7 +78,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
           }
         ]
       }
-      Generate ${slideCount} slides with diverse layouts and engaging, educational content suitable for students. Make sure to use different layouts for visual variety. The first slide should always be a titleSlide layout. Ensure each slide has substantial content, including the main content and relevant bullet points or other layout-specific information. Strictly adhere to the JSON format without any additional text or explanations outside the JSON structure.`,
+      Generate exactly ${validSlideCount} slides with diverse layouts and engaging, educational content suitable for students. Make sure to use different layouts for visual variety. The first slide should always be a titleSlide layout with a catchy title and brief introduction. Ensure each slide has substantial content, including the main content and relevant bullet points or other layout-specific information. Strictly adhere to the JSON format without any additional text or explanations outside the JSON structure.`,
     })
 
     console.log('Parsing AI response...')
@@ -94,7 +97,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       if (parseError instanceof Error) {
         throw new Error(`Invalid response format from AI: ${parseError.message}`)
       } else {
-        throw new Error('Invalid response format from AI: Unknown error.')
+        throw new Error('Invalid response format from AI: Unknown error')
       }
     }
 
@@ -118,11 +121,11 @@ export async function generatePresentation(prompt: string, theme: string, slideC
             image: image,
             statistics: slide.statistics || [],
             timeline: slide.timeline || [],
-            comparison: slide.comparison || { left: { title: 'Left Title', points: [] }, right: { title: 'Right Title', points: [] } }, // Added titles
+            comparison: slide.comparison || { left: { points: [] }, right: { points: [] } },
             quote: slide.quote || { text: '', author: '' },
-            layout: slide.layout as SlideLayout,
+            layout: index === 0 ? 'titleSlide' : (slide.layout as SlideLayout),
             order: index,
-            ...(slide.layout === 'titleSlide' && {
+            ...(index === 0 && {
               author: {
                 name: "AI Presentation Generator",
                 avatar: "/placeholder.svg?height=100&width=100",
@@ -144,7 +147,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
             title: slide.title || `Slide ${index + 1}`,
             content: slide.content || 'Content generation failed. Please try again.',
             image: `https://via.placeholder.com/1024x1024?text=${encodeURIComponent(slide.title || 'Slide Generation Failed')}`,
-            layout: 'contentWithImage' as SlideLayout,
+            layout: index === 0 ? 'titleSlide' : 'contentWithImage' as SlideLayout,
             order: index,
           }
         }
@@ -154,6 +157,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
     console.log('Presentation generation completed successfully')
     return {
       id: nanoid(),
+      topic: prompt,
       slides,
       theme,
     }
@@ -168,18 +172,17 @@ export async function generatePresentation(prompt: string, theme: string, slideC
     // Return a basic presentation with an error slide
     return {
       id: nanoid(),
+      topic: prompt,
       slides: [{
         id: nanoid(),
         title: 'Error Generating Presentation',
         content: 'There was an error generating your presentation. Please try again.',
         image: `https://via.placeholder.com/1024x1024?text=${encodeURIComponent('Error')}`,
-        layout: 'contentWithImage',
+        layout: 'titleSlide',
         order: 0,
       }],
       theme,
     }
   }
 }
-
-export const regenerateImage = generateImage // Export regenerateImage
 

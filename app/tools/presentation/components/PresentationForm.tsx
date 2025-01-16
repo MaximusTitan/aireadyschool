@@ -14,7 +14,7 @@ import {
 import { Slider } from "@/components/ui/slider";
 import { generatePresentation } from "../actions/generatePresentation";
 import { Presentation } from "../types/presentation";
-import { useToast } from "@/hooks/use-toast";
+import { toast } from "@/hooks/use-toast";
 
 interface PresentationFormProps {
   onGenerated: (presentation: Presentation) => void;
@@ -23,10 +23,9 @@ interface PresentationFormProps {
 export default function PresentationForm({
   onGenerated,
 }: PresentationFormProps) {
-  const { toast } = useToast();
   const [prompt, setPrompt] = useState("");
   const [theme, setTheme] = useState("modern");
-  const [slideCount, setSlideCount] = useState(6);
+  const [slideCount, setSlideCount] = useState(5);
   const [isGenerating, setIsGenerating] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

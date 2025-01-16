@@ -56,7 +56,7 @@ export default function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
 
   const renderLayout = () => {
     switch (slide.layout) {
-      case "splitWithImage":
+      case "split":
         return (
           <div className="grid grid-cols-2 gap-8">
             <div className="space-y-4">
@@ -100,7 +100,7 @@ export default function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
           </div>
         );
 
-      case "fullBleed":
+      case "fullImage":
         return (
           <div className="space-y-6">
             <div className="relative aspect-[21/9] bg-muted rounded-lg overflow-hidden">
@@ -169,7 +169,7 @@ export default function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
           </div>
         );
 
-      case "gridLayout":
+      case "grid":
         return (
           <div className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
@@ -237,11 +237,11 @@ export default function SlideEditor({ slide, onUpdate }: SlideEditorProps) {
               <SelectValue placeholder="Select layout" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="splitWithImage">Split View</SelectItem>
-              <SelectItem value="fullBleed">Full Image</SelectItem>
+              <SelectItem value="split">Split View</SelectItem>
+              <SelectItem value="fullImage">Full Image</SelectItem>
               <SelectItem value="imageTop">Image Top</SelectItem>
               <SelectItem value="imageBottom">Image Bottom</SelectItem>
-              <SelectItem value="gridLayout">Grid</SelectItem>
+              <SelectItem value="grid">Grid</SelectItem>
             </SelectContent>
           </Select>
         </div>

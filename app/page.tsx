@@ -3,7 +3,7 @@ import Image from "next/image";
 import {
   ChevronRight,
   Book,
-  Image as ImageIcon,
+  ImageIcon,
   FileText,
   Layout,
   Video,
@@ -12,10 +12,13 @@ import {
   Github,
   Twitter,
   Linkedin,
+  Play,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
+import logo from "@/public/logo.webp";
 
 const LandingPage = () => {
   const tools = [
@@ -56,193 +59,182 @@ const LandingPage = () => {
     },
   ];
 
+  const benefits = [
+    "Empower Everyone at School with AI",
+    "Customize Education for Kids",
+    "Help Teachers Save Time",
+    "Make Everyone Adapt to AI",
+    "Get Better Insights About Student and Teacher Performance",
+    "Achieve More in Less Time",
+    "Gain Competitive Advantage",
+    "Become a Part of a Growing AI Community",
+  ];
+
+  const roles = [
+    {
+      title: "Student",
+      descriptions: [
+        "Personalize the learning path of every student with our patent pending AI powered personalization.",
+        "Give them the gift of working with AI to help for learning the concepts well and also learn to build things with AI.",
+      ],
+    },
+    {
+      title: "Teacher",
+      descriptions: [
+        "The power of personalization helps teachers generate customized content for each student.",
+        "Give the power of AI to teachers and which gives them more time to enjoy what they do, teaching.",
+      ],
+    },
+    {
+      title: "Admin Staff",
+      descriptions: [
+        "Accessing information about anything in the school is now on the fingertips with AI.",
+        "They can do their daily work more efficiently and also can help with other things.",
+      ],
+    },
+    {
+      title: "Principal / Management",
+      descriptions: [
+        "Principals and school owners can have more control over the operations as the AI helps to automate certain things and provides them intelligent insights on various school related things.",
+        "Now your school will be truly AI Ready!",
+      ],
+    },
+  ];
+
   return (
-    <div className="min-h-screen bg-white dark:bg-neutral-900">
-      {/* Navigation */}
-      <nav className="fixed w-full bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm z-50 border-b border-gray-100 dark:border-neutral-800">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <Image
-                src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/ai-ready-school.webp"
-                alt="AI Ready School"
-                width={160}
-                height={30}
-                priority
-              />
-            </div>
-            <div className="flex items-center space-x-4">
-              <Link href="/sign-in">
-                <Button
-                  variant="ghost"
-                  className="text-gray-600 dark:text-gray-300 hover:text-rose-500 dark:hover:text-rose-400"
-                >
-                  Sign In
-                </Button>
-              </Link>
-              <Link href="/sign-up">
-                <Button className="bg-rose-500 hover:bg-rose-600 text-white">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
-          </div>
+    <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-neutral-900 dark:to-neutral-950">
+      {/* Header */}
+      <header className="container mx-auto px-4 pt-12 pb-16 text-center relative">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,rgba(255,192,203,0.1),transparent)] dark:bg-[radial-gradient(45%_40%_at_50%_50%,rgba(255,192,203,0.05),transparent)]" />
+        <div className="mb-12 relative">
+          <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full blur-2xl opacity-10 dark:opacity-20" />
+          <Image
+            src={logo}
+            alt="AI Ready School"
+            width={240}
+            height={96}
+            className="mx-auto relative"
+            priority
+          />
         </div>
-      </nav>
-
-      {/* Hero Section */}
-      <div className="pt-32 pb-20 bg-gradient-to-b from-rose-50 to-white dark:from-neutral-900 dark:to-neutral-900">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto text-center">
-            <h1 className="text-6xl font-bold mb-6 bg-gradient-to-r from-rose-500 to-rose-600 bg-clip-text text-transparent">
-              Transform Education with AI
-            </h1>
-            <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-              Empower your educational journey with AI-driven tools designed to
-              enhance learning, streamline teaching, and improve student
-              outcomes.
-            </p>
-            <div className="flex justify-center space-x-4">
-              <Button className="bg-rose-500 hover:bg-rose-600 text-white px-8 py-6 text-lg">
-                Start Free Trial <ChevronRight className="ml-2 h-5 w-5" />
-              </Button>
-              <Button
-                variant="outline"
-                className="border-rose-200 dark:border-rose-800 text-rose-500 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-neutral-800 px-8 py-6 text-lg"
-              >
-                Watch Demo
-              </Button>
-            </div>
-          </div>
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+          The Power of AI to Empower Everyone at the School
+        </h1>
+        <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto">
+          <Button
+            size="lg"
+            className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25 dark:shadow-pink-500/10"
+          >
+            Signup for a Demo
+          </Button>
+          <Link href="/sign-in">
+            <Button size="lg" variant="outline" className="border-2">
+              Login
+            </Button>
+          </Link>
         </div>
-      </div>
+      </header>
 
-      {/* Tools Grid */}
-      <div className="container mx-auto px-4 py-24">
-        <h2 className="text-4xl font-bold text-center mb-4 dark:text-white">
-          Our AI Tools
-        </h2>
-        <p className="text-gray-600 dark:text-gray-300 text-center mb-12 max-w-2xl mx-auto">
-          A comprehensive suite of AI-powered tools designed specifically for
-          educational excellence
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {tools.map((tool) => (
-            <Card
-              key={tool.name}
-              className="border-gray-100 dark:border-neutral-800 dark:bg-neutral-800/20 hover:shadow-lg transition-shadow"
+      {/* Video Section */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="aspect-video max-w-4xl mx-auto rounded-2xl overflow-hidden relative group cursor-pointer">
+          <div className="absolute inset-0 bg-gradient-to-br from-pink-500 to-purple-500 opacity-10 group-hover:opacity-20 transition-opacity" />
+          <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-800 -z-10" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-20 w-20 rounded-full bg-white/90 dark:bg-white/80 hover:bg-white dark:hover:bg-white shadow-xl group-hover:scale-105 transition-transform"
             >
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <div className="p-3 bg-rose-100 dark:bg-rose-900/30 rounded-xl">
-                    <tool.icon className="h-6 w-6 text-rose-500 dark:text-rose-400" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-xl text-gray-900 dark:text-white mb-2">
-                      {tool.name}
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
-                      {tool.description}
+              <Play className="h-10 w-10 text-pink-500" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Roles Grid */}
+      <section className="container mx-auto px-4 py-16">
+        <div className="grid md:grid-cols-2 gap-8 max-w-6xl mx-auto">
+          {roles.map((role, index) => (
+            <Card
+              key={role.title}
+              className="group relative overflow-hidden border-0 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-pink-500/5 transition-shadow"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <CardContent className="p-8">
+                <h2 className="text-2xl font-semibold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                  {role.title}
+                </h2>
+                <div className="space-y-4">
+                  {role.descriptions.map((desc, index) => (
+                    <p
+                      key={index}
+                      className="text-gray-600 dark:text-gray-300 leading-relaxed"
+                    >
+                      {desc}
                     </p>
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      </div>
+      </section>
 
       {/* Benefits Section */}
-      <div className="bg-rose-50 dark:bg-neutral-800/20 py-24">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-4xl font-bold text-center mb-4 dark:text-white">
-              Why Choose AI Ready School?
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-center mb-12">
-              Discover how our platform transforms the educational experience
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card className="border-0 shadow-lg dark:bg-neutral-800/40">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-semibold mb-4 text-rose-500 dark:text-rose-400">
-                    For Educators
-                  </h3>
-                  <ul className="space-y-4">
-                    <li className="flex items-center">
-                      <div className="h-2 w-2 bg-rose-500 dark:bg-rose-400 rounded-full mr-3"></div>
-                      <span className="text-gray-600 dark:text-gray-300">
-                        Automated lesson planning and content creation
-                      </span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-2 w-2 bg-rose-500 dark:bg-rose-400 rounded-full mr-3"></div>
-                      <span className="text-gray-600 dark:text-gray-300">
-                        Intelligent assessment generation
-                      </span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-2 w-2 bg-rose-500 dark:bg-rose-400 rounded-full mr-3"></div>
-                      <span className="text-gray-600 dark:text-gray-300">
-                        Performance tracking and analytics
-                      </span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
-              <Card className="border-0 shadow-lg dark:bg-neutral-800/40">
-                <CardContent className="p-8">
-                  <h3 className="text-2xl font-semibold mb-4 text-rose-500 dark:text-rose-400">
-                    For Students
-                  </h3>
-                  <ul className="space-y-4">
-                    <li className="flex items-center">
-                      <div className="h-2 w-2 bg-rose-500 dark:bg-rose-400 rounded-full mr-3"></div>
-                      <span className="text-gray-600 dark:text-gray-300">
-                        Personalized learning pathways
-                      </span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-2 w-2 bg-rose-500 dark:bg-rose-400 rounded-full mr-3"></div>
-                      <span className="text-gray-600 dark:text-gray-300">
-                        24/7 AI tutoring support
-                      </span>
-                    </li>
-                    <li className="flex items-center">
-                      <div className="h-2 w-2 bg-rose-500 dark:bg-rose-400 rounded-full mr-3"></div>
-                      <span className="text-gray-600 dark:text-gray-300">
-                        Interactive study materials
-                      </span>
-                    </li>
-                  </ul>
-                </CardContent>
-              </Card>
+      <section className="container mx-auto px-4 py-16 relative">
+        <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,rgba(255,192,203,0.1),transparent)] dark:bg-[radial-gradient(45%_40%_at_50%_50%,rgba(255,192,203,0.05),transparent)]" />
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+          Overall Benefits to the School
+        </h2>
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {benefits.map((benefit, index) => (
+            <div
+              key={index}
+              className="flex items-center gap-4 p-4 rounded-xl bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-gray-100 dark:border-neutral-800"
+            >
+              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center">
+                <Check className="h-5 w-5 text-white" />
+              </div>
+              <span className="text-gray-600 dark:text-gray-300">
+                {benefit}
+              </span>
             </div>
-          </div>
+          ))}
         </div>
-      </div>
+      </section>
+
+      {/* Pricing Section */}
+      <section className="container mx-auto px-4 py-16">
+        <h2 className="text-3xl md:text-4xl font-bold text-center mb-12 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+          Pricing
+        </h2>
+        <div className="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+          {["Starter", "Silver", "Gold"].map((tier, index) => (
+            <Card
+              key={tier}
+              className="relative group overflow-hidden border-0 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-pink-500/5 transition-shadow"
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <CardContent className="p-8">
+                <h3 className="text-2xl font-semibold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                  {tier}
+                </h3>
+                <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25 dark:shadow-pink-500/10">
+                  Get Started
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </section>
 
       {/* Footer */}
-      <footer className="bg-white dark:bg-neutral-900 border-t border-gray-100 dark:border-neutral-800">
-        <div className="container mx-auto px-4 py-12">
-          <div className="flex flex-col items-center text-center gap-8">
-            <div className="space-y-4 flex flex-col items-center">
-              <Image
-                src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/ai-ready-school.webp"
-                alt="AI Ready School"
-                width={140}
-                height={30}
-              />
-              <p className="text-gray-600 dark:text-gray-300">
-                Empowering education through artificial intelligence
-              </p>
-            </div>
-          </div>
-          <div className="mt-12 pt-8 border-t border-gray-100 dark:border-neutral-800">
-            <p className="text-center text-gray-600 dark:text-gray-300">
-              © 2024 AI Ready School. All rights reserved.
-            </p>
-          </div>
+      <footer className="border-t border-gray-100 dark:border-neutral-800 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-sm">
+        <div className="container mx-auto px-4 py-8">
+          <p className="text-center text-gray-600 dark:text-gray-300">
+            © 2024 AI Ready School. All rights reserved.
+          </p>
         </div>
       </footer>
     </div>

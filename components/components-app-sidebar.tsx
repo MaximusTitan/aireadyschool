@@ -25,6 +25,7 @@ import {
   SidebarRail,
   SidebarSeparator,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   BadgeCheck,
@@ -32,7 +33,6 @@ import {
   Bot,
   ChevronsUpDown,
   Frame,
-  LayoutDashboard,
   LogOut,
   Map,
   PieChart,
@@ -43,7 +43,9 @@ import Image from "next/image";
 import Link from "next/link";
 import { ThemeSwitcher } from "./theme-switcher";
 import { signOutAction } from "@/app/actions";
-import logo from "@/public/logo.webp";
+import logo from "@/public/logo.png";
+import logo1 from "@/public/logo1.png";
+import { stat } from "fs";
 
 export function AppSidebar() {
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
@@ -69,7 +71,6 @@ export function AppSidebar() {
   // Define navigation data based on user role
   const navData = {
     navMain: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
       { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
       // ...existing navigation items...
@@ -82,6 +83,20 @@ export function AppSidebar() {
     ],
   };
 
+  // Add Logo component to switch logos based on sidebar state
+  const Logo = () => {
+    const { state } = useSidebar();
+    return (
+      <Image
+        src={state === "expanded" ? logo : logo1}
+        alt="AI Ready School"
+        width={110}
+        height={110}
+        className={state === "expanded" ? "ml-2" : ""}
+      />
+    );
+  };
+
   return (
     <Sidebar collapsible="icon">
       {/* Sidebar Header with Logo */}
@@ -90,12 +105,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Image
-                  src={logo}
-                  alt="AI Ready School"
-                  width={110}
-                  height={110}
-                />
+                <Logo />
               </DropdownMenuTrigger>
             </DropdownMenu>
           </SidebarMenuItem>
@@ -200,7 +210,7 @@ export function AppSidebar() {
 export function AppSidebarHeader() {
   return (
     <SidebarInset>
-      <header className="flex h-16 shrink-0 px-4 items-center justify-between gap-2 border-b">
+      <header className="flex h-12 shrink-0 px-4 items-center justify-between gap-2 border-b border-opacity-75">
         <SidebarTrigger className="-ml-1" />
         <ThemeSwitcher />
       </header>

@@ -48,7 +48,7 @@ export default function RootLayout({
             {showSidebar && <AppSidebar />}
             <main className="flex-1 flex flex-col">
               {showSidebar && <AppSidebarHeader />}
-              <div className="p-4">{children}</div>
+              <div>{children}</div>
             </main>
             <Toaster />
           </ThemeProvider>

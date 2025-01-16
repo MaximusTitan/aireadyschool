@@ -69,9 +69,17 @@ export interface Slide {
   order: number
 }
 
+
+
 export interface Presentation {
-  id: string
-  slides: Slide[]
-  theme: string
+
+  id: string;
+
+  topic: string;
+
+  slides: Slide[];
+
+  theme: string;
+
 }
 

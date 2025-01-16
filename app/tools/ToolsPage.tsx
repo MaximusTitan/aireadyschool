@@ -67,7 +67,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
             {title}
           </CardTitle>
           {isHot && (
-            <span className="px-2 py-1 text-xs font-semibold bg-rose-100 text-rose-600 rounded-full dark:bg-rose-950 dark:text-rose-300">
+            <span className="px-2 py-1 text-xs font-semibold bg-purple-100 text-purple-600 rounded-full dark:bg-purple-950 dark:text-purple-300">
               HOT
             </span>
           )}
@@ -79,7 +79,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
       <CardContent>
         <div className="flex justify-end">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="text-xs px-3 py-1 bg-rose-500 text-white rounded-full hover:bg-rose-600 transition-colors dark:bg-rose-600 dark:hover:bg-rose-700">
+            <button className="text-xs px-3 py-1 bg-purple-500 text-white rounded-full hover:bg-purple-600 transition-colors dark:bg-purple-600 dark:hover:bg-purple-700">
               Try Now
             </button>
           </div>
@@ -158,7 +158,6 @@ const ToolsPage = () => {
         title: "Lesson Content Generator",
         description: "Generate lesson content",
         route: "/tools/lesson-content-generator",
-        isHot: true,
       },
       {
         title: "YouTube Summary",
@@ -357,14 +356,8 @@ const ToolsPage = () => {
         {/* Filters */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex space-x-4">
-            <button className="px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors dark:bg-rose-600 dark:hover:bg-rose-700">
+            <button className="px-4 py-2 bg-purple-400 text-white rounded-lg hover:bg-purple-500 transition-colors dark:bg-purple-500 dark:hover:bg-purple-600">
               All Tools
-            </button>
-            <button className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors dark:text-neutral-300 dark:hover:bg-neutral-800">
-              Favorites
-            </button>
-            <button className="px-4 py-2 text-neutral-600 hover:bg-neutral-100 rounded-lg transition-colors dark:text-neutral-300 dark:hover:bg-neutral-800">
-              Recent
             </button>
           </div>
           <Select defaultValue="popular">

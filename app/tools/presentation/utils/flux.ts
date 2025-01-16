@@ -25,18 +25,19 @@ async function attemptImageGeneration(prompt: string, attempt: number = 1): Prom
   try {
     console.log(`Attempt ${attempt} - Generating image for prompt: "${prompt}"`)
     
-    const result = await fal.subscribe("fal-ai/flux/schnell", {
+    const result = await fal.subscribe("fal-ai/recraft-v3", {
       input: {
         prompt,
-        image_size: "square_hd",
-        steps: 50,
-        seed: Math.floor(Math.random() * 1000000),
-        scheduler: "euler_a",
+        image_size: "square_hd", // Using valid image size from the API spec
+        num_inference_steps: 10,
         guidance_scale: 7.5,
+        negative_prompt: "ugly, blurry, poor quality, distorted",
+        style: "digital_illustration"
       },
       logs: true,
       onQueueUpdate: (update) => {
         if (update.status === "IN_PROGRESS") {
+          console.log('Generation in progress:', update.status);
           update.logs.map((log) => log.message).forEach(console.log);
         }
       },
@@ -52,6 +53,14 @@ async function attemptImageGeneration(prompt: string, attempt: number = 1): Prom
 
   } catch (error) {
     console.error(`Attempt ${attempt} failed:`, error)
+    
+    // Log detailed error information
+    if (error instanceof Error) {
+      console.error('Error name:', error.name)
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+    }
+
     if (attempt < MAX_RETRIES) {
       console.log(`Retrying after ${RETRY_DELAY}ms...`)
       await delay(RETRY_DELAY)

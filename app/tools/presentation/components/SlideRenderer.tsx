@@ -11,47 +11,69 @@ import { TimelineSlide } from "./slides/TimelineSlide";
 import { ComparisonSlide } from "./slides/ComparisonSlide";
 import { StatisticSlide } from "./slides/StatisticSlide";
 import { BulletPointsSlide } from "./slides/BulletPointsSlide";
-import { Skeleton } from "@/components/ui/skeleton";
 
 interface SlideRendererProps {
   slide: Slide;
   theme: string;
-  imagesLoading?: boolean;
+  dimensions: { width: number; height: number };
 }
 
 export function SlideRenderer({
   slide,
   theme,
-  imagesLoading,
+  dimensions,
 }: SlideRendererProps) {
-  if (imagesLoading) {
-    return <Skeleton className="w-full h-64" />;
-  }
+  const commonProps = {
+    slide,
+    theme,
+    style: {
+      width: "100%",
+      height: "100%",
+      fontSize: `${dimensions.height * 0.02}px`, // Base font size
+      "--title-size": `${dimensions.height * 0.1}px`,
+      "--content-size": `${dimensions.height * 0.05}px`,
+      "--bullet-size": `${dimensions.height * 0.04}px`,
+      "--margin-horizontal": `${dimensions.width * 0.1}px`,
+      "--margin-vertical": `${dimensions.height * 0.05}px`,
+    } as React.CSSProperties,
+  };
 
-  const commonProps = { slide, theme };
-
-  switch (slide.layout) {
-    case "titleSlide":
-      return <TitleSlide {...commonProps} />;
-    case "contentWithImage":
-      return <ContentWithImageSlide {...commonProps} />;
-    case "splitContent":
-      return <SplitContentSlide {...commonProps} />;
-    case "fullBleed":
-      return <FullBleedSlide {...commonProps} />;
-    case "gridLayout":
-      return <GridLayoutSlide {...commonProps} />;
-    case "quoteSlide":
-      return <QuoteSlide {...commonProps} />;
-    case "timelineSlide":
-      return <TimelineSlide {...commonProps} />;
-    case "comparisonSlide":
-      return <ComparisonSlide {...commonProps} />;
-    case "statisticSlide":
-      return <StatisticSlide {...commonProps} />;
-    case "bulletPoints":
-      return <BulletPointsSlide {...commonProps} />;
-    default:
-      return <div>Unsupported layout: {slide.layout}</div>;
-  }
+  return (
+    <div
+      className="relative w-full h-full"
+      style={{
+        aspectRatio: "16/9",
+        overflow: "hidden",
+        margin: 0,
+        padding: 0,
+      }}
+    >
+      {(() => {
+        switch (slide.layout) {
+          case "titleSlide":
+            return <TitleSlide {...commonProps} />;
+          case "contentWithImage":
+            return <ContentWithImageSlide {...commonProps} />;
+          case "splitContent":
+            return <SplitContentSlide {...commonProps} />;
+          case "fullBleed":
+            return <FullBleedSlide {...commonProps} />;
+          case "gridLayout":
+            return <GridLayoutSlide {...commonProps} />;
+          case "quoteSlide":
+            return <QuoteSlide {...commonProps} />;
+          case "timelineSlide":
+            return <TimelineSlide {...commonProps} />;
+          case "comparisonSlide":
+            return <ComparisonSlide {...commonProps} />;
+          case "statisticSlide":
+            return <StatisticSlide {...commonProps} />;
+          case "bulletPoints":
+            return <BulletPointsSlide {...commonProps} />;
+          default:
+            return <div>Unsupported layout: {slide.layout}</div>;
+        }
+      })()}
+    </div>
+  );
 }

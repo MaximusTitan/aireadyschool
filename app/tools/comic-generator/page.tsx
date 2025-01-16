@@ -208,8 +208,10 @@ function ComicGeneratorContent() {
     <Suspense fallback={<div>Loading...</div>}>
       <div className="flex flex-col min-h-screen bg-background text-foreground">
         <div className="p-4 border-b border-border">
-          <div className="max-w-6xl mx-auto flex justify-between items-start">
-            <h1 className="text-3xl font-bold">Comic Generator</h1>
+          <div className="max-w-6xl mx-auto flex flex-col items-start space-y-4">
+            <h1 className="text-3xl text-rose-500 font-bold">
+              Comic Generator
+            </h1>
             <form onSubmit={handleSubmit} className="w-[500px] relative">
               <Textarea
                 placeholder="Enter your comic idea here..."

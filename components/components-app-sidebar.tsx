@@ -73,12 +73,8 @@ export function AppSidebar() {
     navMain: [
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
       { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
-      // ...existing navigation items...
       ...(userRole === "Admin"
-        ? [
-            { title: "Schools", url: "/schools", icon: BookOpen },
-            // Add more Admin-specific items here
-          ]
+        ? [{ title: "Schools", url: "/schools", icon: BookOpen }]
         : []),
     ],
   };
@@ -115,15 +111,21 @@ export function AppSidebar() {
       <SidebarSeparator />
 
       {/* Main Navigation Links */}
-      <SidebarContent>
+      <SidebarContent className="mt-4">
         <SidebarGroup>
           <SidebarMenu>
             {navData.navMain.map((item) => (
-              <SidebarMenuItem key={item.title}>
+              <SidebarMenuItem key={item.title} className="mt-2">
                 <SidebarMenuButton tooltip={item.title} asChild>
                   <Link href={item.url}>
-                    {item.icon && <item.icon />}
-                    <span>{item.title}</span>
+                    {item.icon && (
+                      <item.icon
+                        className="font-bold text-purple-700"
+                        size={36}
+                        strokeWidth={2}
+                      />
+                    )}
+                    <span className="font-semibold text-lg">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -210,7 +212,7 @@ export function AppSidebar() {
 export function AppSidebarHeader() {
   return (
     <SidebarInset>
-      <header className="flex h-12 shrink-0 px-4 items-center justify-between gap-2 border-b border-opacity-75">
+      <header className="flex h-12 shrink-0 px-4 items-center justify-between gap-2 border-opacity-75">
         <SidebarTrigger className="-ml-1" />
         <ThemeSwitcher />
       </header>

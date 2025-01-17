@@ -173,7 +173,6 @@ const ToolsPage = () => {
         title: "Lesson Content Generator",
         description: "Generate lesson content",
         route: "/tools/lesson-content-generator",
-        isComingSoon: true,
       },
       {
         title: "YouTube Summary",
@@ -260,7 +259,6 @@ const ToolsPage = () => {
         title: "Lesson Content Generator",
         description: "Create lesson content",
         route: "/tools/lesson-content-generator",
-        isComingSoon: true, // Mark as Coming Soon
       },
 
       {
@@ -332,7 +330,6 @@ const ToolsPage = () => {
         title: "Lesson Content Generator",
         description: "Create lesson content",
         route: "/tools/lesson-content-generator",
-        isComingSoon: true, // Mark as Coming Soon
       },
       {
         title: "Presentation Generator",
@@ -359,7 +356,6 @@ const ToolsPage = () => {
     userRole === "Admin"
       ? Object.values(categories)
           .flat()
-          // Remove duplicates based on the 'route' property
           .filter(
             (tool, index, self) =>
               index === self.findIndex((t) => t.route === tool.route)
@@ -375,18 +371,35 @@ const ToolsPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+    <div
+      className="min-h-screen bg-neutral-50 dark:bg-neutral-950"
+      style={{
+        background:
+          "radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(250,220,255,0.3) 35%, rgba(255,255,255,0.3) 100%)",
+      }}
+    >
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-neutral-950 dark:text-neutral-100">
-            AI Tools
+          <div className="flex items-center">
+            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
+              AI Tools
+            </h1>
             {userRole && (
               <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
                 ({userRole})
               </span>
             )}
-          </h1>
+          </div>
+        </div>
+
+        {/* Filters */}
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex space-x-4">
+            <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
+              All Tools
+            </button>
+          </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 dark:text-neutral-500 h-4 w-4" />
@@ -399,25 +412,6 @@ const ToolsPage = () => {
               />
             </div>
           </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex space-x-4">
-            <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
-              All Tools
-            </button>
-          </div>
-          <Select defaultValue="popular">
-            <SelectTrigger className="w-[180px] dark:border-neutral-800 dark:bg-neutral-900">
-              <SelectValue placeholder="Sort by" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="popular">Most Popular</SelectItem>
-              <SelectItem value="newest">Newest</SelectItem>
-              <SelectItem value="alphabetical">Alphabetical</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {/* Tools Grid */}

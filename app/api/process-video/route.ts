@@ -184,7 +184,7 @@ export async function POST(req: Request) {
               content: `Based on the following video summary, please answer the question below:\n\nSummary: ${analysis.analysis_results}\n\nQuestion: ${chatMessage}`
             }
           ],
-          max_tokens: 2000,
+          max_tokens: 500,
           temperature: 0.7
         })
 

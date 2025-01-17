@@ -25,6 +25,7 @@ interface ToolCardProps {
   description: string;
   route: string;
   isHot?: boolean;
+  isComingSoon?: boolean; // Add isComingSoon property
 }
 
 const ToolCard: React.FC<ToolCardProps> = ({
@@ -32,11 +33,15 @@ const ToolCard: React.FC<ToolCardProps> = ({
   description,
   route,
   isHot = false,
+  isComingSoon = false, // Destructure isComingSoon
 }) => {
   const router = useRouter();
 
   const handleClick = () => {
-    router.push(route);
+    if (!isComingSoon) {
+      // Disable redirect if coming soon
+      router.push(route);
+    }
   };
 
   const [userRole, setUserRole] = useState<string | null>(null);
@@ -71,6 +76,11 @@ const ToolCard: React.FC<ToolCardProps> = ({
               HOT
             </span>
           )}
+          {isComingSoon && ( // Add Coming Soon badge
+            <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full">
+              Coming Soon
+            </span>
+          )}
         </div>
         <CardDescription className="text-sm text-neutral-500 dark:text-neutral-400">
           {description}
@@ -79,9 +89,11 @@ const ToolCard: React.FC<ToolCardProps> = ({
       <CardContent>
         <div className="flex justify-end">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-            <button className="text-xs px-3 py-1 bg-neutral-800 text-white rounded-full hover:bg-neutral-600 transition-colors dark:bg-neutral-600 dark:hover:bg-neutral-700">
-              Try Now
-            </button>
+            {!isComingSoon && ( // Remove "Try Now" button if coming soon
+              <button className="text-xs px-3 py-1 bg-neutral-800 text-white rounded-full hover:bg-neutral-600 transition-colors dark:bg-neutral-600 dark:hover:bg-neutral-700">
+                Try Now
+              </button>
+            )}
           </div>
         </div>
       </CardContent>
@@ -113,6 +125,7 @@ const ToolsPage = () => {
       description: string;
       route: string;
       isHot?: boolean;
+      isComingSoon?: boolean; // Allow isComingSoon in category tools
     }[];
   } = {
     Student: [
@@ -126,6 +139,7 @@ const ToolsPage = () => {
         title: "Study Plan Generator",
         description: "Plan your study schedule",
         route: "/tools/study-planner",
+        isComingSoon: true,
       },
 
       {
@@ -153,11 +167,13 @@ const ToolsPage = () => {
         title: "Project Helper",
         description: "Get help with your projects",
         route: "/tools/project-helper",
+        isComingSoon: true,
       },
       {
         title: "Lesson Content Generator",
         description: "Generate lesson content",
         route: "/tools/lesson-content-generator",
+        isComingSoon: true,
       },
       {
         title: "YouTube Summary",
@@ -187,6 +203,12 @@ const ToolsPage = () => {
         description: "Create presentations",
         route: "/tools/presentation",
         isHot: true,
+      },
+      {
+        title: "Video Story Generator",
+        description: "Generate video stories from text",
+        route: "/tools/video-story-generator",
+        isComingSoon: true, // Mark as Coming Soon
       },
     ],
     Teacher: [
@@ -232,11 +254,13 @@ const ToolsPage = () => {
         title: "Assignment Generator",
         description: "Generate assignments",
         route: "/tools/assignment-generator",
+        isComingSoon: true, // Mark as Coming Soon
       },
       {
         title: "Lesson Content Generator",
         description: "Create lesson content",
         route: "/tools/lesson-content-generator",
+        isComingSoon: true, // Mark as Coming Soon
       },
 
       {
@@ -254,6 +278,7 @@ const ToolsPage = () => {
         title: "Video Story Generator",
         description: "Generate video stories from text",
         route: "/tools/video-story-generator",
+        isComingSoon: true,
       },
       {
         title: "Presentation Generator",
@@ -295,6 +320,19 @@ const ToolsPage = () => {
         title: "Video Story Generator",
         description: "Generate video stories from text",
         route: "/tools/video-story-generator",
+        isComingSoon: true, // Mark as Coming Soon
+      },
+      {
+        title: "Assignment Generator",
+        description: "Generate assignments",
+        route: "/tools/assignment-generator",
+        isComingSoon: true, // Mark as Coming Soon
+      },
+      {
+        title: "Lesson Content Generator",
+        description: "Create lesson content",
+        route: "/tools/lesson-content-generator",
+        isComingSoon: true, // Mark as Coming Soon
       },
       {
         title: "Presentation Generator",
@@ -306,18 +344,26 @@ const ToolsPage = () => {
         title: "Marketing Content Generator",
         description: "Generate marketing content",
         route: "/tools/marketing-content-generator",
+        isComingSoon: true,
       },
       {
         title: "School Intelligence",
         description: "Get insights about your school",
         route: "/tools/school-intelligence",
+        isComingSoon: true,
       },
     ],
   };
 
   const tools =
     userRole === "Admin"
-      ? Object.values(categories).flat()
+      ? Object.values(categories)
+          .flat()
+          // Remove duplicates based on the 'route' property
+          .filter(
+            (tool, index, self) =>
+              index === self.findIndex((t) => t.route === tool.route)
+          )
       : (userRole ? categories[userRole] : []) || [];
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -383,6 +429,7 @@ const ToolsPage = () => {
               description={tool.description}
               route={tool.route}
               isHot={tool.isHot}
+              isComingSoon={tool.isComingSoon}
             />
           ))}
         </div>

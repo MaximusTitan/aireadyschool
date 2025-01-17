@@ -1,4 +1,5 @@
 "use client";
+import { Comic_Neue } from '@next/font/google';
 
 import { useState, useRef, useEffect, Suspense } from "react";
 import Image from "next/image";
@@ -208,35 +209,46 @@ function ComicGeneratorContent() {
 
   return (
     <Suspense fallback={<div>Loading...</div>}>
-      <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <div className="p-4 border-b border-border">
-          <div className="flex flex-row items-center">
+      <div className="flex flex-col min-h-screen bg-background text-foreground"  style={{ fontFamily: '"Comic Neue", cursive' }}
+      >
+        <div className="p-4 border-b border-border"  style={{ fontFamily: '"Comic Neue", cursive' }}
+        >
+          <div className="flex flex-row items-center"  style={{ fontFamily: '"Comic Neue", cursive' }}
+          >
             <Link
               href="/tools"
-              className="text-neutral-500 hover:text-neutral-700 "
+              className="text-neutral-500 hover:text-neutral-700"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
             >
               <ChevronLeft />
             </Link>
-            <h1 className="text-3xl text-neutral-800 font-bold ml-2">
+            <h1 className="text-3xl text-neutral-800 font-bold ml-2"  style={{ fontFamily: '"Comic Neue", cursive' }}
+            >
               Comic Strip Generator
             </h1>
           </div>
-          <div className="max-w-6xl mx-auto mt-8">
-            <form onSubmit={handleSubmit} className="w-full mt-4 relative">
+          <div className="max-w-6xl mx-auto mt-8"  style={{ fontFamily: '"Comic Neue", cursive' }}
+          >
+            <form onSubmit={handleSubmit} className="w-full mt-4 relative"  style={{ fontFamily: '"Comic Neue", cursive' }}
+            >
               <Textarea
                 placeholder="Enter your comic idea here..."
                 value={prompt}
                 onChange={handleTextareaChange}
                 onKeyDown={handleKeyDown}
-                className="w-full resize-none px-4 py-2 text-base leading-tight h-[calc(1em+8px)]"
+                className="w-full resize-none px-4 py-2 text-base leading-tight h-[calc(1em+8px)]"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
               />
               <button
                 type="submit"
-                className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+                className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
               >
-                <Send className="w-6 h-6" />
+                <Send className="w-6 h-6"  style={{ fontFamily: '"Comic Neue", cursive' }}
+ />
               </button>
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="text-xs text-muted-foreground mt-1"  style={{ fontFamily: '"Comic Neue", cursive' }}
+              >
                 Press Enter to send, Shift + Enter for new line
               </p>
             </form>
@@ -246,72 +258,93 @@ function ComicGeneratorContent() {
         {loading && <Loader />}
 
         {imageData.urls.length > 0 && (
-          <div ref={containerRef} className="flex-1 flex flex-col">
-            <div className="bg-muted p-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
+          <div ref={containerRef} className="flex-1 flex flex-col"  style={{ fontFamily: '"Comic Neue", cursive' }}
+>
+            <div className="bg-muted p-2 flex items-center justify-between"  style={{ fontFamily: '"Comic Neue", cursive' }}
+            >
+              <div className="flex items-center gap-2"  style={{ fontFamily: '"Comic Neue", cursive' }}
+              >
                 <Button
                   variant="ghost"
                   onClick={handleFullscreen}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
                 >
-                  <Maximize2 className="h-5 w-5" />
+                  <Maximize2 className="h-5 w-5"  style={{ fontFamily: '"Comic Neue", cursive' }}
+ />
                   <span>Fullscreen</span>
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={downloadJSON}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
                 >
-                  <FileJson className="h-5 w-5" />
+                  <FileJson className="h-5 w-5"  style={{ fontFamily: '"Comic Neue", cursive' }}
+ />
                   <span>Download JSON</span>
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={downloadPDF}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
                 >
-                  <FileText className="h-5 w-5" />
+                  <FileText className="h-5 w-5"  style={{ fontFamily: '"Comic Neue", cursive' }}
+ />
                   <span>Download PDF</span>
                 </Button>
                 <Button
                   variant="ghost"
                   onClick={downloadPPT}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
                 >
-                  <FilePresentation className="h-5 w-5" />
+                  <FilePresentation className="h-5 w-5"  style={{ fontFamily: '"Comic Neue", cursive' }}
+ />
                   <span>Download PPT</span>
                 </Button>
               </div>
-              <div className="text-foreground">
+              <div className="text-foreground"  style={{ fontFamily: '"Comic Neue", cursive' }}
+              >
                 {imageData.urls.length} panels generated
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-7xl mx-auto space-y-12">
+            <div className="flex-1 overflow-y-auto p-8"  style={{ fontFamily: '"Comic Neue", cursive' }}
+            >
+              <div className="max-w-7xl mx-auto space-y-12"  style={{ fontFamily: '"Comic Neue", cursive' }}
+              >
                 {imageData.urls.map((url, index) => (
                   <div
                     key={index}
-                    className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
+                    className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
                   >
-                    <div className="w-1/2 relative">
-                      <div className="aspect-[16/9] relative">
+                    <div className="w-1/2 relative"  style={{ fontFamily: '"Comic Neue", cursive' }}
+                    >
+                      <div className="aspect-[16/9] relative"  style={{ fontFamily: '"Comic Neue", cursive' }}
+                      >
                         <Image
                           src={url}
                           alt={`Comic panel ${index + 1}`}
                           fill
-                          className="object-contain"
+                          className="object-contain"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
                           sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
                         />
                       </div>
                     </div>
-                    <div className="w-1/2 p-8 flex items-center">
+                    <div className="w-1/2 p-8 flex items-center"  style={{ fontFamily: '"Comic Neue", cursive' }}
+                    >
                       {index === 0 ? (
-                        <h1 className="text-4xl leading-relaxed text-foreground font-comic-sans">
+                        <h1 className="text-4xl leading-relaxed text-foreground font-comic-sans"  style={{ fontFamily: '"Comic Neue", cursive' }}
+>
                           {imageData.descriptions[index]}
                         </h1>
                       ) : (
-                        <p className="text-2xl leading-relaxed text-foreground font-comic-sans">
+                        <p className="text-2xl leading-relaxed text-foreground font-comic-sans"  style={{ fontFamily: '"Comic Neue", cursive' }}
+>
                           {imageData.descriptions[index]}
                         </p>
                       )}
@@ -324,21 +357,27 @@ function ComicGeneratorContent() {
         )}
 
         {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
-            <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">
+          <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50"  style={{ fontFamily: '"Comic Neue", cursive' }}
+>
+            <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border"  style={{ fontFamily: '"Comic Neue", cursive' }}
+            >
               <button
                 onClick={() => setShowModal(false)}
-                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
               >
-                <X className="h-6 w-6" />
+                <X className="h-6 w-6"  style={{ fontFamily: '"Comic Neue", cursive' }}
+ />
               </button>
-              <h2 className="text-lg mb-4">
+              <h2 className="text-lg mb-4"  style={{ fontFamily: '"Comic Neue", cursive' }}
+              >
                 You do not have enough credits to generate a comic. <br />
                 Please recharge your credits.
               </h2>
               <Button
                 onClick={() => router.push("/credits")}
-                className="bg-primary text-primary-foreground"
+                className="bg-primary text-primary-foreground"  style={{ fontFamily: '"Comic Neue", cursive' }}
+
               >
                 Buy Credits
               </Button>

@@ -228,6 +228,11 @@ const ToolsPage = () => {
         route: "/tools/text-tools",
       },
       {
+        title: "Teachable Machine",
+        description: "Train a machine learning model",
+        route: "/tools/teachable-machine",
+      },
+      {
         title: "Assessment Generator",
         description: "Create interactive assessments",
         route: "/tools/mcq-generator",

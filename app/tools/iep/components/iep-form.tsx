@@ -34,6 +34,10 @@ const formSchema = z.object({
   weaknesses: z.string().min(10, {
     message: "Areas for improvement must be at least 10 characters.",
   }),
+  disabilities: z
+    .string()
+    .min(2, { message: "Please specify any disabilities." }),
+  additionalNotes: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -56,12 +60,15 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
       board: "",
       strengths: "",
       weaknesses: "",
+      disabilities: "",
+      additionalNotes: "",
     },
   });
 
   const steps = [
     { title: "Student Info", fields: ["name", "grade", "country", "board"] },
     { title: "Strengths & Improvements", fields: ["strengths", "weaknesses"] },
+    { title: "Personal Context", fields: ["disabilities", "additionalNotes"] },
     { title: "Generated IEP", fields: [] },
   ];
 
@@ -80,7 +87,7 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
 
       const result = await response.json();
       setGeneratedIEP(result.iep);
-      setCurrentStep(2);
+      setCurrentStep(3);
     } catch (error) {
       console.error("Error generating IEP:", error);
     } finally {
@@ -94,7 +101,7 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
     >;
     const isValid = await form.trigger(currentStepFields);
     if (isValid) {
-      if (currentStep === 1) {
+      if (currentStep === 2) {
         const values = form.getValues();
         await generateIEP(values);
       } else {
@@ -187,6 +194,50 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
             </Card>
           )}
           {currentStep === 2 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Personal Context</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="disabilities"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Disabilities</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="List any disabilities"
+                            {...field}
+                            required
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="additionalNotes"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Additional Notes</FormLabel>
+                        <FormControl>
+                          <Textarea
+                            placeholder="Any additional personal context"
+                            {...field}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {currentStep === 3 && (
             <IndividualizedEducationPlan
               studentInfo={form.getValues()}
               generatedIEP={generatedIEP}
@@ -198,7 +249,7 @@ export default function IEPForm({ onSubmit }: IEPFormProps) {
                 Previous
               </Button>
             )}
-            {currentStep < 2 && (
+            {currentStep < 3 && (
               <Button type="button" onClick={handleNext} disabled={loading}>
                 {loading ? (
                   <>

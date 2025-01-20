@@ -4,7 +4,7 @@ import { generateText } from "ai";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { name, grade, country, board, strengths, weaknesses } = data;
+    const { name, grade, country, board, strengths, weaknesses, disabilities, additionalNotes } = data;
 
     // Construct the prompt
     const prompt = `
@@ -15,6 +15,8 @@ export async function POST(req: Request) {
       Board: ${board}
       Strengths: ${strengths}
       Weaknesses: ${weaknesses}
+      Disabilities: ${disabilities}
+      Additional Notes: ${additionalNotes}
 
       Provide the IEP in the following JSON format:
 
@@ -24,6 +26,10 @@ export async function POST(req: Request) {
           "grade": "${grade}",
           "country": "${country}",
           "board": "${board}"
+        },
+        "personalContext": {
+          "disabilities": ["${disabilities}"],
+          "additionalNotes": "${additionalNotes}"
         },
         "presentLevelsOfPerformance": {
           "academic": "",

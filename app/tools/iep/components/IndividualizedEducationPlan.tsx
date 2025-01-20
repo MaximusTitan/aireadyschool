@@ -138,6 +138,30 @@ export function IndividualizedEducationPlan({
             </div>
           </div>
         </section>
+
+        <section>
+          <h3 className="font-semibold mb-2">Personal Context</h3>
+          <div className="grid gap-4">
+            <div>
+              <h4 className="font-medium">Disabilities</h4>
+              <ul className="list-disc list-inside">
+                {generatedIEP.personalContext.disabilities.map(
+                  (disability, index) => (
+                    <li key={index} className="text-gray-700">
+                      {disability}
+                    </li>
+                  )
+                )}
+              </ul>
+            </div>
+            <div>
+              <h4 className="font-medium">Additional Notes</h4>
+              <p className="text-gray-700">
+                {generatedIEP.personalContext.additionalNotes}
+              </p>
+            </div>
+          </div>
+        </section>
       </CardContent>
     </Card>
   );

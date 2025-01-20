@@ -27,4 +27,8 @@ export interface IEPData {
     methods: string[];
     frequency: string;
   };
+  personalContext: {
+    disabilities: string[];
+    additionalNotes: string;
+  };
 }

@@ -117,9 +117,13 @@ const LandingPage = () => {
             priority
           />
         </div>
-        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold mb-8 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
-          The Power of AI to Empower Everyone at the School
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4 bg-gradient-to-r from-gray-900 to-gray-600 dark:from-gray-100 dark:to-gray-400 bg-clip-text text-transparent">
+          Transform Education with AI
         </h1>
+        <p className="text-md md:text-lg lg:text-xl font-medium text-gray-700 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
+          Empower your educational journey with AI-driven tools designed to
+          enhance learning, streamline teaching, and improve student outcomes.
+        </p>
         <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto">
           <Button
             size="lg"

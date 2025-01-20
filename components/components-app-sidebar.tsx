@@ -86,8 +86,8 @@ export function AppSidebar() {
       <Image
         src={state === "expanded" ? logo : logo1}
         alt="AI Ready School"
-        width={110}
-        height={110}
+        width={140}
+        height={130}
         className={state === "expanded" ? "ml-2" : ""}
       />
     );

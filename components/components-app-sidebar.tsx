@@ -37,6 +37,7 @@ import {
   Map,
   PieChart,
   Settings2,
+  BrainCircuit,
   SquareTerminal,
 } from "lucide-react";
 import Image from "next/image";
@@ -73,6 +74,11 @@ export function AppSidebar() {
     navMain: [
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
       { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
+      {
+        title: "Learn with AI",
+        url: "/learn-with-ai",
+        icon: BrainCircuit,
+      },
       ...(userRole === "Admin"
         ? [{ title: "Schools", url: "/schools", icon: BookOpen }]
         : []),

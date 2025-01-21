@@ -6,6 +6,10 @@ interface StepperProps {
 }
 
 export function Stepper({ steps, currentStep }: StepperProps) {
+  if (!steps || !Array.isArray(steps)) {
+    return null; // or render a fallback UI
+  }
+
   return (
     <div className="flex items-center justify-center space-x-4">
       {steps.map((step, index) => (

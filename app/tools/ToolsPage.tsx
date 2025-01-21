@@ -239,9 +239,9 @@ const ToolsPage = () => {
       },
 
       {
-        title: "Individualized Education Planner",
+        title: "Personalized Learning Plan",
         description: "Plan individualized education for students",
-        route: "/tools/iep",
+        route: "/tools/plp",
       },
       {
         title: "YouTube Summary",
@@ -258,7 +258,6 @@ const ToolsPage = () => {
         title: "Assignment Generator",
         description: "Generate assignments",
         route: "/tools/assignment-generator",
-        isComingSoon: true, // Mark as Coming Soon
       },
       {
         title: "Lesson Content Generator",
@@ -329,7 +328,6 @@ const ToolsPage = () => {
         title: "Assignment Generator",
         description: "Generate assignments",
         route: "/tools/assignment-generator",
-        isComingSoon: true, // Mark as Coming Soon
       },
       {
         title: "Lesson Content Generator",

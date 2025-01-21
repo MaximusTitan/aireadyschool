@@ -23,7 +23,6 @@ const TOOL_ROUTES = {
   'study-planner': '/tools/study-planner',
   'evaluator': '/tools/evaluator',
   'project-helper': '/tools/project-helper',
-  'individualized-education-planner': '/tools/individualized-education-planner',
   'marketing-content-generator': '/tools/marketing-content-generator',
   'report-generator': '/tools/report-generator',
   'school-intelligence': '/tools/school-intelligence',
@@ -82,7 +81,6 @@ export async function POST(req: Request) {
       - Study Planner
       - Evaluator
       - Project Helper
-      - Individualized Education Planner
       - Marketing Content Generator
       - Report Generator
       - School Intelligence

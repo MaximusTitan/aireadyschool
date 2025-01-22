@@ -1,48 +1,130 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react"; // Add useEffect import
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Send, Upload, ChevronLeft } from "lucide-react";
+import { Loader2, Send, Upload, ChevronLeft, FileText } from "lucide-react"; // Add FileText import
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox"; // Add this import
+import { createClient } from "@/utils/supabase/client";
 
 export default function Home() {
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]); // Changed from single file to array
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState<{ role: string; content: string }[]>([]);
+  const [fetchedFiles, setFetchedFiles] = useState<string[]>([]); // Add state for fetched files
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+  }, []);
+
+  const fetchFiles = async () => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!session) {
+        setChat((prev) => [
+          ...prev,
+          {
+            role: "system",
+            content: "Please sign in to access your documents.",
+          },
+        ]);
+        return;
+      }
+
+      const response = await fetch("/api/documents", {
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      });
+      const data = await response.json();
+
+      if (response.ok) {
+        const fileNames = data.files.map(
+          (doc: { file_name: string }) => doc.file_name
+        );
+        const uniqueFileNames = Array.from(new Set(fileNames));
+        setFetchedFiles(uniqueFileNames as string[]);
+        // Set all documents as selected by default
+        setSelectedDocs(uniqueFileNames as string[]);
+      } else {
+        throw new Error(data.error);
+      }
+    } catch (error) {
+      console.error("Error fetching files:", error);
+    }
+  };
+
+  useEffect(() => {
+    fetchFiles();
+  }, [isAuthenticated]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      setChat((prev) => [
+        ...prev,
+        {
+          role: "system",
+          content: "Please sign in to upload documents.",
+        },
+      ]);
+      return;
+    }
+
     setLoading(true);
-    const file = e.target.files[0];
-    setFile(file);
+    const uploadedFiles = Array.from(e.target.files);
+    setFiles(uploadedFiles);
 
     const formData = new FormData();
-    formData.append("file", file);
+    uploadedFiles.forEach((file) => formData.append("files", file));
 
     try {
       const response = await fetch("/api/upload", {
         method: "POST",
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
         body: formData,
       });
 
       if (!response.ok) throw new Error("Upload failed");
 
       const result = await response.json();
-      setChat((prev) => [
-        ...prev,
-        {
-          role: "system",
-          content: `File "${file.name}" uploaded successfully!`,
-        },
-      ]);
+      uploadedFiles.forEach((file) => {
+        setChat((prev) => [
+          ...prev,
+          {
+            role: "system",
+            content: `File "${file.name}" uploaded successfully!`,
+          },
+        ]);
+      });
     } catch (error) {
       setChat((prev) => [
         ...prev,
-        { role: "system", content: "Error uploading file." },
+        { role: "system", content: "Error uploading files." },
       ]);
     } finally {
       setLoading(false);
@@ -53,6 +135,22 @@ export default function Home() {
     e.preventDefault();
     if (!message.trim()) return;
 
+    const supabase = createClient();
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (!session) {
+      setChat((prev) => [
+        ...prev,
+        {
+          role: "system",
+          content: "Please sign in to chat with documents.",
+        },
+      ]);
+      return;
+    }
+
     const userMessage = message;
     setMessage("");
     setChat((prev) => [...prev, { role: "user", content: userMessage }]);
@@ -61,8 +159,14 @@ export default function Home() {
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          selectedDocs: selectedDocs, // Add selected documents
+        }),
       });
 
       const result = await response.json();
@@ -103,6 +207,15 @@ export default function Home() {
     }
   };
 
+  // Add toggle function for document selection
+  const toggleDocumentSelection = (fileName: string) => {
+    setSelectedDocs((prev) =>
+      prev.includes(fileName)
+        ? prev.filter((name) => name !== fileName)
+        : [...prev, fileName]
+    );
+  };
+
   return (
     <>
       <div className="ml-4 flex h-16 items-center space-x-2">
@@ -113,6 +226,7 @@ export default function Home() {
           Chat With Docs
         </CardTitle>
       </div>
+
       <Card className="bg-white dark:bg-neutral-950 max-w-8xl m-8">
         <CardContent className="p-0">
           <div className="h-[60vh] overflow-y-auto p-4 space-y-4">
@@ -157,6 +271,7 @@ export default function Home() {
                   type="file"
                   className="hidden"
                   accept=".pdf,.doc,.docx,.txt"
+                  multiple // Added multiple attribute
                   onChange={handleFileUpload}
                 />
               </div>
@@ -180,6 +295,67 @@ export default function Home() {
           </div>
         </CardContent>
       </Card>
+      <div className="mx-8 mb-4 grid gap-4">
+        {/* Files Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {fetchedFiles.length > 0 && (
+            <Card className="col-span-full">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">
+                  Available Documents
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {fetchedFiles.map((fileName, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center p-2 rounded-lg border dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    >
+                      <Checkbox
+                        checked={selectedDocs.includes(fileName)}
+                        onCheckedChange={() =>
+                          toggleDocumentSelection(fileName)
+                        }
+                        className="mr-2"
+                      />
+                      <FileText className="h-4 w-4 mr-2 text-neutral-500" />
+                      <span className="text-sm truncate" title={fileName}>
+                        {fileName}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {files.length > 0 && (
+            <Card className="col-span-full">
+              <CardHeader>
+                <CardTitle className="text-lg font-medium">
+                  Recently Uploaded
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  {files.map((file, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center p-2 rounded-lg border dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
+                    >
+                      <FileText className="h-4 w-4 mr-2 text-neutral-500" />
+                      <span className="text-sm truncate" title={file.name}>
+                        {file.name}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
     </>
   );
 }

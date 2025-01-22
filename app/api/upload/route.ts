@@ -14,40 +14,54 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const file = formData.get('file') as File;
-    
-    // Read file content
-    const fileBuffer = Buffer.from(await file.arrayBuffer());
-    let text = '';
-    
-    if (file.type === 'application/pdf') {
-      const parser = new createParser();
-      text = await new Promise((resolve, reject) => {
-        parser.on('pdfParser_dataReady', (pdfData) => {
-          resolve(pdfData.Pages.map(page => 
-            page.Texts.map(text => text.R.map(r => r.T).join(' ')).join(' ')
-          ).join('\n'));
-        });
-        parser.parseBuffer(fileBuffer);
-      });
-    } else {
-      text = fileBuffer.toString('utf-8');
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 });
     }
 
-    // Create embeddings
-    const chunks = text.match(/[\s\S]{1,1000}/g) || [];
-    
-    for (const chunk of chunks) {
-      const embedding = await openai.embeddings.create({
-        input: chunk,
-        model: "text-embedding-ada-002"
-      });
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authError || !user?.email) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
 
-      await supabase.from('documents').insert({
-        content: chunk,
-        embedding: embedding.data[0].embedding
-      });
+    const formData = await request.formData();
+    const files = formData.getAll('files') as File[]; // Changed from single file to multiple
+
+    for (const file of files) { // Loop through each file
+      // Read file content
+      const fileBuffer = Buffer.from(await file.arrayBuffer());
+      let text = '';
+
+      if (file.type === 'application/pdf') {
+        const parser = new createParser();
+        text = await new Promise((resolve, reject) => {
+          parser.on('pdfParser_dataReady', (pdfData) => {
+            resolve(pdfData.Pages.map(page => 
+              page.Texts.map(text => text.R.map(r => r.T).join(' ')).join(' ')
+            ).join('\n'));
+          });
+          parser.parseBuffer(fileBuffer);
+        });
+      } else {
+        text = fileBuffer.toString('utf-8');
+      }
+
+      // Create embeddings
+      const chunks = text.match(/[\s\S]{1,1000}/g) || [];
+      
+      for (const chunk of chunks) {
+        const embedding = await openai.embeddings.create({
+          input: chunk,
+          model: "text-embedding-ada-002"
+        });
+
+        await supabase.from('documents').insert({
+          content: chunk,
+          embedding: embedding.data[0].embedding,
+          file_name: file.name, // Add file_name
+          user_email: user.email  // Use authenticated user email
+        });
+      }
     }
 
     return NextResponse.json({ success: true });

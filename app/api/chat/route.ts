@@ -13,7 +13,17 @@ const openai = new OpenAI({
 
 export async function POST(request: Request) {
   try {
-    const { message } = await request.json();
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader) {
+      return NextResponse.json({ error: 'No authorization header' }, { status: 401 });
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
+    if (authError || !user?.email) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    }
+
+    const { message, selectedDocs } = await request.json();
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
@@ -25,12 +35,17 @@ export async function POST(request: Request) {
       model: "text-embedding-ada-002"
     });
 
-    // Search for similar content with improved error handling
-    const { data: documents, error: matchError } = await supabase.rpc('match_documents', {
-      query_embedding: embedding.data[0].embedding,
-      match_threshold: 0.7,
-      match_count: 5
-    });
+    // Search for similar content with document filtering
+    const { data: documents, error: matchError } = await supabase.rpc(
+      'match_documents_filtered',
+      {
+        query_embedding: embedding.data[0].embedding,
+        match_threshold: 0.7,
+        match_count: 5,
+        selected_files: selectedDocs || [],
+        user_email: user.email  // Add user email to filter
+      }
+    );
 
     if (matchError) {
       console.error('Supabase match error:', matchError);

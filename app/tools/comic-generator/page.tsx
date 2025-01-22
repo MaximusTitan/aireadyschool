@@ -12,6 +12,7 @@ import {
   FileJson,
   FileText,
   FileIcon as FilePresentation,
+  ChevronLeft,
 } from "lucide-react";
 import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
@@ -29,6 +30,25 @@ export default function ComicGenerator() {
   const [showModal, setShowModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [loadedImages, setLoadedImages] = useState<boolean[]>([]);
+
+  // Replace the existing useEffect with this updated version
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const topic = searchParams.get("topic");
+    if (topic) {
+      setPrompt(topic);
+    }
+  }, []);
+
+  // Add a new useEffect to handle auto-submission after prompt is set
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const topic = searchParams.get("topic");
+    if (topic && prompt === topic && !loading && imageData.urls.length === 0) {
+      handleSubmit(new Event("submit") as unknown as React.FormEvent);
+    }
+  }, [prompt, loading]);
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -41,8 +61,9 @@ export default function ComicGenerator() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+    e.preventDefault?.(); // Make preventDefault optional for programmatic calls
     setImageData({ urls: [], descriptions: [] });
+    setLoadedImages([]);
     setLoading(true);
 
     try {
@@ -64,10 +85,16 @@ export default function ComicGenerator() {
       const imageData = await imageResponse.json();
       if (!imageResponse.ok) throw new Error(imageData.message);
 
+      // Pre-load all images in parallel
+      const preloadPromises: Promise<HTMLImageElement>[] =
+        imageData.imageUrls.map((url: string) => loadImage(url));
+      await Promise.all(preloadPromises);
+
       setImageData({
         urls: imageData.imageUrls,
         descriptions: promptData.prompts,
       });
+      setLoadedImages(new Array(imageData.imageUrls.length).fill(true));
     } catch (error) {
       console.error("Error generating comic:", error);
     } finally {
@@ -192,23 +219,32 @@ export default function ComicGenerator() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <div className="p-4 border-b border-border">
-        <div className="max-w-6xl mx-auto flex justify-between items-start">
-          <h1 className="text-3xl font-bold">Comic Generator</h1>
-          <form onSubmit={handleSubmit} className="w-[500px] relative">
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/tools")}
+              className="p-0 hover:bg-transparent"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <h1 className="text-3xl font-bold">Comic Generator</h1>
+          </div>
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative">
             <Textarea
               placeholder="Enter your comic idea here..."
               value={prompt}
               onChange={handleTextareaChange}
               onKeyDown={handleKeyDown}
-              className="w-full resize-none px-4 py-2 text-base leading-tight h-[calc(1em+8px)]"
+              className="w-full resize-none px-4 py-2 text-base leading-normal h-[calc(6em+16px)]"
             />
             <button
               type="submit"
-              className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
+              className="absolute right-2 top-1/4 -translate-y-1/2 text-muted-foreground hover:text-foreground"
             >
               <Send className="w-6 h-6" />
             </button>
-            <p className="text-xs text-muted-foreground mt-1">
+            <p className="text-xs text-muted-foreground mt-1 text-center">
               Press Enter to send, Shift + Enter for new line
             </p>
           </form>
@@ -268,12 +304,26 @@ export default function ComicGenerator() {
                 >
                   <div className="w-1/2 relative">
                     <div className="aspect-[16/9] relative">
+                      {!loadedImages[index] && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                          <Loader />
+                        </div>
+                      )}
                       <Image
                         src={url}
                         alt={`Comic panel ${index + 1}`}
                         fill
-                        className="object-contain"
+                        className={cn(
+                          "object-contain",
+                          !loadedImages[index] && "opacity-0"
+                        )}
                         sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
+                        priority={index < 2} // Prioritize loading first two images
+                        onLoad={() => {
+                          const newLoadedImages = [...loadedImages];
+                          newLoadedImages[index] = true;
+                          setLoadedImages(newLoadedImages);
+                        }}
                       />
                     </div>
                   </div>

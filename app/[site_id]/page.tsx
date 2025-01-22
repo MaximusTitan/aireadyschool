@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { readSiteById } from "@/utils/actions/readSiteById";
+import { notFound } from "next/navigation";
 
 interface PageParams {
   site_id: string;
@@ -187,7 +188,3 @@ const tools = [
     icon: Lightbulb,
   },
 ];
-
-function notFound() {
-  throw new Error("Function not implemented.");
-}

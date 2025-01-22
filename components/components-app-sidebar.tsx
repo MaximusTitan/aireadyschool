@@ -75,7 +75,7 @@ export function AppSidebar() {
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
       { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
       {
-        title: "Learn with AI",
+        title: "Learn About AI",
         url: "/learn-with-ai",
         icon: BrainCircuit,
       },

@@ -4,7 +4,7 @@ import { Separator } from "@/components/ui/separator";
 export default function LearnWithAIPage() {
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold mb-8">Learn With AI</h1>
+      <h1 className="text-4xl font-bold mb-8">Learn About AI</h1>
 
       {/* 5th and 6th Grade Section */}
       <div className="mb-8">

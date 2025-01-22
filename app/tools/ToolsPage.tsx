@@ -63,7 +63,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
 
   return (
     <Card
-      className="group hover:shadow-lg transition-all duration-200 cursor-pointer dark:bg-neutral-900 dark:border-neutral-800"
+      className="group hover:shadow-lg hover:bg-gradient-to-br hover:from-white hover:to-purple-100/60 transition-all duration-200 cursor-pointer dark:bg-neutral-900 dark:border-neutral-800 dark:hover:from-neutral-900 dark:hover:to-purple-900/20"
       onClick={handleClick}
     >
       <CardHeader className="space-y-1">
@@ -374,13 +374,7 @@ const ToolsPage = () => {
   );
 
   return (
-    <div
-      className="min-h-screen bg-neutral-50 dark:bg-neutral-950"
-      style={{
-        background:
-          "radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(250,220,255,0.3) 35%, rgba(255,255,255,0.3) 100%)",
-      }}
-    >
+    <div className="min-h-screen bg-[radial-gradient(circle,rgba(255,255,255,1)_0%,rgba(250,220,255,0.3)_35%,rgba(255,255,255,1)_100%)] dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(50,0,55,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="flex justify-between items-center mb-8">

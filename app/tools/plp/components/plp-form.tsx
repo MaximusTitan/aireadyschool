@@ -60,6 +60,10 @@ export default function PLPForm({ onSubmit }: PLPFormProps) {
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [generatedPLP, setGeneratedPLP] = useState<PLPData | null>(null);
+  const [selectedCognitiveParameters, setSelectedCognitiveParameters] =
+    useState<string[]>([]);
+  const [selectedKnowledgeParameters, setSelectedKnowledgeParameters] =
+    useState<string[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -143,10 +147,17 @@ export default function PLPForm({ onSubmit }: PLPFormProps) {
   async function generatePLP(values: FormData) {
     setLoading(true);
     try {
+      // Include all form data and selected parameters
+      const formData = {
+        ...values,
+        cognitiveParameters: selectedCognitiveParameters,
+        knowledgeParameters: selectedKnowledgeParameters,
+      };
+
       const response = await fetch("/api/generate-plp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values), // Ensure all form data is sent
+        body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
@@ -298,7 +309,7 @@ export default function PLPForm({ onSubmit }: PLPFormProps) {
                 </h3>
                 <DropdownMenuCheckboxes
                   onSelect={(selected) => {
-                    // Handle selected cognitive parameters
+                    setSelectedCognitiveParameters(selected);
                   }}
                 />
                 {/* Render score inputs based on selected cognitive parameters */}
@@ -307,6 +318,11 @@ export default function PLPForm({ onSubmit }: PLPFormProps) {
                 <h3 className="font-semibold mt-4 mb-2">
                   Knowledge Parameters
                 </h3>
+                <DropdownMenuCheckboxes
+                  onSelect={(selected) => {
+                    setSelectedKnowledgeParameters(selected);
+                  }}
+                />
                 {/* Repeat similar structure for each subject */}
                 {/* ...existing code... */}
 

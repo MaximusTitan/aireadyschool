@@ -4,11 +4,30 @@ import { generateText } from "ai";
 export async function POST(req: Request) {
   try {
     const data = await req.json();
-    const { 
-      name, grade, board, country, strengths, weaknesses, disabilities, additionalNotes,
-      age, gender, nationality, topic, otherInformation, goal,
-      ...cognitiveAndKnowledge
+    
+    // Destructure all expected fields
+    const {
+      name, grade, board, country,
+      strengths, weaknesses,
+      disabilities, additionalNotes,
+      age, gender, nationality,
+      topic, otherInformation, goal,
+      cognitiveParameters,
+      knowledgeParameters,
     } = data;
+
+    // Format cognitive and knowledge parameters for the prompt
+    const cognitiveParamsString = Object.entries(cognitiveParameters)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n');
+
+    const knowledgeParamsString = Object.entries(knowledgeParameters)
+      .map(([subject, params]) => 
+        `${subject}:\n${Object.entries(params as Record<string, unknown>)
+          .map(([key, value]) => `  ${key}: ${value}`)
+          .join('\n')}`
+      )
+      .join('\n');
 
     // Construct the prompt with all parameters
     const prompt = `
@@ -29,55 +48,10 @@ export async function POST(req: Request) {
       Goal: ${goal}
       
       Cognitive Parameters:
-      ${Object.entries(cognitiveAndKnowledge)
-        .filter(([key]) => 
-          key.startsWith('comprehension') || 
-          key.startsWith('understands') || 
-          key.startsWith('grasps') || 
-          key.startsWith('retains') || 
-          key.startsWith('attention') || 
-          key.startsWith('focus') || 
-          key.startsWith('task') || 
-          key.startsWith('follows') || 
-          key.startsWith('participation') || 
-          key.startsWith('class') || 
-          key.startsWith('asks') || 
-          key.startsWith('group')
-        )
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n')}
+      ${cognitiveParamsString}
 
       Knowledge Parameters:
-      ${Object.entries(cognitiveAndKnowledge)
-        .filter(([key]) => 
-          key.endsWith('Score') || 
-          key.includes('numberSense') || 
-          key.includes('problemSolving') || 
-          key.includes('mathematicalReasoning') || 
-          key.includes('calculationAccuracy') || 
-          key.includes('geometrySkills') || 
-          key.includes('scientificInquiry') || 
-          key.includes('experimentalSkills') || 
-          key.includes('dataInterpretation') || 
-          key.includes('scientificConcepts') || 
-          key.includes('labWork') || 
-          key.includes('readingComprehension') || 
-          key.includes('writingSkills') || 
-          key.includes('grammarUsage') || 
-          key.includes('vocabulary') || 
-          key.includes('verbalExpression') || 
-          key.includes('historicalUnderstanding') || 
-          key.includes('geographicAwareness') || 
-          key.includes('culturalComprehension') || 
-          key.includes('currentEventsKnowledge') || 
-          key.includes('analysisOfSocialIssues') || 
-          key.includes('creativeExpression') || 
-          key.includes('technicalSkills') || 
-          key.includes('visualUnderstanding') || 
-          key.includes('designThinking')
-        )
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n')}
+      ${knowledgeParamsString}
 
       Present Levels of Performance:
       - Academic: Provide current academic performance levels.
@@ -107,54 +81,17 @@ export async function POST(req: Request) {
             "board": "${board}"
           },
           "cognitiveParameters": {
-            ${Object.entries(cognitiveAndKnowledge)
-              .filter(([key]) => 
-                key.startsWith('comprehension') || 
-                key.startsWith('understands') || 
-                key.startsWith('grasps') || 
-                key.startsWith('retains') || 
-                key.startsWith('attention') || 
-                key.startsWith('focus') || 
-                key.startsWith('task') || 
-                key.startsWith('follows') || 
-                key.startsWith('participation') || 
-                key.startsWith('class') || 
-                key.startsWith('asks') || 
-                key.startsWith('group')
-              )
+            ${Object.entries(cognitiveParameters)
               .map(([key, value]) => `"${key}": ${value}`)
               .join(',\n')}
           },
           "knowledgeParameters": {
-            ${Object.entries(cognitiveAndKnowledge)
-              .filter(([key]) => 
-                key.endsWith('Score') || 
-                key.includes('numberSense') || 
-                key.includes('problemSolving') || 
-                key.includes('mathematicalReasoning') || 
-                key.includes('calculationAccuracy') || 
-                key.includes('geometrySkills') || 
-                key.includes('scientificInquiry') || 
-                key.includes('experimentalSkills') || 
-                key.includes('dataInterpretation') || 
-                key.includes('scientificConcepts') || 
-                key.includes('labWork') || 
-                key.includes('readingComprehension') || 
-                key.includes('writingSkills') || 
-                key.includes('grammarUsage') || 
-                key.includes('vocabulary') || 
-                key.includes('verbalExpression') || 
-                key.includes('historicalUnderstanding') || 
-                key.includes('geographicAwareness') || 
-                key.includes('culturalComprehension') || 
-                key.includes('currentEventsKnowledge') || 
-                key.includes('analysisOfSocialIssues') || 
-                key.includes('creativeExpression') || 
-                key.includes('technicalSkills') || 
-                key.includes('visualUnderstanding') || 
-                key.includes('designThinking')
+            ${Object.entries(knowledgeParameters)
+              .map(([subject, params]) => 
+                `"${subject}": {\n${Object.entries(params as Record<string, unknown>)
+                  .map(([key, value]) => `  "${key}": ${value}`)
+                  .join(',\n')}\n}`
               )
-              .map(([key, value]) => `"${key}": ${value}`)
               .join(',\n')}
           },
           "topic": "${topic}",

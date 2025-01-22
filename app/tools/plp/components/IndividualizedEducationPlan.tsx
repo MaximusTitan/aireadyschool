@@ -18,6 +18,12 @@ interface IndividualizedEducationPlanProps {
   generatedPLP: PLPData | null;
 }
 
+interface KnowledgeParameters {
+  [subject: string]: {
+    [key: string]: number;
+  };
+}
+
 export function IndividualizedEducationPlan({
   studentInfo,
   generatedPLP,
@@ -49,12 +55,66 @@ export function IndividualizedEducationPlan({
         <section>
           <h3 className="font-semibold mb-2">Student Information</h3>
           <div className="grid gap-4">
-            <p>Name: {generatedPLP.studentInformation.name}</p>
-            <p>Grade: {generatedPLP.studentInformation.grade}</p>
-            <p>Board: {generatedPLP.studentInformation.board}</p>
-            <p>Country: {generatedPLP.studentInformation.country}</p>
-            <p>Strengths: {studentInfo.strengths}</p>
-            <p>Weaknesses: {studentInfo.weaknesses}</p>
+            {/* Display all student information */}
+            {Object.entries(generatedPLP.studentInformation).map(
+              ([key, value]) => (
+                <p key={key} className="capitalize">
+                  {key}: {value}
+                </p>
+              )
+            )}
+          </div>
+        </section>
+
+        <section>
+          <h3 className="font-semibold mb-2">Subject Specific Information</h3>
+          <div className="grid gap-4">
+            <h4 className="font-medium">General</h4>
+            {Object.entries(
+              generatedPLP.subjectSpecificInformation.general as Record<
+                string,
+                string
+              >
+            ).map(([key, value]) => (
+              <p key={key} className="capitalize">
+                {key}: {value}
+              </p>
+            ))}
+
+            <h4 className="font-medium mt-4">Cognitive Parameters</h4>
+            {Object.entries(
+              generatedPLP.subjectSpecificInformation
+                .cognitiveParameters as Record<string, number>
+            ).map(([key, value]) => (
+              <p key={key} className="capitalize">
+                {key}: {value}
+              </p>
+            ))}
+
+            <h4 className="font-medium mt-4">Knowledge Parameters</h4>
+            {Object.entries(
+              generatedPLP.subjectSpecificInformation
+                .knowledgeParameters as KnowledgeParameters
+            ).map(([subject, params]) => (
+              <div key={subject}>
+                <h5 className="font-medium capitalize">{subject}</h5>
+                {Object.entries(params as Record<string, number>).map(
+                  ([key, value]) => (
+                    <p key={key} className="capitalize ml-4">
+                      {key}: {value}
+                    </p>
+                  )
+                )}
+              </div>
+            ))}
+
+            <h4 className="font-medium mt-4">Additional Information</h4>
+            <p>Topic: {generatedPLP.subjectSpecificInformation.topic}</p>
+            <p>
+              Other Information:{" "}
+              {generatedPLP.subjectSpecificInformation.otherInformation}
+            </p>
+            <p>Goal: {generatedPLP.subjectSpecificInformation.goal}</p>
           </div>
         </section>
 

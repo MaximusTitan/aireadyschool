@@ -1,65 +1,48 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { createClient } from "@/utils/supabase/client";
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { Search, MessageCircle, Send } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { createClient } from "@/utils/supabase/client"
+import { generateSqlQuery, processSqlQuery } from "../api/processSqlQuery/route"
 
 interface ToolCardProps {
-  title: string;
-  description: string;
-  route: string;
-  isHot?: boolean;
-  isComingSoon?: boolean; // Add isComingSoon property
+  title: string
+  description: string
+  route: string
+  isHot?: boolean
+  isComingSoon?: boolean
 }
 
-const ToolCard: React.FC<ToolCardProps> = ({
-  title,
-  description,
-  route,
-  isHot = false,
-  isComingSoon = false, // Destructure isComingSoon
-}) => {
-  const router = useRouter();
+const ToolCard: React.FC<ToolCardProps> = ({ title, description, route, isHot = false, isComingSoon = false }) => {
+  const router = useRouter()
 
   const handleClick = () => {
     if (!isComingSoon) {
-      // Disable redirect if coming soon
-      router.push(route);
+      router.push(route)
     }
-  };
+  }
 
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient();
+      const supabase = createClient()
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getUser()
 
       if (user) {
-        setUserRole(user.user_metadata.role ?? null);
+        setUserRole(user.user_metadata.role ?? null)
       }
-    };
+    }
 
-    fetchUser();
-  }, []);
+    fetchUser()
+  }, [])
 
   return (
     <Card
@@ -68,28 +51,24 @@ const ToolCard: React.FC<ToolCardProps> = ({
     >
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold dark:text-neutral-100">
-            {title}
-          </CardTitle>
+          <CardTitle className="text-lg font-semibold dark:text-neutral-100">{title}</CardTitle>
           {isHot && (
             <span className="px-2 py-1 text-xs font-semibold bg-neutral-100 text-neutral-600 rounded-full dark:bg-neutral-950 dark:text-neutral-300">
               HOT
             </span>
           )}
-          {isComingSoon && ( // Add Coming Soon badge
+          {isComingSoon && (
             <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full">
               Coming Soon
             </span>
           )}
         </div>
-        <CardDescription className="text-sm text-neutral-500 dark:text-neutral-400">
-          {description}
-        </CardDescription>
+        <CardDescription className="text-sm text-neutral-500 dark:text-neutral-400">{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex justify-end">
           <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-            {!isComingSoon && ( // Remove "Try Now" button if coming soon
+            {!isComingSoon && (
               <button className="text-xs px-3 py-1 bg-neutral-800 text-white rounded-full hover:bg-neutral-600 transition-colors dark:bg-neutral-600 dark:hover:bg-neutral-700">
                 Try Now
               </button>
@@ -98,41 +77,50 @@ const ToolCard: React.FC<ToolCardProps> = ({
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}
+
+interface ChatMessage {
+  text: string
+  isUser: boolean
+  naturalLanguageResponse?: string
+  error?: string
+}
 
 const ToolsPage = () => {
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null)
+  const [defaultMessage, setDefaultMessage] = useState(
+    "Hi, ask me anything about your company's data using natural language.",
+  )
 
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient();
+      const supabase = createClient()
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getUser()
 
       if (user) {
-        setUserRole(user.user_metadata.role ?? null);
+        setUserRole(user.user_metadata.role ?? null)
       }
-    };
+    }
 
-    fetchUser();
-  }, []);
+    fetchUser()
+  }, [])
 
   const categories: {
     [key: string]: {
-      title: string;
-      description: string;
-      route: string;
-      isHot?: boolean;
-      isComingSoon?: boolean; // Allow isComingSoon in category tools
-    }[];
+      title: string
+      description: string
+      route: string
+      isHot?: boolean
+      isComingSoon?: boolean
+    }[]
   } = {
     Student: [
       {
         title: "Assessment Generator",
-        description:
-          "Create and share interactive multiple choice questions for students",
+        description: "Create and share interactive multiple choice questions for students",
         route: "/tools/mcq-generator",
       },
       {
@@ -141,7 +129,6 @@ const ToolsPage = () => {
         route: "/tools/study-planner",
         isComingSoon: true,
       },
-
       {
         title: "Evaluator",
         description: "Evaluate student answers",
@@ -149,8 +136,7 @@ const ToolsPage = () => {
       },
       {
         title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        description: "Rewrite, proofread, translate, generate questions, expand, summarize texts",
         route: "/tools/text-tools",
       },
       {
@@ -181,8 +167,7 @@ const ToolsPage = () => {
       },
       {
         title: "Talk to PDF Docs",
-        description:
-          "Powerful RAG-based document chat system for intelligent document interactions",
+        description: "Powerful RAG-based document chat system for intelligent document interactions",
         route: "/tools/chat-with-docs",
         isHot: true,
       },
@@ -207,7 +192,7 @@ const ToolsPage = () => {
         title: "Video Story Generator",
         description: "Generate video stories from text",
         route: "/tools/video-story-generator",
-        isComingSoon: true, // Mark as Coming Soon
+        isComingSoon: true,
       },
     ],
     Teacher: [
@@ -223,8 +208,7 @@ const ToolsPage = () => {
       },
       {
         title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        description: "Rewrite, proofread, translate, generate questions, expand, summarize texts",
         route: "/tools/text-tools",
       },
       {
@@ -237,7 +221,6 @@ const ToolsPage = () => {
         description: "Create interactive assessments",
         route: "/tools/mcq-generator",
       },
-
       {
         title: "Personalized Learning Plan",
         description: "Plan individualized education for students",
@@ -264,7 +247,6 @@ const ToolsPage = () => {
         description: "Create lesson content",
         route: "/tools/lesson-content-generator",
       },
-
       {
         title: "Image Generator",
         description: "Create stunning images",
@@ -292,8 +274,7 @@ const ToolsPage = () => {
     School: [
       {
         title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        description: "Rewrite, proofread, translate, generate questions, expand, summarize texts",
         route: "/tools/text-tools",
       },
       {
@@ -322,7 +303,7 @@ const ToolsPage = () => {
         title: "Video Story Generator",
         description: "Generate video stories from text",
         route: "/tools/video-story-generator",
-        isComingSoon: true, // Mark as Coming Soon
+        isComingSoon: true,
       },
       {
         title: "Assignment Generator",
@@ -353,25 +334,84 @@ const ToolsPage = () => {
         isComingSoon: true,
       },
     ],
-  };
+  }
 
   const tools =
     userRole === "Admin"
       ? Object.values(categories)
           .flat()
-          .filter(
-            (tool, index, self) =>
-              index === self.findIndex((t) => t.route === tool.route)
-          )
-      : (userRole ? categories[userRole] : []) || [];
+          .filter((tool, index, self) => index === self.findIndex((t) => t.route === tool.route))
+      : (userRole ? categories[userRole] : []) || []
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("")
 
   const filteredTools = tools.filter(
     (tool) =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      tool.description.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
+
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [message, setMessage] = useState("")
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const toggleChat = () => {
+    setIsChatOpen(!isChatOpen)
+    if (!isChatOpen && messages.length === 0) {
+      setMessages([{ text: defaultMessage, isUser: false }])
+    }
+  }
+
+  const sendMessage = async () => {
+    if (message.trim()) {
+      setMessages((prev) => [...prev, { text: message, isUser: true }])
+      setMessage("")
+
+      try {
+        const generatedQuery = await generateSqlQuery(message)
+        console.log("Generated SQL Query:", generatedQuery)
+
+        const processedResult = await processSqlQuery(message, generatedQuery)
+        console.log("Processed Result:", processedResult)
+
+        if (processedResult.success) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              text: processedResult.naturalLanguageResponse || "No response generated.",
+              isUser: false,
+              naturalLanguageResponse: processedResult.naturalLanguageResponse,
+            },
+          ])
+        } else {
+          throw new Error(processedResult.error || "Unknown error occurred while processing the query.")
+        }
+      } catch (error) {
+        console.error("Error processing query:", error)
+        setMessages((prev) => [
+          ...prev,
+          {
+            text: `An error occurred while processing your query: ${error instanceof Error ? error.message : "Unknown error"}. Please try again.`,
+            isUser: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+        ])
+      }
+    }
+  }
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      sendMessage()
+    }
+  }
+
+  useEffect(() => {
+    if (isChatOpen && inputRef.current) {
+      inputRef.current.focus()
+    }
+  }, [isChatOpen])
 
   return (
     <div
@@ -382,21 +422,13 @@ const ToolsPage = () => {
       }}
     >
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center">
-            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
-              AI Tools
-            </h1>
-            {userRole && (
-              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
-                ({userRole})
-              </span>
-            )}
+            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">AI Tools</h1>
+            {userRole && <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">({userRole})</span>}
           </div>
         </div>
 
-        {/* Filters */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex space-x-4">
             <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
@@ -417,7 +449,6 @@ const ToolsPage = () => {
           </div>
         </div>
 
-        {/* Tools Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredTools.map((tool, index) => (
             <ToolCard
@@ -430,9 +461,65 @@ const ToolsPage = () => {
             />
           ))}
         </div>
+        {/* Chat Bubble */}
+        <div className="fixed bottom-4 right-4 z-50">
+          <button
+            onClick={toggleChat}
+            className="bg-pink-500 hover:bg-pink-600 text-white rounded-full p-3 shadow-lg transition-colors duration-200"
+          >
+            <MessageCircle size={24} />
+          </button>
+        </div>
+
+        {/* Chat Dialog */}
+        {isChatOpen && (
+          <div className="fixed bottom-20 right-4 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[70vh]">
+            <div className="p-4 border-b dark:border-neutral-700 font-semibold">Chat</div>
+            <div className="flex-grow overflow-y-auto p-4 space-y-4">
+              {messages.map((msg, index) => (
+                <div
+                  key={index}
+                  className={`p-2 rounded-lg ${
+                    msg.isUser
+                      ? "bg-neutral-100 dark:bg-neutral-700"
+                      : msg.error
+                        ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                        : "bg-pink-100 dark:bg-pink-900 text-pink-800 dark:text-pink-200"
+                  }`}
+                >
+                  {msg.text}
+                  {msg.error && (
+                    <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                      <p className="text-xs font-semibold mb-1">Error:</p>
+                      <pre className="text-xs overflow-x-auto">{msg.error}</pre>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t dark:border-neutral-700 flex">
+              <input
+                ref={inputRef}
+                type="text"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="e.g; First email in chat_history?"
+                className="flex-grow px-3 py-2 bg-neutral-100 dark:bg-neutral-700 rounded-l-lg focus:outline-none"
+              />
+              <button
+                onClick={sendMessage}
+                className="bg-pink-500 hover:bg-pink-600 text-white px-4 rounded-r-lg transition-colors duration-200"
+              >
+                <Send size={20} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ToolsPage;
+export default ToolsPage
+

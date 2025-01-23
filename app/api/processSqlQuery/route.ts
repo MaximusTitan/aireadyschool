@@ -1,6 +1,7 @@
 "use server"
 import { createClient } from "@/utils/supabase/client"
 import OpenAI from "openai"
+import { NextResponse } from "next/server"
 
 export async function generateSqlQuery(userInput: string): Promise<string> {
   const model = "gpt-4o"
@@ -124,5 +125,16 @@ export async function processSqlQuery(userInput: string, query: string) {
     console.error("Error executing SQL query:", error)
     return { success: false, error: "Error executing SQL query" }
   }
+}
+
+export async function POST(request: Request) {
+  const { userInput } = await request.json(); // Assuming userInput is sent in the request body
+
+  const generatedQuery = await generateSqlQuery(userInput); // Call your function here
+
+  // Process the SQL query and return the response
+  const processedResult = await processSqlQuery(userInput, generatedQuery);
+
+  return NextResponse.json(processedResult); // Return the processed result as JSON
 }
 

@@ -3,7 +3,7 @@ import { createClient } from "@/utils/supabase/client"
 import OpenAI from "openai"
 import { NextResponse } from "next/server"
 
-export async function generateSqlQuery(userInput: string): Promise<string> {
+async function generateSqlQuery(userInput: string): Promise<string> {
   const model = "gpt-4o"
 
   const messages = [
@@ -86,7 +86,7 @@ async function generateNaturalLanguageResponse(userInput: string, queryResult: a
   return response.choices[0].message.content || "";
 }
 
-export async function processSqlQuery(userInput: string, query: string) {
+async function processSqlQuery(userInput: string, query: string) {
   const supabase = await createClient()
 
   try {

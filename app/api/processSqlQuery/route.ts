@@ -3,13 +3,13 @@ import { createClient } from "@/utils/supabase/client"
 import OpenAI from "openai"
 import { NextResponse } from "next/server"
 
-async function generateSqlQuery(userInput: string): Promise<string> {
+async function generateSqlQuery(userInput: string, schemaQuery: string): Promise<string> {
   const model = "gpt-4o"
 
   const messages = [
     {
       role: "system",
-      content: `You are an AI assistant that generates SQL queries based on natural language inputs. Always use proper SQL syntax and best practices. 
+      content: `You are an AI assistant that generates SQL queries for the database ${schemaQuery} based on natural language inputs. Always use proper SQL syntax and best practices. 
       Return only a JSON object with a 'query' key. Do not end with ;`,
     },
     {
@@ -119,6 +119,7 @@ async function processSqlQuery(userInput: string, query: string) {
     if (error) throw error
 
     const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, data)
+    console.log(naturalLanguageResponse)
 
     return { success: true, naturalLanguageResponse }
   } catch (error) {
@@ -130,7 +131,37 @@ async function processSqlQuery(userInput: string, query: string) {
 export async function POST(request: Request) {
   const { userInput } = await request.json(); // Assuming userInput is sent in the request body
 
-  const generatedQuery = await generateSqlQuery(userInput); // Call your function here
+  // Preprocess the schema query
+  const schemaQuery = `
+    SELECT
+      table_name,
+      json_agg(column_name) AS columns
+    FROM
+      information_schema.columns
+    WHERE
+      table_schema = 'public'
+    GROUP BY
+      table_name
+    ORDER BY
+      table_name
+  `;
+
+  // Execute the schema query to get the schema information
+  const supabase = await createClient();
+  const result = await supabase.rpc("execute_sql_query", { query: schemaQuery });
+  const schemaData = result.data; // Get the schema data
+  const error = result.error;
+
+  if (error) {
+    return NextResponse.json({ success: false, error: error.message });
+  }
+
+  // Convert schemaData to a string format suitable for the generateSqlQuery function
+  const schemaString = JSON.stringify(schemaData, null, 2); // Format the schema data as a string
+  console.log(schemaString)
+
+  // Pass the user input and the formatted schema string to generateSqlQuery
+  const generatedQuery = await generateSqlQuery(userInput, schemaString); // Pass schemaString as an argument
 
   // Process the SQL query and return the response
   const processedResult = await processSqlQuery(userInput, generatedQuery);

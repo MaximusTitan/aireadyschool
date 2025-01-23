@@ -17,7 +17,6 @@ const layouts: SlideLayout[] = [
 ]
 
 async function generateImagesForSlide(slide: any, theme: string): Promise<string> {
-  console.log('Generating image for slide:', slide.title)
 
   const basePrompt = slide.title
   const stylePrompts = {
@@ -31,7 +30,6 @@ async function generateImagesForSlide(slide: any, theme: string): Promise<string
   const style = stylePrompts[theme as keyof typeof stylePrompts] || stylePrompts.modern
 
   try {
-    console.log('Generating image for layout:', slide.layout)
     const image = await generateImage(`${basePrompt}, ${style}`)
     return image
   } catch (error) {
@@ -47,13 +45,11 @@ async function generateImagesForSlide(slide: any, theme: string): Promise<string
 }
 
 export async function generatePresentation(prompt: string, theme: string, slideCount: number): Promise<Presentation> {
-  console.log('Starting presentation generation for prompt:', prompt, 'theme:', theme, 'slideCount:', slideCount)
 
   // Ensure slideCount is within the allowed range
   const validSlideCount = Math.max(2, Math.min(8, slideCount))
 
   try {
-    console.log('Generating text content with OpenAI...')
     const { text } = await generateText({
       model: openai('gpt-4-turbo'),
       prompt: `Create an engaging and educational presentation about ${prompt} for students. Format the response as JSON with the following structure:
@@ -81,7 +77,6 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       Generate exactly ${validSlideCount} slides with diverse layouts and engaging, educational content suitable for students. Make sure to use different layouts for visual variety. The first slide should always be a titleSlide layout with a catchy title and brief introduction. Ensure each slide has substantial content, including the main content and relevant bullet points or other layout-specific information. Strictly adhere to the JSON format without any additional text or explanations outside the JSON structure.`,
     })
 
-    console.log('Parsing AI response...')
     let content;
     try {
       // Remove any potential non-JSON content before and after the JSON structure
@@ -105,10 +100,8 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       throw new Error('Invalid or empty slides data received from AI')
     }
 
-    console.log('Generating slides with images...')
     const slides: Slide[] = await Promise.all(
       content.slides.map(async (slide: any, index: number) => {
-        console.log(`Processing slide ${index + 1}:`, slide.title)
         
         try {
           const image = await generateImagesForSlide(slide, theme)
@@ -154,7 +147,6 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       })
     )
 
-    console.log('Presentation generation completed successfully')
     return {
       id: nanoid(),
       topic: prompt,

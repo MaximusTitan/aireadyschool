@@ -58,8 +58,6 @@ export async function POST(req: Request) {
   try {
     const { messages } = await req.json()
 
-    console.log('Received request with messages:', messages)
-
     const result: ReturnType<typeof streamText> = streamText({
       model: openai('gpt-4o'),
       messages,
@@ -88,8 +86,6 @@ export async function POST(req: Request) {
       Always use the appropriate tool to redirect the user after providing a brief response about the tool's functionality.`,
       tools,
     })
-
-    console.log('Stream created with tools:', Object.keys(tools))
 
     return result.toDataStreamResponse()
   } catch (error) {

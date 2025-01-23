@@ -29,9 +29,7 @@ interface SearchResponse {
 }
 
 async function performWebSearch(query: string): Promise<SearchResponse> {
-  try {
-    console.log('Starting web search with query:', query)
-    
+  try {    
     if (!query.trim()) {
       console.error('Empty search query provided')
       return { error: 'Empty search query', results: [] }
@@ -68,7 +66,6 @@ async function performWebSearch(query: string): Promise<SearchResponse> {
       throw new Error('Invalid response format from search API')
     }
 
-    console.log(`Web search completed with ${data.results.length} results`)
     return {
       results: data.results
     }
@@ -87,7 +84,6 @@ async function performWebSearch(query: string): Promise<SearchResponse> {
 }
 
 export async function POST(req: Request) {
-  console.log('Research API route called')
   try {
     const { messages, email } = await req.json()
     
@@ -100,8 +96,6 @@ export async function POST(req: Request) {
       throw new Error('Empty message content')
     }
 
-    console.log('Processing research request:', currentMessage)
-
     const { results: searchResults, error: searchError } = await performWebSearch(currentMessage)
     
     if (searchError) {
@@ -109,7 +103,6 @@ export async function POST(req: Request) {
     }
 
     const noSearchResults = !searchResults?.length
-    console.log(`Search results found: ${!noSearchResults}`)
 
     let searchContext = ''
     if (!noSearchResults) {
@@ -146,7 +139,6 @@ Important Guidelines:
 - Highlight key discoveries and breakthroughs
 - ${!noSearchResults ? 'Use proper citations for the provided sources' : 'Indicate when information might need further verification'}`
 
-    console.log('Generating research report...')
     const model = genAI.getGenerativeModel({ model: 'gemini-pro' })
     
     const result = await model.generateContent(prompt)
@@ -158,8 +150,6 @@ Important Guidelines:
     if (!text) {
       throw new Error('Empty text in Gemini response')
     }
-
-    console.log('Research report generated successfully')
 
     // Save to Supabase
     const { error: supabaseError } = await supabase

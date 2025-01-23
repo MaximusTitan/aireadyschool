@@ -12,8 +12,6 @@ export async function POST(req: Request) {
   try {
     const { classLevel, subject, topic, assessmentType, difficulty, questionCount } = await req.json()
 
-    console.log('Received request:', { classLevel, subject, topic, assessmentType, difficulty, questionCount })
-
     let prompt = `Generate a ${difficulty} difficulty ${subject} assessment for ${classLevel} on the topic of "${topic}" with ${questionCount} questions. `
 
     switch (assessmentType) {
@@ -30,15 +28,11 @@ export async function POST(req: Request) {
         throw new Error('Invalid assessment type')
     }
 
-    console.log('Generating assessment with prompt:', prompt)
-
     const { text } = await generateText({
       model: openai('gpt-4o'),
       prompt: prompt,
       temperature: 0.7,
     })
-
-    console.log('Raw OpenAI response:', text)
 
     // Extract JSON from the response
     const jsonMatch = text.match(/\[[\s\S]*\]/)
@@ -51,8 +45,6 @@ export async function POST(req: Request) {
     if (!Array.isArray(assessment)) {
       throw new Error('Invalid assessment format: Expected an array of questions')
     }
-
-    console.log('Parsed assessment:', assessment)
 
     // Save the assessment to the database
     const { data, error } = await supabase
@@ -71,8 +63,6 @@ export async function POST(req: Request) {
       console.error('Supabase error:', error)
       throw new Error(`Failed to save assessment: ${error.message}`)
     }
-
-    console.log('Assessment saved to database:', data)
 
     return NextResponse.json({ assessment, id: data[0].id })
   } catch (error) {

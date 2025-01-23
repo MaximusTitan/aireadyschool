@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, Suspense } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   X,
   Send,
@@ -18,11 +18,9 @@ import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
-import Link from "next/link";
 
-function ComicGeneratorContent() {
+export default function ComicGenerator() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [prompt, setPrompt] = useState("");
   const [imageData, setImageData] = useState<{
     urls: string[];
@@ -32,20 +30,25 @@ function ComicGeneratorContent() {
   const [showModal, setShowModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [loadedImages, setLoadedImages] = useState<boolean[]>([]);
 
-  const topic = searchParams.get("topic");
-
+  // Replace the existing useEffect with this updated version
   useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const topic = searchParams.get("topic");
     if (topic) {
-      setPrompt(decodeURIComponent(topic));
+      setPrompt(topic);
     }
-  }, [topic]);
+  }, []);
 
+  // Add a new useEffect to handle auto-submission after prompt is set
   useEffect(() => {
-    if (prompt) {
-      handleSubmit();
+    const searchParams = new URLSearchParams(window.location.search);
+    const topic = searchParams.get("topic");
+    if (topic && prompt === topic && !loading && imageData.urls.length === 0) {
+      handleSubmit(new Event("submit") as unknown as React.FormEvent);
     }
-  }, [prompt]);
+  }, [prompt, loading]);
 
   const handleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -57,9 +60,10 @@ function ComicGeneratorContent() {
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault?.(); // Make preventDefault optional for programmatic calls
     setImageData({ urls: [], descriptions: [] });
+    setLoadedImages([]);
     setLoading(true);
 
     try {
@@ -81,10 +85,16 @@ function ComicGeneratorContent() {
       const imageData = await imageResponse.json();
       if (!imageResponse.ok) throw new Error(imageData.message);
 
+      // Pre-load all images in parallel
+      const preloadPromises: Promise<HTMLImageElement>[] =
+        imageData.imageUrls.map((url: string) => loadImage(url));
+      await Promise.all(preloadPromises);
+
       setImageData({
         urls: imageData.imageUrls,
         descriptions: promptData.prompts,
       });
+      setLoadedImages(new Array(imageData.imageUrls.length).fill(true));
     } catch (error) {
       console.error("Error generating comic:", error);
     } finally {
@@ -207,153 +217,156 @@ function ComicGeneratorContent() {
   };
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <div className="flex flex-col min-h-screen bg-background text-foreground">
-        <div className="p-4 border-b border-border">
-          <div className="flex flex-row items-center">
-            <Link
-              href="/tools"
-              className="text-neutral-500 hover:text-neutral-700 "
+    <div className="flex flex-col min-h-screen bg-background text-foreground">
+      <div className="p-4 border-b border-border">
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => router.push("/tools")}
+              className="p-0 hover:bg-transparent"
             >
-              <ChevronLeft />
-            </Link>
-            <h1 className="text-3xl text-neutral-800 font-bold ml-2">
-              Comic Strip Generator
-            </h1>
+              <ChevronLeft className="h-6 w-6" />
+            </Button>
+            <h1 className="text-3xl font-bold">Comic Generator</h1>
           </div>
-          <div className="max-w-6xl mx-auto mt-8">
-            <form onSubmit={handleSubmit} className="w-full mt-4 relative">
-              <Textarea
-                placeholder="Enter your comic idea here..."
-                value={prompt}
-                onChange={handleTextareaChange}
-                onKeyDown={handleKeyDown}
-                className="w-full resize-none px-4 py-2 text-base leading-tight h-[calc(1em+8px)]"
-              />
-              <button
-                type="submit"
-                className="absolute right-2 top-2 text-muted-foreground hover:text-foreground"
-              >
-                <Send className="w-6 h-6" />
-              </button>
-              <p className="text-xs text-muted-foreground mt-1">
-                Press Enter to send, Shift + Enter for new line
-              </p>
-            </form>
-          </div>
+          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative">
+            <Textarea
+              placeholder="Enter your comic idea here..."
+              value={prompt}
+              onChange={handleTextareaChange}
+              onKeyDown={handleKeyDown}
+              className="w-full resize-none px-4 py-2 text-base leading-normal h-[calc(6em+16px)]"
+            />
+            <button
+              type="submit"
+              className="absolute right-2 top-1/4 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <Send className="w-6 h-6" />
+            </button>
+            <p className="text-xs text-muted-foreground mt-1 text-center">
+              Press Enter to send, Shift + Enter for new line
+            </p>
+          </form>
         </div>
+      </div>
 
-        {loading && <Loader />}
+      {loading && <Loader />}
 
-        {imageData.urls.length > 0 && (
-          <div ref={containerRef} className="flex-1 flex flex-col">
-            <div className="bg-muted p-2 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={handleFullscreen}
-                  className="flex items-center gap-2"
-                >
-                  <Maximize2 className="h-5 w-5" />
-                  <span>Fullscreen</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={downloadJSON}
-                  className="flex items-center gap-2"
-                >
-                  <FileJson className="h-5 w-5" />
-                  <span>Download JSON</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={downloadPDF}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-5 w-5" />
-                  <span>Download PDF</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={downloadPPT}
-                  className="flex items-center gap-2"
-                >
-                  <FilePresentation className="h-5 w-5" />
-                  <span>Download PPT</span>
-                </Button>
-              </div>
-              <div className="text-foreground">
-                {imageData.urls.length} panels generated
-              </div>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-7xl mx-auto space-y-12">
-                {imageData.urls.map((url, index) => (
-                  <div
-                    key={index}
-                    className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
-                  >
-                    <div className="w-1/2 relative">
-                      <div className="aspect-[16/9] relative">
-                        <Image
-                          src={url}
-                          alt={`Comic panel ${index + 1}`}
-                          fill
-                          className="object-contain"
-                          sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
-                        />
-                      </div>
-                    </div>
-                    <div className="w-1/2 p-8 flex items-center">
-                      {index === 0 ? (
-                        <h1 className="text-4xl leading-relaxed text-foreground font-comic-sans">
-                          {imageData.descriptions[index]}
-                        </h1>
-                      ) : (
-                        <p className="text-2xl leading-relaxed text-foreground font-comic-sans">
-                          {imageData.descriptions[index]}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {showModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
-            <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">
-              <button
-                onClick={() => setShowModal(false)}
-                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-              >
-                <X className="h-6 w-6" />
-              </button>
-              <h2 className="text-lg mb-4">
-                You do not have enough credits to generate a comic. <br />
-                Please recharge your credits.
-              </h2>
+      {imageData.urls.length > 0 && (
+        <div ref={containerRef} className="flex-1 flex flex-col">
+          <div className="bg-muted p-2 flex items-center justify-between">
+            <div className="flex items-center gap-2">
               <Button
-                onClick={() => router.push("/credits")}
-                className="bg-primary text-primary-foreground"
+                variant="ghost"
+                onClick={handleFullscreen}
+                className="flex items-center gap-2"
               >
-                Buy Credits
+                <Maximize2 className="h-5 w-5" />
+                <span>Fullscreen</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={downloadJSON}
+                className="flex items-center gap-2"
+              >
+                <FileJson className="h-5 w-5" />
+                <span>Download JSON</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={downloadPDF}
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-5 w-5" />
+                <span>Download PDF</span>
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={downloadPPT}
+                className="flex items-center gap-2"
+              >
+                <FilePresentation className="h-5 w-5" />
+                <span>Download PPT</span>
               </Button>
             </div>
+            <div className="text-foreground">
+              {imageData.urls.length} panels generated
+            </div>
           </div>
-        )}
-      </div>
-    </Suspense>
-  );
-}
 
-export default function ComicGenerator() {
-  return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <ComicGeneratorContent />
-    </Suspense>
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="max-w-7xl mx-auto space-y-12">
+              {imageData.urls.map((url, index) => (
+                <div
+                  key={index}
+                  className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
+                >
+                  <div className="w-1/2 relative">
+                    <div className="aspect-[16/9] relative">
+                      {!loadedImages[index] && (
+                        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                          <Loader />
+                        </div>
+                      )}
+                      <Image
+                        src={url}
+                        alt={`Comic panel ${index + 1}`}
+                        fill
+                        className={cn(
+                          "object-contain",
+                          !loadedImages[index] && "opacity-0"
+                        )}
+                        sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
+                        priority={index < 2} // Prioritize loading first two images
+                        onLoad={() => {
+                          const newLoadedImages = [...loadedImages];
+                          newLoadedImages[index] = true;
+                          setLoadedImages(newLoadedImages);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div className="w-1/2 p-8 flex items-center">
+                    {index === 0 ? (
+                      <h1 className="text-4xl leading-relaxed text-foreground font-comic-sans">
+                        {imageData.descriptions[index]}
+                      </h1>
+                    ) : (
+                      <p className="text-2xl leading-relaxed text-foreground font-comic-sans">
+                        {imageData.descriptions[index]}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
+          <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">
+            <button
+              onClick={() => setShowModal(false)}
+              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            <h2 className="text-lg mb-4">
+              You do not have enough credits to generate a comic. <br />
+              Please recharge your credits.
+            </h2>
+            <Button
+              onClick={() => router.push("/credits")}
+              className="bg-primary text-primary-foreground"
+            >
+              Buy Credits
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }

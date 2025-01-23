@@ -3,8 +3,6 @@ import { NextResponse } from 'next/server';
 export async function POST(req: Request) {
   try {
     const { message, context } = await req.json();
-    console.log('Received message:', message);
-    console.log('Context:', context);
 
     const apiKey = process.env.OPENAI_API_KEY;
     if (!apiKey) {
@@ -87,7 +85,6 @@ User: ${message}`;
       throw new Error('The AI model was unable to provide a valid response. Please try again.');
     }
 
-    console.log('AI Response:', responseText);
     return NextResponse.json({ reply: responseText });
   } catch (error) {
     console.error('Error generating chat response:', error);

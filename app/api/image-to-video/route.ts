@@ -59,7 +59,6 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         while (attempts < maxAttempts) {
             const taskResponse: TaskResponse = await client.tasks.retrieve(taskId);
-            console.log(`Task status: ${taskResponse.status}, Progress: ${taskResponse.progress}`);
 
             switch (taskResponse.status) {
                 case "SUCCEEDED":
@@ -83,12 +82,10 @@ export async function POST(request: Request): Promise<NextResponse> {
                     );
 
                 case "THROTTLED":
-                    console.log("Task throttled, waiting...");
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
                     break;
 
                 case "RUNNING":
-                    console.log(`Progress: ${(taskResponse.progress ?? 0) * 100}%`);
                     await new Promise(resolve => setTimeout(resolve, pollInterval));
                     break;
 

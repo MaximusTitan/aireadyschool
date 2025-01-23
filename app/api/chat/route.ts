@@ -70,7 +70,7 @@ export async function POST(request: Request) {
           role: "system",
           content: `You are a helpful assistant analyzing documents. Base your answers only on the provided context. 
                    If the context doesn't contain enough information to answer the question fully, explain what specific information is missing.
-                   If you're unsure about any information, indicate that clearly.`
+                   If you're unsure about any information, indicate that clearly. Do not mention document numbers.`
         },
         {
           role: "user",

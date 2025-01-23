@@ -18,7 +18,21 @@ export async function POST(req: Request) {
     const data = await req.json();
     
     // Validate required fields
-    const requiredFields = ['name', 'age', 'grade', 'board', 'cognitiveParams', 'selectedSubject', 'knowledgeParams', 'goals', 'timeline'];
+    const requiredFields = [
+      "name",
+      "age",
+      "gender",
+      "nationality",
+      "grade",
+      "board",
+      "cognitiveParams",
+      "selectedSubject",
+      "knowledgeParams",
+      "goals",
+      "timeline",
+      "topic",
+      "otherInfo",
+    ];
     for (const field of requiredFields) {
       if (!data[field]) {
         return NextResponse.json(
@@ -34,6 +48,8 @@ export async function POST(req: Request) {
     Student Information:
     Name: ${data.name}
     Age: ${data.age}
+    Gender: ${data.gender}
+    Nationality: ${data.nationality}
     Grade: ${data.grade}
     Board: ${data.board}
 
@@ -50,6 +66,8 @@ export async function POST(req: Request) {
 
     Goals: ${data.goals}
     Timeline: ${data.timeline}
+    Topic: ${data.topic}
+    Other Info: ${data.otherInfo}
 
     Generate a structured learning plan with weekly targets and specific activities.
     Return the response in the following JSON format:

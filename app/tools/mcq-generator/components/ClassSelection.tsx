@@ -6,25 +6,25 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-interface ClassSelectionProps {
+interface GradeSelectionProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-export default function ClassSelection({
+export default function GradeSelection({
   value,
   onChange,
-}: ClassSelectionProps) {
+}: GradeSelectionProps) {
   return (
     <div>
       <label
-        htmlFor="class"
+        htmlFor="grade"
         className="block text-sm font-medium text-gray-700 mb-1"
       >
         Choose the Grade
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full" id="grade">
           <SelectValue placeholder="Select a grade" />
         </SelectTrigger>
         <SelectContent>
@@ -32,7 +32,7 @@ export default function ClassSelection({
             <SelectItem
               key={i + 1}
               value={`Grade ${i + 1}`}
-              className="text-neutral-500 hover:bg-neutral-100"
+              className="text-neutral-500 hover:bg-rose-100"
             >
               Grade {i + 1}
             </SelectItem>

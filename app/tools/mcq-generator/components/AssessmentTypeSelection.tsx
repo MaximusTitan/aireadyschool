@@ -38,7 +38,7 @@ export default function AssessmentTypeSelection({
             <SelectItem
               key={type.value}
               value={type.value}
-              className="text-neutral-500 hover:bg-neutral-100"
+              className="text-neutral-500 hover:bg-rose-100"
             >
               {type.label}
             </SelectItem>

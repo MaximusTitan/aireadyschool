@@ -68,19 +68,21 @@ export default function FillInTheBlankQuestion({
           </Fragment>
         ))}
       </div>
-      <div className="flex flex-wrap gap-2 mb-4">
-        {question.options.map((option, optionIndex) => (
-          <Button
-            key={optionIndex}
-            variant="outline"
-            draggable
-            onDragStart={(e) => handleDragStart(e, option)}
-            onClick={() => onChange(option)}
-          >
-            {option}
-          </Button>
-        ))}
-      </div>
+      {!showResults && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {question.options.map((option, optionIndex) => (
+            <Button
+              key={optionIndex}
+              variant="outline"
+              draggable
+              onDragStart={(e) => handleDragStart(e, option)}
+              onClick={() => onChange(option)}
+            >
+              {option}
+            </Button>
+          ))}
+        </div>
+      )}
       {showResults && (
         <div
           className={

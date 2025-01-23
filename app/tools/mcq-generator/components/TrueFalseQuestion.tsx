@@ -31,7 +31,11 @@ export default function TrueFalseQuestion({
       >
         {["true", "false"].map((option) => (
           <div key={option} className="flex items-center space-x-2">
-            <RadioGroupItem value={option} id={`q${index}-${option}`} />
+            <RadioGroupItem
+              value={option}
+              id={`q${index}-${option}`}
+              disabled={showResults}
+            />
             <Label htmlFor={`q${index}-${option}`}>
               {option.charAt(0).toUpperCase() + option.slice(1)}
             </Label>

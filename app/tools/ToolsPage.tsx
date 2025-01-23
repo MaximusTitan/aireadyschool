@@ -176,7 +176,6 @@ const ToolsPage = () => {
         title: "Project Helper",
         description: "Get help with your projects",
         route: "/tools/project-helper",
-        isComingSoon: true,
       },
       {
         title: "Lesson Content Generator",
@@ -351,7 +350,6 @@ const ToolsPage = () => {
         title: "Marketing Content Generator",
         description: "Generate marketing content",
         route: "/tools/marketing-content-generator",
-        isComingSoon: true,
       },
       {
         title: "School Intelligence",

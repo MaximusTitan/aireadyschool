@@ -11,52 +11,62 @@ import QuestionCount from "./components/QuestionCount";
 import GenerateButton from "./components/GenerateButton";
 import Assessment from "./components/Assessment";
 import Footer from "./components/Footer";
+import CountrySelection from "./components/CountrySelection";
+import BoardSelection from "./components/BoardSelection";
+import LearningOutcomesInput from "./components/LearningOutcomesInput";
 import { createClient } from "@/utils/supabase/client";
-import Link from "next/link"; // Added import
+import { CountryKey } from "@/types/assessment";
 
 const supabase = createClient();
 
+interface FormData {
+  country: CountryKey | "";
+  board: string;
+  classLevel: string;
+  subject: string;
+  topic: string;
+  assessmentType: string;
+  difficulty: string;
+  questionCount: number;
+  learningOutcomes: string[];
+}
+
 export default function Home() {
-  const [formData, setFormData] = useState({
-    classLevel: "Class 8",
+  const [formData, setFormData] = useState<FormData>({
+    country: "",
+    board: "",
+    classLevel: "Grade 9",
     subject: "Math",
     topic: "",
     assessmentType: "mcq",
     difficulty: "Medium",
-    questionCount: 5,
+    questionCount: 10,
+    learningOutcomes: [],
   });
   const [assessment, setAssessment] = useState<any[] | null>(null);
+  const [assessmentId, setAssessmentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [showResults, setShowResults] = useState(false);
-  const [userAnswers, setUserAnswers] = useState<UserAnswer[]>([]);
+  const [userAnswers, setUserAnswers] = useState<Answer[]>([]);
   const [savedAssessments, setSavedAssessments] = useState<
-    Array<{ id: string; subject: string; topic: string }>
+    Array<{
+      id: string;
+      subject: string;
+      topic: string;
+      questions: any[];
+      answers?: any[];
+      country?: string;
+      board?: string;
+      class_level: string;
+      assessment_type: string;
+      difficulty: string;
+      learning_outcomes?: string[];
+    }>
   >([]);
 
   useEffect(() => {
     fetchSavedAssessments();
-  }, []);
-
-  useEffect(() => {
-    const testDatabaseConnection = async () => {
-      try {
-        const { data, error } = await supabase
-          .from("assessments")
-          .select("id")
-          .limit(1);
-
-        if (error) {
-          throw error;
-        }
-
-        console.log("Successfully connected to the assessments table:", data);
-      } catch (error) {
-        console.error("Error connecting to the assessments table:", error);
-      }
-    };
-
-    testDatabaseConnection();
   }, []);
 
   const fetchSavedAssessments = async () => {
@@ -93,7 +103,10 @@ export default function Home() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          learningOutcomes: formData.learningOutcomes,
+        }),
       });
 
       console.log("Response status:", response.status);
@@ -111,6 +124,7 @@ export default function Home() {
       }
 
       setAssessment(data.assessment);
+      setAssessmentId(data.id);
       fetchSavedAssessments(); // Refresh the list of saved assessments
     } catch (error) {
       console.error("Error in handleSubmit:", error);
@@ -122,24 +136,32 @@ export default function Home() {
     }
   };
 
-  interface UserAnswer {
+  interface Answer {
     questionIndex: number;
     selectedAnswer: string;
   }
 
-  const handleAnswerSubmit = (answers: UserAnswer[]): void => {
+  const handleAnswerSubmit = (answers: Answer[]): void => {
     setUserAnswers(answers);
     setShowResults(true);
   };
 
-  interface SavedAssessment {
+  interface Assessment {
     id: string;
+    country?: string;
+    board?: string;
     class_level: string;
     subject: string;
     topic: string;
     assessment_type: string;
     difficulty: string;
-    questions: any[]; // Type can be more specific based on your question structure
+    questions: any[];
+    answers?: any[];
+    learning_outcomes?: string[];
+  }
+
+  interface AssessmentError {
+    message: string;
   }
 
   const handleLoadAssessment = async (id: string): Promise<void> => {
@@ -148,37 +170,108 @@ export default function Home() {
         .from("assessments")
         .select("*")
         .eq("id", id)
-        .single<SavedAssessment>();
+        .single<Assessment>();
 
       if (error) {
         throw error;
       }
 
       setAssessment(data.questions);
+      setAssessmentId(data.id);
       setFormData({
+        ...formData,
+        country: (data.country as CountryKey) || "",
+        board: data.board || "",
         classLevel: data.class_level,
         subject: data.subject,
         topic: data.topic,
         assessmentType: data.assessment_type,
         difficulty: data.difficulty,
         questionCount: data.questions.length,
+        learningOutcomes: data.learning_outcomes || [],
       });
       setShowResults(false);
-      setUserAnswers([]);
-    } catch (error: any) {
+      setUserAnswers(data.answers || []);
+    } catch (error: unknown) {
+      const err = error as AssessmentError;
       console.error("Error loading assessment:", error);
-      setError(`Failed to load assessment: ${error.message}`);
+      setError(`Failed to load assessment: ${err.message}`);
+    }
+  };
+
+  interface AssessmentData {
+    id: string;
+    country?: string;
+    board?: string;
+    class_level: string;
+    subject: string;
+    topic: string;
+    assessment_type: string;
+    difficulty: string;
+    questions: any[];
+    answers?: any[];
+    learning_outcomes?: string[];
+  }
+
+  interface AssessmentError {
+    message: string;
+  }
+
+  const handleViewAnswers = async (id: string): Promise<void> => {
+    try {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", id)
+        .single<AssessmentData>();
+
+      if (error) {
+        throw error;
+      }
+
+      setAssessment(data.questions);
+      setAssessmentId(data.id);
+      setFormData({
+        country: (data.country as CountryKey) || "",
+        board: data.board || "",
+        classLevel: data.class_level,
+        subject: data.subject,
+        topic: data.topic,
+        assessmentType: data.assessment_type,
+        difficulty: data.difficulty,
+        questionCount: data.questions.length,
+        learningOutcomes: data.learning_outcomes || [],
+      });
+      setShowResults(true);
+      setUserAnswers(data.answers || []);
+    } catch (error: unknown) {
+      const err = error as AssessmentError;
+      console.error("Error loading assessment answers:", error);
+      setError(`Failed to load assessment answers: ${err.message}`);
     }
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between">
+    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col justify-between">
       <Header />
       <main className="container mx-auto px-4 py-8 flex-grow bg-white">
-        <div className="bg-white rounded-lg border border-neutral-200 p-6 md:p-8 max-w-6xl mx-auto">
+        <div className="bg-white rounded-lg border p-6 md:p-8 max-w-5xl mx-auto">
           {!assessment ? (
             <>
               <form onSubmit={handleSubmit} className="space-y-6">
+                <CountrySelection
+                  value={formData.country}
+                  onChange={(value: CountryKey) =>
+                    setFormData({ ...formData, country: value, board: "" })
+                  }
+                />
+                <BoardSelection
+                  value={formData.board}
+                  onChange={(value) =>
+                    setFormData({ ...formData, board: value })
+                  }
+                  country={formData.country}
+                />
                 <ClassSelection
                   value={formData.classLevel}
                   onChange={(value) =>
@@ -195,6 +288,12 @@ export default function Home() {
                   value={formData.topic}
                   onChange={(value) =>
                     setFormData({ ...formData, topic: value })
+                  }
+                />
+                <LearningOutcomesInput
+                  value={formData.learningOutcomes}
+                  onChange={(value) =>
+                    setFormData({ ...formData, learningOutcomes: value })
                   }
                 />
                 <AssessmentTypeSelection
@@ -217,7 +316,7 @@ export default function Home() {
                 />
                 <GenerateButton
                   isLoading={isLoading}
-                  className="bg-neutral-500 hover:bg-neutral-600 text-white"
+                  className="bg-neutral-800 hover:bg-neutral-600 text-white"
                 />
               </form>
               <div className="mt-8">
@@ -225,26 +324,36 @@ export default function Home() {
                   Saved Assessments
                 </h2>
                 {savedAssessments.length > 0 ? (
-                  <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
+                  <ul className="space-y-2">
                     {savedAssessments.map((savedAssessment) => (
-                      <div
+                      <li
                         key={savedAssessment.id}
-                        className="flex justify-between items-center bg-white border border-neutral-200 p-2 rounded"
+                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
                       >
                         <span>
                           {savedAssessment.subject} - {savedAssessment.topic}
                         </span>
-                        <button
-                          onClick={() =>
-                            handleLoadAssessment(savedAssessment.id)
-                          }
-                          className="bg-white border border-neutral-400 hover:bg-black hover:text-white px-2 py-1 rounded"
-                        >
-                          Load
-                        </button>
-                      </div>
+                        <div>
+                          <button
+                            onClick={() =>
+                              handleLoadAssessment(savedAssessment.id)
+                            }
+                            className="bg-neutral-500 hover:bg-neutral-600 text-white px-2 py-1 rounded mr-2"
+                          >
+                            Load
+                          </button>
+                          <button
+                            onClick={() =>
+                              handleViewAnswers(savedAssessment.id)
+                            }
+                            className="bg-purple-400 hover:bg-purple-300 text-white px-2 py-1 rounded"
+                          >
+                            View Answers
+                          </button>
+                        </div>
+                      </li>
                     ))}
-                  </div>
+                  </ul>
                 ) : (
                   <p>No saved assessments found.</p>
                 )}
@@ -257,6 +366,7 @@ export default function Home() {
               onSubmit={handleAnswerSubmit}
               showResults={showResults}
               userAnswers={userAnswers}
+              assessmentId={assessmentId || ""} // Provide a default empty string
             />
           )}
           {error && (

@@ -1,9 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import MCQQuestion from "./MCQQuestion";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
-import { createClient } from "@/utils/supabase/client";
 
 interface AssessmentProps {
   assessment: any[];
@@ -11,9 +10,8 @@ interface AssessmentProps {
   onSubmit: (answers: any[]) => void;
   showResults: boolean;
   userAnswers: any[];
+  assessmentId?: string; // Make assessmentId optional
 }
-
-const supabase = createClient();
 
 export default function Assessment({
   assessment,
@@ -21,12 +19,23 @@ export default function Assessment({
   onSubmit,
   showResults,
   userAnswers,
+  assessmentId,
 }: AssessmentProps) {
   const [answers, setAnswers] = useState<any[]>(
-    new Array(assessment.length).fill(null)
+    userAnswers.length > 0
+      ? userAnswers
+      : new Array(assessment.length).fill(null)
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+
+  useEffect(() => {
+    setAnswers(
+      Array.isArray(userAnswers) && userAnswers.length > 0
+        ? userAnswers
+        : new Array(assessment.length).fill(null)
+    );
+  }, [userAnswers, assessment]);
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     const newAnswers = [...answers];
@@ -39,17 +48,25 @@ export default function Assessment({
   };
 
   const calculateScore = () => {
-    return userAnswers.reduce((score, answer, index) => {
-      if (assessmentType === "mcq") {
-        return score + (answer === assessment[index].correctAnswer ? 1 : 0);
-      } else if (assessmentType === "truefalse") {
-        return score + (answer === assessment[index].correctAnswer ? 1 : 0);
-      } else if (assessmentType === "fillintheblank") {
+    if (!Array.isArray(answers)) {
+      console.error("Answers is not an array:", answers);
+      return 0;
+    }
+    return answers.reduce((score, answer, index) => {
+      const question = assessment[index];
+      if (!question) return score;
+
+      if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
+        return score + (answer === question.correctAnswer ? 1 : 0);
+      } else if (
+        assessmentType === "truefalse" &&
+        question.correctAnswer !== undefined
+      ) {
+        return score + (answer === question.correctAnswer ? 1 : 0);
+      } else if (assessmentType === "fillintheblank" && question.answer) {
         return (
           score +
-          (answer.toLowerCase() === assessment[index].answer.toLowerCase()
-            ? 1
-            : 0)
+          (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
         );
       }
       return score;
@@ -61,33 +78,27 @@ export default function Assessment({
     setSaveError("");
 
     try {
-      console.log("Saving assessment results:", {
-        assessment_type: assessmentType,
-        user_answers: userAnswers,
-        score: calculateScore(),
-        total_questions: assessment.length,
+      const response = await fetch("/api/generate-assessment", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: assessmentId,
+          answers: answers,
+        }),
       });
 
-      const { data, error } = await supabase
-        .from("assessment_results")
-        .insert({
-          assessment_type: assessmentType,
-          user_answers: userAnswers,
-          score: calculateScore(),
-          total_questions: assessment.length,
-        })
-        .select();
-
-      if (error) {
-        console.error("Supabase error:", error);
-        throw new Error(`Failed to save results: ${error.message}`);
+      if (!response.ok) {
+        throw new Error("Failed to save answers");
       }
 
-      console.log("Results saved successfully:", data);
+      const data = await response.json();
+      console.log("Answers saved successfully:", data);
     } catch (error) {
-      console.error("Error saving results:", error);
+      console.error("Error saving answers:", error);
       setSaveError(
-        `Failed to save results: ${error instanceof Error ? error.message : "Unknown error occurred"}`
+        `Failed to save answers: ${error instanceof Error ? error.message : "Unknown error occurred"}`
       );
     } finally {
       setIsSaving(false);
@@ -141,14 +152,14 @@ export default function Assessment({
           </h2>
           <Button
             onClick={handleSaveResults}
-            className="mt-4 mr-2 bg-neutral-500 hover:bg-neutral-600"
+            className="mt-4 mr-2 bg-neutral-900 hover:bg-neutral-700"
             disabled={isSaving}
           >
             {isSaving ? "Saving..." : "Save Results"}
           </Button>
           <Button
             onClick={() => window.location.reload()}
-            className="mt-4 bg-neutral-500 hover:bg-neutral-600"
+            className="mt-4 bg-neutral-900 hover:bg-neutral-700"
           >
             Start New Assessment
           </Button>

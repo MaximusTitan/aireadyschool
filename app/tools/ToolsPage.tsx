@@ -176,7 +176,6 @@ const ToolsPage = () => {
         title: "Project Helper",
         description: "Get help with your projects",
         route: "/tools/project-helper",
-        isComingSoon: true,
       },
       {
         title: "Lesson Content Generator",

@@ -498,7 +498,7 @@ const ToolsPage = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="e.g; First email in chat_history?"
+                placeholder="e.g; first email in chat_history?"
                 className="flex-grow px-3 py-2 bg-neutral-100 dark:bg-neutral-700 rounded-l-lg focus:outline-none"
               />
               <button

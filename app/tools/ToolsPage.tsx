@@ -350,7 +350,6 @@ const ToolsPage = () => {
         title: "Marketing Content Generator",
         description: "Generate marketing content",
         route: "/tools/marketing-content-generator",
-        isComingSoon: true,
       },
       {
         title: "School Intelligence",

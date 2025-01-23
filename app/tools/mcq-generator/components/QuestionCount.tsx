@@ -12,12 +12,12 @@ export default function QuestionCount({ value, onChange }: QuestionCountProps) {
       >
         How many questions do you want to generate?
       </label>
-      <div className="mt-1 relative rounded-md shadow-sm border border-neutral-200">
+      <div className="mt-1 relative rounded-md shadow-sm">
         <input
           type="number"
           name="questionCount"
           id="questionCount"
-          className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md h-10"
+          className="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-3 pr-12 sm:text-sm border-gray-300 rounded-md"
           placeholder="10"
           min="1"
           max="20"

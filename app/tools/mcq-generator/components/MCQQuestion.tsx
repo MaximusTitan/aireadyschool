@@ -35,6 +35,7 @@ export default function MCQQuestion({
             <RadioGroupItem
               value={optionIndex.toString()}
               id={`q${index}-o${optionIndex}`}
+              disabled={showResults}
             />
             <Label htmlFor={`q${index}-o${optionIndex}`}>{option}</Label>
             {showResults && (

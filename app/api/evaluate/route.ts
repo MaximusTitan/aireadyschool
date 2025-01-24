@@ -54,38 +54,104 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const assignmentText = formData.get("assignmentText") as string
     const gradeLevel = formData.get("gradeLevel") as string
     const subject = formData.get("subject") as string
+    const rubric = formData.get("rubric") as File | null
+    const rubricTextInput = formData.get("rubricText") as string
 
-    if (!file || file.type !== "application/pdf") {
-      return NextResponse.json({ error: "Invalid file type. Please upload a PDF." }, { status: 400 })
+    if ((!file && !assignmentText) || !gradeLevel || !subject) {
+      return NextResponse.json(
+        { error: "Please provide an assignment (file or text), fill in all fields." },
+        { status: 400 }
+      )
     }
 
-    // Read file content
-    const fileBuffer = Buffer.from(await file.arrayBuffer())
-    let text = ""
-
-    const parser = new createParser()
-    text = await new Promise((resolve, reject) => {
-      parser.on("pdfParser_dataReady", (pdfData) => {
-        resolve(
-          pdfData.Pages.map((page) =>
-            page.Texts.map((text) => text.R.map((r) => decodeURIComponent(r.T)).join(" ")).join(" "),
-          ).join("\n"),
+    // Read assignment content
+    let assignmentContent = ""
+    if (file) {
+      if (
+        file.type !== "application/pdf" &&
+        file.type !== "text/plain"
+      ) {
+        return NextResponse.json(
+          { error: "Invalid assignment file type. Please upload a PDF or TXT file." },
+          { status: 400 }
         )
-      })
-      parser.on("pdfParser_dataError", reject)
-      parser.parseBuffer(fileBuffer)
-    })
+      }
+
+      if (file.type === "application/pdf") {
+        const fileBuffer = Buffer.from(await file.arrayBuffer())
+        const parser = new createParser()
+        assignmentContent = await new Promise<string>((resolve, reject) => {
+          parser.on("pdfParser_dataReady", (pdfData) => {
+            resolve(
+              pdfData.Pages.map((page) =>
+                page.Texts.map((text) =>
+                  text.R.map((r) => decodeURIComponent(r.T)).join(" ")
+                ).join(" ")
+              ).join("\n")
+            )
+          })
+          parser.on("pdfParser_dataError", reject)
+          parser.parseBuffer(fileBuffer)
+        })
+      } else if (file.type === "text/plain") {
+        assignmentContent = await file.text()
+      }
+    } else {
+      assignmentContent = assignmentText
+    }
+
+    // Handle rubric
+    let systemPrompt = SYSTEM_PROMPT
+    if (rubric || rubricTextInput) {
+      let rubricContent = ""
+      if (rubric) {
+        if (
+          rubric.type !== "application/pdf" &&
+          rubric.type !== "text/plain"
+        ) {
+          return NextResponse.json(
+            { error: "Invalid rubric file type. Please upload a PDF or TXT file." },
+            { status: 400 }
+          )
+        }
+
+        if (rubric.type === "application/pdf") {
+          const rubricBuffer = Buffer.from(await rubric.arrayBuffer())
+          const rubricParser = new createParser()
+          rubricContent = await new Promise<string>((resolve, reject) => {
+            rubricParser.on("pdfParser_dataReady", (pdfData) => {
+              resolve(
+                pdfData.Pages.map((page) =>
+                  page.Texts.map((text) =>
+                    text.R.map((r) => decodeURIComponent(r.T)).join(" ")
+                  ).join(" ")
+                ).join("\n")
+              )
+            })
+            rubricParser.on("pdfParser_dataError", reject)
+            rubricParser.parseBuffer(rubricBuffer)
+          })
+        } else if (rubric.type === "text/plain") {
+          rubricContent = await rubric.text()
+        }
+      } else if (rubricTextInput) {
+        rubricContent = rubricTextInput
+      }
+
+      systemPrompt = `You are an expert educational evaluator with the following rubric:\n${rubricContent}\n\nYour task is to analyze the given student assignment and provide a comprehensive evaluation based on the provided rubric.`
+    }
 
     // Prepare the prompt for the AI
-    const userPrompt = `Grade Level: ${gradeLevel}\nSubject: ${subject}\n\nStudent Assignment:\n${text}\n\nPlease evaluate this assignment based on the criteria provided.`
+    const userPrompt = `Grade Level: ${gradeLevel}\nSubject: ${subject}\n\nStudent Assignment:\n${assignmentContent}\n\nPlease evaluate this assignment based on the criteria provided.`
 
     // Call OpenAI API for evaluation
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o",
       messages: [
-        { role: "system", content: SYSTEM_PROMPT },
+        { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },
       ],
       temperature: 0.7,
@@ -93,12 +159,29 @@ export async function POST(request: Request) {
     })
 
     const aiResponse = completion.choices[0].message.content
-    const evaluation = JSON.parse(aiResponse || "{}")
+
+    let evaluation
+    try {
+      // Always try to parse as JSON first
+      evaluation = JSON.parse(aiResponse || "{}")
+      
+      // Validate the parsed response has the expected structure
+      if (!evaluation.contentUnderstanding || !evaluation.totalScore) {
+        // If parsed but missing required fields, use the raw response
+        evaluation = aiResponse
+      }
+    } catch (parseError) {
+      // If JSON parsing fails, use the raw response
+      evaluation = aiResponse
+    }
 
     return NextResponse.json({ evaluation })
   } catch (error) {
-    console.error("Error processing PDF or evaluating assignment:", error)
-    return NextResponse.json({ error: "Failed to process PDF or evaluate assignment." }, { status: 500 })
+    console.error("Error processing assignment or evaluating:", error)
+    return NextResponse.json(
+      { error: "Failed to process assignment or evaluate." },
+      { status: 500 }
+    )
   }
 }
 

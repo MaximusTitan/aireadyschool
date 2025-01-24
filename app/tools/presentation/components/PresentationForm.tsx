@@ -107,8 +107,8 @@ export default function PresentationForm({
         <Label htmlFor="slideCount">Number of Slides: {slideCount}</Label>
         <Slider
           id="slideCount"
-          min={2}
-          max={8}
+          min={3}
+          max={15}
           step={1}
           value={[slideCount]}
           onValueChange={(value) => setSlideCount(value[0])}

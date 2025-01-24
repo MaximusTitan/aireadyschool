@@ -188,7 +188,7 @@ const YoutubeAssistantPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      <header className="sticky top-0 z-50 w-full dark:bg-neutral-800 dark:border-neutral-700">
+      <header className="top-0 z-50 w-full dark:bg-neutral-800 dark:border-neutral-700">
         <div className="ml-4 flex h-16 items-center space-x-2">
           <Link
             href="/tools"

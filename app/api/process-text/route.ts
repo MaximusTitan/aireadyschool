@@ -34,7 +34,7 @@ export async function POST(request: Request) {
           content: prompts[operation] 
         }
       ],
-      model: "gpt-4",
+      model: "gpt-4o",
       temperature: 0.7,
     })
 

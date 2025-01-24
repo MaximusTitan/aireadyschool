@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@supabase/supabase-js"
+import { createClient, SupabaseClient } from "@supabase/supabase-js"
+
+let ext_supabase: SupabaseClient; // Declare the Supabase client with an explicit type
 
 export async function POST(request: Request) {
   try {
@@ -11,10 +13,10 @@ export async function POST(request: Request) {
     }
 
     // Create a Supabase client with the provided credentials
-    const supabase = createClient(supabaseUrl, supabaseAnonKey)
+    ext_supabase = createClient(supabaseUrl, supabaseAnonKey) // Assign to the outer variable
 
     // Fetch the database name (assuming you have a way to get it)
-    const { data: dbNameData, error: dbNameError } = await supabase.rpc("get_database_name"); // Replace with your actual RPC or query to get the database name
+    const { data: dbNameData, error: dbNameError } = await ext_supabase.rpc("get_database_name"); // Replace with your actual RPC or query to get the database name
 
     if (dbNameError) {
       throw new Error("Failed to fetch database name")
@@ -27,4 +29,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Failed to connect to Supabase" }, { status: 500 })
   }
 }
+
+export { ext_supabase }; // Export the Supabase client
 

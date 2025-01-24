@@ -38,8 +38,6 @@ export function ChatWindow({ onClose, databaseName, supabaseUrl, supabaseAnonKey
         },
         body: JSON.stringify({
           query: input,
-          supabaseUrl,
-          supabaseAnonKey,
         }),
       })
 
@@ -49,7 +47,10 @@ export function ChatWindow({ onClose, databaseName, supabaseUrl, supabaseAnonKey
         throw new Error(result.error || "Failed to execute query")
       }
 
-      const assistantMessage: ChatMessage = { role: "assistant", content: JSON.stringify(result.data, null, 2) }
+      const assistantMessage: ChatMessage = { 
+        role: "assistant", 
+        content: result.naturalLanguageResponse
+      }
       setMessages((prev) => [...prev, assistantMessage])
     } catch (error) {
       console.error("Error executing query:", error)

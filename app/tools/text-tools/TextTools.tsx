@@ -29,10 +29,22 @@ const countWords = (text: string): number => {
     .filter((word) => word.length > 0).length;
 };
 
+const operationDescriptions = {
+  rewrite:
+    "Rewrite the text while keeping the same meaning but using different words and structure",
+  proofread: "Check and correct spelling, grammar, and punctuation errors",
+  translate: "Translate the text into your selected target language",
+  expand:
+    "Make the text longer by adding more details and elaborating on the ideas",
+  summarize:
+    "Create a shorter version that captures the main points of the text",
+  questions: "Generate questions based on the text content",
+} as const;
+
 export default function TextTools() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [operation, setOperation] = useState<Operation>("rewrite");
+  const [operation, setOperation] = useState<Operation>("summarize");
   const [loading, setLoading] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("spanish");
   const [targetWords, setTargetWords] = useState(100);
@@ -108,13 +120,16 @@ export default function TextTools() {
                   <SelectValue placeholder="Select operation" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="summarize">📊 Summarize</SelectItem>
+                  <SelectItem value="expand">📈 Expand</SelectItem>
+                  <SelectItem value="translate">🌍 Translate</SelectItem>
                   <SelectItem value="rewrite">✍️ Rewrite</SelectItem>
                   <SelectItem value="proofread">📝 Proofread</SelectItem>
-                  <SelectItem value="translate">🌍 Translate</SelectItem>
-                  <SelectItem value="expand">📈 Expand</SelectItem>
-                  <SelectItem value="summarize">📊 Summarize</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
+                {operationDescriptions[operation]}
+              </p>
             </div>
 
             {(operation === "expand" || operation === "summarize") && (

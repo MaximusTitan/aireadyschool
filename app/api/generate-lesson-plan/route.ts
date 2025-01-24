@@ -98,7 +98,7 @@ Ensure all content is directly related to ${topic} and appropriate for grade ${g
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',

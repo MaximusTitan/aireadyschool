@@ -20,6 +20,12 @@ interface VideoData {
   transcript: string;
 }
 
+interface VideoMetadata {
+  title: string;
+  description: string;
+  channelTitle: string;
+}
+
 const getYouTubeEmbedUrl = (url: string) => {
   try {
     const parsedUrl = new URL(url);
@@ -42,6 +48,24 @@ const YoutubeAssistantPage = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(
+    null
+  );
+
+  const fetchVideoMetadata = async (videoId: string) => {
+    try {
+      const response = await fetch(`/api/youtube-metadata?videoId=${videoId}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error);
+      setVideoMetadata({
+        title: data.title,
+        description: data.description,
+        channelTitle: data.channelTitle,
+      });
+    } catch (error) {
+      console.error("Failed to fetch video metadata:", error);
+    }
+  };
 
   // Auto-scroll to bottom of chat
   useEffect(() => {
@@ -80,8 +104,17 @@ const YoutubeAssistantPage = () => {
     setLoading(true);
     setVideoData(null);
     setMessages([]);
+    setVideoMetadata(null);
 
     try {
+      // Extract video ID and fetch metadata
+      const videoId =
+        new URL(url).searchParams.get("v") ||
+        url.split("youtu.be/")[1]?.split("?")[0];
+      if (videoId) {
+        await fetchVideoMetadata(videoId);
+      }
+
       const response = await fetch("/api/process-video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -155,7 +188,7 @@ const YoutubeAssistantPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      <header className="sticky top-0 z-50 w-full dark:bg-neutral-800 dark:border-neutral-700">
+      <header className="top-0 z-50 w-full dark:bg-neutral-800 dark:border-neutral-700">
         <div className="ml-4 flex h-16 items-center space-x-2">
           <Link
             href="/tools"
@@ -228,6 +261,21 @@ const YoutubeAssistantPage = () => {
                       allowFullScreen
                     ></iframe>
                   </div>
+                  {videoMetadata && (
+                    <div className="mt-4 space-y-2">
+                      <h3 className="text-xl font-semibold">
+                        {videoMetadata.title}
+                      </h3>
+                      <p className="text-sm text-gray-500">
+                        By {videoMetadata.channelTitle}
+                      </p>
+                      {videoMetadata.description && (
+                        <p className="text-sm text-gray-600 whitespace-pre-wrap">
+                          {videoMetadata.description}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

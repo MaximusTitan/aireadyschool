@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2, ChevronLeft } from "lucide-react";
+import { Loader2, ChevronLeft, Copy, Check } from "lucide-react";
 import Link from "next/link";
 
 type Operation =
@@ -22,12 +22,33 @@ type Operation =
   | "expand"
   | "summarize";
 
+const countWords = (text: string): number => {
+  return text
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.length > 0).length;
+};
+
+const operationDescriptions = {
+  rewrite:
+    "Rewrite the text while keeping the same meaning but using different words and structure",
+  proofread: "Check and correct spelling, grammar, and punctuation errors",
+  translate: "Translate the text into your selected target language",
+  expand:
+    "Make the text longer by adding more details and elaborating on the ideas",
+  summarize:
+    "Create a shorter version that captures the main points of the text",
+  questions: "Generate questions based on the text content",
+} as const;
+
 export default function TextTools() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
-  const [operation, setOperation] = useState<Operation>("rewrite");
+  const [operation, setOperation] = useState<Operation>("summarize");
   const [loading, setLoading] = useState(false);
   const [targetLanguage, setTargetLanguage] = useState("spanish");
+  const [targetWords, setTargetWords] = useState(100);
+  const [copied, setCopied] = useState(false);
 
   const processText = async () => {
     if (!input.trim()) return;
@@ -42,6 +63,9 @@ export default function TextTools() {
           operation,
           targetLanguage:
             operation === "translate" ? targetLanguage : undefined,
+          targetWords: ["expand", "summarize"].includes(operation)
+            ? targetWords
+            : undefined,
         }),
       });
 
@@ -55,92 +79,172 @@ export default function TextTools() {
     }
   };
 
+  const copyToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(output);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text:", err);
+    }
+  };
+
+  const inputWordCount = countWords(input);
+  const outputWordCount = countWords(output);
+
   return (
-    <div>
-      <div className="container mx-auto px-4 py-4 flex items-center space-x-2">
+    <div className="min-h-screen dark:bg-neutral-900">
+      <div className="container mx-auto px-4 py-6 flex items-center space-x-4">
         <Link
           href="/tools"
-          className="text-neutral-500 hover:text-neutral-700 "
+          className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
         >
-          <ChevronLeft />
+          <ChevronLeft className="h-5 w-5" />
         </Link>
-        <h1 className="text-3xl font-bold text-neutral-800">Text Tools</h1>
+        <h1 className="text-3xl font-bold text-neutral-800 dark:text-neutral-100">
+          Write Right
+        </h1>
       </div>
-      <div className="max-w-6xl mx-auto space-y-8 x-auto px-2 py-8">
-        <div className="border border-neutral-200 rounded-md p-6 md:p-8 max-w-6xl mx-auto">
-          <div className="flex gap-4 items-center mb-4">
-            <Select
-              value={operation}
-              onValueChange={(value) => setOperation(value as Operation)}
-            >
-              <SelectTrigger className="w-[200px] bg-white dark:bg-neutral-800">
-                <SelectValue placeholder="Select operation" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="rewrite">Rewrite</SelectItem>
-                <SelectItem value="proofread">Proofread</SelectItem>
-                <SelectItem value="translate">Translate</SelectItem>
-                <SelectItem value="questions">Generate Questions</SelectItem>
-                <SelectItem value="expand">Expand</SelectItem>
-                <SelectItem value="summarize">Summarize</SelectItem>
-              </SelectContent>
-            </Select>
-
-            {operation === "translate" && (
-              <Select value={targetLanguage} onValueChange={setTargetLanguage}>
-                <SelectTrigger className="w-[200px] bg-white dark:bg-neutral-800">
-                  <SelectValue placeholder="Select language" />
+      <div className="max-w-6xl mx-auto space-y-8 px-4 py-6">
+        <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-6 md:p-8 bg-white dark:bg-neutral-800 shadow-sm">
+          <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
+            <div className="space-y-2 flex-1">
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                Operation
+              </label>
+              <Select
+                value={operation}
+                onValueChange={(value) => setOperation(value as Operation)}
+              >
+                <SelectTrigger className="w-[200px] bg-white dark:bg-neutral-700">
+                  <SelectValue placeholder="Select operation" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="spanish">Spanish</SelectItem>
-                  <SelectItem value="french">French</SelectItem>
-                  <SelectItem value="german">German</SelectItem>
-                  <SelectItem value="italian">Italian</SelectItem>
-                  <SelectItem value="portuguese">Portuguese</SelectItem>
-                  <SelectItem value="chinese">Chinese</SelectItem>
-                  <SelectItem value="japanese">Japanese</SelectItem>
+                  <SelectItem value="summarize">📊 Summarize</SelectItem>
+                  <SelectItem value="expand">📈 Expand</SelectItem>
+                  <SelectItem value="translate">🌍 Translate</SelectItem>
+                  <SelectItem value="rewrite">✍️ Rewrite</SelectItem>
+                  <SelectItem value="proofread">📝 Proofread</SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-2">
+                {operationDescriptions[operation]}
+              </p>
+            </div>
+
+            {(operation === "expand" || operation === "summarize") && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                  Target Words
+                </label>
+                <input
+                  type="number"
+                  value={targetWords}
+                  onChange={(e) =>
+                    setTargetWords(Math.max(1, parseInt(e.target.value) || 0))
+                  }
+                  className="w-[100px] rounded-md border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-700 px-3 py-2"
+                />
+              </div>
+            )}
+
+            {operation === "translate" && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                  Target Language
+                </label>
+                <Select
+                  value={targetLanguage}
+                  onValueChange={setTargetLanguage}
+                >
+                  <SelectTrigger className="w-[200px] bg-white dark:bg-neutral-700">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="spanish">🇪🇸 Spanish</SelectItem>
+                    <SelectItem value="french">🇫🇷 French</SelectItem>
+                    <SelectItem value="german">🇩🇪 German</SelectItem>
+                    <SelectItem value="italian">🇮🇹 Italian</SelectItem>
+                    <SelectItem value="portuguese">🇵🇹 Portuguese</SelectItem>
+                    <SelectItem value="chinese">🇨🇳 Chinese</SelectItem>
+                    <SelectItem value="japanese">🇯🇵 Japanese</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             )}
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="dark:bg-neutral-800">
-              <CardHeader>
+            <Card className="border dark:border-neutral-700">
+              <CardHeader className="border-b dark:border-neutral-700">
                 <CardTitle>Input Text</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-4">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-neutral-500">
+                    Word count: {inputWordCount}
+                  </span>
+                </div>
                 <Textarea
                   placeholder="Enter your text here..."
-                  className="min-h-[200px] dark:bg-neutral-800"
+                  className="min-h-[300px] bg-transparent resize-none focus:ring-2"
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                 />
               </CardContent>
             </Card>
 
-            <Card className="dark:bg-neutral-800">
-              <CardHeader>
-                <CardTitle>Output Text</CardTitle>
+            <Card className="border dark:border-neutral-700">
+              <CardHeader className="border-b dark:border-neutral-700">
+                <div className="flex justify-between items-center">
+                  <CardTitle>Output Text</CardTitle>
+                  {output && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={copyToClipboard}
+                      className="h-8 w-8 p-0"
+                      title="Copy to clipboard"
+                    >
+                      {copied ? (
+                        <Check className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent>
+              <CardContent
+                className={`pt-4 relative ${loading ? "opacity-50" : ""}`}
+              >
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-sm text-neutral-500">
+                    Word count: {outputWordCount}
+                  </span>
+                </div>
                 <Textarea
                   placeholder="Processed text will appear here..."
-                  className="min-h-[200px] dark:bg-neutral-800"
+                  className="min-h-[300px] bg-transparent resize-none"
                   value={output}
                   readOnly
                 />
+                {loading && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="h-8 w-8 animate-spin text-neutral-500" />
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
 
-          <div className="text-center mt-4">
+          <div className="text-center mt-6">
             <Button
               onClick={processText}
               disabled={loading || !input.trim()}
-              className="bg-neutral-500 hover:bg-neutral-600 text-white"
+              className="bg-neutral-800 hover:bg-neutral-900 text-white px-8 py-2 text-lg font-medium transition-colors"
             >
-              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
               {loading ? "Processing..." : "Process Text"}
             </Button>
           </div>

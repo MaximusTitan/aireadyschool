@@ -16,8 +16,8 @@ interface PresentationPreviewProps {
 }
 
 // Define constant dimensions for both PDF and screenshots
-const SLIDE_WIDTH = 1254;
-const SLIDE_HEIGHT = 702;
+const SLIDE_WIDTH = 1150;
+const SLIDE_HEIGHT = 647;
 
 export default function PresentationPreview({
   presentation,

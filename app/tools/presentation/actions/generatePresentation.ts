@@ -51,7 +51,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
 
   try {
     const { text } = await generateText({
-      model: openai('gpt-4-turbo'),
+      model: openai('gpt-4o'),
       prompt: `Create an engaging and educational presentation about ${prompt} for students. Format the response as JSON with the following structure:
       {
         "slides": [

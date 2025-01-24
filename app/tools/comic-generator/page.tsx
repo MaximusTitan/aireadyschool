@@ -19,6 +19,16 @@ import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
 
+// Add this near the top with other imports
+import localFont from "next/font/local";
+
+const comicNeue = localFont({
+  src: "../../../public/fonts/ComicNeue-Bold.ttf",
+  weight: "700",
+  variable: "--font-comic",
+  display: "swap",
+});
+
 export default function ComicGenerator() {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
@@ -217,36 +227,45 @@ export default function ComicGenerator() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-background text-foreground">
+    <div
+      className={`flex flex-col min-h-screen bg-background text-foreground ${comicNeue.variable}`}
+    >
       <div className="p-4 border-b border-border">
-        <div className="max-w-6xl mx-auto space-y-4">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/tools")}
-              className="p-0 hover:bg-transparent"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-            <h1 className="text-3xl font-bold">Comic Generator</h1>
-          </div>
-          <form onSubmit={handleSubmit} className="max-w-4xl mx-auto relative">
-            <Textarea
-              placeholder="Enter your comic idea here..."
-              value={prompt}
-              onChange={handleTextareaChange}
-              onKeyDown={handleKeyDown}
-              className="w-full resize-none px-4 py-2 text-base leading-normal h-[calc(6em+16px)]"
-            />
-            <button
-              type="submit"
-              className="absolute right-2 top-1/4 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <Send className="w-6 h-6" />
-            </button>
-            <p className="text-xs text-muted-foreground mt-1 text-center">
-              Press Enter to send, Shift + Enter for new line
-            </p>
+        <div className="flex items-center ml-4 gap-2 mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => router.push("/tools")}
+            className="p-0 hover:bg-transparent"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+          <h1 className="text-3xl font-bold text-neutral-800">
+            Comic Generator
+          </h1>
+        </div>
+        <div className="max-w-5xl mx-auto space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <Textarea
+                placeholder="Enter your comic idea here..."
+                value={prompt}
+                onChange={handleTextareaChange}
+                onKeyDown={handleKeyDown}
+                className="w-full resize-none px-4 py-2 text-base leading-normal h-[calc(6em+16px)]"
+              />
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <Button
+                type="submit"
+                className="w-fit max-w-md flex items-center gap-2"
+                disabled={loading || !prompt.trim()}
+              >
+                Generate Comic
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                Press Enter to send, Shift + Enter for new line
+              </p>
+            </div>
           </form>
         </div>
       </div>
@@ -255,54 +274,56 @@ export default function ComicGenerator() {
 
       {imageData.urls.length > 0 && (
         <div ref={containerRef} className="flex-1 flex flex-col">
-          <div className="bg-muted p-2 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                onClick={handleFullscreen}
-                className="flex items-center gap-2"
-              >
-                <Maximize2 className="h-5 w-5" />
-                <span>Fullscreen</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={downloadJSON}
-                className="flex items-center gap-2"
-              >
-                <FileJson className="h-5 w-5" />
-                <span>Download JSON</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={downloadPDF}
-                className="flex items-center gap-2"
-              >
-                <FileText className="h-5 w-5" />
-                <span>Download PDF</span>
-              </Button>
-              <Button
-                variant="ghost"
-                onClick={downloadPPT}
-                className="flex items-center gap-2"
-              >
-                <FilePresentation className="h-5 w-5" />
-                <span>Download PPT</span>
-              </Button>
-            </div>
-            <div className="text-foreground">
-              {imageData.urls.length} panels generated
+          <div className="bg-muted p-2">
+            <div className="max-w-5xl mx-auto flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={handleFullscreen}
+                  className="flex items-center gap-2"
+                >
+                  <Maximize2 className="h-5 w-5" />
+                  <span>Fullscreen</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={downloadJSON}
+                  className="flex items-center gap-2"
+                >
+                  <FileJson className="h-5 w-5" />
+                  <span>Download JSON</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={downloadPDF}
+                  className="flex items-center gap-2"
+                >
+                  <FileText className="h-5 w-5" />
+                  <span>Download PDF</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  onClick={downloadPPT}
+                  className="flex items-center gap-2"
+                >
+                  <FilePresentation className="h-5 w-5" />
+                  <span>Download PPT</span>
+                </Button>
+              </div>
+              <div className="text-foreground">
+                {imageData.urls.length} panels generated
+              </div>
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-7xl mx-auto space-y-12">
+            <div className="max-w-5xl mx-auto space-y-8">
               {imageData.urls.map((url, index) => (
                 <div
                   key={index}
-                  className="flex gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
+                  className="flex flex-col md:flex-row gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
                 >
-                  <div className="w-1/2 relative">
+                  <div className="w-full md:w-1/2 relative">
                     <div className="aspect-[16/9] relative">
                       {!loadedImages[index] && (
                         <div className="absolute inset-0 flex items-center justify-center bg-muted">
@@ -327,13 +348,13 @@ export default function ComicGenerator() {
                       />
                     </div>
                   </div>
-                  <div className="w-1/2 p-8 flex items-center">
+                  <div className="w-full md:w-1/2 p-8 flex items-center">
                     {index === 0 ? (
-                      <h1 className="text-4xl leading-relaxed text-foreground font-comic-sans">
+                      <h1 className="text-4xl leading-relaxed text-foreground font-comic">
                         {imageData.descriptions[index]}
                       </h1>
                     ) : (
-                      <p className="text-2xl leading-relaxed text-foreground font-comic-sans">
+                      <p className="text-2xl leading-relaxed text-foreground font-comic">
                         {imageData.descriptions[index]}
                       </p>
                     )}

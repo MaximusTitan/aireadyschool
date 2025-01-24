@@ -70,7 +70,7 @@ export default function Home() {
           Presentation Generator
         </h1>
       </div>
-      <main className="container mx-auto p-4 border border-neutral-200 rounded-lg mt-8">
+      <main className="container max-w-6xl mx-auto p-4 border border-neutral-200 rounded-lg mt-8">
         <PresentationForm onGenerated={handlePresentationGenerated} />
         {presentation && (
           <PresentationPreview

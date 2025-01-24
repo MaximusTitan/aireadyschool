@@ -1,11 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChatBubble } from "./chat-bubble"
+import { ChatWindow } from "./chat-window"
 
 type ToastProps = {
   message: string
@@ -27,7 +28,7 @@ export default function ConnectDatabasePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [toast, setToast] = useState<ToastProps | null>(null)
   const [databaseName, setDatabaseName] = useState<string | null>(null)
-  const router = useRouter()
+  const [isChatOpen, setIsChatOpen] = useState(false)
 
   useEffect(() => {
     if (toast) {
@@ -49,13 +50,13 @@ export default function ConnectDatabasePage() {
         body: JSON.stringify({ supabaseUrl, supabaseAnonKey }),
       })
 
-      const result = await response.json();
+      const result = await response.json()
 
       if (!response.ok) {
         throw new Error(result.error || "Failed to connect to database")
       }
 
-      setDatabaseName(result.databaseName);
+      setDatabaseName(result.databaseName)
       setToast({ message: `Successfully connected to the database: ${databaseNameInput}`, type: "success" })
     } catch (error) {
       console.error("Error connecting to database:", error)
@@ -119,7 +120,20 @@ export default function ConnectDatabasePage() {
         </form>
       </Card>
       {toast && <Toast message={toast.message} type={toast.type} />}
-      {databaseName && <div className="mt-4 text-center">Connected to: {databaseNameInput}</div>}
+      {databaseName && (
+        <>
+          <div className="mt-4 text-center">Connected to: {databaseNameInput}</div>
+          <ChatBubble onClick={() => setIsChatOpen(true)} />
+          {isChatOpen && (
+            <ChatWindow
+              onClose={() => setIsChatOpen(false)}
+              databaseName={databaseNameInput}
+              supabaseUrl={supabaseUrl}
+              supabaseAnonKey={supabaseAnonKey}
+            />
+          )}
+        </>
+      )}
     </div>
   )
 }

@@ -223,10 +223,11 @@ Interactive learning resources about volcanic formations and eruptions, with vid
 Ensure each resource:
 - Has a clear, descriptive title in [brackets]
 - Has a working URL in (parentheses)
+- Do not include any resources with non-working or broken links. Double-check that all provided links function correctly
 - Includes a helpful description
 - Is appropriate for ${grade} level
 - Supports the specific learning goals`,
-      temperature: 0.7,
+      temperature: 0.9,
       maxTokens: 1000,
     })
 

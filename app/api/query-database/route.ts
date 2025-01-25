@@ -1,6 +1,6 @@
 "use server"
 import { NextResponse } from "next/server"
-import { ext_supabase } from "../connect-database/route"
+import { getSupabaseClient } from "@/utils/supabase"
 import OpenAI from "openai"
 
 async function generateSqlQuery(userInput: string, schemaQuery: string): Promise<string> {
@@ -87,22 +87,17 @@ async function generateSqlQuery(userInput: string, schemaQuery: string): Promise
   }
   
   async function processSqlQuery(userInput: string, query: string) {
-    if (!ext_supabase) {
-      throw new Error("Supabase client is not initialized.");
-    }
-
-    console.log("ext_supabase:", ext_supabase); // Debugging line
-
     try {
-      const result = await ext_supabase.rpc("execute_sql_query", { query });
+      const supabase = getSupabaseClient();
+      const result = await supabase.rpc("execute_sql_query", { query });
       const data = result.data;
       const error = result.error;
-
+  
       if (error) throw error;
-
+  
       const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, data);
       console.log(naturalLanguageResponse);
-
+  
       return { success: true, naturalLanguageResponse };
     } catch (error) {
       console.error("Error executing SQL query:", error);
@@ -113,6 +108,7 @@ async function generateSqlQuery(userInput: string, schemaQuery: string): Promise
 export async function POST(request: Request) {
   try {
     const { query } = await request.json()
+    const supabase = getSupabaseClient();
 
     // Preprocess the schema query
     const schemaQuery = `
@@ -129,7 +125,7 @@ export async function POST(request: Request) {
         table_name
     `;
 
-    const result = await ext_supabase.rpc("execute_sql_query", { query: schemaQuery });
+    const result = await supabase.rpc("execute_sql_query", { query: schemaQuery });
     const schemaData = result.data; // Get the schema data
     const error = result.error;
 

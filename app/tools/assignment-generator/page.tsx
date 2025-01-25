@@ -1,12 +1,13 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AssignmentForm } from "./components/AssignmentForm";
 import { AssignmentDisplay } from "./components/AssignmentDisplay";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   gradeLevel: z.string().min(1, "Grade level is required"),
@@ -18,7 +19,10 @@ const formSchema = z.object({
     .refine((val) => ["Yes", "No"].includes(val), {
       message: "Collaboration must be either 'Yes' or 'No'",
     }),
-  dueDate: z.string().min(1, "Due date is required"),
+  dueDate: z
+    .number()
+    .min(1, "Number of days is required")
+    .max(365, "Maximum 365 days"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -73,36 +77,30 @@ async function generateAssignment(
   topic: string,
   learningObjective: string,
   collaboration: string,
-  dueDate: string
+  dueDate: number
 ): Promise<Assignment> {
-  const curDate = new Date();
-  const dueDateObj = new Date(dueDate);
+  const timeLeftStr = `${dueDate} day${dueDate > 1 ? "s" : ""}`;
 
-  const hoursLeft = (dueDateObj.getTime() - curDate.getTime()) / 1000 / 60 / 60;
-  let timeLeftStr = "";
-
-  if (hoursLeft < 5 || curDate.toDateString() === dueDateObj.toDateString()) {
-    timeLeftStr = "5 hours";
-  } else if (hoursLeft > 24) {
-    const daysLeft = Math.ceil(hoursLeft / 24);
-    timeLeftStr = `${daysLeft} day${daysLeft > 1 ? "s" : ""}`;
-  } else {
-    timeLeftStr = `${Math.round(hoursLeft)} hour${hoursLeft > 1 ? "s" : ""}`;
-  }
   const prompt = `Generate an assignment topic for a ${gradeLevel} grade 
   with an assignment type of ${assignmentType} focusing on ${topic}. 
   The learning objective is to ${learningObjective}. Collaboration is ${
     collaboration === "Yes" ? "allowed" : "not allowed"
   }. 
   This assignment would be due in ${timeLeftStr}. 
-  Please decide the complexity of the assignment based on the time left untill the due date.`;
+  Please decide the complexity of the assignment based on the time left until the due date.`;
 
   return await sendAssignmentRequest(prompt);
 }
 
 const AssignmentGenerator: React.FC = () => {
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const outputRef = useRef<HTMLDivElement>(null);
+
+  const scrollToOutput = () => {
+    outputRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const formMethods = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -112,7 +110,7 @@ const AssignmentGenerator: React.FC = () => {
       textInput: "",
       learningObjective: "",
       collaboration: "No",
-      dueDate: "",
+      dueDate: 1,
     },
   });
 
@@ -128,8 +126,18 @@ const AssignmentGenerator: React.FC = () => {
         data.dueDate
       );
       setAssignment(results);
+      toast({
+        title: "Assignment Generated",
+        description: "Your assignment has been created successfully.",
+      });
+      setTimeout(scrollToOutput, 100); // Small delay to ensure content is rendered
     } catch (error) {
       console.error("Error generating assignments:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate assignment. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsLoading(false);
     }
@@ -139,7 +147,9 @@ const AssignmentGenerator: React.FC = () => {
     <FormProvider {...formMethods}>
       <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-8">
         <AssignmentForm isLoading={isLoading} />
-        <AssignmentDisplay assignment={assignment} isLoading={isLoading} />
+        <div ref={outputRef}>
+          <AssignmentDisplay assignment={assignment} isLoading={isLoading} />
+        </div>
       </form>
     </FormProvider>
   );

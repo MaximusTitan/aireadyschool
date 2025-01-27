@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import jsPDF from "jspdf";
 
 interface MultiSelectProps {
   options: string[];
@@ -25,12 +26,23 @@ interface MultiSelectProps {
   placeholder: string;
 }
 
+interface LearningPlanSummary {
+  currentStatus: string;
+  expectedOutcome: string;
+  keyStrengths: string[];
+  focusAreas: string[];
+}
+
 interface LearningPlan {
+  summary: LearningPlanSummary;
   weeklyPlans: {
     week: number;
     focus: string;
+    expectedProgress: string;
     activities: string[];
     targets: string[];
+    resources: string[];
+    parentInvolvement: string;
   }[];
   recommendations: string[];
   assessmentStrategy: string[];
@@ -75,7 +87,7 @@ const StepIndicator: React.FC<{ steps: Step[]; currentStep: number }> = ({
                   idx < currentStep
                     ? "border-primary bg-primary text-white shadow-md"
                     : idx === currentStep
-                      ? "border-primary text-primary animate-pulse"
+                      ? "border-primary text-primary"
                       : "border-gray-300 text-gray-300"
                 }`}
             >
@@ -206,6 +218,211 @@ const LoadingSkeleton = () => (
     </CardContent>
   </Card>
 );
+
+const exportToPDF = (learningPlan: LearningPlan, studentName: string) => {
+  const pdf = new jsPDF();
+  let y = 20;
+  const lineHeight = 7;
+  const margin = 20;
+  const pageWidth = pdf.internal.pageSize.width;
+  const contentWidth = pageWidth - margin * 2;
+
+  const addWrappedText = (
+    text: string,
+    x: number,
+    y: number,
+    maxWidth: number
+  ) => {
+    const lines = pdf.splitTextToSize(text, maxWidth);
+    pdf.text(lines, x, y);
+    return lines.length * lineHeight;
+  };
+
+  const addSection = (title: string) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(margin, y - 3, contentWidth, 10, "F");
+    pdf.text(title, margin, y + 3);
+    y += lineHeight * 1.5;
+    pdf.setFont("helvetica", "normal");
+  };
+
+  const addBulletPoint = (text: string, indent = 0) => {
+    y += addWrappedText(`• ${text}`, margin + indent, y, contentWidth - indent);
+  };
+
+  // Header with styling
+  pdf.setFillColor(52, 152, 219); // Theme color
+  pdf.rect(0, 0, pageWidth, 15, "F");
+  pdf.setTextColor(255, 255, 255);
+  pdf.setFontSize(16);
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Personalized Learning Plan", pageWidth / 2, 10, {
+    align: "center",
+  });
+
+  // Student Info
+  pdf.setTextColor(0, 0, 0);
+  y = 30;
+  pdf.setFontSize(14);
+  pdf.text(`Student: ${studentName}`, margin, y);
+  y += lineHeight * 2;
+
+  // Executive Summary
+  pdf.setFontSize(12);
+  addSection("Executive Summary");
+
+  const summaryItems = [
+    { label: "Current Status", content: learningPlan.summary.currentStatus },
+    {
+      label: "Expected Outcome",
+      content: learningPlan.summary.expectedOutcome,
+    },
+  ];
+
+  summaryItems.forEach((item) => {
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`${item.label}:`, margin, y);
+    pdf.setFont("helvetica", "normal");
+    y += lineHeight;
+    y += addWrappedText(item.content, margin, y, contentWidth);
+    y += lineHeight;
+  });
+
+  // Key Strengths
+  y += lineHeight;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Key Strengths:", margin, y);
+  y += lineHeight;
+  pdf.setFont("helvetica", "normal");
+  learningPlan.summary.keyStrengths.forEach((strength) => {
+    addBulletPoint(strength, 5);
+  });
+
+  // Focus Areas
+  y += lineHeight;
+  pdf.setFont("helvetica", "bold");
+  pdf.text("Focus Areas:", margin, y);
+  y += lineHeight;
+  pdf.setFont("helvetica", "normal");
+  learningPlan.summary.focusAreas.forEach((area) => {
+    addBulletPoint(area, 5);
+  });
+
+  // Weekly Plans
+  learningPlan.weeklyPlans.forEach((week, index) => {
+    if (y > pdf.internal.pageSize.height - 40) {
+      pdf.addPage();
+      y = 20;
+    }
+
+    y += lineHeight * 2;
+    addSection(`Week ${week.week} Plan`);
+
+    // Progress box
+    pdf.setDrawColor(52, 152, 219);
+    pdf.setFillColor(240, 247, 254);
+    pdf.roundedRect(margin, y, contentWidth, 15, 3, 3, "FD");
+    pdf.setFont("helvetica", "bold");
+    pdf.text(`Progress Target: ${week.expectedProgress}`, margin + 5, y + 10);
+    y += 20;
+
+    // Week focus
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Focus:", margin, y);
+    pdf.setFont("helvetica", "normal");
+    y += addWrappedText(week.focus, margin + 40, y, contentWidth - 40);
+    y += lineHeight;
+
+    // Activities
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Activities:", margin, y);
+    y += lineHeight;
+    pdf.setFont("helvetica", "normal");
+    week.activities.forEach((activity) => {
+      addBulletPoint(activity, 10);
+    });
+
+    // Targets
+    y += lineHeight;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Targets:", margin, y);
+    y += lineHeight;
+    pdf.setFont("helvetica", "normal");
+    week.targets.forEach((target) => {
+      addBulletPoint(target, 10);
+    });
+
+    // Resources
+    y += lineHeight;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Required Resources:", margin, y);
+    y += lineHeight;
+    pdf.setFont("helvetica", "normal");
+    week.resources.forEach((resource) => {
+      addBulletPoint(resource, 10);
+    });
+
+    // Parent Involvement
+    y += lineHeight;
+    pdf.setFillColor(240, 240, 240);
+    pdf.rect(margin, y, contentWidth, 30, "F");
+    y += 5;
+    pdf.setFont("helvetica", "bold");
+    pdf.text("Parent/Guardian Involvement:", margin + 5, y);
+    y += lineHeight;
+    pdf.setFont("helvetica", "normal");
+    y += addWrappedText(
+      week.parentInvolvement,
+      margin + 5,
+      y,
+      contentWidth - 10
+    );
+    y += lineHeight;
+  });
+
+  // Recommendations
+  if (y > pdf.internal.pageSize.height - 60) {
+    pdf.addPage();
+    y = 20;
+  }
+  y += lineHeight * 2;
+  addSection("Recommendations");
+  learningPlan.recommendations.forEach((rec) => {
+    addBulletPoint(rec);
+  });
+
+  // Assessment Strategy
+  if (y > pdf.internal.pageSize.height - 60) {
+    pdf.addPage();
+    y = 20;
+  }
+  y += lineHeight * 2;
+  addSection("Assessment Strategy");
+  learningPlan.assessmentStrategy.forEach((strategy) => {
+    addBulletPoint(strategy);
+  });
+
+  // Footer
+  const pageCount = pdf.internal.pages.length - 1;
+  for (let i = 1; i <= pageCount; i++) {
+    pdf.setPage(i);
+    pdf.setFontSize(10);
+    pdf.setTextColor(128, 128, 128);
+    pdf.text(
+      `Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      pdf.internal.pageSize.height - 10,
+      { align: "center" }
+    );
+    // Add timestamp
+    const date = new Date().toLocaleDateString();
+    pdf.text(`Generated on ${date}`, margin, pdf.internal.pageSize.height - 10);
+  }
+
+  // Save the PDF
+  pdf.save(`${studentName.replace(/\s+/g, "_")}_learning_plan.pdf`);
+};
 
 const StudentAssessmentForm = () => {
   const [name, setName] = useState("");
@@ -405,7 +622,7 @@ const StudentAssessmentForm = () => {
         description: "Please fill in all required fields",
         variant: "destructive",
       });
-      return;
+      return false; // Return false to indicate failure
     }
 
     setIsLoading(true);
@@ -445,10 +662,12 @@ const StudentAssessmentForm = () => {
 
       const plan = await response.json();
       setLearningPlan(plan);
+      setCurrentStep(3); // Immediately move to step 3 after successful generation
       toast({
         title: "Success",
         description: "Learning plan generated successfully",
       });
+      return true; // Return true to indicate success
     } catch (error) {
       console.error(error);
       toast({
@@ -456,6 +675,7 @@ const StudentAssessmentForm = () => {
         description: "Failed to generate learning plan",
         variant: "destructive",
       });
+      return false; // Return false to indicate failure
     } finally {
       setIsLoading(false);
     }
@@ -473,9 +693,17 @@ const StudentAssessmentForm = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
+  const handlePrint = () => {
+    // Set the document title temporarily for the print filename
+    const originalTitle = document.title;
+    document.title = `${name}_learning_plan`;
+    window.print();
+    document.title = originalTitle;
+  };
+
   return (
     <div className="container mx-auto py-6 space-y-6">
-      {/* Add print styles */}
+      {/* Update print styles */}
       <style jsx global>{`
         @media print {
           body * {
@@ -493,6 +721,10 @@ const StudentAssessmentForm = () => {
           }
           .no-print {
             display: none;
+          }
+          @page {
+            size: auto;
+            margin: 20mm;
           }
         }
       `}</style>
@@ -922,29 +1154,95 @@ const StudentAssessmentForm = () => {
 
           {/* Step 3 - Learning Plan with print-content class */}
           {currentStep === 3 && learningPlan && (
-            <Card className="w-full max-w-6xl mx-auto shadow-lg animate-fade-in print-content">
+            <Card
+              id="learning-plan"
+              className="w-full max-w-6xl mx-auto shadow-lg animate-fade-in print-content"
+            >
               <CardHeader>
                 <CardTitle>Learning Plan for {name}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Learning plan content */}
+              <CardContent className="space-y-6">
+                {/* Summary Section */}
+                <div className="bg-muted p-4 rounded-lg">
+                  <h3 className="font-semibold text-lg mb-3">
+                    Executive Summary
+                  </h3>
+                  <div className="space-y-2">
+                    <p>
+                      <strong>Current Status:</strong>{" "}
+                      {learningPlan.summary.currentStatus}
+                    </p>
+                    <p>
+                      <strong>Expected Outcome:</strong>{" "}
+                      {learningPlan.summary.expectedOutcome}
+                    </p>
+                    <div>
+                      <strong>Key Strengths:</strong>
+                      <ul className="list-disc pl-6 mt-1">
+                        {learningPlan.summary.keyStrengths.map(
+                          (strength, i) => (
+                            <li key={i}>{strength}</li>
+                          )
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <strong>Focus Areas:</strong>
+                      <ul className="list-disc pl-6 mt-1">
+                        {learningPlan.summary.focusAreas.map((area, i) => (
+                          <li key={i}>{area}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Weekly Plans */}
                 {learningPlan.weeklyPlans.map((week) => (
-                  <div key={week.week} className="space-y-2">
-                    <h3 className="font-semibold">Week {week.week}</h3>
+                  <div
+                    key={week.week}
+                    className="border rounded-lg p-4 space-y-3"
+                  >
+                    <div className="flex justify-between items-center">
+                      <h3 className="font-semibold text-lg">
+                        Week {week.week}
+                      </h3>
+                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                        Progress Target: {week.expectedProgress}
+                      </span>
+                    </div>
                     <p className="font-medium">Focus: {week.focus}</p>
-                    <div className="pl-4">
-                      <h4 className="font-medium">Activities:</h4>
-                      <ul className="list-disc pl-4">
-                        {week.activities.map((activity, i) => (
-                          <li key={i}>{activity}</li>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div>
+                        <h4 className="font-medium">Activities:</h4>
+                        <ul className="list-disc pl-6">
+                          {week.activities.map((activity, i) => (
+                            <li key={i}>{activity}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Targets:</h4>
+                        <ul className="list-disc pl-6">
+                          {week.targets.map((target, i) => (
+                            <li key={i}>{target}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                    <div>
+                      <h4 className="font-medium">Required Resources:</h4>
+                      <ul className="list-disc pl-6">
+                        {week.resources.map((resource, i) => (
+                          <li key={i}>{resource}</li>
                         ))}
                       </ul>
-                      <h4 className="font-medium mt-2">Targets:</h4>
-                      <ul className="list-disc pl-4">
-                        {week.targets.map((target, i) => (
-                          <li key={i}>{target}</li>
-                        ))}
-                      </ul>
+                    </div>
+                    <div className="bg-muted p-3 rounded-lg mt-2">
+                      <h4 className="font-medium">
+                        Parent/Guardian Involvement:
+                      </h4>
+                      <p>{week.parentInvolvement}</p>
                     </div>
                   </div>
                 ))}
@@ -981,22 +1279,22 @@ const StudentAssessmentForm = () => {
         )}
         {currentStep < 2 && <Button onClick={nextStep}>Next</Button>}
         {currentStep === 2 && (
-          <Button
-            onClick={async () => {
-              await handleSubmit();
-              if (learningPlan) {
-                nextStep();
-              }
-            }}
-            disabled={isLoading}
-          >
+          <Button onClick={handleSubmit} disabled={isLoading}>
             {isLoading ? "Generating Plan..." : "Generate Learning Plan"}
           </Button>
         )}
         {currentStep === 3 && learningPlan && (
-          <Button onClick={() => window.print()} variant="outline">
-            Print Plan
-          </Button>
+          <div className="flex justify-end gap-4 no-print">
+            <Button
+              variant="outline"
+              onClick={() => exportToPDF(learningPlan, name)}
+            >
+              Download PDF
+            </Button>
+            <Button variant="outline" onClick={handlePrint}>
+              Print Plan
+            </Button>
+          </div>
         )}
       </div>
     </div>

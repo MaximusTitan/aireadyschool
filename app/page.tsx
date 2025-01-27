@@ -1,5 +1,9 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Session } from "@supabase/supabase-js";
 import {
   ChevronRight,
   Book,
@@ -19,8 +23,31 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import logo from "@/public/logo.webp";
+import { createClient } from "@/utils/supabase/client";
 
 const LandingPage = () => {
+  const router = useRouter();
+  const supabase = createClient();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const client = await supabase;
+      const {
+        data: { session },
+      } = await client.auth.getSession();
+      setSession(session);
+      setLoading(false);
+    };
+
+    checkSession();
+  }, [supabase]);
+
+  if (loading) {
+    return null; // or a loading spinner
+  }
+
   const tools = [
     {
       icon: Book,
@@ -131,11 +158,14 @@ const LandingPage = () => {
           >
             Signup for a Demo
           </Button>
-          <Link href="/sign-in">
-            <Button size="lg" variant="outline" className="border-2">
-              Login
-            </Button>
-          </Link>
+          <Button
+            size="lg"
+            variant="outline"
+            className="border-2"
+            onClick={() => router.push(session ? "/tools" : "/sign-in")}
+          >
+            {session ? "Go to App" : "Login"}
+          </Button>
         </div>
       </header>
 

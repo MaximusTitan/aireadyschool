@@ -72,7 +72,7 @@ export async function POST(req: Request) {
     Generate a structured learning plan that includes:
     1. An executive summary of the current situation and expected outcomes
     2. Weekly plans with progressive improvement targets (show progress in percentages)
-    3. Detailed step-by-step instructions for each activity. Go indepth for each activity on what exactly needs to be done.
+    3. Detailed step-by-step instructions for each activity
     4. Clear metrics for measuring progress
     5. Specific resources and materials needed
     6. Parent/teacher involvement guidelines

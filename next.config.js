@@ -9,6 +9,11 @@ const nextConfig = {
       },
       {
         protocol: "https",
+        hostname: "xndjwmkypyilvkyczvbj.supabase.co",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
         hostname: "fal.media",
         pathname: "/**",
       },

@@ -217,6 +217,16 @@ const ToolsPage = () => {
         route: "/tools/video-story-generator",
         isComingSoon: true,
       },
+      {
+        title: "Song Generator",
+        description: "Generate songs from lyrics",
+        route: "/tools/song-generator",
+      },
+      {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+      },
     ],
     Teacher: [
       {

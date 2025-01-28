@@ -8,7 +8,7 @@ import { StoryTab } from "./StoryTab";
 import { ImagePromptsTab } from "./ImagePromptsTab";
 import { GeneratedImagesTab } from "./GeneratedImagesTab";
 import { GeneratedVideoTab } from "./GeneratedVideoTab";
-import { ExportVideoTab } from "./ExportVideoTab"; // Update import
+// import { ExportVideoTab } from "./ExportVideoTab"; // Update import
 import { AudioTab } from "./AudioTab"; // Add this import
 import { HistoryComponent } from "./HistoryComponents"; // Import HistoryComponent
 
@@ -632,7 +632,7 @@ export function StoryGeneratorComponent() {
         </TabsContent>
 
         <TabsContent value="exportVideo">
-          <ExportVideoTab
+          {/* <ExportVideoTab
             generatedVideo={currentStory.generatedVideo || []} // Pass full array
             narrationAudios={
               currentStory.narrations?.map((n) => n.audioUrl || "") || []
@@ -643,7 +643,7 @@ export function StoryGeneratorComponent() {
             onRetryVideo={retryGenerateVideo} // Add the onRetryVideo prop
             story={currentStory.story} // Add this line
             prompt={currentStory.originalPrompt} // Add this line
-          />
+          /> */}
         </TabsContent>
       </Tabs>
 

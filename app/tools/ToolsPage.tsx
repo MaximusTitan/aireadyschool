@@ -146,12 +146,6 @@ const ToolsPage = () => {
         route: "/tools/mcq-generator",
       },
       {
-        title: "Study Plan Generator",
-        description: "Plan your study schedule",
-        route: "/tools/study-planner",
-        isComingSoon: true,
-      },
-      {
         title: "Evaluator",
         description: "Evaluate student answers",
         route: "/tools/evaluator",
@@ -188,7 +182,7 @@ const ToolsPage = () => {
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk to PDF Docs",
+        title: "Chat with Docs",
         description:
           "Powerful RAG-based document chat system for intelligent document interactions",
         route: "/tools/chat-with-docs",
@@ -227,10 +221,17 @@ const ToolsPage = () => {
         description: "Generate stories from prompts",
         route: "/tools/story-generator",
       },
+
       {
         title: "P5.JS",
         description: "Code in P5.js",
         route: "/tools/p5",
+      },
+      {
+        title: "Study Plan Generator",
+        description: "Plan your study schedule",
+        route: "/tools/study-planner",
+        isComingSoon: true,
       },
       {
         title: "Code Playground",
@@ -276,7 +277,7 @@ const ToolsPage = () => {
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk to PDF Docs",
+        title: "Chat with Docs",
         description: "Document chat system",
         route: "/tools/chat-with-docs",
         isHot: true,
@@ -328,7 +329,7 @@ const ToolsPage = () => {
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk to PDF Docs",
+        title: "Chat with Docs",
         description: "Document chat system",
         route: "/tools/chat-with-docs",
         isHot: true,

@@ -90,13 +90,7 @@ export default function SchoolMarketingDashboard() {
       <div className="max-w-7xl mx-auto space-y-8">
         <div className="flex justify-between items-center">
           <div className="container mx-auto px-4 py-4 flex items-center space-x-2">
-            <Link
-              href="/tools"
-              className="text-neutral-500 hover:text-neutral-700 mr-4"
-            >
-              <ChevronLeft />
-            </Link>
-            <h1 className="text-3xl font-bold text-neutral-700">
+            <h1 className="text-3xl font-bold text-neutral-800">
               Marketing Content Generator
             </h1>
           </div>
@@ -113,27 +107,15 @@ export default function SchoolMarketingDashboard() {
 
         {selectedTool ? (
           <div className="space-y-6">
-            <button
-              onClick={() => setSelectedTool(null)}
-              className="text-blue-600 hover:text-blue-800 transition-colors flex items-center"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-5 w-5 mr-2"
-                viewBox="0 0 20 20"
-                fill="currentColor"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Back to Tools
-            </button>
             <Card className="bg-white border-gray-200 shadow-lg overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-6">
-                <CardTitle className="text-2xl font-bold">
+              <CardHeader className="p-6">
+                <CardTitle className="text-2xl font-bold flex items-center">
+                  <button
+                    onClick={() => setSelectedTool(null)}
+                    className="text-neutral-600 hover:text-neutral-800 transition-colors flex items-center"
+                  >
+                    <ChevronLeft className="w-6 h-6 mr-2" />
+                  </button>
                   {tools.find((t) => t.title === selectedTool)?.title}
                 </CardTitle>
               </CardHeader>

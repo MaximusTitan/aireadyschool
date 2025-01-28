@@ -80,13 +80,31 @@ export function AppSidebar() {
         url: "/learn-with-ai",
         icon: BrainCircuit,
       },
-      {
-        title: "Connect Database",
-        url: "/connect-database",
-        icon: Plugin,
-      },
+
       ...(userRole === "Admin"
-        ? [{ title: "Schools", url: "/schools", icon: BookOpen }]
+        ? [
+            { title: "Schools", url: "/schools", icon: BookOpen },
+            {
+              title: "Connect Database",
+              url: "/connect-database",
+              icon: Plugin,
+            },
+            {
+              title: "Marketing Content Generator",
+              url: "/tools/marketing-content-generator",
+              icon: BadgeCheck,
+            },
+          ]
+        : []),
+
+      ...(userRole === "School"
+        ? [
+            {
+              title: "Marketing Content Generator",
+              url: "/tools/marketing-content-generator",
+              icon: BadgeCheck,
+            },
+          ]
         : []),
     ],
   };

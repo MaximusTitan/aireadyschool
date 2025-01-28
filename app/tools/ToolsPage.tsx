@@ -347,11 +347,6 @@ const ToolsPage = () => {
         isHot: true,
       },
       {
-        title: "Marketing Content Generator",
-        description: "Generate marketing content",
-        route: "/tools/marketing-content-generator",
-      },
-      {
         title: "School Intelligence",
         description: "Get insights about your school",
         route: "/tools/school-intelligence",

@@ -227,6 +227,11 @@ const ToolsPage = () => {
         description: "Generate stories from prompts",
         route: "/tools/story-generator",
       },
+      {
+        title: "P5.JS",
+        description: "Code in P5.js",
+        route: "/tools/p5",
+      },
     ],
     Teacher: [
       {

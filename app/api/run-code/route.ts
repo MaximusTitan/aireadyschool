@@ -20,20 +20,36 @@ export async function POST(req: Request) {
       language: language,
       files: [
         {
-          name: `Main.${language === "javascript" ? "js" : language === "python" ? "py" : "java"}`,
+          name: `Main.${
+            language === "nodejs" ? "js" : 
+            language === "python3" ? "py" : 
+            language === "rust" ? "rs" : 
+            "java"}`,
           content: code,
         },
       ],
+      stdin: "",
     }),
   }
 
   try {
     const response = await fetch(apiUrl, options)
     const result = await response.json()
-    return NextResponse.json({ output: result.stdout || result.stderr })
+
+    if (!response.ok) {
+      return NextResponse.json({ 
+        error: result.message || "API request failed" 
+      }, { status: response.status })
+    }
+
+    const output = result.stdout || result.stderr || ""
+    return NextResponse.json({ output })
   } catch (error) {
     console.error("Error:", error)
-    return NextResponse.json({ error: "An error occurred while running the code." }, { status: 500 })
+    return NextResponse.json(
+      { error: "An error occurred while running the code." }, 
+      { status: 500 }
+    )
   }
 }
 

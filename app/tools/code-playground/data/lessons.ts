@@ -447,5 +447,179 @@ public class Main {
       ],
     },
   ],
+  Rust: [
+    {
+      id: "rust-1",
+      title: "Hello, World!",
+      description: 'Write a program that prints "Hello, World!" to the console.',
+      language: "rust",
+      initialCode: "fn main() {\n    // Write your code here\n}",
+      answer: 'fn main() {\n    println!("Hello, World!");\n}',
+      tips: [
+        "In Rust, the main() function is the entry point of the program.",
+        "Use println! macro to print to the console.",
+        "Macros in Rust are called using the ! symbol.",
+        "Rust statements end with a semicolon (;).",
+      ],
+    },
+    {
+      id: "rust-2",
+      title: "Sum of Two Numbers",
+      description: "Write a function that takes two numbers as parameters and returns their sum.",
+      language: "rust",
+      initialCode: "fn sum(a: i32, b: i32) -> i32 {\n    // Write your code here\n}\n\nfn main() {\n    println!(\"{}\", sum(5, 3));\n}",
+      answer: "fn sum(a: i32, b: i32) -> i32 {\n    a + b\n}\n\nfn main() {\n    println!(\"{}\", sum(5, 3));\n}",
+      tips: [
+        "In Rust, you must specify the type of function parameters.",
+        "The return type is specified after the -> symbol.",
+        "The last expression in a block becomes its return value.",
+        "Omitting the semicolon makes an expression return its value.",
+      ],
+    },
+    {
+      id: "rust-3",
+      title: "Vector Manipulation",
+      description: "Create a function that takes a vector of numbers and returns a new vector with only the even numbers.",
+      language: "rust",
+      initialCode: `fn filter_even(numbers: Vec<i32>) -> Vec<i32> {
+    // Write your code here
+}
+
+fn main() {
+    let numbers = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    println!("{:?}", filter_even(numbers));
+}`,
+      answer: `fn filter_even(numbers: Vec<i32>) -> Vec<i32> {
+    numbers.into_iter().filter(|x| x % 2 == 0).collect()
+}
+
+fn main() {
+    let numbers = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+    println!("{:?}", filter_even(numbers));
+}`,
+      tips: [
+        "Use Vec<T> to create a vector of type T.",
+        "into_iter() consumes the vector and creates an iterator.",
+        "filter() takes a closure that returns true for elements to keep.",
+        "collect() transforms the iterator back into a collection.",
+      ],
+    },
+    {
+      id: "rust-4",
+      title: "String Operations",
+      description: "Write a function that counts the occurrences of each character in a string.",
+      language: "rust",
+      initialCode: `use std::collections::HashMap;
+
+fn count_chars(input: &str) -> HashMap<char, i32> {
+    // Write your code here
+}
+
+fn main() {
+    println!("{:?}", count_chars("hello world"));
+}`,
+      answer: `use std::collections::HashMap;
+
+fn count_chars(input: &str) -> HashMap<char, i32> {
+    let mut char_count = HashMap::new();
+    for c in input.chars() {
+        *char_count.entry(c).or_insert(0) += 1;
+    }
+    char_count
+}
+
+fn main() {
+    println!("{:?}", count_chars("hello world"));
+}`,
+      tips: [
+        "HashMap is used to store key-value pairs.",
+        "The entry() method provides a way to insert or modify values.",
+        "or_insert() inserts a value if the key doesn't exist.",
+        "Use chars() to iterate over characters in a string.",
+      ],
+    },
+    {
+      id: "rust-5",
+      title: "Error Handling",
+      description: "Write a function that converts a string to a number and handles potential errors using Result.",
+      language: "rust",
+      initialCode: `fn parse_number(input: &str) -> Result<i32, String> {
+    // Write your code here
+}
+
+fn main() {
+    println!("{:?}", parse_number("123"));
+    println!("{:?}", parse_number("abc"));
+}`,
+      answer: `fn parse_number(input: &str) -> Result<i32, String> {
+    input.parse::<i32>()
+        .map_err(|e| format!("Failed to parse: {}", e))
+}
+
+fn main() {
+    println!("{:?}", parse_number("123"));
+    println!("{:?}", parse_number("abc"));
+}`,
+      tips: [
+        "Result is an enum that represents either success (Ok) or failure (Err).",
+        "parse() returns a Result type.",
+        "map_err() transforms the error value while leaving success values unchanged.",
+        "Use the ? operator for early returns in functions that return Result.",
+      ],
+    },
+    {
+      id: "rust-6",
+      title: "Structs and Traits",
+      description: "Create a Shape trait and implement it for Circle and Rectangle structs.",
+      language: "rust",
+      initialCode: `// Write your code here
+
+fn main() {
+    let circle = Circle { radius: 5.0 };
+    let rectangle = Rectangle { width: 4.0, height: 6.0 };
+    
+    println!("Circle area: {}", circle.area());
+    println!("Rectangle area: {}", rectangle.area());
+}`,
+      answer: `trait Shape {
+    fn area(&self) -> f64;
+}
+
+struct Circle {
+    radius: f64,
+}
+
+struct Rectangle {
+    width: f64,
+    height: f64,
+}
+
+impl Shape for Circle {
+    fn area(&self) -> f64 {
+        std::f64::consts::PI * self.radius * self.radius
+    }
+}
+
+impl Shape for Rectangle {
+    fn area(&self) -> f64 {
+        self.width * self.height
+    }
+}
+
+fn main() {
+    let circle = Circle { radius: 5.0 };
+    let rectangle = Rectangle { width: 4.0, height: 6.0 };
+    
+    println!("Circle area: {}", circle.area());
+    println!("Rectangle area: {}", rectangle.area());
+}`,
+      tips: [
+        "Traits in Rust are similar to interfaces in other languages.",
+        "impl Trait for Type syntax is used to implement a trait for a type.",
+        "Use &self to reference the struct instance in method implementations.",
+        "std::f64::consts::PI provides the value of π for calculations.",
+      ],
+    },
+  ],
 }
 

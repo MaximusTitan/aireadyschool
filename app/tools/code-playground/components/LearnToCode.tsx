@@ -8,9 +8,9 @@ import { lessons } from "../data/lessons";
 import type { Lesson as LessonType } from "../types/lessons";
 import { motion, AnimatePresence } from "framer-motion";
 import ProgressTracker from "./ProgressTracker";
-import DarkModeToggle from "./DarkModeToggle";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import CodePlayground from "./CodePlayground";
 
 export default function LearnToCode() {
   const [currentLesson, setCurrentLesson] = useState<LessonType | null>(null);
@@ -27,7 +27,6 @@ export default function LearnToCode() {
 
   return (
     <>
-      <DarkModeToggle />
       <div className="flex flex-col lg:flex-row gap-6">
         <div className="w-full lg:w-1/4 bg-white dark:bg-gray-800 rounded-lg shadow-md p-6">
           <LanguageSelector
@@ -63,7 +62,7 @@ export default function LearnToCode() {
         <div className="w-full lg:w-3/4">
           <AnimatePresence mode="wait">
             <motion.div
-              key={currentLesson?.id || "empty"}
+              key={currentLesson?.id || "playground"}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
@@ -77,15 +76,7 @@ export default function LearnToCode() {
                   }
                 />
               ) : (
-                <div className="text-center text-gray-500 dark:text-gray-400 mt-8 bg-white dark:bg-gray-800 rounded-lg shadow-md p-12">
-                  <h2 className="text-2xl font-semibold mb-4">
-                    Welcome to Learn to Code!
-                  </h2>
-                  <p>
-                    Select a lesson from the list to get started on your coding
-                    journey.
-                  </p>
-                </div>
+                <CodePlayground language={selectedLanguage} />
               )}
             </motion.div>
           </AnimatePresence>

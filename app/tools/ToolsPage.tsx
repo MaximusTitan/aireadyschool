@@ -232,6 +232,11 @@ const ToolsPage = () => {
         description: "Code in P5.js",
         route: "/tools/p5",
       },
+      {
+        title: "Code Playground",
+        description: "Code in various languages",
+        route: "/tools/code-playground",
+      },
     ],
     Teacher: [
       {

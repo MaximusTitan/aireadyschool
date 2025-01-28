@@ -5,82 +5,25 @@ import Link from "next/link";
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { FiMusic, FiLoader, FiPlay, FiPause } from "react-icons/fi";
 import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 const REFERENCE_SONGS = [
   {
     name: "APT.",
     url: "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/generated-audio//apt.mp3",
-    lyrics: `Frowny face, frowny face
-Avoiding my phone, yeah
-I'm tryna dodge your calls for real (Uh-uh, uh-uh)
-Blue thumbs, blue thumbs
-That's what I'm on, nah
-Don't give me somethin' I can feel, no-no, no
-
-Don't you leave me like I left you, baby?
-Don't you miss me like I dodged you now?
-Stay tonight, but tomorrow, stay lazy
-All you gotta do is just leave me at the
-
-Nowhere, nowhere
-Nowhere, nowhere
-Nowhere, nowhere
-Uh, uh-uh, uh-uh`,
   },
   {
     name: "Die With A Smile",
     url: "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/generated-audio//diewithasmile.mp3",
-    lyrics: `You, you showed up in my wacky dream
-Where you and I ate jelly bean
-And I don't know what it could mean
-But since I woke up, I'm feeling free
-Wherever you go, I'll go the other way
-Nobody needs to hang out every day
-So I'll skip you every night like it's the first time
-Like it's the first time
-If the world kept spinning, I'd just do my own thing
-If the party kept going, I'd grab snacks and go sing
-I'd wave goodbye and ride my bike with a smile
-If the world kept spinning, I'd be happy for a while`,
   },
   {
     name: "Starboy",
     url: "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/generated-audio//starboy.mp3",
-    lyrics: `I'm tryna keep you in the best mood, yeah
-Worn-out sneakers but they feel good, yeah
-Twenty bucks saved, that's a win, dude, yeah
-Bike ride fresh, ain't no tease, true, yeah
-
-Room so cozy, got the perfect piece
-Secondhand table, got it dirt cheap
-Spilled some paint but that's my vibe, sweet, yeah
-I sip my tea, I don't need champagne
-
-Look what I've done
-I'm a humble, grounded nice guy
-Look what I've done
-I'm a humble, grounded nice guy`,
   },
   {
     name: "Never Gonna Let You Down",
     url: "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/generated-audio//nevergonnaletyoudown.mp3",
-    lyrics: `We're complete strangers to hate
-You break the rules, and so will I
-No commitment's what I'm dreamin' of
-You'd find this from any other guy
-
-I just wanna hide what I'm concealing
-Gotta make you misunderstand
-
-Always gonna give you up
-Always gonna let you down
-Always gonna run away and desert you
-Always gonna make you cry
-Always gonna wave goodbye
-Always gonna tell a lie and hurt you
-
-We've just met, it hasn't been that long
-My heart's been laughing, and I just had to say it`,
   },
 ];
 
@@ -142,7 +85,9 @@ const SongGenerator = () => {
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isMounted, setIsMounted] = useState(false);
-  const [useCustomLyrics, setUseCustomLyrics] = useState(false);
+  const [isGeneratingLyrics, setIsGeneratingLyrics] = useState(false);
+  const [songDescription, setSongDescription] = useState("");
+  const [lyricsType, setLyricsType] = useState<"ai" | "custom">("ai");
 
   useEffect(() => {
     setIsMounted(true);
@@ -211,11 +156,8 @@ const SongGenerator = () => {
     (song: (typeof REFERENCE_SONGS)[0]) => {
       setSelectedSong(song.url);
       setUseCustomUrl(false);
-      if (!useCustomLyrics) {
-        setPrompt(song.lyrics);
-      }
     },
-    [useCustomLyrics]
+    [] // removed useCustomLyrics dependency since we don't set lyrics anymore
   );
 
   const togglePlay = useCallback(
@@ -254,31 +196,124 @@ const SongGenerator = () => {
     [isPlaying, isMounted, handleSongSelect]
   );
 
+  const generateLyrics = async () => {
+    if (!songDescription) {
+      toast({
+        title: "Error",
+        description: "Please enter a song description",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingLyrics(true);
+    try {
+      const response = await fetch("/api/generate-lyrics", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ songDescription }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to generate lyrics");
+      }
+
+      const data = await response.json();
+      setPrompt(data.story);
+      toast({
+        title: "Success",
+        description: "Lyrics generated successfully!",
+        variant: "default",
+      });
+    } catch (err) {
+      toast({
+        title: "Error",
+        description: "Failed to generate lyrics",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingLyrics(false);
+    }
+  };
+
   const characterLimit = 500;
   const characterCount = prompt.length;
 
   if (!isMounted) return <LoadingSkeleton />;
 
   return (
-    <div className="min-h-screen bg-white py-8">
-      <div className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 py-4 px-8 border-b">
-        <div className="flex items-center gap-3 max-w-6xl mx-auto">
-          <Link
-            href="/tools"
-            className="hover:bg-gray-100 p-2 rounded-full transition-all"
-          >
-            <ChevronLeft className="text-gray-900" />
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-900">Song Generator</h1>
-        </div>
+    <div className="min-h-screen bg-white">
+      <div className="flex items-center gap-3 ml-8 mx-auto">
+        <Link
+          href="/tools"
+          className="hover:bg-gray-100 p-2 rounded-full transition-all"
+        >
+          <ChevronLeft className="text-gray-900" />
+        </Link>
+        <h1 className="text-3xl font-bold text-gray-900">Song Generator</h1>
       </div>
+      <div className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 py-4 px-8 border-b"></div>
 
       <div className="container mx-auto p-6 max-w-6xl">
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
             <label className="block text-gray-700 font-bold mb-3">
-              Lyrics for your song
+              Song Lyrics
             </label>
+
+            <RadioGroup
+              value={lyricsType}
+              onValueChange={(value) => setLyricsType(value as "ai" | "custom")}
+              className="flex gap-4 mb-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ai" id="lyrics-ai" />
+                <Label
+                  htmlFor="lyrics-ai"
+                  className="text-sm text-gray-700 font-medium"
+                >
+                  Generate lyrics with AI
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="lyrics-custom" />
+                <Label
+                  htmlFor="lyrics-custom"
+                  className="text-sm text-gray-700"
+                >
+                  Write custom lyrics
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {lyricsType === "ai" && (
+              <div className="mb-4">
+                <div className="flex gap-4">
+                  <input
+                    type="text"
+                    value={songDescription}
+                    onChange={(e) => setSongDescription(e.target.value)}
+                    placeholder="Describe your song (e.g., 'a happy love song about summer')"
+                    className="flex-1 p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-gray-400 focus:border-transparent"
+                  />
+                  <button
+                    type="button"
+                    onClick={generateLyrics}
+                    disabled={isGeneratingLyrics || !songDescription}
+                    className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-200 disabled:cursor-not-allowed transition-all"
+                  >
+                    {isGeneratingLyrics ? (
+                      <FiLoader className="animate-spin" />
+                    ) : (
+                      "Generate"
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
@@ -286,9 +321,9 @@ const SongGenerator = () => {
               rows={6}
               maxLength={characterLimit}
               placeholder={
-                useCustomLyrics
-                  ? "Enter your custom lyrics..."
-                  : "Enter your song lyrics or select a reference song below..."
+                lyricsType === "ai"
+                  ? "Your AI-generated lyrics will appear here..."
+                  : "Write your song lyrics..."
               }
               required
             />
@@ -310,22 +345,6 @@ const SongGenerator = () => {
             </label>
 
             <div className="space-y-4">
-              <div className="flex items-center gap-2 mb-4">
-                <input
-                  type="checkbox"
-                  id="useCustomLyrics"
-                  checked={useCustomLyrics}
-                  onChange={(e) => setUseCustomLyrics(e.target.checked)}
-                  className="rounded border-gray-300"
-                />
-                <label
-                  htmlFor="useCustomLyrics"
-                  className="text-sm text-gray-700"
-                >
-                  Use custom lyrics with reference audio
-                </label>
-              </div>
-
               <div className="grid grid-cols-2 gap-4">
                 {REFERENCE_SONGS.map((song) => (
                   <div
@@ -337,14 +356,7 @@ const SongGenerator = () => {
                         : "border-gray-200"
                     }`}
                   >
-                    <div>
-                      <div className="font-medium">{song.name}</div>
-                      {!useCustomLyrics && selectedSong === song.url && (
-                        <div className="text-sm text-gray-500 mt-1">
-                          Using original lyrics
-                        </div>
-                      )}
-                    </div>
+                    <div className="font-medium">{song.name}</div>
                     <AudioPlayer
                       url={song.url}
                       isPlaying={isPlaying === song.url}

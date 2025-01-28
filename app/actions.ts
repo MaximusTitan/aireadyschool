@@ -16,7 +16,7 @@ export const signUpAction = async (formData: FormData) => {
     return { error: "Email, password, and role are required" };
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -27,16 +27,31 @@ export const signUpAction = async (formData: FormData) => {
     },
   });
 
-  if (error) {
-    console.error(error.code + " " + error.message);
-    return encodedRedirect("error", "/sign-up", error.message);
-  } else {
-    return encodedRedirect(
-      "success",
-      "/sign-up",
-      "Thanks for signing up! Please check your email for a verification link.",
-    );
+  if (signUpError) {
+    console.error(signUpError.code + " " + signUpError.message);
+    return encodedRedirect("error", "/sign-up", signUpError.message);
   }
+
+  // Insert user data into users table
+  const { error: insertError } = await supabase
+    .from('users')
+    .insert({
+      user_id: signUpData.user!.id,
+      role_type: role,
+      image_credits: 25,
+      video_credits: 25
+    });
+
+  if (insertError) {
+    console.error("Database insert error:", insertError);
+    return encodedRedirect("error", "/sign-up", "Error creating user profile");
+  }
+
+  return encodedRedirect(
+    "success",
+    "/sign-up",
+    "Thanks for signing up! Please check your email for a verification link."
+  );
 };
 
 export const schoolSignUpAction = async (formData: FormData, site_id: string) => {
@@ -50,7 +65,7 @@ export const schoolSignUpAction = async (formData: FormData, site_id: string) =>
     return { error: "Email, password, and role are required" };
   }
 
-  const { error } = await supabase.auth.signUp({
+  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
     options: {
@@ -62,16 +77,32 @@ export const schoolSignUpAction = async (formData: FormData, site_id: string) =>
     },
   });
 
-  if (error) {
-    console.error(error.code + " " + error.message);
-    return encodedRedirect("error", `/sign-up`, error.message);
-  } else {
-    return encodedRedirect(
-      "success",
-      `/sign-up`,
-      "Thanks for signing up! Please check your email for a verification link."
-    );
+  if (signUpError) {
+    console.error(signUpError.code + " " + signUpError.message);
+    return encodedRedirect("error", `/sign-up`, signUpError.message);
   }
+
+  // Insert user data into users table
+  const { error: insertError } = await supabase
+    .from('users')
+    .insert({
+      user_id: signUpData.user!.id,
+      role_type: role,
+      site_id: site_id.toLowerCase(),
+      image_credits: 25,
+      video_credits: 25
+    });
+
+  if (insertError) {
+    console.error("Database insert error:", insertError);
+    return encodedRedirect("error", "/sign-up", "Error creating user profile");
+  }
+
+  return encodedRedirect(
+    "success",
+    `/sign-up`,
+    "Thanks for signing up! Please check your email for a verification link."
+  );
 };
 
 export const signInAction = async (formData: FormData) => {

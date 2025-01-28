@@ -28,6 +28,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
+import { useEffect } from "react";
 
 // Add this after imports
 const aspectRatioMap = {
@@ -40,7 +41,35 @@ const aspectRatioMap = {
 };
 
 const ImageGeneratorPage = () => {
-  const supabase = createClient();
+  const [userEmail, setUserEmail] = useState("guest@example.com");
+  const [credits, setCredits] = useState<number | null>(null);
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUserEmail(user.email ?? "guest@example.com");
+
+        // Fetch user credits
+        const { data: userData } = await supabase
+          .from("users")
+          .select("image_credits")
+          .eq("user_id", user.id)
+          .single();
+
+        if (userData) {
+          setCredits(userData.image_credits);
+        }
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
   const [loading, setLoading] = useState(false);
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [prompt, setPrompt] = useState("");
@@ -64,6 +93,16 @@ const ImageGeneratorPage = () => {
       return;
     }
 
+    // Add credit check before API call
+    if (credits !== null && credits < settings.num_images) {
+      toast({
+        title: "Insufficient Credits",
+        description: `You need ${settings.num_images} credits to generate ${settings.num_images} image${settings.num_images > 1 ? "s" : ""}. You have ${credits} credits remaining.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const response = await fetch("/api/generate", {
@@ -72,20 +111,25 @@ const ImageGeneratorPage = () => {
         body: JSON.stringify({ prompt, ...settings }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate image");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to generate image");
+      }
 
       const data = await response.json();
       if (data.images?.length > 0) {
         setGeneratedImages(data.images.map((img: any) => img.url));
+        setCredits(data.remainingCredits);
         toast({
           title: "Success!",
-          description: `Generated ${data.images.length} images successfully.`,
+          description: `Generated ${data.images.length} images successfully. ${data.remainingCredits} credits remaining.`,
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Failed to generate image. Please try again.",
+        description:
+          error.message || "Failed to generate image. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -147,7 +191,13 @@ const ImageGeneratorPage = () => {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card className="border-neutral-500/20 shadow-lg transition-shadow hover:shadow-xl">
-            <CardHeader></CardHeader>
+            <CardHeader>
+              {credits !== null && (
+                <div className="text-sm text-neutral-500">
+                  Available Credits: {credits}
+                </div>
+              )}
+            </CardHeader>
             <CardContent className="space-y-6">
               {/* Prompt Input with character count */}
               <div className="space-y-2">

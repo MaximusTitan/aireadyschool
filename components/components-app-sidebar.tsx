@@ -152,7 +152,7 @@ export function AppSidebar() {
                   <Link href={item.url}>
                     {item.icon && (
                       <item.icon
-                        className="font-bold text-purple-700"
+                        className="font-bold text-primary"
                         size={36}
                         strokeWidth={2}
                       />

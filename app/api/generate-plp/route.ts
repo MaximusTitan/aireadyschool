@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
-    Create a learning plan for a student with the following details:
+    Create a detailed, progressive learning plan for a student with the following details:
 
     Student Information:
     Name: ${data.name}
@@ -69,15 +69,31 @@ export async function POST(req: Request) {
     Topic: ${data.topic}
     Other Info: ${data.otherInfo}
 
-    Generate a structured learning plan with weekly targets and specific activities.
+    Generate a structured learning plan that includes:
+    1. An executive summary of the current situation and expected outcomes
+    2. Weekly plans with progressive improvement targets (show progress in percentages)
+    3. Detailed step-by-step instructions for each activity
+    4. Clear metrics for measuring progress
+    5. Specific resources and materials needed
+    6. Parent/teacher involvement guidelines
+
     Return the response in the following JSON format:
     {
+      "summary": {
+        "currentStatus": string,
+        "expectedOutcome": string,
+        "keyStrengths": string[],
+        "focusAreas": string[]
+      },
       "weeklyPlans": [
         {
           "week": number,
           "focus": string,
+          "expectedProgress": string,
           "activities": string[],
-          "targets": string[]
+          "targets": string[],
+          "resources": string[],
+          "parentInvolvement": string
         }
       ],
       "recommendations": string[],

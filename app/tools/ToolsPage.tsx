@@ -130,12 +130,6 @@ const ToolsPage = () => {
         route: "/tools/mcq-generator",
       },
       {
-        title: "Study Plan Generator",
-        description: "Plan your study schedule",
-        route: "/tools/study-planner",
-        isComingSoon: true,
-      },
-      {
         title: "Evaluator",
         description: "Evaluate student answers",
         route: "/tools/evaluator",
@@ -171,8 +165,9 @@ const ToolsPage = () => {
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk to PDF Docs",
-        description: "Powerful RAG-based document chat system for intelligent document interactions",
+        title: "Chat with Docs",
+        description:
+          "Powerful RAG-based document chat system for intelligent document interactions",
         route: "/tools/chat-with-docs",
         isHot: true,
       },
@@ -198,6 +193,33 @@ const ToolsPage = () => {
         description: "Generate video stories from text",
         route: "/tools/video-story-generator",
         isComingSoon: true,
+      },
+      {
+        title: "Song Generator",
+        description: "Generate songs from lyrics",
+        route: "/tools/song-generator",
+      },
+      {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+      },
+
+      {
+        title: "P5.JS",
+        description: "Code in P5.js",
+        route: "/tools/p5",
+      },
+      {
+        title: "Study Plan Generator",
+        description: "Plan your study schedule",
+        route: "/tools/study-planner",
+        isComingSoon: true,
+      },
+      {
+        title: "Code Playground",
+        description: "Code in various languages",
+        route: "/tools/code-playground",
       },
     ],
     Teacher: [
@@ -237,7 +259,7 @@ const ToolsPage = () => {
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk to PDF Docs",
+        title: "Chat with Docs",
         description: "Document chat system",
         route: "/tools/chat-with-docs",
         isHot: true,
@@ -288,7 +310,7 @@ const ToolsPage = () => {
         route: "/tools/youtube-assistant",
       },
       {
-        title: "Talk to PDF Docs",
+        title: "Chat with Docs",
         description: "Document chat system",
         route: "/tools/chat-with-docs",
         isHot: true,
@@ -325,11 +347,6 @@ const ToolsPage = () => {
         description: "Create presentations",
         route: "/tools/presentation",
         isHot: true,
-      },
-      {
-        title: "Marketing Content Generator",
-        description: "Generate marketing content",
-        route: "/tools/marketing-content-generator",
       },
       {
         title: "School Intelligence",

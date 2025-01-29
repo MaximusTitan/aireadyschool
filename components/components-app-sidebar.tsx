@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client" // Supabase client import
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useEffect, useState } from "react";
+import { createClient } from "@/utils/supabase/client"; // Supabase client import
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
   SidebarContent,
@@ -26,7 +26,7 @@ import {
   SidebarSeparator,
   SidebarTrigger,
   useSidebar,
-} from "@/components/ui/sidebar"
+} from "@/components/ui/sidebar";
 import {
   BadgeCheck,
   BookOpen,
@@ -40,35 +40,35 @@ import {
   BrainCircuit,
   SquareTerminal,
   PlugIcon as Plugin,
-} from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
-import { ThemeSwitcher } from "./theme-switcher"
-import { signOutAction } from "@/app/actions"
-import logo from "@/public/logo.png"
-import logo1 from "@/public/logo1.png"
-import { stat } from "fs"
+} from "lucide-react";
+import Image from "next/image";
+import Link from "next/link";
+import { ThemeSwitcher } from "./theme-switcher";
+import { signOutAction } from "@/app/actions";
+import logo from "@/public/logo.png";
+import logo1 from "@/public/logo1.png";
+import { stat } from "fs";
 
 export function AppSidebar() {
-  const [userEmail, setUserEmail] = useState("guest@example.com") // Default email
-  const [userRole, setUserRole] = useState<string | null>(null) // User role
+  const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
+  const [userRole, setUserRole] = useState<string | null>(null); // User role
 
   // Fetch the user session from Supabase
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient() // Initialize Supabase client
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
-      } = await supabase.auth.getUser() // Get user session
+      } = await supabase.auth.getUser(); // Get user session
 
       if (user) {
-        setUserEmail(user.email ?? "guest@example.com") // Set email from the user session
-        setUserRole(user.user_metadata.role ?? null) // Set role from user metadata
+        setUserEmail(user.email ?? "guest@example.com"); // Set email from the user session
+        setUserRole(user.user_metadata.role ?? null); // Set role from user metadata
       }
-    }
+    };
 
-    fetchUser()
-  }, [])
+    fetchUser();
+  }, []);
 
   // Define navigation data based on user role
   const navData = {
@@ -80,28 +80,50 @@ export function AppSidebar() {
         url: "/learn-with-ai",
         icon: BrainCircuit,
       },
-      {
-        title: "Connect Database",
-        url: "/connect-database",
-        icon: Plugin,
-      },
-      ...(userRole === "Admin" ? [{ title: "Schools", url: "/schools", icon: BookOpen }] : []),
+
+      ...(userRole === "Admin"
+        ? [
+            { title: "Schools", url: "/schools", icon: BookOpen },
+            {
+              title: "Connect Database",
+              url: "/connect-database",
+              icon: Plugin,
+            },
+            {
+              title: "Marketing Content Generator",
+              url: "/tools/marketing-content-generator",
+              icon: BadgeCheck,
+            },
+          ]
+        : []),
+
+      ...(userRole === "School"
+        ? [
+            {
+              title: "Marketing Content Generator",
+              url: "/tools/marketing-content-generator",
+              icon: BadgeCheck,
+            },
+          ]
+        : []),
     ],
-  }
+  };
 
   // Add Logo component to switch logos based on sidebar state
   const Logo = () => {
-    const { state } = useSidebar()
+    const { state } = useSidebar();
     return (
-      <Image
-        src={state === "expanded" ? logo : logo1}
-        alt="AI Ready School"
-        width={140}
-        height={130}
-        className={state === "expanded" ? "ml-2" : ""}
-      />
-    )
-  }
+      <Link href="/">
+        <Image
+          src={state === "expanded" ? logo : logo1}
+          alt="AI Ready School"
+          width={140}
+          height={130}
+          className={state === "expanded" ? "ml-2" : ""}
+        />
+      </Link>
+    );
+  };
 
   return (
     <Sidebar collapsible="icon">
@@ -128,7 +150,13 @@ export function AppSidebar() {
               <SidebarMenuItem key={item.title} className="mt-2">
                 <SidebarMenuButton tooltip={item.title} asChild>
                   <Link href={item.url}>
-                    {item.icon && <item.icon className="font-bold text-purple-700" size={36} strokeWidth={2} />}
+                    {item.icon && (
+                      <item.icon
+                        className="font-bold text-purple-700"
+                        size={36}
+                        strokeWidth={2}
+                      />
+                    )}
                     <span className="font-semibold text-lg">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -144,12 +172,19 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <SidebarMenuButton size="lg" className="data-[state=open]:bg-sidebar-accent">
+                <SidebarMenuButton
+                  size="lg"
+                  className="data-[state=open]:bg-sidebar-accent"
+                >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    <AvatarFallback className="rounded-lg">{userEmail.charAt(0).toUpperCase()}</AvatarFallback>
+                    <AvatarFallback className="rounded-lg">
+                      {userEmail.charAt(0).toUpperCase()}
+                    </AvatarFallback>
                   </Avatar>
                   <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate text-xs font-semibold">{userEmail}</span>
+                    <span className="truncate text-xs font-semibold">
+                      {userEmail}
+                    </span>
                   </div>
                   <ChevronsUpDown className="ml-auto size-4" />
                 </SidebarMenuButton>
@@ -164,11 +199,18 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      <AvatarImage src="/default-avatar.png" alt="User Avatar" />
-                      <AvatarFallback className="rounded-lg">{userEmail.charAt(0).toUpperCase()}</AvatarFallback>
+                      <AvatarImage
+                        src="/default-avatar.png"
+                        alt="User Avatar"
+                      />
+                      <AvatarFallback className="rounded-lg">
+                        {userEmail.charAt(0).toUpperCase()}
+                      </AvatarFallback>
                     </Avatar>
                     <div className="grid flex-1 text-left text-sm leading-tight">
-                      <span className="truncate text-xs font-semibold">{userEmail}</span>
+                      <span className="truncate text-xs font-semibold">
+                        {userEmail}
+                      </span>
                     </div>
                   </div>
                 </DropdownMenuLabel>
@@ -176,8 +218,8 @@ export function AppSidebar() {
                 <DropdownMenuItem>
                   <form
                     onSubmit={async (e) => {
-                      e.preventDefault()
-                      await signOutAction()
+                      e.preventDefault();
+                      await signOutAction();
                     }}
                     className="w-full"
                   >
@@ -195,7 +237,7 @@ export function AppSidebar() {
 
       <SidebarRail />
     </Sidebar>
-  )
+  );
 }
 
 // Sidebar Header Component with Theme Switcher
@@ -207,6 +249,5 @@ export function AppSidebarHeader() {
         <ThemeSwitcher />
       </header>
     </SidebarInset>
-  )
+  );
 }
-

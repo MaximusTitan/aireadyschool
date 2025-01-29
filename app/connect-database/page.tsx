@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/card";
 import { ChatBubble } from "./chat-bubble";
 import { ChatWindow } from "./chat-window";
+import { createClient } from "@/utils/supabase/client";
+const supabase = createClient();
 
 type ToastProps = {
   message: string;
@@ -49,12 +51,21 @@ export default function ConnectDatabasePage() {
     setIsLoading(true);
 
     try {
+      // Fetch user email
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user || !user.email) {
+        throw new Error("User not authenticated");
+      }
+      const email = user.email;
+
       const response = await fetch("/api/connect-database", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ supabaseUrl, supabaseAnonKey }),
+        body: JSON.stringify({ supabaseUrl, supabaseAnonKey, databaseName: databaseNameInput, email }),
       });
 
       const result = await response.json();
@@ -63,11 +74,19 @@ export default function ConnectDatabasePage() {
         throw new Error(result.error || "Failed to connect to database");
       }
 
-      setDatabaseName(result.databaseName);
-      setToast({
-        message: `Successfully connected to the database: ${databaseNameInput}`,
-        type: "success",
-      });
+      // Check for specific messages in the response
+      if (result.message) {
+        setToast({
+          message: result.message,
+          type: "error", // You can change this to "success" if you want to treat it as a success message
+        });
+      } else {
+        setDatabaseName(result.databaseName);
+        setToast({
+          message: `Successfully connected to the database: ${databaseNameInput}`,
+          type: "success",
+        });
+      }
     } catch (error) {
       console.error("Error connecting to database:", error);
       setToast({
@@ -138,16 +157,16 @@ export default function ConnectDatabasePage() {
           <div className="mt-4 text-center">
             Connected to: {databaseNameInput}
           </div>
-          <ChatBubble onClick={() => setIsChatOpen(true)} />
-          {isChatOpen && (
-            <ChatWindow
-              onClose={() => setIsChatOpen(false)}
-              databaseName={databaseNameInput}
-              supabaseUrl={supabaseUrl}
-              supabaseAnonKey={supabaseAnonKey}
-            />
-          )}
         </>
+      )}
+      <ChatBubble onClick={() => setIsChatOpen(true)} />
+      {isChatOpen && (
+        <ChatWindow
+          onClose={() => setIsChatOpen(false)}
+          databaseName={databaseNameInput}
+          supabaseUrl={supabaseUrl}
+          supabaseAnonKey={supabaseAnonKey}
+        />
       )}
     </div>
   );

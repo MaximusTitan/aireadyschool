@@ -1,65 +1,48 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
-import { Search, MessageCircle, Send } from "lucide-react";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { createClient } from "@/utils/supabase/client";
+import type React from "react"
+import { useState, useEffect, useRef } from "react"
+import { useRouter } from "next/navigation"
+import { Search, MessageCircle, Send, Plug } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Input } from "@/components/ui/input"
+import { createClient } from "@/utils/supabase/client"
+import { initSupabase } from "@/utils/supabase"
 
 interface ToolCardProps {
-  title: string;
-  description: string;
-  route: string;
-  isHot?: boolean;
-  isComingSoon?: boolean;
+  title: string
+  description: string
+  route: string
+  isHot?: boolean
+  isComingSoon?: boolean
 }
 
-const ToolCard: React.FC<ToolCardProps> = ({
-  title,
-  description,
-  route,
-  isHot = false,
-  isComingSoon = false,
-}) => {
-  const router = useRouter();
+const ToolCard: React.FC<ToolCardProps> = ({ title, description, route, isHot = false, isComingSoon = false }) => {
+  const router = useRouter()
 
   const handleClick = () => {
     if (!isComingSoon) {
-      router.push(route);
+      router.push(route)
     }
-  };
+  }
 
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient();
+      const supabase = createClient()
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getUser()
 
       if (user) {
-        setUserRole(user.user_metadata.role ?? null);
+        setUserRole(user.user_metadata.role ?? null)
       }
-    };
+    }
 
-    fetchUser();
-  }, []);
+    fetchUser()
+  }, [])
 
   return (
     <Card
@@ -68,9 +51,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
     >
       <CardHeader className="space-y-1">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold dark:text-neutral-100">
-            {title}
-          </CardTitle>
+          <CardTitle className="text-lg font-semibold dark:text-neutral-100">{title}</CardTitle>
           {isHot && (
             <span className="px-2 py-1 text-xs font-semibold bg-neutral-100 text-neutral-600 rounded-full dark:bg-neutral-950 dark:text-neutral-300">
               HOT
@@ -82,9 +63,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
             </span>
           )}
         </div>
-        <CardDescription className="text-sm text-neutral-500 dark:text-neutral-400">
-          {description}
-        </CardDescription>
+        <CardDescription className="text-sm text-neutral-500 dark:text-neutral-400">{description}</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex justify-end">
@@ -98,51 +77,56 @@ const ToolCard: React.FC<ToolCardProps> = ({
         </div>
       </CardContent>
     </Card>
-  );
-};
+  )
+}
 
 interface ChatMessage {
-  text: string;
-  isUser: boolean;
-  naturalLanguageResponse?: string;
-  error?: string;
+  text: string
+  isUser: boolean
+  naturalLanguageResponse?: string
+  error?: string
 }
 
 const ToolsPage = () => {
-  const [userRole, setUserRole] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null)
   const [defaultMessage, setDefaultMessage] = useState(
-    "Hi, ask me anything about your company's data using natural language."
-  );
+    "Hi, ask me anything about your company's data using natural language.",
+  )
+  const [databases, setDatabases] = useState<string[]>([])
+  const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null)
+  const [supabaseUrl, setSupabaseUrl] = useState<string | null>(null)
+  const [supabaseKey, setSupabaseKey] = useState<string | null>(null)
+  const [isPluginClicked, setIsPluginClicked] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient();
+      const supabase = createClient()
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await supabase.auth.getUser()
 
       if (user) {
-        setUserRole(user.user_metadata.role ?? null);
+        setUserRole(user.user_metadata.role ?? null)
       }
-    };
+    }
 
-    fetchUser();
-  }, []);
+    fetchUser()
+  }, [])
 
   const categories: {
     [key: string]: {
-      title: string;
-      description: string;
-      route: string;
-      isHot?: boolean;
-      isComingSoon?: boolean;
-    }[];
+      title: string
+      description: string
+      route: string
+      isHot?: boolean
+      isComingSoon?: boolean
+    }[]
   } = {
     Student: [
       {
         title: "Assessment Generator",
-        description:
-          "Create and share interactive multiple choice questions for students",
+        description: "Create and share interactive multiple choice questions for students",
         route: "/tools/mcq-generator",
       },
       {
@@ -158,8 +142,7 @@ const ToolsPage = () => {
       },
       {
         title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        description: "Rewrite, proofread, translate, generate questions, expand, summarize texts",
         route: "/tools/text-tools",
       },
       {
@@ -189,8 +172,7 @@ const ToolsPage = () => {
       },
       {
         title: "Talk to PDF Docs",
-        description:
-          "Powerful RAG-based document chat system for intelligent document interactions",
+        description: "Powerful RAG-based document chat system for intelligent document interactions",
         route: "/tools/chat-with-docs",
         isHot: true,
       },
@@ -231,8 +213,7 @@ const ToolsPage = () => {
       },
       {
         title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        description: "Rewrite, proofread, translate, generate questions, expand, summarize texts",
         route: "/tools/text-tools",
       },
       {
@@ -298,8 +279,7 @@ const ToolsPage = () => {
     School: [
       {
         title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
+        description: "Rewrite, proofread, translate, generate questions, expand, summarize texts",
         route: "/tools/text-tools",
       },
       {
@@ -358,70 +338,65 @@ const ToolsPage = () => {
         isComingSoon: true,
       },
     ],
-  };
+  }
 
   const tools =
     userRole === "Admin"
       ? Object.values(categories)
           .flat()
-          .filter(
-            (tool, index, self) =>
-              index === self.findIndex((t) => t.route === tool.route)
-          )
-      : (userRole ? categories[userRole] : []) || [];
+          .filter((tool, index, self) => index === self.findIndex((t) => t.route === tool.route))
+      : (userRole ? categories[userRole] : []) || []
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState("")
 
   const filteredTools = tools.filter(
     (tool) =>
       tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      tool.description.toLowerCase().includes(searchQuery.toLowerCase()),
+  )
 
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [message, setMessage] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false)
+  const [message, setMessage] = useState("")
+  const [messages, setMessages] = useState<ChatMessage[]>([])
 
   const toggleChat = () => {
-    setIsChatOpen(!isChatOpen);
+    setIsChatOpen(!isChatOpen)
     if (!isChatOpen && messages.length === 0) {
-      setMessages([{ text: defaultMessage, isUser: false }]);
+      setMessages([{ text: defaultMessage, isUser: false }])
     }
-  };
+  }
 
   const sendMessage = async () => {
     if (message.trim()) {
-      setMessages((prev) => [...prev, { text: message, isUser: true }]);
-      setMessage("");
+      setMessages((prev) => [...prev, { text: message, isUser: true }])
+      setMessage("")
 
       try {
-        const response = await fetch("/api/processSqlQuery", {
+        const response = await fetch(isPluginClicked ? "/api/query-database" : "/api/processSqlQuery", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ userInput: message }),
-        });
-        const processedResult = await response.json();
+          body: JSON.stringify({
+            query: message,
+            supabaseUrl: supabaseUrl,
+            supabaseKey: supabaseKey,
+          }),
+        })
+        const processedResult = await response.json()
 
         if (processedResult.success) {
           setMessages((prev) => [
             ...prev,
             {
-              text:
-                processedResult.naturalLanguageResponse ||
-                "No response generated.",
+              text: processedResult.naturalLanguageResponse || "No response generated.",
               isUser: false,
               naturalLanguageResponse: processedResult.naturalLanguageResponse,
             },
-          ]);
+          ])
         } else {
-          throw new Error(
-            processedResult.error ||
-              "Unknown error occurred while processing the query."
-          );
+          throw new Error(processedResult.error || "Unknown error occurred while processing the query.")
         }
       } catch (error) {
-        console.error("Error processing query:", error);
+        console.error("Error processing query:", error)
         setMessages((prev) => [
           ...prev,
           {
@@ -429,36 +404,65 @@ const ToolsPage = () => {
             isUser: false,
             error: error instanceof Error ? error.message : "Unknown error",
           },
-        ]);
+        ])
       }
     }
-  };
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      sendMessage();
+      sendMessage()
     }
-  };
+  }
 
   useEffect(() => {
     if (isChatOpen && inputRef.current) {
-      inputRef.current.focus();
+      inputRef.current.focus()
     }
-  }, [isChatOpen]);
+  }, [isChatOpen])
+
+  const handleDatabaseSelection = async (database: string) => {
+    setSelectedDatabase(database)
+
+    // Fetch the corresponding supabase_url and anon_key for the selected database
+    const supabase = createClient()
+    const { data, error } = await supabase
+      .from("connected_db")
+      .select("supabase_url, anon_key")
+      .eq("database_name", database)
+      .single()
+
+    if (error) {
+      console.error("Error fetching database details:", error)
+    } else if (data) {
+      setSupabaseUrl(data.supabase_url)
+      setSupabaseKey(data.anon_key)
+      // Initialize Supabase with the fetched URL and key
+      initSupabase(data.supabase_url, data.anon_key)
+    }
+  }
+
+  useEffect(() => {
+    const fetchDatabases = async () => {
+      const supabase = createClient()
+      const { data, error } = await supabase.from("connected_db").select("database_name")
+      if (error) {
+        console.error("Error fetching databases:", error)
+      } else {
+        setDatabases(data.map((db) => db.database_name))
+      }
+    }
+
+    fetchDatabases()
+  }, [])
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle,rgba(255,255,255,1)_0%,rgba(250,220,255,0.3)_35%,rgba(255,255,255,1)_100%)] dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(50,0,55,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center">
-            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
-              AI Tools
-            </h1>
-            {userRole && (
-              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
-                ({userRole})
-              </span>
-            )}
+            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">AI Tools</h1>
+            {userRole && <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">({userRole})</span>}
           </div>
         </div>
 
@@ -506,9 +510,36 @@ const ToolsPage = () => {
 
         {/* Chat Dialog */}
         {isChatOpen && (
-          <div className="fixed bottom-20 right-4 w-80 bg-white dark:bg-neutral-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[70vh]">
-            <div className="p-4 border-b dark:border-neutral-700 font-semibold">
-              Chat
+          <div className="fixed bottom-20 right-4 w-96 bg-white dark:bg-neutral-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[70vh]">
+            <div className="p-4 border-b dark:border-neutral-700 flex justify-between items-center">
+              <div className="font-semibold">Chat</div>
+              {/* Dropdown for Database Selection */}
+              <div className="flex items-center space-x-2">
+                <select
+                  value={selectedDatabase || ""}
+                  onChange={(e) => handleDatabaseSelection(e.target.value)}
+                  className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
+                >
+                  <option value="" disabled>
+                    Select Database
+                  </option>
+                  {databases.map((db, idx) => (
+                    <option key={idx} value={db}>
+                      {db}
+                    </option>
+                  ))}
+                </select>
+                {/* Plugin Icon Button */}
+                <button
+                  onClick={() => {
+                    console.log(`Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`)
+                    setIsPluginClicked(true)
+                  }}
+                  className="p-2 bg-purple-300 rounded-full text-white hover:bg-purple-400"
+                >
+                  <Plug size={16} />
+                </button>
+              </div>
             </div>
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               {messages.map((msg, index) => (
@@ -539,7 +570,7 @@ const ToolsPage = () => {
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="e.g; first email in chat_history?"
+                placeholder="Type your query..."
                 className="flex-grow px-3 py-2 bg-neutral-100 dark:bg-neutral-700 rounded-l-lg focus:outline-none"
               />
               <button
@@ -553,7 +584,8 @@ const ToolsPage = () => {
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default ToolsPage;
+export default ToolsPage
+

@@ -26,6 +26,7 @@ export default function ClientLayout({
     pathname.startsWith("/audiobot") ||
     pathname.startsWith("/learn-with-ai") ||
     pathname.startsWith("/payment") ||
+    pathname.startsWith("/canvas") ||
     pathname.startsWith("/rooms");
 
   return (

@@ -22,6 +22,11 @@ const nextConfig = {
         hostname: "v3.fal.media",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "v3.fal.media",
+        pathname: "/files/**",
+      },
     ],
   },
   experimental: {

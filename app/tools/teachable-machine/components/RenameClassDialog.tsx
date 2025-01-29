@@ -14,11 +14,13 @@ import { Label } from "@/components/ui/label";
 interface RenameClassDialogProps {
   currentName: string;
   onRename: (newName: string) => void;
+  disabled?: boolean;
 }
 
 export function RenameClassDialog({
   currentName,
   onRename,
+  disabled = false,
 }: RenameClassDialogProps) {
   const [newName, setNewName] = useState(currentName);
   const [isOpen, setIsOpen] = useState(false);
@@ -46,7 +48,14 @@ export function RenameClassDialog({
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={disabled}
+          title={
+            disabled ? "Cannot rename after adding images" : "Rename class"
+          }
+        >
           Rename
         </Button>
       </DialogTrigger>

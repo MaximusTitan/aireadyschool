@@ -238,6 +238,30 @@ const SongGenerator = () => {
     }
   };
 
+  const handleDownload = useCallback(
+    async (url: string) => {
+      try {
+        const response = await fetch(url);
+        const blob = await response.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = downloadUrl;
+        link.download = "generated-song.mp3";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(downloadUrl);
+      } catch (err) {
+        toast({
+          title: "Error",
+          description: "Failed to download the song",
+          variant: "destructive",
+        });
+      }
+    },
+    [toast]
+  );
+
   const characterLimit = 500;
   const characterCount = prompt.length;
 
@@ -424,9 +448,17 @@ const SongGenerator = () => {
 
         {generatedAudio && (
           <div className="mt-8 p-6 border border-gray-200 rounded-lg bg-gray-50">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              Your Generated Song
-            </h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-gray-900">
+                Your Generated Song
+              </h2>
+              <button
+                onClick={() => handleDownload(generatedAudio)}
+                className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all"
+              >
+                Download
+              </button>
+            </div>
             <AudioPlayer
               url={generatedAudio}
               isPlaying={isPlaying === generatedAudio}

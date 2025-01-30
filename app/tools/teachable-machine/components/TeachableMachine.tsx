@@ -22,6 +22,12 @@ import { toast } from "@/hooks/use-toast";
 import { Toaster } from "@/components/ui/toaster";
 import { RenameClassDialog } from "../components/RenameClassDialog";
 import { RefreshCcw } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function TeachableMachine() {
   const [net, setNet] = useState<mobilenetModule.MobileNet | null>(null);
@@ -330,12 +336,45 @@ export default function TeachableMachine() {
                     >
                       {classLabel === "A" ? classAName : classBName}
                     </label>
-                    <RenameClassDialog
-                      currentName={classLabel === "A" ? classAName : classBName}
-                      onRename={(newName) =>
-                        handleRenameClass(classLabel as "A" | "B", newName)
-                      }
-                    />
+                    {(
+                      classLabel === "A" ? classASamples > 0 : classBSamples > 0
+                    ) ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="cursor-not-allowed">
+                              <RenameClassDialog
+                                currentName={
+                                  classLabel === "A" ? classAName : classBName
+                                }
+                                onRename={(newName) =>
+                                  handleRenameClass(
+                                    classLabel as "A" | "B",
+                                    newName
+                                  )
+                                }
+                                disabled={true}
+                              />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Rename is only available before uploading images
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <RenameClassDialog
+                        currentName={
+                          classLabel === "A" ? classAName : classBName
+                        }
+                        onRename={(newName) =>
+                          handleRenameClass(classLabel as "A" | "B", newName)
+                        }
+                        disabled={false}
+                      />
+                    )}
                   </div>
                   <div className="flex items-center justify-center space-x-2">
                     <Input
@@ -411,7 +450,7 @@ export default function TeachableMachine() {
             ))}
           </div>
 
-          {(classASamples > 0 || classBSamples > 0) && (
+          {classASamples > 0 && classBSamples > 0 && (
             <div className="space-y-2">
               <Button
                 className="w-full relative"

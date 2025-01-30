@@ -74,10 +74,10 @@ export function AppSidebar() {
   const navData = {
     navMain: [
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
-      { title: "Tools", url: "/tools", icon: SquareTerminal, isActive: true },
+      { title: "AI Tool", url: "/tools", icon: SquareTerminal, isActive: true },
       {
-        title: "Learn About AI",
-        url: "/learn-with-ai",
+        title: "Learn AI",
+        url: "/learn-ai",
         icon: BrainCircuit,
       },
 

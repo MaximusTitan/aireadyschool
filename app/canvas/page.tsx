@@ -12,6 +12,10 @@ import ReactFlow, {
 import Image from "next/image";
 import "reactflow/dist/style.css";
 import { useState, useEffect } from "react";
+import {
+  TextInputNode,
+  TextOutputNode,
+} from "./components/TextProcessingNodes";
 
 // Custom Image Node
 const ImageNode = ({ data }: { data: any }) => {
@@ -19,8 +23,8 @@ const ImageNode = ({ data }: { data: any }) => {
   const [isZoomed, setIsZoomed] = useState(false);
 
   return (
-    <div className="group p-6 border-2 border-purple-100 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all">
-      <div className="relative w-[512px] h-[512px] overflow-hidden rounded-lg bg-gray-50">
+    <div className="group p-4 border-2 border-purple-100 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all">
+      <div className="relative w-[256px] h-[256px] overflow-hidden rounded-lg bg-gray-50">
         {isImageLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-50">
             <div className="flex flex-col items-center gap-2">
@@ -88,7 +92,7 @@ const ImageNode = ({ data }: { data: any }) => {
 // Custom Text Node
 const TextNode = ({ data }: { data: any }) => {
   return (
-    <div className="p-6 border-2 border-emerald-100 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow max-w-[400px]">
+    <div className="p-4 border-2 border-emerald-100 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow max-w-[300px]">
       <div className="flex items-center gap-2 mb-3">
         <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
         <h3 className="text-sm font-medium text-emerald-700">AI Response</h3>
@@ -173,14 +177,48 @@ const nodeTypes = {
   inputNode: InputNode,
   imageNode: ImageNode,
   textNode: TextNode,
+  textInputNode: TextInputNode,
+  textOutputNode: TextOutputNode,
 };
 
 const initialNodes: Node[] = [
   {
-    id: "1",
+    id: "text-input",
     position: { x: 100, y: 100 },
+    type: "textInputNode",
+    data: {
+      input: "",
+      operation: "summarize",
+      loading: false,
+      setInput: () => {},
+      setOperation: () => {},
+      processText: () => {},
+    },
+  },
+  {
+    id: "text-output",
+    position: { x: 600, y: 100 },
+    type: "textOutputNode",
+    data: {
+      output: "",
+    },
+  },
+  {
+    id: "1",
+    position: { x: 100, y: 400 },
     data: { label: "Input Node" },
     type: "inputNode",
+  },
+];
+
+const initialEdges: Edge[] = [
+  {
+    id: "text-edge",
+    source: "text-input",
+    target: "text-output",
+    type: "smoothstep",
+    animated: true,
+    style: { stroke: "#94a3b8", strokeWidth: 2 },
   },
 ];
 
@@ -188,8 +226,14 @@ export default function CanvasPage() {
   const [inputValue, setInputValue] = useState("");
   const [mode, setMode] = useState<"text" | "image">("text");
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [isLoading, setIsLoading] = useState(false);
+
+  const [textInput, setTextInput] = useState("");
+  const [textOperation, setTextOperation] = useState("summarize");
+  const [textOutput, setTextOutput] = useState("");
+  const [textLoading, setTextLoading] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState("spanish");
 
   useEffect(() => {
     if (nodes.length > 1) {
@@ -262,6 +306,29 @@ export default function CanvasPage() {
     }
   };
 
+  const processText = async () => {
+    if (!textInput.trim() || textLoading) return;
+    setTextLoading(true);
+    try {
+      const response = await fetch("/api/process-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: textInput,
+          operation: textOperation,
+          targetLanguage:
+            textOperation === "translate" ? targetLanguage : undefined,
+        }),
+      });
+      const data = await response.json();
+      setTextOutput(data.result);
+    } catch (error) {
+      console.error("Error:", error);
+    } finally {
+      setTextLoading(false);
+    }
+  };
+
   const addNodeAndEdge = (newNode: Node) => {
     const newEdge: Edge = {
       id: `e1-${newNode.id}`,
@@ -291,6 +358,31 @@ export default function CanvasPage() {
         },
       };
     }
+    if (node.id === "text-input") {
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          input: textInput,
+          operation: textOperation,
+          loading: textLoading,
+          setInput: setTextInput,
+          setOperation: setTextOperation,
+          processText,
+          targetLanguage,
+          setTargetLanguage,
+        },
+      };
+    }
+    if (node.id === "text-output") {
+      return {
+        ...node,
+        data: {
+          ...node.data,
+          output: textOutput,
+        },
+      };
+    }
     return node;
   });
 
@@ -314,6 +406,61 @@ export default function CanvasPage() {
         <Controls showInteractive={false} />
         <MiniMap className="bg-white rounded-lg border-2 border-gray-200" />
       </ReactFlow>
+
+      {/* Floating Prompt Bar */}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[800px] max-w-[90vw]">
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <div className="flex-1 bg-white rounded-xl shadow-lg border border-gray-200">
+            <div className="flex items-center px-4">
+              <select
+                value={mode}
+                onChange={(e) => setMode(e.target.value as "text" | "image")}
+                className="py-3 pr-2 bg-transparent border-r border-gray-200 focus:outline-none text-gray-600"
+              >
+                <option value="text">Text</option>
+                <option value="image">Image</option>
+              </select>
+              <input
+                type="text"
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
+                className="flex-1 p-3 bg-transparent focus:outline-none"
+                placeholder={
+                  mode === "text" ? "Ask anything..." : "Describe an image..."
+                }
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            disabled={!inputValue || isLoading}
+            className={`px-6 rounded-xl font-medium shadow-lg
+              ${isLoading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"}
+              text-white transition-all`}
+          >
+            {isLoading ? (
+              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+            ) : (
+              "Send"
+            )}
+          </button>
+        </form>
+      </div>
     </div>
   );
 }

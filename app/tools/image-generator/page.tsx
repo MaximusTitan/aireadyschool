@@ -78,6 +78,7 @@ const ImageGeneratorPage = () => {
     num_inference_steps: 4,
     num_images: 1,
     enable_safety_checker: true,
+    style: "enhance", // Add default style
   });
 
   const { toast } = useToast();
@@ -105,10 +106,17 @@ const ImageGeneratorPage = () => {
 
     setLoading(true);
     try {
-      const response = await fetch("/api/generate", {
+      const response = await fetch("/api/generate-recraft", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, ...settings }),
+        body: JSON.stringify({
+          prompt,
+          style: settings.style,
+          imageSize: settings.image_size,
+          numInferenceSteps: settings.num_inference_steps,
+          numImages: settings.num_images,
+          enableSafetyChecker: settings.enable_safety_checker,
+        }),
       });
 
       if (!response.ok) {
@@ -242,6 +250,32 @@ const ImageGeneratorPage = () => {
                       </SelectItem>
                       <SelectItem value="landscape_16_9">
                         16:9 Landscape
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Style */}
+                <div className="space-y-2">
+                  <Label>Style</Label>
+                  <Select
+                    value={settings.style}
+                    onValueChange={(value) =>
+                      setSettings({ ...settings, style: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select style" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="realistic_image">
+                        Realistic Image
+                      </SelectItem>
+                      <SelectItem value="digital_illustration">
+                        Digital Illustration
+                      </SelectItem>
+                      <SelectItem value="vector_illustration">
+                        Vector Illustration
                       </SelectItem>
                     </SelectContent>
                   </Select>

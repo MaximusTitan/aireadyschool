@@ -26,7 +26,7 @@ export default function LearnWithAIPage() {
     },
     {
       number: 5,
-      title: "Stories with GenAI Tools",
+      title: "Story Videos with GenAI Tools",
       presentationUrl: "https://docs.google.com/presentation/d/1Ndt2aCMsbIahx8gB5hBjbCqIPKC_XqdC525pt1x_vSI/embed", // Replace with actual URL
     },
     {

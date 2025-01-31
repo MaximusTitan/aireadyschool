@@ -1,6 +1,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 import { FaUser, FaRobot } from "react-icons/fa";
+import ReactMarkdown from "react-markdown";
 import { formatTime } from "@/app/utils/dateFormat";
 
 interface Message {
@@ -81,10 +82,10 @@ export default function ChatBot() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 h-screen flex flex-col">
+    <div className="max-w-8xl mx-auto p-4 h-screen flex flex-col">
       <div className="bg-white rounded-lg shadow-lg flex-1 flex flex-col">
         <div className="bg-neutral-800 text-white p-4 rounded-t-lg">
-          <h1 className="text-xl font-bold">Science Learning Assistant</h1>
+          <h1 className="text-xl font-bold">Science Tutor</h1>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -113,13 +114,50 @@ export default function ChatBot() {
                   className={`flex flex-col ${message.isBot ? "items-start" : "items-end"}`}
                 >
                   <div
-                    className={`p-3 rounded-lg ${
+                    className={`p-2 rounded-lg ${
                       message.isBot
                         ? "bg-neutral-100 text-neutral-800"
-                        : "bg-neutral-800 text-white"
+                        : "bg-white text-neutral-800 border border-neutral-200"
                     }`}
                   >
-                    {message.text}
+                    <ReactMarkdown
+                      className={`prose prose-sm max-w-none ${
+                        !message.isBot && "prose-neutral"
+                      }`}
+                      components={{
+                        p: ({ children }) => (
+                          <p className="mb-0.5">{children}</p>
+                        ),
+                        ul: ({ children }) => (
+                          <ul className="list-disc ml-4 mb-0.5">{children}</ul>
+                        ),
+                        ol: ({ children }) => (
+                          <ol className="list-decimal ml-4 mb-0.5">
+                            {children}
+                          </ol>
+                        ),
+                        li: ({ children }) => (
+                          <li className="mb-0.5">{children}</li>
+                        ),
+                        h1: ({ children }) => (
+                          <h1 className="text-lg font-bold mb-0.5">
+                            {children}
+                          </h1>
+                        ),
+                        h2: ({ children }) => (
+                          <h2 className="text-md font-bold mb-0.5">
+                            {children}
+                          </h2>
+                        ),
+                        code: ({ children }) => (
+                          <code className="bg-gray-100 dark:bg-gray-800 rounded px-1">
+                            {children}
+                          </code>
+                        ),
+                      }}
+                    >
+                      {message.text}
+                    </ReactMarkdown>
                   </div>
                   <span className="text-xs text-neutral-500 mt-1">
                     {message.timestamp}

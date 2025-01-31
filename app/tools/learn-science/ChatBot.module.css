@@ -8,7 +8,7 @@
 .typing-indicator span {
   width: 8px;
   height: 8px;
-  background-color: #93c5fd;
+  background-color: #737373; /* neutral-500 */
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out;
 }

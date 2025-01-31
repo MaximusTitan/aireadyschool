@@ -3,9 +3,15 @@ import { generateText } from 'ai';
 import { NextResponse } from 'next/server';
 import { SCIENCE_TEACHER_PROMPT } from '@/app/utils/systemPrompt';
 
+interface Message {
+    text: string;
+    isBot: boolean;
+    timestamp: string;
+}
+
 export async function POST(req: Request) {
     try {
-        const { prompt } = await req.json();
+        const { prompt, messages } = await req.json();
 
         if (!prompt) {
             return NextResponse.json(
@@ -14,6 +20,11 @@ export async function POST(req: Request) {
             );
         }
 
+        const formattedMessages = messages.map((msg: Message) => ({
+            role: msg.isBot ? 'assistant' : 'user',
+            content: msg.text,
+        }));
+
         const result = await generateText({
             model: anthropic('claude-3-haiku-20240307'),
             messages: [
@@ -21,10 +32,7 @@ export async function POST(req: Request) {
                     role: 'system',
                     content: SCIENCE_TEACHER_PROMPT,
                 },
-                {
-                    role: 'user',
-                    content: prompt,
-                },
+                ...formattedMessages,
             ],
         });
 

@@ -35,15 +35,14 @@ export default function ChatBot() {
     if (!inputText.trim() || isLoading) return;
 
     const currentTime = formatTime(new Date());
+    const userMessage = {
+      text: inputText,
+      isBot: false,
+      timestamp: currentTime,
+    };
 
-    setMessages((prev) => [
-      ...prev,
-      {
-        text: inputText,
-        isBot: false,
-        timestamp: currentTime,
-      },
-    ]);
+    setInputText(""); // Moved here to clear input immediately
+    setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
     try {
@@ -52,7 +51,10 @@ export default function ChatBot() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ prompt: inputText }),
+        body: JSON.stringify({
+          prompt: inputText,
+          messages: messages.concat(userMessage),
+        }),
       });
 
       if (!response.ok) throw new Error("API request failed");
@@ -77,7 +79,6 @@ export default function ChatBot() {
       ]);
     } finally {
       setIsLoading(false);
-      setInputText("");
     }
   };
 

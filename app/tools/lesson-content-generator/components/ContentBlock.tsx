@@ -21,7 +21,7 @@ export function ContentBlock({
 }: ContentBlockProps) {
   return (
     <Card className="content-block">
-      <CardHeader>
+      <CardHeader className="flex justify-center">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>

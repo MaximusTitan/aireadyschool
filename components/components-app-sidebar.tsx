@@ -74,7 +74,12 @@ export function AppSidebar() {
   const navData = {
     navMain: [
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
-      { title: "AI Tool", url: "/tools", icon: SquareTerminal, isActive: true },
+      {
+        title: "AI Tools",
+        url: "/tools",
+        icon: SquareTerminal,
+        isActive: true,
+      },
       {
         title: "Learn AI",
         url: "/learn-ai",

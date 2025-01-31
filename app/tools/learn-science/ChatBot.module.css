@@ -1,0 +1,45 @@
+.typing-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px;
+}
+
+.typing-indicator span {
+  width: 8px;
+  height: 8px;
+  background-color: #737373; /* neutral-500 */
+  border-radius: 50%;
+  animation: bounce 1.4s infinite ease-in-out;
+}
+
+.typing-indicator span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-indicator span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes bounce {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  }
+  40% { 
+    transform: scale(1.0);
+  }
+}
+
+/* Add smooth scrolling to the chat container */
+.messages-container {
+  scroll-behavior: smooth;
+}
+
+/* Add hover effects to messages */
+.message-bubble {
+  transition: transform 0.2s ease;
+}
+
+.message-bubble:hover {
+  transform: scale(1.02);
+}

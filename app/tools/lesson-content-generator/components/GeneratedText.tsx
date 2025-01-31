@@ -33,7 +33,7 @@ const Heading2: React.FC<HeadingProps> = ({ children, ...props }) => (
 
 const Heading3: React.FC<HeadingProps> = ({ children, ...props }) => (
   <h3
-    className="text-lg font-semibold leading-none tracking-tight mb-2"
+    className="text-lg font-semibold leading-none tracking-tight mb-2 flex justify-center"
     {...props}
   >
     {children}

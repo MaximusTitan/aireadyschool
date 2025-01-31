@@ -1,86 +1,85 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import Link from "next/link"
+import { ArrowLeft } from "lucide-react"
+import { Card, CardContent } from "@/components/ui/card"
 
 export default function LearnWithAIPage() {
+  const modules = [
+    {
+      number: 1,
+      title: "Introduction to GenAI",
+      presentationUrl: "https://docs.google.com/presentation/d/1S-DLOpotisKQT2a_3S9Gkw17j-bSYVVO4Ud8Ck8LJuA/embed",
+    },
+    {
+      number: 2,
+      title: "How AI Works",
+      presentationUrl: "https://docs.google.com/presentation/d/14yDGMl5R8riNqN9EjVLPnLJLLPB03FfG7HqroR_67No/embed",
+    },
+    {
+      number: 3,
+      title: "How GenAI Works",
+      presentationUrl: "https://docs.google.com/presentation/d/1ldpxa1xQAJtmg8BjEIMMNYBx5BEcUShj/embed",
+    },
+    {
+      number: 4,
+      title: "GenAI Tools",
+      presentationUrl: "https://docs.google.com/presentation/d/18OccPFdHNal_MHPhH86J4qi9FaKQR1rifzC7Vryy4Hs/embed",
+    },
+    {
+      number: 5,
+      title: "Stories with GenAI Tools",
+      presentationUrl: "https://docs.google.com/presentation/d/1Ndt2aCMsbIahx8gB5hBjbCqIPKC_XqdC525pt1x_vSI/embed", // Replace with actual URL
+    },
+    {
+      number: 6,
+      title: "RAPDF with Thinking 2.0",
+      presentationUrl: "https://docs.google.com/presentation/d/1ysik8giZNOOdjcgF3kYuhRKlheb9NIb02hUjS30K93I/embed", // Replace with actual URL
+    },
+    {
+      number: 7,
+      title: "Building GenAI APPs",
+      presentationUrl: "https://docs.google.com/presentation/d/1onvDxSr1s9KvMpTF5jA_qau3Oal_3ouwIG6uWMrJrZ8/embed", // Replace with actual URL
+    },
+    {
+      number: 8,
+      title: "Responsible AI",
+      presentationUrl: "https://docs.google.com/presentation/d/1NN3-Z6pIzq3oRcsI6omkCrhZtmK_CZF5TOuKvHrFoBo/embed", // Replace with actual URL
+    },
+  ]
+
   return (
-    <div className="container mx-auto py-8">
-      <h1 className="text-4xl font-bold mb-8">Learn About AI</h1>
-
-      {/* 5th and 6th Grade Section */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold mb-4">
-          Foundation - 5th and 6th Grade
-        </h2>
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Module 1 - Introduction to GenAI</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative w-full pt-[62.5%]">
-                <iframe
-                  src="https://docs.google.com/presentation/d/1S-DLOpotisKQT2a_3S9Gkw17j-bSYVVO4Ud8Ck8LJuA/embed"
-                  className="absolute top-0 left-0 w-full h-full border-0"
-                  allowFullScreen
-                />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Module 2 - How AI Works</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative w-full pt-[62.5%]">
-                <iframe
-                  src="https://docs.google.com/presentation/d/14yDGMl5R8riNqN9EjVLPnLJLLPB03FfG7HqroR_67No/embed"
-                  className="absolute top-0 left-0 w-full h-full border-0"
-                  allowFullScreen
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="max-w-[1400px] mx-auto py-8 px-12">
+      <div className="flex items-center gap-1 mb-8 ml-[-46px]" >
+        <Link
+          href="/dashboard"
+          className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          <span className="sr-only">Back to Dashboard</span>
+        </Link>
+        <h1 className="text-3xl font-bold pr-20">Learn AI</h1>
       </div>
 
-      <Separator className="my-8" />
-
-      {/* 7th to 10th Grade Section */}
       <div className="mb-8">
-        <div className="grid gap-6 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Module 3 - How GenAI Works</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative w-full pt-[62.5%]">
-                <iframe
-                  src="https://docs.google.com/presentation/d/1ldpxa1xQAJtmg8BjEIMMNYBx5BEcUShj/embed"
-                  className="absolute top-0 left-0 w-full h-full border-0"
-                  allowFullScreen
-                />
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader>
-              <CardTitle>Module 4</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="relative w-full pt-[62.5%]">
-                <iframe
-                  src="https://docs.google.com/presentation/d/18OccPFdHNal_MHPhH86J4qi9FaKQR1rifzC7Vryy4Hs/embed"
-                  className="absolute top-0 left-0 w-full h-full border-0"
-                  allowFullScreen
-                />
-              </div>
-            </CardContent>
-          </Card>
+        <h2 className="text-xl font-semibold mb-6">Foundation Courses</h2>
+        <div className="grid gap-x-7 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 max-w-[1200px]">
+          {modules.map((module) => (
+            <Card key={module.number} className="overflow-hidden">
+              <CardContent className="p-2 pb-5">
+                <div className="relative w-full pt-[56.25%] bg-muted rounded-md overflow-hidden mb-4">
+                  <iframe
+                    src={module.presentationUrl}
+                    className="absolute top-0 left-0 w-full h-full border-0"
+                    allowFullScreen
+                  />
+                </div>
+                <h3 className="font-bold text-m mb-2 ml-2">Module - {module.number}</h3>
+                <p className="text-sm text-muted-foreground ml-2">{module.title}</p>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
-      <h2 className="text-2xl font-semibold mb-4">
-        Foundation - 7th to 10th Grade
-      </h2>
     </div>
-  );
+  )
 }
+

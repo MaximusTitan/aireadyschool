@@ -245,6 +245,16 @@ const ToolsPage = () => {
         description: "Code in various languages",
         route: "/tools/code-playground",
       },
+      {
+        title: "Canvas",
+        description: "Generate using Canvas",
+        route: "/canvas",
+      },
+      {
+        title: "Science Tutor",
+        description: "Learn Science concepts",
+        route: "/tools/learn-science",
+      },
     ],
     Teacher: [
       {
@@ -321,6 +331,11 @@ const ToolsPage = () => {
         description: "Create presentations",
         route: "/tools/presentation",
         isHot: true,
+      },
+      {
+        title: "Canvas",
+        description: "Generate using Canvas",
+        route: "/canvas",
       },
     ],
     School: [

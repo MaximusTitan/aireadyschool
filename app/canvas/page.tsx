@@ -12,6 +12,7 @@ import ReactFlow, {
 import Image from "next/image";
 import "reactflow/dist/style.css";
 import { useState, useEffect } from "react";
+import { Download, Copy, Check } from "lucide-react";
 import {
   TextInputNode,
   TextOutputNode,
@@ -21,6 +22,23 @@ import {
 const ImageNode = ({ data }: { data: any }) => {
   const [isImageLoading, setIsImageLoading] = useState(true);
   const [isZoomed, setIsZoomed] = useState(false);
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(data.imageUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `generated-image-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+    }
+  };
 
   return (
     <div className="group p-4 border-2 border-purple-100 rounded-xl bg-white shadow-lg hover:shadow-xl transition-all">
@@ -63,7 +81,14 @@ const ImageNode = ({ data }: { data: any }) => {
           onClick={() => setIsZoomed(!isZoomed)}
         />
         {!isImageLoading && (
-          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+            <button
+              onClick={handleDownload}
+              className="bg-black/50 text-white p-2 rounded-full backdrop-blur-sm hover:bg-black/70 transition-all"
+              title="Download image"
+            >
+              <Download size={14} />
+            </button>
             <div className="bg-black/50 text-white text-xs px-3 py-1 rounded-full backdrop-blur-sm">
               512 × 512
             </div>
@@ -91,11 +116,32 @@ const ImageNode = ({ data }: { data: any }) => {
 
 // Custom Text Node
 const TextNode = ({ data }: { data: any }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(data.label);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
     <div className="p-4 border-2 border-emerald-100 rounded-xl bg-white shadow-lg hover:shadow-xl transition-shadow max-w-[300px]">
-      <div className="flex items-center gap-2 mb-3">
-        <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
-        <h3 className="text-sm font-medium text-emerald-700">AI Response</h3>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <span className="w-2 h-2 bg-emerald-500 rounded-full"></span>
+          <h3 className="text-sm font-medium text-emerald-700">AI Response</h3>
+        </div>
+        <button
+          onClick={handleCopy}
+          className={`p-1.5 rounded-md transition-all ${
+            copied
+              ? "bg-emerald-100 text-emerald-600"
+              : "hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+          }`}
+          title={copied ? "Copied!" : "Copy to clipboard"}
+        >
+          {copied ? <Check size={14} /> : <Copy size={14} />}
+        </button>
       </div>
       <div className="text-gray-700 leading-relaxed whitespace-pre-wrap text-[15px]">
         {data.label}
@@ -104,123 +150,15 @@ const TextNode = ({ data }: { data: any }) => {
   );
 };
 
-// Custom Input Node
-const InputNode = ({ data }: { data: any }) => {
-  return (
-    <div className="p-6 border-2 border-blue-100 rounded-xl bg-white shadow-lg min-w-[350px] hover:border-blue-200 transition-colors">
-      <h3 className="text-xl font-semibold mb-4 text-gray-800 flex items-center gap-2">
-        <span className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></span>
-        AI Assistant
-      </h3>
-      <div className="mb-4">
-        <select
-          value={data.mode}
-          onChange={(e) => data.setMode(e.target.value)}
-          className="w-full p-3 border-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors focus:outline-none focus:border-blue-500"
-        >
-          <option value="text">Generate Text</option>
-          <option value="image">Generate Image</option>
-        </select>
-      </div>
-      <form onSubmit={data.onSubmit} className="flex flex-col gap-4">
-        <input
-          type="text"
-          value={data.inputValue}
-          onChange={(e) => data.setInputValue(e.target.value)}
-          className="border-2 p-4 rounded-lg focus:outline-none focus:border-blue-500 transition-colors bg-gray-50"
-          placeholder={
-            data.mode === "text"
-              ? "Ask me anything..."
-              : "Describe the image you want to create..."
-          }
-        />
-        <button
-          type="submit"
-          className={`bg-blue-500 text-white p-4 rounded-lg font-medium transition-all
-            ${
-              !data.inputValue || data.isLoading
-                ? "opacity-50 cursor-not-allowed"
-                : "hover:bg-blue-600 active:scale-98 hover:shadow-md"
-            }`}
-          disabled={!data.inputValue || data.isLoading}
-        >
-          {data.isLoading ? (
-            <span className="flex items-center justify-center gap-3">
-              <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                  fill="none"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                />
-              </svg>
-              Generating...
-            </span>
-          ) : (
-            `Create ${data.mode === "text" ? "Response" : "Image"}`
-          )}
-        </button>
-      </form>
-    </div>
-  );
-};
-
 const nodeTypes = {
-  inputNode: InputNode,
   imageNode: ImageNode,
   textNode: TextNode,
   textInputNode: TextInputNode,
   textOutputNode: TextOutputNode,
 };
 
-const initialNodes: Node[] = [
-  {
-    id: "text-input",
-    position: { x: 100, y: 100 },
-    type: "textInputNode",
-    data: {
-      input: "",
-      operation: "summarize",
-      loading: false,
-      setInput: () => {},
-      setOperation: () => {},
-      processText: () => {},
-    },
-  },
-  {
-    id: "text-output",
-    position: { x: 600, y: 100 },
-    type: "textOutputNode",
-    data: {
-      output: "",
-    },
-  },
-  {
-    id: "1",
-    position: { x: 100, y: 400 },
-    data: { label: "Input Node" },
-    type: "inputNode",
-  },
-];
-
-const initialEdges: Edge[] = [
-  {
-    id: "text-edge",
-    source: "text-input",
-    target: "text-output",
-    type: "smoothstep",
-    animated: true,
-    style: { stroke: "#94a3b8", strokeWidth: 2 },
-  },
-];
+const initialNodes: Node[] = [];
+const initialEdges: Edge[] = [];
 
 export default function CanvasPage() {
   const [inputValue, setInputValue] = useState("");
@@ -270,7 +208,7 @@ export default function CanvasPage() {
           type: "textNode",
         };
 
-        addNodeAndEdge(newNode);
+        setNodes((nodes) => [...nodes, newNode]);
       } else {
         const response = await fetch("/api/image", {
           method: "POST",
@@ -295,7 +233,7 @@ export default function CanvasPage() {
           type: "imageNode",
         };
 
-        addNodeAndEdge(newNode);
+        setNodes((nodes) => [...nodes, newNode]);
       }
 
       setInputValue("");
@@ -329,67 +267,71 @@ export default function CanvasPage() {
     }
   };
 
-  const addNodeAndEdge = (newNode: Node) => {
-    const newEdge: Edge = {
-      id: `e1-${newNode.id}`,
-      source: "1",
-      target: newNode.id,
-      type: "smoothstep",
-      animated: true,
-      style: { stroke: "#94a3b8", strokeWidth: 2 },
-    };
+  useEffect(() => {
+    setNodes((nodes) => {
+      // Remove existing text processing nodes
+      const filteredNodes = nodes.filter(
+        (node) => !["text-input", "text-output"].includes(node.id)
+      );
 
-    setNodes((prevNodes) => [...prevNodes, newNode]);
-    setEdges((prevEdges) => [...prevEdges, newEdge]);
-  };
+      if (mode === "text") {
+        // Add text input node
+        const textInputNode = {
+          id: "text-input",
+          position: { x: 100, y: 100 },
+          type: "textInputNode",
+          data: {
+            input: textInput,
+            operation: textOperation,
+            loading: textLoading,
+            setInput: setTextInput,
+            setOperation: setTextOperation,
+            processText,
+            targetLanguage,
+            setTargetLanguage,
+          },
+        };
+        filteredNodes.push(textInputNode);
 
-  const nodesWithUpdatedData = nodes.map((node) => {
-    if (node.id === "1") {
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          inputValue,
-          setInputValue,
-          onSubmit: handleSubmit,
-          isLoading,
-          mode,
-          setMode,
-        },
-      };
-    }
-    if (node.id === "text-input") {
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          input: textInput,
-          operation: textOperation,
-          loading: textLoading,
-          setInput: setTextInput,
-          setOperation: setTextOperation,
-          processText,
-          targetLanguage,
-          setTargetLanguage,
-        },
-      };
-    }
-    if (node.id === "text-output") {
-      return {
-        ...node,
-        data: {
-          ...node.data,
-          output: textOutput,
-        },
-      };
-    }
-    return node;
-  });
+        // Add text output node only if there's output
+        if (textOutput) {
+          const textOutputNode = {
+            id: "text-output",
+            position: { x: 600, y: 100 },
+            type: "textOutputNode",
+            data: {
+              output: textOutput,
+            },
+          };
+          filteredNodes.push(textOutputNode);
+
+          // Add edge between input and output nodes
+          setEdges([
+            {
+              id: "text-edge",
+              source: "text-input",
+              target: "text-output",
+              type: "smoothstep",
+              animated: true,
+              style: { stroke: "#94a3b8", strokeWidth: 2 },
+            },
+          ]);
+        } else {
+          setEdges([]);
+        }
+      }
+
+      return filteredNodes;
+    });
+  }, [mode, textOutput, textInput, textOperation, textLoading, targetLanguage]);
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }} className="bg-gray-50">
+    <div
+      style={{ width: "100vw", height: "100vh" }}
+      className="bg-gradient-to-br from-gray-50 to-gray-100"
+    >
       <ReactFlow
-        nodes={nodesWithUpdatedData}
+        nodes={nodes}
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
@@ -401,32 +343,49 @@ export default function CanvasPage() {
           style: { stroke: "#94a3b8", strokeWidth: 2 },
         }}
         connectOnClick={false}
+        className="transition-all"
+        minZoom={0.5}
+        maxZoom={1.5}
+        defaultViewport={{ x: 0, y: 0, zoom: 1 }}
       >
-        <Background gap={12} size={1} color="#e2e8f0" />
-        <Controls showInteractive={false} />
-        <MiniMap className="bg-white rounded-lg border-2 border-gray-200" />
+        <Background gap={12} size={1} color="#e2e8f0" className="opacity-50" />
+        <Controls
+          showInteractive={false}
+          className="bg-white/80 backdrop-blur-sm"
+        />
+        <MiniMap
+          className="bg-white/80 backdrop-blur-sm rounded-lg border-2 border-gray-200"
+          maskColor="rgb(0, 0, 0, 0.1)"
+          nodeColor={(node) => {
+            if (node.type === "imageNode") return "#9333ea";
+            if (node.type === "textNode") return "#059669";
+            return "#3b82f6";
+          }}
+        />
       </ReactFlow>
 
       {/* Floating Prompt Bar */}
       <div className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[800px] max-w-[90vw]">
         <form onSubmit={handleSubmit} className="flex gap-2">
-          <div className="flex-1 bg-white rounded-xl shadow-lg border border-gray-200">
+          <div className="flex-1 bg-white/80 backdrop-blur-sm rounded-xl shadow-lg border border-gray-200 hover:border-blue-300 transition-all">
             <div className="flex items-center px-4">
               <select
                 value={mode}
                 onChange={(e) => setMode(e.target.value as "text" | "image")}
-                className="py-3 pr-2 bg-transparent border-r border-gray-200 focus:outline-none text-gray-600"
+                className="py-3 pr-2 bg-transparent border-r border-gray-200 focus:outline-none text-gray-600 cursor-pointer hover:text-blue-600 transition-colors"
               >
-                <option value="text">Text</option>
-                <option value="image">Image</option>
+                <option value="text">💬 Text</option>
+                <option value="image">🎨 Image</option>
               </select>
               <input
                 type="text"
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                className="flex-1 p-3 bg-transparent focus:outline-none"
+                className="flex-1 p-3 bg-transparent focus:outline-none placeholder:text-gray-400"
                 placeholder={
-                  mode === "text" ? "Ask anything..." : "Describe an image..."
+                  mode === "text"
+                    ? "Ask anything... (Press '/' to focus)"
+                    : "Describe an image... (Press '/' to focus)"
                 }
               />
             </div>
@@ -434,9 +393,13 @@ export default function CanvasPage() {
           <button
             type="submit"
             disabled={!inputValue || isLoading}
-            className={`px-6 rounded-xl font-medium shadow-lg
-              ${isLoading ? "bg-gray-400" : "bg-blue-500 hover:bg-blue-600"}
-              text-white transition-all`}
+            className={`px-6 rounded-xl font-medium shadow-lg transition-all transform active:scale-95
+              ${
+                isLoading
+                  ? "bg-gray-400"
+                  : "bg-blue-500 hover:bg-blue-600 hover:shadow-blue-200/50 hover:shadow-xl"
+              }
+              text-white`}
           >
             {isLoading ? (
               <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">

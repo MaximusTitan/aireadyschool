@@ -4,12 +4,26 @@ import { useChat } from "ai/react";
 import { SendIcon } from "lucide-react";
 import { MathProblem } from "./components/math-problem";
 import { QuizCard } from "./components/quiz-card";
-import { useEffect, useRef } from "react"; // Add this import
+import { useEffect, useRef, useState } from "react";
+
+const AVAILABLE_COMMANDS = [
+  {
+    command: "@math",
+    description: "Generate math problems",
+    examples: ["@math easy addition", "@math medium multiplication"],
+  },
+  {
+    command: "@quiz",
+    description: "Create interactive quizzes",
+    examples: ["@quiz science easy", "@quiz history medium"],
+  },
+];
 
 export default function Page() {
   const { messages, input, setInput, handleSubmit, append, isLoading } =
     useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showCommands, setShowCommands] = useState(false);
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
@@ -40,41 +54,87 @@ export default function Page() {
     await append(userMessage);
   };
 
+  const handleDirectCommand = async (command: string) => {
+    const parts = command.slice(1).split(" "); // Remove @ and split
+    const toolName = parts[0].toLowerCase();
+
+    if (toolName === "math") {
+      const level = parts[1] || "easy";
+      const topic = parts[2] || "addition";
+
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `Generate a ${level} ${topic} math problem`,
+        toolCalls: [
+          {
+            tool: "generateMathProblem",
+            parameters: { level, topic },
+          },
+        ],
+      };
+      await append(userMessage);
+    } else if (toolName === "quiz") {
+      const subject = parts[1] || "general";
+      const difficulty = parts[2] || "easy";
+
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `Generate a ${difficulty} quiz about ${subject}`,
+        toolCalls: [
+          {
+            tool: "generateQuiz",
+            parameters: { subject, difficulty },
+          },
+        ],
+      };
+      await append(userMessage);
+    }
+  };
+
+  const handleFormSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (input.startsWith("@")) {
+      await handleDirectCommand(input);
+      setInput("");
+    } else {
+      handleSubmit(e);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInput(value);
+    setShowCommands(value.startsWith("@") && !value.includes(" "));
+  };
+
   return (
-    <div className="max-w-8xl mx-auto p-4 flex flex-col min-h-[100vh] bg-gradient-to-b from-white to-neutral-50">
-      <header className="text-center py-8">
-        <h1 className="text-3xl font-bold text-neutral-800 mb-2">
-          Learning Buddy
-        </h1>
-        <p className="text-sm text-neutral-500 max-w-md mx-auto">
-          Ask questions and practice with interactive math problems and quizzes
-        </p>
+    <div className="max-w-4xl mx-auto p-4 flex flex-col min-h-[100vh]">
+      <header className="py-4">
+        <h1 className="text-lg font-medium text-neutral-800">Learning Buddy</h1>
       </header>
 
-      <main className="flex-1 overflow-hidden flex flex-col gap-4">
-        <div className="flex-1 overflow-y-auto space-y-4 pb-6 scroll-smooth">
+      <main className="flex-1 overflow-hidden flex flex-col gap-2">
+        <div className="flex-1 overflow-y-auto space-y-2 pb-4">
           {messages.map((message) => (
             <div
               key={message.id}
-              className={`flex animate-fade-in ${
+              className={`flex ${
                 message.role === "user" ? "justify-end" : "justify-start"
               }`}
             >
               <div
                 className={`
-                  max-w-[85%] rounded-2xl p-4 shadow-sm
-                  transition-all duration-200
+                  max-w-[85%] rounded-lg px-3 py-2
                   ${
                     message.role === "user"
                       ? "bg-neutral-800 text-white"
-                      : "bg-white hover:shadow-md"
+                      : "bg-neutral-100"
                   }
                 `}
               >
-                <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                  {message.content}
-                </div>
-
+                <div className="text-sm">{message.content}</div>
                 {message.toolInvocations?.map((toolInvocation) => {
                   const { toolName, toolCallId, state } = toolInvocation;
 
@@ -120,23 +180,43 @@ export default function Page() {
           <div ref={messagesEndRef} />
         </div>
 
-        <form onSubmit={handleSubmit} className="sticky bottom-0">
-          <div className="flex gap-2 bg-white p-3 rounded-2xl shadow-lg">
+        <form onSubmit={handleFormSubmit} className="sticky bottom-0">
+          <div className="relative flex gap-2">
             <input
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask a question..."
-              className="flex-1 p-3 rounded-xl bg-neutral-50 focus:outline-none focus:ring-2 focus:ring-neutral-300 text-neutral-600 transition-all"
+              onChange={handleInputChange}
+              placeholder="Message..."
+              className="flex-1 p-2 rounded-lg bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-300"
               disabled={isLoading}
             />
             <button
               type="submit"
               disabled={isLoading || !input.trim()}
-              className="p-3 bg-neutral-800 text-white rounded-xl hover:bg-neutral-900 disabled:opacity-50 transition-all"
+              className="p-2 bg-neutral-800 text-white rounded-lg disabled:opacity-50"
             >
-              <SendIcon className="w-5 h-5" />
+              <SendIcon className="w-4 h-4" />
             </button>
+
+            {showCommands && (
+              <div className="absolute bottom-full left-0 w-full mb-1 bg-white rounded-lg shadow-sm border border-neutral-200">
+                {AVAILABLE_COMMANDS.map((cmd) => (
+                  <button
+                    key={cmd.command}
+                    className="w-full p-2 text-left hover:bg-neutral-50 text-sm"
+                    onClick={() => {
+                      setInput(cmd.command + " ");
+                      setShowCommands(false);
+                    }}
+                  >
+                    <span className="font-medium">{cmd.command}</span>
+                    <span className="text-neutral-500 ml-2">
+                      {cmd.description}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </form>
       </main>

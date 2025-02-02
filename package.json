@@ -11,6 +11,8 @@
     "@anthropic-ai/sdk": "^0.36.3",
     "@fal-ai/client": "^1.0.2",
     "@fal-ai/serverless-client": "^0.15.0",
+    "@ffmpeg/core": "0.8.5",
+    "@ffmpeg/ffmpeg": "0.9.7",
     "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.10.0",
     "@humeai/voice-react": "^0.1.19",

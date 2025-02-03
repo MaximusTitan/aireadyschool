@@ -27,7 +27,8 @@ export default function ClientLayout({
     pathname.startsWith("/learn-ai") ||
     pathname.startsWith("/payment") ||
     pathname.startsWith("/canvas") ||
-    pathname.startsWith("/rooms");
+    pathname.startsWith("/rooms") ||
+    pathname.startsWith("/document-vault");
 
   return (
     <SidebarProvider>

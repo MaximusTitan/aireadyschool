@@ -40,6 +40,7 @@ import {
   BrainCircuit,
   SquareTerminal,
   PlugIcon as Plugin,
+  Folder,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -88,7 +89,16 @@ export function AppSidebar() {
 
       ...(userRole === "Admin"
         ? [
-            { title: "Schools", url: "/schools", icon: BookOpen },
+          { 
+            title: "Document Vault", 
+            url: "/document-vault", 
+            icon: Folder 
+            },
+            { 
+              title: "Schools", 
+              url: "/schools", 
+              icon: BookOpen 
+            },
             {
               title: "Connect Database",
               url: "/connect-database",

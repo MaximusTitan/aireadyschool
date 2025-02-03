@@ -27,16 +27,12 @@ const nextConfig = {
         hostname: "v3.fal.media",
         pathname: "/files/**",
       },
+      {
+        protocol: "https",
+        hostname: "docs.google.com",
+        pathname: "/**",
+      },
     ],
-  },
-  webpack: (config, { isServer }) => {
-    config.resolve.fallback = {
-      ...config.resolve.fallback,
-      fs: false,
-      path: false,
-      crypto: false,
-    };
-    return config;
   },
   async headers() {
     return [
@@ -44,26 +40,8 @@ const nextConfig = {
         source: "/:path*",
         headers: [
           {
-            key: "Cross-Origin-Embedder-Policy",
-            value: "credentialless", // Changed from require-corp to credentialless
-          },
-          {
-            key: "Cross-Origin-Opener-Policy",
-            value: "same-origin",
-          },
-          {
-            key: "Cross-Origin-Resource-Policy",
-            value: "same-site",
-          },
-        ],
-      },
-      {
-        // Add specific headers for API routes
-        source: "/api/:path*",
-        headers: [
-          {
-            key: "Cross-Origin-Resource-Policy",
-            value: "cross-origin",
+            key: "Access-Control-Allow-Origin",
+            value: "*",
           },
         ],
       },

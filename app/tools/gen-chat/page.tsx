@@ -295,7 +295,7 @@ export default function Page() {
                                   <img
                                     src={generatedImages[toolCallId].url}
                                     alt={prompt}
-                                    className="w-full rounded-lg"
+                                    className="max-w-96 rounded-lg"
                                   />
                                   <div className="text-xs text-neutral-500">
                                     Credits remaining:{" "}

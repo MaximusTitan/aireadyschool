@@ -252,7 +252,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-100 to-purple-100 flex flex-col justify-between">
+    <div className="min-h-screen bg-white flex flex-col justify-between">
       <Header />
       <main className="container mx-auto px-4 py-8 flex-grow bg-white">
         <div className="bg-white rounded-lg border p-6 md:p-8 max-w-5xl mx-auto">

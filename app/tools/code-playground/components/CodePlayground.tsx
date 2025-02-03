@@ -12,27 +12,12 @@ const languageMap: { [key: string]: string } = {
   Rust: "rust",
 };
 
-const defaultCode = {
-  JavaScript: `console.log("Hello, World!");`,
-  Python: `print("Hello, World!")`,
-  Java: `public class Main {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}`,
-  Rust: `fn main() {
-    println!("Hello, World!");
-}`,
-};
-
 interface CodePlaygroundProps {
   language: string;
 }
 
 export default function CodePlayground({ language }: CodePlaygroundProps) {
-  const [code, setCode] = useState(
-    defaultCode[language as keyof typeof defaultCode] || ""
-  );
+  const [code, setCode] = useState("");
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -88,10 +73,6 @@ export default function CodePlayground({ language }: CodePlaygroundProps) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [handleKeyDown]);
 
-  useEffect(() => {
-    setCode(defaultCode[language as keyof typeof defaultCode] || "");
-  }, [language]);
-
   const copyCode = async () => {
     await navigator.clipboard.writeText(code);
   };
@@ -115,7 +96,7 @@ export default function CodePlayground({ language }: CodePlaygroundProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="relative">
+        <div className="relative h-[400px]">
           <CodeEditor code={code} setCode={setCode} language={language} />
           <div className="absolute bottom-4 right-4 text-xs text-muted-foreground">
             Press Ctrl+Enter to run

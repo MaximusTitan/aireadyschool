@@ -6,6 +6,7 @@ type QuizCardProps = {
   options: string[];
   correctAnswer: string;
   explanation?: string;
+  difficulty?: string;
   onAnswer?: (isCorrect: boolean) => void;
 };
 
@@ -15,6 +16,7 @@ export const QuizCard = ({
   options,
   correctAnswer,
   explanation,
+  difficulty,
   onAnswer,
 }: QuizCardProps) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -29,6 +31,20 @@ export const QuizCard = ({
 
   return (
     <div className="border rounded-lg p-3 space-y-2 bg-white/50">
+      <div className="flex justify-between items-center mb-2">
+        <div className="text-xs text-neutral-500 capitalize">{topic}</div>
+        {difficulty && (
+          <div
+            className={`text-xs px-2 py-1 rounded-full ${
+              difficulty === "easy"
+                ? "bg-green-100 text-green-700"
+                : "bg-orange-100 text-orange-700"
+            }`}
+          >
+            {difficulty}
+          </div>
+        )}
+      </div>
       <div className="text-sm font-medium">{question}</div>
 
       <div className="space-y-1">

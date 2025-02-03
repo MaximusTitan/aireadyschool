@@ -17,6 +17,11 @@ const AVAILABLE_COMMANDS = [
     description: "Create interactive quizzes",
     examples: ["@quiz science easy", "@quiz history medium"],
   },
+  {
+    command: "@image",
+    description: "Generate educational images",
+    examples: ["@image solar system realistic", "@image cell structure vector"],
+  },
 ];
 
 export default function Page() {
@@ -24,6 +29,13 @@ export default function Page() {
     useChat();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showCommands, setShowCommands] = useState(false);
+  // Add a Set to track pending image requests
+  const [pendingImageRequests] = useState(() => new Set<string>());
+  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
+  const [completedImages] = useState(() => new Set<string>());
+  const [generatedImages, setGeneratedImages] = useState<
+    Record<string, { url: string; credits: number }>
+  >({});
 
   // Auto scroll to bottom on new messages
   useEffect(() => {
@@ -90,6 +102,29 @@ export default function Page() {
         ],
       };
       await append(userMessage);
+    } else if (toolName === "image") {
+      const prompt = parts.slice(1, -1).join(" ");
+      const style = parts[parts.length - 1] || "realistic_image";
+
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `Generate an educational image about: ${prompt}`,
+        toolCalls: [
+          {
+            tool: "generateImage",
+            parameters: {
+              prompt,
+              style,
+              imageSize: "landscape_4_3",
+              numInferenceSteps: 1,
+              numImages: 1,
+              enableSafetyChecker: true,
+            },
+          },
+        ],
+      };
+      await append(userMessage);
     }
   };
 
@@ -109,10 +144,70 @@ export default function Page() {
     setShowCommands(value.startsWith("@") && !value.includes(" "));
   };
 
+  // Add function to handle image generation
+  const handleImageGeneration = async (
+    toolCallId: string,
+    params: {
+      prompt: string;
+      style: string;
+      imageSize: string;
+      numInferenceSteps: number;
+      numImages: number;
+      enableSafetyChecker: boolean;
+    }
+  ) => {
+    // Check if this request is already pending or completed
+    if (
+      pendingImageRequests.has(toolCallId) ||
+      completedImages.has(toolCallId)
+    ) {
+      return;
+    }
+
+    // Add to pending requests
+    pendingImageRequests.add(toolCallId);
+
+    try {
+      const response = await fetch("/api/generate-recraft", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(params),
+      });
+      const data = await response.json();
+
+      // Remove from pending and mark as completed
+      pendingImageRequests.delete(toolCallId);
+      completedImages.add(toolCallId);
+
+      if (data.images?.[0]) {
+        setGeneratedImages((prev) => ({
+          ...prev,
+          [toolCallId]: {
+            url: data.images[0].url,
+            credits: data.remainingCredits,
+          },
+        }));
+        setRemainingCredits(data.remainingCredits);
+      }
+    } catch (error) {
+      console.error("Image generation failed:", error);
+      pendingImageRequests.delete(toolCallId);
+      setGeneratedImages((prev) => ({
+        ...prev,
+        [toolCallId]: { url: "error", credits: remainingCredits || 0 },
+      }));
+    }
+  };
+
   return (
     <div className="max-w-4xl mx-auto p-4 flex flex-col min-h-[100vh]">
-      <header className="py-4">
+      <header className="py-4 flex justify-between items-center">
         <h1 className="text-lg font-medium text-neutral-800">Learning Buddy</h1>
+        {remainingCredits !== null && (
+          <div className="text-sm text-neutral-500">
+            Credits: {remainingCredits}
+          </div>
+        )}
       </header>
 
       <main className="flex-1 overflow-hidden flex flex-col gap-2">
@@ -163,6 +258,60 @@ export default function Page() {
                               })
                             }
                           />
+                        </div>
+                      );
+                    } else if (
+                      toolName === "generateImage" &&
+                      toolInvocation.result.pending
+                    ) {
+                      const { prompt, style, imageSize } =
+                        toolInvocation.result;
+
+                      // Only trigger image generation if not already pending or completed
+                      if (
+                        !pendingImageRequests.has(toolCallId) &&
+                        !completedImages.has(toolCallId)
+                      ) {
+                        handleImageGeneration(toolCallId, {
+                          prompt,
+                          style,
+                          imageSize,
+                          numInferenceSteps: 1,
+                          numImages: 1,
+                          enableSafetyChecker: true,
+                        });
+                      }
+
+                      return (
+                        <div key={toolCallId} className="mt-3">
+                          <div className="space-y-2">
+                            {generatedImages[toolCallId] ? (
+                              generatedImages[toolCallId].url === "error" ? (
+                                <div className="text-sm text-red-500">
+                                  Failed to generate image. Please try again.
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <img
+                                    src={generatedImages[toolCallId].url}
+                                    alt={prompt}
+                                    className="w-full rounded-lg"
+                                  />
+                                  <div className="text-xs text-neutral-500">
+                                    Credits remaining:{" "}
+                                    {generatedImages[toolCallId].credits}
+                                  </div>
+                                </div>
+                              )
+                            ) : (
+                              <div className="animate-pulse">
+                                <div className="h-48 bg-neutral-100 rounded" />
+                                <div className="text-xs text-neutral-500 mt-2">
+                                  Generating image...
+                                </div>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     }

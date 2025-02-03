@@ -78,7 +78,7 @@ const ImageGeneratorPage = () => {
     num_inference_steps: 4,
     num_images: 1,
     enable_safety_checker: true,
-    style: "enhance", // Add default style
+    style: "realistic_image",
   });
 
   const { toast } = useToast();

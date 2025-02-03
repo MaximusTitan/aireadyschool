@@ -23,6 +23,6 @@
       "@/*": ["./*"]
     }
   },
-  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/tools/video-story/components/ExportVideoTab.jsx"],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts", "app/tools/video-story/components/ExportVideoTab.jsx", "app/api/proxy-video/route.js", "app/tools/video-story/context/FFmpegContext.jsx"],
   "exclude": ["node_modules"]
 }

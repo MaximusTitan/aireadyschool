@@ -31,7 +31,7 @@ export default function CodeEditor({
   }
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="border rounded-md overflow-hidden h-full">
       <Editor
         value={code}
         onValueChange={setCode}
@@ -49,6 +49,7 @@ export default function CodeEditor({
           fontSize: 14,
           backgroundColor: "#2d2d2d",
           color: "#ccc",
+          height: "100%",
         }}
         textareaClassName="focus:outline-none"
       />

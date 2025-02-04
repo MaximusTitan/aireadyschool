@@ -26,7 +26,9 @@ const AVAILABLE_COMMANDS = [
 
 export default function Page() {
   const { messages, input, setInput, handleSubmit, append, isLoading } =
-    useChat();
+    useChat({
+      api: "/api/gen-chat",
+    });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showCommands, setShowCommands] = useState(false);
   // Add a Set to track pending image requests

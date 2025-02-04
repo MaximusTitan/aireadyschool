@@ -136,4 +136,43 @@ export async function GET(req: Request) {
     }
   }
   
-  
+  // Handle DELETE request
+export async function DELETE(req: NextRequest) {
+  try {
+    const supabase = await createClient();
+    
+    // Parse the request body to get file/folder details
+    const { fileName, type, filePath } = await req.json();
+    
+    if (!fileName || !filePath) {
+      return NextResponse.json({ error: "File name and path are required" }, { status: 400 });
+    }
+
+    // Delete from Supabase Storage
+    const { error: storageError } = await supabase.storage
+      .from("document-vault")
+      .remove([filePath]);
+
+    if (storageError) {
+      console.error("Error deleting file from storage:", storageError.message);
+      return NextResponse.json({ error: "Failed to delete file from storage" }, { status: 500 });
+    }
+
+    // Delete from Supabase Database
+    const { error: dbError } = await supabase
+      .from("document-vault")
+      .delete()
+      .eq("file_name", fileName)
+      .eq("file_path", filePath);
+
+    if (dbError) {
+      console.error("Error deleting record from database:", dbError.message);
+      return NextResponse.json({ error: "Failed to delete record from database" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error("Error handling delete request:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}

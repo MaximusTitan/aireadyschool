@@ -85,9 +85,32 @@ export default function DocumentVaultContent() {
     }
   };
 
+  // In your DocumentVaultContent component:
+const handleDelete = async (fileName: string, type: "file" | "folder", filePath: string) => {
+  if (confirm(`Are you sure you want to delete ${fileName}?`)) {
+    try {
+      // Send the DELETE request to the backend
+      const response = await fetch("/api/document-vault", {
+        method: "DELETE",
+        body: JSON.stringify({ fileName, type, filePath }),
+        headers: { "Content-Type": "application/json" },
+      });
+
+      if (!response.ok) throw new Error("Failed to delete item");
+
+      // Remove the item from the state after successful deletion
+      setItems((prevItems) => prevItems.filter((item) => item.file_name !== fileName));
+
+      console.log(`${fileName} deleted successfully`);
+    } catch (error) {
+      console.error("Error deleting item:", error);
+    }
+  }
+};
+
   return (
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
-      <h2 className="text-lg font-bold mb-4">Contents of "{folderName}"</h2>
+      <h2 className="text-lg font-bold mb-4">{folderName}</h2>
 
       {/* Display uploaded files and folders */}
       <ul className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
@@ -109,6 +132,13 @@ export default function DocumentVaultContent() {
                   </a>
                 </>
               )}
+              <Button
+                size="sm"
+                className="ml-4"
+                onClick={() => handleDelete(item.file_name, item.type, item.file_path)}
+              >
+                Delete
+              </Button>
             </li>
           ))
         ) : (

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, AlertCircle, Download, Send, Edit } from "lucide-react";
@@ -98,6 +99,20 @@ export function ResearchAssistant({
     if (savedTitle) {
       setPersistentTitle(savedTitle);
     }
+  }, []);
+
+  useEffect(() => {
+    const fetchUserEmail = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email) {
+        setEmail(user.email);
+      }
+    };
+
+    fetchUserEmail();
   }, []);
 
   useEffect(() => {
@@ -449,21 +464,6 @@ export function ResearchAssistant({
                     className="flex flex-col gap-3 w-2/3 mx-auto mb-4"
                   >
                     <label
-                      htmlFor="email"
-                      className="text-sm font-medium text-gray-700 mb-1"
-                    >
-                      Email
-                    </label>
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Your email"
-                      className="w-full text-sm text-left transition-all focus:ring-2 focus:ring-blue-500 rounded-md border-gray-300 shadow-sm"
-                      required
-                    />
-                    <label
                       htmlFor="wordLimit"
                       className="text-sm font-medium text-gray-700 mb-1"
                     >
@@ -639,7 +639,11 @@ export function ResearchAssistant({
                                               ? ""
                                               : "noopener noreferrer"
                                           }
-                                          className={`${isCitation ? "text-blue-600 no-underline" : "text-blue-600 underline"} hover:text-blue-800 cursor-pointer transition-all`}
+                                          className={`${
+                                            isCitation
+                                              ? "text-blue-600 no-underline"
+                                              : "text-blue-600 underline"
+                                          } hover:text-blue-800 cursor-pointer transition-all`}
                                         >
                                           {children}
                                         </a>
@@ -787,21 +791,6 @@ export function ResearchAssistant({
                   onSubmit={handleSubmit}
                   className="flex flex-col gap-3 w-2/3 mx-auto mb-4"
                 >
-                  <label
-                    htmlFor="email"
-                    className="text-sm font-medium text-gray-700 mb-1"
-                  >
-                    Email
-                  </label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="Your email"
-                    className="w-full text-sm text-left transition-all focus:ring-2 focus:ring-blue-500 rounded-md border-gray-300 shadow-sm"
-                    required
-                  />
                   <label
                     htmlFor="wordLimit"
                     className="text-sm font-medium text-gray-700 mb-1"

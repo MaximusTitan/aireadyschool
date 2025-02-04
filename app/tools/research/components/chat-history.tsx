@@ -4,11 +4,9 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
-import { createClient } from "@/utils/supabase/client"; // Added
-
-const supabase = createClient(); // Added
 
 interface ChatSession {
   id: string;
@@ -22,22 +20,7 @@ export function ChatHistory() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user && user.email) {
-        setUserEmail(user.email);
-        fetchChatHistory(user.email); // Fetch history on load
-      } else {
-        setError("User not authenticated");
-      }
-    };
-    fetchUser();
-  }, []);
+  const [email, setEmail] = useState("");
 
   const fetchChatHistory = async (email: string) => {
     setLoading(true);
@@ -59,12 +42,33 @@ export function ChatHistory() {
     }
   };
 
-  return (
-    <Card className="w-full max-w-2xl p-4">
-      <CardContent className="p-4">
-        {error && <p className="text-gray-500 mb-4">{error}</p>}
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (email) {
+      fetchChatHistory(email);
+    }
+  };
 
-        <ScrollArea className="h-[60vh] p-4 bg-gray-50 rounded-lg">
+  return (
+    <Card className="w-full max-w-2xl">
+      <CardContent className="p-4">
+        <form onSubmit={handleSubmit} className="mb-4">
+          <div className="flex space-x-2">
+            <Input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email..."
+              required
+              className="flex-grow"
+            />
+            <Button type="submit">Fetch History</Button>
+          </div>
+        </form>
+
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+
+        <ScrollArea className="h-[60vh] prose prose-sm max-w-none">
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-6 w-6 animate-spin" />
@@ -73,24 +77,24 @@ export function ChatHistory() {
             sessions.map((session) => (
               <div
                 key={session.id}
-                className="mb-6 p-4 border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                className="mb-6 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
               >
-                <p className="font-bold text-sm text-gray-700">
+                <p className="font-bold text-sm text-muted-foreground">
                   {new Date(session.timestamp).toLocaleString()}
                 </p>
-                <p className="mt-2 font-semibold text-gray-800">Prompt:</p>
-                <p className="mt-1 text-gray-700">{session.prompt}</p>
-                <p className="mt-2 font-semibold text-gray-800">Response:</p>
-                <div className="mt-1 prose prose-sm max-w-none text-gray-700">
+                <p className="mt-2 font-semibold">Prompt:</p>
+                <p className="mt-1">{session.prompt}</p>
+                <p className="mt-2 font-semibold">Response:</p>
+                <div className="mt-1 prose prose-sm max-w-none">
                   <ReactMarkdown>{session.response}</ReactMarkdown>
                 </div>
               </div>
             ))
           ) : (
-            <p className="text-center text-gray-500">
-              {userEmail && !loading
+            <p className="text-center text-muted-foreground">
+              {email && !loading
                 ? "No chat history found for this email."
-                : "User email not available."}
+                : "Enter your email and click 'Fetch History' to view your chat history."}
             </p>
           )}
         </ScrollArea>

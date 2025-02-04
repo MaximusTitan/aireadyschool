@@ -1,68 +1,41 @@
-"use client";
-import Link from "next/link";
-import { ResearchAssistant } from "./components/research-assistant";
-import { Button } from "@/components/ui/button";
-import { ErrorBoundary } from "react-error-boundary";
-import { Inter } from "next/font/google";
-import { ChevronLeft } from "lucide-react";
+"use client"
 
-const inter = Inter({ subsets: ["latin"] });
+import { useState } from "react"
+import { ResearchAssistant } from "./components/research-assistant"
+import { ResearchSidebar } from "./components/research-sidebar"
+import { Inter } from "next/font/google"
+import { ErrorBoundaryWrapper } from "./components/error-boundary-wrapper"
+import { ResearchEntry } from "./types"
 
-function ErrorFallback({
-  error,
-  resetErrorBoundary,
-}: {
-  error: Error;
-  resetErrorBoundary: () => void;
-}) {
-  return (
-    <div
-      role="alert"
-      className="p-6 bg-gray-100 border border-gray-300 rounded"
-    >
-      <p className="font-bold text-gray-800">Something went wrong:</p>
-      <pre className="text-sm text-red-600 mt-2 whitespace-pre-wrap">
-        {error.message}
-      </pre>
-      {error.stack && (
-        <pre className="text-xs text-red-500 mt-2 whitespace-pre-wrap">
-          {error.stack}
-        </pre>
-      )}
-      <Button onClick={resetErrorBoundary} className="mt-4">
-        Try again
-      </Button>
-    </div>
-  );
-}
+const inter = Inter({ subsets: ["latin"] })
 
 export default function Home() {
+  const [researchContent, setResearchContent] = useState("")
+  const [selectedResearch, setSelectedResearch] = useState<ResearchEntry | undefined>(undefined)
+
+  const handleNewChat = () => {
+    setSelectedResearch(undefined)
+    setResearchContent("")
+  }
+
+  const handleSelectResearch = (research: ResearchEntry) => {
+    setSelectedResearch(research)
+    setResearchContent(research.response)
+  }
+
   return (
-    <div className={`flex flex-col min-h-screen py-4 px-6 ${inter.className}`}>
-      <h1 className="text-3xl font-bold mb-8 text-neutral-800 font-sans flex items-center">
-        <Link href="/tools" className="mr-2">
-          <ChevronLeft />
-        </Link>
-        AI Research Assistant
-      </h1>
-      <ErrorBoundary
-        FallbackComponent={ErrorFallback}
-        onReset={() => {
-          // Reset the state of your app here
-          console.log("Resetting app state");
-        }}
-        onError={(error, info) => {
-          // Log the error to an error reporting service
-          console.error("Caught an error:", error, info);
-        }}
-      >
-        <ResearchAssistant />
-      </ErrorBoundary>
-      <Link href="/tools/research/history">
-        <Button variant="outline" className="px-4 py-2 mt-8 ml-16">
-          View Chat History
-        </Button>
-      </Link>
+    <div className={`flex ${inter.className}`}>
+      <ResearchSidebar onNewChat={handleNewChat} onSelectResearch={handleSelectResearch} />
+      <div className="flex-1 p-4">
+        <ErrorBoundaryWrapper>
+          <ResearchAssistant
+            onContentUpdate={setResearchContent}
+            initialResearch={selectedResearch}
+            onNewResearch={handleNewChat}
+          />
+        </ErrorBoundaryWrapper>
+      </div>
     </div>
-  );
+  )
 }
+

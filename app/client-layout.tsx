@@ -28,8 +28,8 @@ export default function ClientLayout({
     pathname.startsWith("/payment") ||
     pathname.startsWith("/canvas") ||
     pathname.startsWith("/rooms") ||
-    pathname.startsWith("/games");
-  pathname.startsWith("/document-vault");
+    pathname.startsWith("/games") ||
+    pathname.startsWith("/document-vault");
 
   return (
     <SidebarProvider>

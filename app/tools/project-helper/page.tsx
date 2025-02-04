@@ -7,33 +7,28 @@ import ResourceSuggestions from "./components/ResourceSuggestions";
 import ProblemSolver from "./components/ProblemSolver";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChevronLeft } from "lucide-react";
-import Link from "next/link";
+import type { ProjectData, ResourceData, AssistantData } from "./types";
+import { NavBar } from "./components/NavBar";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("ideation");
   const [projectData, setProjectData] = useState<ProjectData | null>(null);
-  const [resourceData, setResourceData] = useState<ResourceData | null>(null);
-  const [assistantData, setAssistantData] = useState<AssistantData | null>(
-    null
+  const [resourceData, setResourceData] = useState<ResourceData | undefined>(
+    undefined
+  );
+  const [assistantData, setAssistantData] = useState<AssistantData | undefined>(
+    undefined
   );
 
-  interface ProjectData {
-    grade: string;
-    projectDomain: string;
-    // Add other fields as needed
-  }
-
   const handleProjectDataGenerated = (data: ProjectData): void => {
-    setProjectData(data);
+    setProjectData({
+      ...data,
+      id: data.id || Date.now().toString(),
+      grade: data.grade,
+      projectDomain: data.projectDomain,
+    } as ProjectData);
     setActiveTab("planner");
   };
-
-  interface ResourceData {
-    grade: string;
-    projectDomain: string;
-    // Add other fields as needed
-  }
 
   const handleResourceGeneration = (data: ResourceData): void => {
     setResourceData({
@@ -44,17 +39,14 @@ export default function Home() {
     setActiveTab("resources");
   };
 
-  interface AssistantData {
-    grade: string;
-    projectDomain: string;
-    // Add other fields as needed
-  }
-
   const handleProjectAssistant = (data: AssistantData): void => {
     setAssistantData({
-      ...data,
+      topic: data.topic,
+      specificGoals: data.specificGoals,
+      timeAvailable: data.timeAvailable,
       grade: data.grade,
       projectDomain: data.projectDomain,
+      projectId: data.projectId || projectData?.id || null,
     });
     setActiveTab("problemSolver");
   };
@@ -93,17 +85,9 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8">
-      <div className="container mx-auto px-4">
-        <div className="flex items-center gap-2 mb-8">
-          <Link
-            href="/tools"
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-800"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Link>
-          <h1 className="text-3xl font-bold">Project Helper</h1>
-        </div>
+    <>
+      <NavBar />
+      <div className="space-y-6 mt-4">
         <Card className="w-full max-w-4xl mx-auto">
           <CardContent className="p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -122,6 +106,6 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 }

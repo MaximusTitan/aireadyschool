@@ -10,63 +10,31 @@ if (!supabaseUrl || !supabaseKey) {
 
 const supabase = createClient(supabaseUrl, supabaseKey)
 
-function formatResponseAsMarkdown(response: string): string {
-  // Split the response into sections
-  const sections = response.split('\n\n');
-  
-  // Format each section
-  const formattedSections = sections.map(section => {
-    if (section.startsWith('1. ') || section.startsWith('- ')) {
-      // It's already a list, return as is
-      return section;
-    } else if (section.match(/^[A-Z][\w\s]+:/)) {
-      // It's a heading, format as h3
-      return '### ' + section;
-    } else {
-      // It's a paragraph, return as is
-      return section;
-    }
-  });
-
-  // Join the formatted sections
-  return formattedSections.join('\n\n');
-}
-
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const email = searchParams.get('email')
-
-    if (!email) {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 })
-    }
-
     const { data, error } = await supabase
-      .from('chat_history')
-      .select(`
-        id,
-        email,
-        prompt,
-        response,
-        timestamp
-      `)
-      .eq('email', email)
-      .order('timestamp', { ascending: false })
+      .from("chat_history_new")
+      .select("id, email, prompt, response, timestamp, conversation")
+      .order("timestamp", { ascending: false })
 
     if (error) {
-      console.error('Error fetching chat history:', error)
-      return NextResponse.json({ error: 'Failed to fetch chat history' }, { status: 500 })
+      console.error("Supabase error:", error)
+      return NextResponse.json({ error: "Failed to fetch chat history", details: error }, { status: 500 })
     }
 
-    const formattedData = data.map(item => ({
-      ...item,
-      response: formatResponseAsMarkdown(item.response)
-    }));
+    if (!data) {
+      return NextResponse.json({ error: "No data returned from Supabase" }, { status: 500 })
+    }
+
+    // Ensure conversation is an array, even if it's null in the database
+    const formattedData = data.map((entry) => ({
+      ...entry,
+      conversation: Array.isArray(entry.conversation) ? entry.conversation : [],
+    }))
 
     return NextResponse.json({ chatHistory: formattedData })
   } catch (error) {
-    console.error('Unexpected error:', error)
-    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
+    console.error("Unexpected error:", error)
+    return NextResponse.json({ error: "An unexpected error occurred", details: error }, { status: 500 })
   }
 }
-

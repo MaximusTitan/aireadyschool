@@ -1,6 +1,7 @@
 "use server"
 
 import { generateText } from "ai"
+import type { Message } from "../types"
 import { openai } from "@ai-sdk/openai"
 
 const model = openai("gpt-4o")
@@ -223,14 +224,12 @@ Interactive learning resources about volcanic formations and eruptions, with vid
 Ensure each resource:
 - Has a clear, descriptive title in [brackets]
 - Has a working URL in (parentheses)
-- Do not include any resources with non-working or broken links. Double-check that all provided links function correctly
 - Includes a helpful description
 - Is appropriate for ${grade} level
 - Supports the specific learning goals`,
-      temperature: 0.9,
+      temperature: 0.7,
       maxTokens: 1000,
     })
-
 
     if (!text || typeof text !== 'string') {
       throw new Error("No response received from the AI model")
@@ -241,7 +240,6 @@ Ensure each resource:
     if (!Array.isArray(resources) || resources.length === 0) {
       throw new Error("Failed to generate resources. Please try again with different parameters.")
     }
-
 
     return resources
   } catch (error) {
@@ -277,12 +275,11 @@ Please modify the current resource suggestions based on the user's input. You ca
   }
 }
 
-export async function generateChatResponse(messages: { role: string; content: string }[]) {
-  const prompt = messages.map(m => `${m.role}: ${m.content}`).join("\n")
+export async function generateChatResponse(messages: Message[]) {
   try {
     const { text } = await generateText({
       model,
-      prompt,
+      messages: messages.map(({ role, content }) => ({ role, content })),
     })
     return text
   } catch (error) {

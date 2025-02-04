@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateProjectPlan, modifyProjectPlan } from "../actions/ai";
+import { saveText } from "../actions/database";
 import ReactMarkdown from "react-markdown";
 import PdfDownloadButton from "./PdfDownloadButton";
 import {
@@ -17,6 +18,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
+import type { ProjectPlannerProps, ProjectData, ResourceData } from "../types";
 
 function getOrdinalSuffix(num: number): string {
   const j = num % 10;
@@ -38,11 +42,6 @@ type Message = {
   content: string;
 };
 
-type ProjectPlannerProps = {
-  projectData: any;
-  onResourceGeneration: (resources: any) => void;
-};
-
 export default function ProjectPlanner({
   projectData,
   onResourceGeneration,
@@ -57,6 +56,9 @@ export default function ProjectPlanner({
   const [input, setInput] = useState("");
   const [grade, setGrade] = useState("");
   const [projectDomain, setProjectDomain] = useState("technical");
+  const [saveError, setSaveError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProjectTimeline, setEditedProjectTimeline] = useState("");
 
   useEffect(() => {
     if (projectData) {
@@ -168,6 +170,39 @@ export default function ProjectPlanner({
     });
   };
 
+  const handleSaveTimeline = async () => {
+    if (!projectTimeline) {
+      setSaveError("No project timeline to save.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const contentToSave = `# ${projectName}\n\n${projectTimeline}`;
+      const savedText = await saveText(contentToSave);
+      setSaveError("");
+      alert(`Project timeline saved successfully! ID: ${savedText.id}`);
+    } catch (error) {
+      console.error("Error saving timeline:", error);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save the project timeline. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      setProjectTimeline(editedProjectTimeline);
+    } else {
+      setEditedProjectTimeline(projectTimeline);
+    }
+    setIsEditing(!isEditing);
+  };
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -249,57 +284,82 @@ export default function ProjectPlanner({
               Generated Project Timeline:
             </h3>
             <div className="prose prose-sm max-w-none dark:prose-invert dark:bg-gray-900">
-              <ReactMarkdown
-                className="prose prose-sm max-w-none dark:prose-invert"
-                components={{
-                  h1: ({ node, ...props }) => (
-                    <h1 className="text-3xl font-bold mt-6 mb-4" {...props} />
-                  ),
-                  h2: ({ node, ...props }) => (
-                    <h2 className="text-2xl font-bold mt-4 mb-3" {...props} />
-                  ),
-                  h3: ({ node, ...props }) => (
-                    <h3 className="text-xl font-bold mt-3 mb-2" {...props} />
-                  ),
-                  ul: ({ node, ...props }) => (
-                    <ul className="list-disc pl-6 mb-4 space-y-2" {...props} />
-                  ),
-                  ol: ({ node, ...props }) => (
-                    <ol
-                      className="list-decimal pl-6 mb-4 space-y-2"
-                      {...props}
-                    />
-                  ),
-                  li: ({ node, ...props }) => (
-                    <li className="mb-1" {...props} />
-                  ),
-                  p: ({ node, ...props }) => <p className="mb-4" {...props} />,
-                  code: ({ node, ...props }) => (
-                    <code
-                      className="bg-muted px-[0.3rem] py-[0.2rem] rounded text-sm"
-                      {...props}
-                    />
-                  ),
-                  pre: ({ node, ...props }) => (
-                    <pre
-                      className="bg-muted p-4 rounded-lg overflow-x-auto"
-                      {...props}
-                    />
-                  ),
-                  strong: ({ node, ...props }) => (
-                    <strong className="font-semibold" {...props} />
-                  ),
-                  em: ({ node, ...props }) => (
-                    <em className="italic" {...props} />
-                  ),
-                }}
-              >
-                {projectTimeline}
-              </ReactMarkdown>
+              {isEditing ? (
+                <Textarea
+                  value={editedProjectTimeline}
+                  onChange={(e) => setEditedProjectTimeline(e.target.value)}
+                  className="w-full h-64 p-2 border rounded"
+                />
+              ) : (
+                <ReactMarkdown
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  components={{
+                    h1: ({ node, ...props }) => (
+                      <h1 className="text-3xl font-bold mt-6 mb-4" {...props} />
+                    ),
+                    h2: ({ node, ...props }) => (
+                      <h2 className="text-2xl font-bold mt-4 mb-3" {...props} />
+                    ),
+                    h3: ({ node, ...props }) => (
+                      <h3 className="text-xl font-bold mt-3 mb-2" {...props} />
+                    ),
+                    ul: ({ node, ...props }) => (
+                      <ul
+                        className="list-disc pl-6 mb-4 space-y-2"
+                        {...props}
+                      />
+                    ),
+                    ol: ({ node, ...props }) => (
+                      <ol
+                        className="list-decimal pl-6 mb-4 space-y-2"
+                        {...props}
+                      />
+                    ),
+                    li: ({ node, ...props }) => (
+                      <li className="mb-1" {...props} />
+                    ),
+                    p: ({ node, ...props }) => (
+                      <p className="mb-4" {...props} />
+                    ),
+                    code: ({ node, ...props }) => (
+                      <code
+                        className="bg-muted px-[0.3rem] py-[0.2rem] rounded text-sm"
+                        {...props}
+                      />
+                    ),
+                    pre: ({ node, ...props }) => (
+                      <pre
+                        className="bg-muted p-4 rounded-lg overflow-x-auto"
+                        {...props}
+                      />
+                    ),
+                    strong: ({ node, ...props }) => (
+                      <strong className="font-semibold" {...props} />
+                    ),
+                    em: ({ node, ...props }) => (
+                      <em className="italic" {...props} />
+                    ),
+                  }}
+                >
+                  {projectTimeline}
+                </ReactMarkdown>
+              )}
             </div>
-            <div className="flex justify-between mt-4">
-              <Button onClick={handleGenerateResources} className="mt-4">
-                Generate Learning Resources
+            <div className="flex justify-between items-center mt-4 space-x-2">
+              <Button
+                onClick={handleGenerateResources}
+                disabled={!projectTimeline || loading}
+              >
+                Generate Resources
+              </Button>
+              <Button
+                onClick={handleSaveTimeline}
+                disabled={!projectTimeline || loading}
+              >
+                {loading ? "Saving..." : "Save Timeline"}
+              </Button>
+              <Button onClick={handleEditToggle}>
+                {isEditing ? "Save Changes" : "Edit"}
               </Button>
               <PdfDownloadButton
                 projectName={projectName}
@@ -311,6 +371,12 @@ export default function ProjectPlanner({
             </div>
           </CardContent>
         </Card>
+      )}
+      {saveError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{saveError}</AlertDescription>
+        </Alert>
       )}
       {projectTimeline && (
         <Card className="mt-6">

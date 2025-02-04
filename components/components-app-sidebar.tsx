@@ -41,6 +41,7 @@ import {
   SquareTerminal,
   PlugIcon as Plugin,
   Folder,
+  Gamepad2,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,6 +50,7 @@ import { signOutAction } from "@/app/actions";
 import logo from "@/public/logo.png";
 import logo1 from "@/public/logo1.png";
 import { stat } from "fs";
+import { title } from "process";
 
 export function AppSidebar() {
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
@@ -86,18 +88,23 @@ export function AppSidebar() {
         url: "/learn-ai",
         icon: BrainCircuit,
       },
+      {
+        title: "Games",
+        url: "/games",
+        icon: Gamepad2,
+      },
 
       ...(userRole === "Admin"
         ? [
-          { 
-            title: "Document Vault", 
-            url: "/document-vault", 
-            icon: Folder 
+            {
+              title: "Document Vault",
+              url: "/document-vault",
+              icon: Folder,
             },
-            { 
-              title: "Schools", 
-              url: "/schools", 
-              icon: BookOpen 
+            {
+              title: "Schools",
+              url: "/schools",
+              icon: BookOpen,
             },
             {
               title: "Connect Database",

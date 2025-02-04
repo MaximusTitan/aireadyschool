@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { generateResources, modifyResources } from "../actions/ai";
-import ReactMarkdown from "react-markdown";
+import { generateResources } from "../actions/ai";
+import { saveText } from "../actions/database";
 import PdfDownloadButton from "./PdfDownloadButton";
 import {
   Select,
@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import type { Resource, ResourceData, ProjectAssistantData } from "../types";
 
 function getOrdinalSuffix(num: number): string {
   const j = num % 10;
@@ -34,34 +35,15 @@ function getOrdinalSuffix(num: number): string {
   return "th";
 }
 
-type Resource = {
-  title: string;
-  description: string;
-  url: string;
-};
-
-type ResourceData = {
-  projectName?: string;
-  projectDescription?: string;
-  duration?: string;
-  grade?: string;
-  projectDomain?: string;
-};
+interface ResourceSuggestionsProps {
+  resourceData?: ResourceData;
+  onProjectAssistant: (data: ProjectAssistantData) => void;
+}
 
 export default function ResourceSuggestions({
   resourceData,
   onProjectAssistant,
-}: {
-  resourceData: ResourceData | null;
-  onProjectAssistant: (args: {
-    topic: string;
-    specificGoals: string;
-    timeAvailable: string;
-    grade: string;
-    projectDomain: string;
-    resources: Resource[];
-  }) => void;
-}) {
+}: ResourceSuggestionsProps) {
   const [topic, setTopic] = useState("");
   const [specificGoals, setSpecificGoals] = useState("");
   const [timeAvailable, setTimeAvailable] = useState("");
@@ -71,15 +53,19 @@ export default function ResourceSuggestions({
   const [grade, setGrade] = useState("");
   const [projectDomain, setProjectDomain] = useState("technical");
   const [dataLoaded, setDataLoaded] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedResources, setEditedResources] = useState("");
 
   useEffect(() => {
-    if (!resourceData) return;
-    setTopic(resourceData.projectName || "");
-    setSpecificGoals(resourceData.projectDescription || "");
-    setTimeAvailable(resourceData.duration || "");
-    setGrade(resourceData.grade || "");
-    setProjectDomain(resourceData.projectDomain || "technical");
-    setDataLoaded(true);
+    if (resourceData) {
+      setTopic(resourceData.projectName || "");
+      setSpecificGoals(resourceData.projectDescription || "");
+      setTimeAvailable(resourceData.duration || "");
+      setGrade(resourceData.grade || "");
+      setProjectDomain(resourceData.projectDomain || "technical");
+      setDataLoaded(true);
+    }
   }, [resourceData]);
 
   useEffect(() => {
@@ -100,7 +86,7 @@ export default function ResourceSuggestions({
       );
       setDataLoaded(false);
     }
-  }, [dataLoaded]);
+  }, [dataLoaded, grade, topic, specificGoals, timeAvailable, projectDomain]);
 
   const validateInputs = () => {
     return Boolean(
@@ -160,15 +146,73 @@ export default function ResourceSuggestions({
     }
   };
 
-  const handleProjectAssistant = () => {
-    onProjectAssistant({
-      topic,
-      specificGoals,
-      timeAvailable,
-      grade,
-      projectDomain,
-      resources,
-    });
+  const handleProjectAssistant = async () => {
+    try {
+      setLoading(true);
+      setError("");
+
+      onProjectAssistant({
+        topic,
+        specificGoals,
+        timeAvailable,
+        grade,
+        projectDomain,
+        resources,
+      });
+    } catch (error) {
+      console.error("Error navigating to assistant:", error);
+      setError(
+        `Failed to navigate to assistant. Error: ${error instanceof Error ? error.message : "Unknown error"}`
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveResources = async () => {
+    if (resources.length === 0) {
+      setSaveError("No resources to save.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const contentToSave = `# ${topic} - Learning Resources\n\n${resources
+        .map(
+          (resource) =>
+            `## [${resource.title}](${resource.url})\n${resource.description}`
+        )
+        .join("\n\n")}`;
+      const savedText = await saveText(contentToSave);
+      setSaveError("");
+      alert(`Resources saved successfully! ID: ${savedText.id}`);
+    } catch (error) {
+      console.error("Error saving resources:", error);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save the resources. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      try {
+        const parsedResources = JSON.parse(editedResources);
+        setResources(parsedResources);
+      } catch (error) {
+        console.error("Error parsing edited resources:", error);
+        alert(
+          "There was an error saving your changes. Please check the format and try again."
+        );
+      }
+    } else {
+      setEditedResources(JSON.stringify(resources, null, 2));
+    }
+    setIsEditing(!isEditing);
   };
 
   return (
@@ -260,26 +304,46 @@ export default function ResourceSuggestions({
         <Card className="mt-6">
           <CardContent className="p-4">
             <h3 className="font-bold text-lg mb-4">Suggested Resources:</h3>
-            <ul className="space-y-6">
-              {resources.map((resource, index) => (
-                <li key={index} className="border-b pb-4 last:border-b-0">
-                  <a
-                    href={resource.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-lg font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                  >
-                    {resource.title}
-                  </a>
-                  <p className="mt-2 text-gray-600 dark:text-gray-300">
-                    {resource.description}
-                  </p>
-                </li>
-              ))}
-            </ul>
-            <div className="flex justify-between mt-6">
-              <Button onClick={handleProjectAssistant}>
-                Get Project Assistance
+            {isEditing ? (
+              <Textarea
+                value={editedResources}
+                onChange={(e) => setEditedResources(e.target.value)}
+                className="w-full h-64 p-2 border rounded font-mono text-sm"
+              />
+            ) : (
+              <ul className="space-y-6">
+                {resources.map((resource, index) => (
+                  <li key={index} className="border-b pb-4 last:border-b-0">
+                    <a
+                      href={resource.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-lg font-semibold text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      {resource.title}
+                    </a>
+                    <p className="mt-2 text-gray-600 dark:text-gray-300">
+                      {resource.description}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="flex justify-between items-center mt-6 space-x-2">
+              <Button
+                onClick={handleProjectAssistant}
+                disabled={loading || resources.length === 0}
+              >
+                {loading ? "Creating Project..." : "Get Assistance"}
+              </Button>
+              <Button
+                onClick={handleSaveResources}
+                disabled={resources.length === 0 || loading}
+              >
+                {loading ? "Saving..." : "Save Resources"}
+              </Button>
+              <Button onClick={handleEditToggle}>
+                {isEditing ? "Save Changes" : "Edit"}
               </Button>
               <PdfDownloadButton
                 projectName={topic}
@@ -290,7 +354,7 @@ export default function ResourceSuggestions({
                     text: resources
                       .map(
                         (resource) =>
-                          `# ${resource.title}\n${resource.description}\nURL: ${resource.url}`
+                          `## [${resource.title}](${resource.url})\n${resource.description}`
                       )
                       .join("\n\n"),
                   },
@@ -299,6 +363,12 @@ export default function ResourceSuggestions({
             </div>
           </CardContent>
         </Card>
+      )}
+      {saveError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{saveError}</AlertDescription>
+        </Alert>
       )}
     </div>
   );

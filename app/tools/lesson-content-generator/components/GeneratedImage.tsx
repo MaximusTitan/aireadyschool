@@ -1,24 +1,25 @@
-import Image from "next/image"
+"use client";
+
+import React from "react";
+import Image from "next/image";
 
 interface GeneratedImageProps {
-  imageUrl: string
+  imageUrl: string;
 }
 
 export function GeneratedImage({ imageUrl }: GeneratedImageProps) {
   return (
-    <div className="space-y-2"> <br /><br /><br />
-      <div className="rounded-lg overflow-hidden border border-gray-200">
-        <div className="relative aspect-square">
-          <Image
-            src={imageUrl || "/placeholder.svg"}
-            alt="Generated image"
-            fill
-            className="object-cover"
-            sizes="(min-width: 1024px) 400px, 100vw"
-          />
-        </div>
+    <div className="generated-image relative h-64 w-full">
+      <p className="mb-2 font-semibold"></p>
+      <div className="relative h-full w-full">
+        <Image
+          src={imageUrl || "/placeholder.svg"}
+          alt="Image"
+          fill
+          className="rounded-md object-cover"
+          priority
+        />
       </div>
     </div>
-  )
+  );
 }
-

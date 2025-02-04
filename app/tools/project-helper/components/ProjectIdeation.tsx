@@ -15,8 +15,11 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateProjectIdea, modifyProjectIdea } from "../actions/ai";
+import { saveText } from "../actions/database";
 import ReactMarkdown from "react-markdown";
 import PdfDownloadButton from "./PdfDownloadButton";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 function getOrdinalSuffix(num: number): string {
   const j = num % 10;
@@ -38,11 +41,20 @@ type Message = {
   content: string;
 };
 
+interface ProjectIdeationProps {
+  onProjectDataGenerated: (data: {
+    projectName: string;
+    projectDescription: string;
+    duration: string;
+    grade: string;
+    detailedExplanation: string;
+    projectDomain: string;
+  }) => void;
+}
+
 export default function ProjectIdeation({
   onProjectDataGenerated,
-}: {
-  onProjectDataGenerated: (data: any) => void;
-}) {
+}: ProjectIdeationProps) {
   const [subject, setSubject] = useState("");
   const [interests, setInterests] = useState("");
   const [tools, setTools] = useState("");
@@ -57,6 +69,9 @@ export default function ProjectIdeation({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [projectDomain, setProjectDomain] = useState("technical");
+  const [saveError, setSaveError] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedProjectIdea, setEditedProjectIdea] = useState("");
 
   const handleGenerateIdea = async () => {
     try {
@@ -125,6 +140,38 @@ export default function ProjectIdeation({
         projectDomain, // Add this line to include the project domain
       });
     }
+  };
+
+  const handleSaveText = async () => {
+    if (!projectIdea) {
+      setSaveError("No project idea to save.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const savedText = await saveText(projectIdea);
+      setSaveError("");
+      alert(`Project idea saved successfully! ID: ${savedText.id}`);
+    } catch (error) {
+      console.error("Error saving text:", error);
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : "Failed to save the project idea. Please try again."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditToggle = () => {
+    if (isEditing) {
+      setProjectIdea(editedProjectIdea);
+    } else {
+      setEditedProjectIdea(projectIdea);
+    }
+    setIsEditing(!isEditing);
   };
 
   return (
@@ -275,33 +322,55 @@ export default function ProjectIdeation({
         <Card className="mt-6">
           <CardContent className="p-4">
             <h3 className="font-bold text-lg mb-2">Generated Project Idea:</h3>
-            <ReactMarkdown
-              className="prose prose-sm max-w-none dark:prose-invert"
-              components={{
-                h1: ({ node, ...props }) => (
-                  <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />
-                ),
-                h2: ({ node, ...props }) => (
-                  <h2 className="text-xl font-bold mt-3 mb-2" {...props} />
-                ),
-                h3: ({ node, ...props }) => (
-                  <h3 className="text-lg font-bold mt-2 mb-1" {...props} />
-                ),
-                p: ({ node, ...props }) => <p className="mb-4" {...props} />,
-                ul: ({ node, ...props }) => (
-                  <ul className="list-disc pl-6 mb-4" {...props} />
-                ),
-                ol: ({ node, ...props }) => (
-                  <ol className="list-decimal pl-6 mb-4" {...props} />
-                ),
-                li: ({ node, ...props }) => <li className="mb-1" {...props} />,
-              }}
-            >
-              {projectIdea}
-            </ReactMarkdown>
-            <div className="flex justify-between mt-4">
-              <Button onClick={handleGeneratePlan} disabled={!projectIdea}>
-                Generate Project Timeline
+            {isEditing ? (
+              <Textarea
+                value={editedProjectIdea}
+                onChange={(e) => setEditedProjectIdea(e.target.value)}
+                className="w-full h-64 p-2 border rounded"
+              />
+            ) : (
+              <ReactMarkdown
+                className="prose prose-sm max-w-none dark:prose-invert"
+                components={{
+                  h1: ({ node, ...props }) => (
+                    <h1 className="text-2xl font-bold mt-4 mb-2" {...props} />
+                  ),
+                  h2: ({ node, ...props }) => (
+                    <h2 className="text-xl font-bold mt-3 mb-2" {...props} />
+                  ),
+                  h3: ({ node, ...props }) => (
+                    <h3 className="text-lg font-bold mt-2 mb-1" {...props} />
+                  ),
+                  p: ({ node, ...props }) => <p className="mb-4" {...props} />,
+                  ul: ({ node, ...props }) => (
+                    <ul className="list-disc pl-6 mb-4" {...props} />
+                  ),
+                  ol: ({ node, ...props }) => (
+                    <ol className="list-decimal pl-6 mb-4" {...props} />
+                  ),
+                  li: ({ node, ...props }) => (
+                    <li className="mb-1" {...props} />
+                  ),
+                }}
+              >
+                {projectIdea}
+              </ReactMarkdown>
+            )}
+            <div className="flex justify-between items-center mt-4 space-x-2">
+              <Button
+                onClick={handleGeneratePlan}
+                disabled={!projectIdea || loading}
+              >
+                Generate Timeline
+              </Button>
+              <Button
+                onClick={handleSaveText}
+                disabled={!projectIdea || loading}
+              >
+                {loading ? "Saving..." : "Save Idea"}
+              </Button>
+              <Button onClick={handleEditToggle}>
+                {isEditing ? "Save Changes" : "Edit"}
               </Button>
               <PdfDownloadButton
                 projectName={projectIdea.split("\n")[0].replace(/^#\s*/, "")}
@@ -310,6 +379,12 @@ export default function ProjectIdeation({
             </div>
           </CardContent>
         </Card>
+      )}
+      {saveError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{saveError}</AlertDescription>
+        </Alert>
       )}
       {projectIdea && (
         <Card className="mt-6">

@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardContent,
 } from "@/components/ui/card";
 
 interface ContentBlockProps {
@@ -20,12 +21,12 @@ export function ContentBlock({
   children,
 }: ContentBlockProps) {
   return (
-    <Card className="content-block">
-      <CardHeader className="flex justify-center">
+    <Card className="overflow-hidden">
+      <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      {children}
+      <CardContent>{children}</CardContent>
     </Card>
   );
 }

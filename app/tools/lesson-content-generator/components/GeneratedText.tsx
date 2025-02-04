@@ -33,7 +33,7 @@ const Heading2: React.FC<HeadingProps> = ({ children, ...props }) => (
 
 const Heading3: React.FC<HeadingProps> = ({ children, ...props }) => (
   <h3
-    className="text-lg font-semibold leading-none tracking-tight mb-2 flex justify-center"
+    className="text-lg font-semibold leading-none tracking-tight mb-2"
     {...props}
   >
     {children}
@@ -84,7 +84,7 @@ const ListItem: React.FC<ListItemProps> = ({ children, ...props }) => (
 
 export function GeneratedText({ text }: GeneratedTextProps) {
   return (
-    <CardContent className="generated-text mt-4 bg-secondary rounded-md overflow-auto max-h-[70vh] p-4">
+    <CardContent className="generated-text mt-4 bg-secondary rounded-md overflow-auto max-h-[70vh]">
       <ReactMarkdown
         components={{
           h1: Heading1,

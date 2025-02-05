@@ -5,6 +5,7 @@ import pptxgen from "pptxgenjs";
 interface Slide {
   title: string;
   content: string[];
+  imageUrl?: string;
 }
 
 export default function PresentationTest() {
@@ -25,8 +26,33 @@ export default function PresentationTest() {
       });
       const data = await response.json();
       const parsedSlides = JSON.parse(data.answer);
-      setSlides(parsedSlides);
-      setEditedSlides(parsedSlides);
+
+      // Generate images for each slide
+      const slidesWithImages = await Promise.all(
+        parsedSlides.map(async (slide: Slide) => {
+          try {
+            const imageResponse = await fetch("/api/generate-fal-image", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                prompt: `${slide.title}: ${slide.content.join(", ")}`,
+              }),
+            });
+            const imageData = await imageResponse.json();
+            if (imageData.error) {
+              console.error("Image generation error:", imageData.error);
+              return { ...slide, imageUrl: undefined };
+            }
+            return { ...slide, imageUrl: imageData.result };
+          } catch (error) {
+            console.error("Error generating image for slide:", error);
+            return { ...slide, imageUrl: undefined };
+          }
+        })
+      );
+
+      setSlides(slidesWithImages);
+      setEditedSlides(slidesWithImages);
     } catch (error) {
       console.error("Error generating presentation:", error);
     }
@@ -92,12 +118,23 @@ export default function PresentationTest() {
         color: "363636",
       });
 
-      // Add content
+      // Add image if available
+      if (slide.imageUrl) {
+        pptSlide.addImage({
+          path: slide.imageUrl,
+          x: 0.5,
+          y: 1.5,
+          w: 4,
+          h: 3,
+        });
+      }
+
+      // Add content with adjusted positioning
       slide.content.forEach((point, idx) => {
         pptSlide.addText(point, {
-          x: 0.7,
+          x: 5,
           y: 1.5 + idx * 0.5,
-          w: "85%",
+          w: "45%",
           fontSize: 18,
           bullet: true,
           color: "666666",
@@ -178,12 +215,30 @@ export default function PresentationTest() {
                       + Add Bullet Point
                     </button>
                   </ul>
+                  {editedSlides[currentSlide].imageUrl && (
+                    <div className="mt-4">
+                      <img
+                        src={editedSlides[currentSlide].imageUrl}
+                        alt={editedSlides[currentSlide].title}
+                        className="max-w-full h-auto rounded-lg shadow-md"
+                      />
+                    </div>
+                  )}
                 </>
               ) : (
                 <>
                   <h2 className="text-2xl font-bold mb-4 text-gray-800 border-b pb-2">
                     {editedSlides[currentSlide].title}
                   </h2>
+                  {editedSlides[currentSlide].imageUrl && (
+                    <div className="mb-4">
+                      <img
+                        src={editedSlides[currentSlide].imageUrl}
+                        alt={editedSlides[currentSlide].title}
+                        className="max-w-full h-auto rounded-lg shadow-md"
+                      />
+                    </div>
+                  )}
                   <ul className="space-y-3 pl-6">
                     {editedSlides[currentSlide].content.map((point, i) => (
                       <li key={i} className="text-gray-700 text-lg list-disc">

@@ -35,9 +35,16 @@ Ensure the JSON is valid and does not include any extra text.`;
     let mindMap;
     try {
       mindMap = JSON.parse(text.trim());
+      // Validate the structure
+      if (!mindMap.nodes || !Array.isArray(mindMap.nodes) || mindMap.nodes.length === 0) {
+        throw new Error('Invalid mind map structure');
+      }
     } catch (error) {
-      // Fallback in case parsing fails
-      mindMap = { nodes: [], links: [] };
+      // Fallback with a basic structure
+      mindMap = {
+        nodes: [{ id: 'root', label: topic }],
+        links: []
+      };
     }
 
     return Response.json({ mindMap });

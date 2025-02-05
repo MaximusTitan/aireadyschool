@@ -215,9 +215,25 @@ export const imageGeneratorTool = createTool({
   },
 });
 
+export const conceptVisualizer = createTool({
+  description: "Generate an interactive, kid-friendly simulation for a concept in a given subject",
+  parameters: z.object({
+    subject: z.string().describe("The subject area of the concept"),
+    concept: z.string().describe("The specific concept to visualize"),
+  }),
+  execute: async ({ subject, concept }) => {
+    return {
+      subject,
+      concept,
+      pending: true,
+    };
+  },
+})
+
 export const tools = {
   generateMathProblem: mathProblemTool,
   evaluateAnswer: evaluateAnswerTool,
   generateQuiz: quizTool,
   generateImage: imageGeneratorTool,
+  conceptVisualizer: conceptVisualizer,
 };

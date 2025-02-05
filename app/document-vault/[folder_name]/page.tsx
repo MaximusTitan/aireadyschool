@@ -4,12 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Plus, Upload, Folder } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import {DropdownMenu,DropdownMenuContent,DropdownMenuItem,DropdownMenuTrigger,} from "@/components/ui/dropdown-menu";
 
 type VaultItem = {
   file_name: string;
@@ -19,19 +14,8 @@ type VaultItem = {
 
 export default function FolderView() {
   const router = useRouter();
-  const params = useParams();
-
-  const folderParam = params?.folder_name;
-  const folderSegments = Array.isArray(folderParam)
-    ? folderParam
-    : folderParam
-      ? [folderParam]
-      : [];
-  const decodedFolderName =
-    folderSegments.length > 0
-      ? decodeURIComponent(folderSegments.join("/"))
-      : "document-vault";
-
+  const { folder_name } = useParams();
+  const decodedFolderName = decodeURIComponent(folder_name as string);
   const [items, setItems] = useState<VaultItem[]>([]);
 
   // Fetch files and subfolders inside this folder
@@ -87,42 +71,22 @@ export default function FolderView() {
   const handleNewFolder = async () => {
     const folderName = prompt("Enter new folder name:");
     if (!folderName) return;
-    if (folderName.includes("/")) {
-      alert("Folder names cannot contain slashes");
-      return;
+  
+    const parentFolder = decodedFolderName !== "document-vault" ? decodedFolderName : ""; // Extract parent folder
+  
+    const response = await fetch(`/api/document-vault`, {
+      method: "PUT",
+      body: JSON.stringify({ folderName, parentFolder }), // Send separate values
+      headers: { "Content-Type": "application/json" },
+    });
+  
+    if (response.ok) {
+      console.log("Folder created successfully!");
+      fetchItems(); // Refresh file list
+    } else {
+      console.error("Folder creation failed");
     }
-
-    const parentFolder =
-      decodedFolderName !== "document-vault" ? decodedFolderName : ""; // Extract parent folder
-    try {
-      const response = await fetch(`/api/document-vault`, {
-        method: "PUT",
-        body: JSON.stringify({ folderName, parentFolder }), // Send separate values
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) throw new Error("Failed to create folder");
-      await fetchItems(); // Refresh file list
-    } catch (error) {
-      console.error("Error creating folder:", error);
-    }
-  };
-
-  const handleNavigate = (path: string) => {
-    const formattedPath = path.replace(/\s+/g, "-");
-    router.push(`/document-vault/${encodeURIComponent(formattedPath)}`);
-  };
-
-  const handleGoBack = () => {
-    const pathSegments = decodedFolderName.split("/");
-    pathSegments.pop();
-    const parentPath = pathSegments.join("/").replace(/\s+/g, "-");;
-    router.push(
-      parentPath
-        ? `/document-vault/${encodeURIComponent(parentPath)}/`
-        : "document-vault",
-    );
-  };
+  }; 
 
   const handleDelete = async (fileName: string, type: "file" | "folder", filePath: string) => {
     if (confirm(`Are you sure you want to delete ${fileName}?`)) {
@@ -148,6 +112,7 @@ export default function FolderView() {
 
   return (
     <div className="p-4">
+      
       <h2 className="text-lg font-bold mb-4">
         {decodedFolderName}
       </h2>
@@ -163,22 +128,14 @@ export default function FolderView() {
               {item.type === "folder" ? (
                 <>
                   <Folder className="h-4 w-4 mr-2 text-blue-500" />
-                  <button
-                    onClick={() => handleNavigate(item.file_path)}
-                    className="text-blue-500 font-semibold hover:underline"
-                  >
+                  <button onClick={() => router.push(`/document-vault/${encodeURIComponent(item.file_name)}`)} className="text-blue-500 font-semibold">
                     {item.file_name}
                   </button>
                 </>
               ) : (
                 <>
                   <Upload className="h-4 w-4 mr-2 text-green-500" />
-                  <a
-                    href={item.file_path}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-500 hover:underline"
-                  >
+                  <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
                     {item.file_name}
                   </a>
                 </>
@@ -193,9 +150,7 @@ export default function FolderView() {
             </li>
           ))
         ) : (
-          <p className="text-gray-500 dark:text-gray-400 py-4">
-            No files or folders found.
-          </p>
+          <p>No files or folders found.</p>
         )}
       </ul>
 
@@ -219,9 +174,9 @@ export default function FolderView() {
               New Folder
             </DropdownMenuItem>
             {decodedFolderName !== "document-vault" && (
-              <DropdownMenuItem onSelect={handleGoBack}>
-                Go Back
-              </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => router.back()} className="cursor-pointer">
+              Go Back
+            </DropdownMenuItem>
             )}
           </DropdownMenuContent>
         </DropdownMenu>

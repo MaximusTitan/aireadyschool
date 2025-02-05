@@ -1,166 +1,233 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { Plus, Upload, Folder } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react"
+import { Plus, Upload, Folder, Trash2, Grid, List } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import { usePathname } from "next/navigation"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
+import { Card, CardContent } from "@/components/ui/card"
+
+type VaultItem = {
+  file_name: string
+  file_path: string
+  type: "file" | "folder"
+}
 
 export default function DocumentVaultContent() {
-  const [fileData, setFileData] = useState<{ length: number; url: string } | null>(null);
-  const [items, setItems] = useState<{ file_name: string; file_path: string; type: "file" | "folder" }[]>([]);
-  const [newFolderName, setNewFolderName] = useState("");
-  const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false);
-  const pathname = usePathname(); // Get current URL
+  const [fileData, setFileData] = useState<{ length: number; url: string } | null>(null)
+  const [items, setItems] = useState<VaultItem[]>([])
+  const [newFolderName, setNewFolderName] = useState("")
+  const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false)
+  const [viewType, setViewType] = useState<"list" | "grid">("list")
+  const pathname = usePathname()
 
-  // Extract folder name from pathname
-  const folderName = pathname.split("/").pop() || "";
+  const folderName = pathname.split("/").pop() || ""
 
-  // Fetch files and folders when component mounts
   useEffect(() => {
     async function fetchItems() {
       try {
-        const response = await fetch(`/api/document-vault?folder_name=document-vault`);
-        if (!response.ok) throw new Error("Failed to fetch files");
+        const response = await fetch(`/api/document-vault?folder_name=document-vault`)
+        if (!response.ok) throw new Error("Failed to fetch files")
 
-        const data = await response.json();
-        setItems(data.files); // Store fetched files and folders
+        const data = await response.json()
+        setItems(data.files)
       } catch (error) {
-        console.error("Error fetching files:", error);
+        console.error("Error fetching files:", error)
       }
     }
 
-    fetchItems();
-  }, [folderName]);
+    fetchItems()
+  }, [])
 
   const handleFileUpload = async () => {
-    const input = document.createElement("input");
-    input.type = "file";
-    input.accept = "*/*";
+    const input = document.createElement("input")
+    input.type = "file"
+    input.accept = "*/*"
     input.onchange = async (event: Event) => {
-      const target = event.target as HTMLInputElement;
+      const target = event.target as HTMLInputElement
       if (target.files && target.files.length > 0) {
-        const file = target.files[0];
-        const formData = new FormData();
-        formData.append("file", file);
+        const file = target.files[0]
+        const formData = new FormData()
+        formData.append("file", file)
 
         try {
           const response = await fetch("/api/document-vault", {
             method: "POST",
             body: formData,
-          });
+          })
 
-          if (!response.ok) throw new Error("Failed to upload file");
+          if (!response.ok) throw new Error("Failed to upload file")
 
-          const data = await response.json();
-          setFileData(data); // Store file data
-          setItems((prevItems) => [...prevItems, { file_name: file.name, file_path: data.url, type: "file" }]); // Add file to list
+          const data = await response.json()
+          setFileData(data)
+          setItems((prevItems) => [...prevItems, { file_name: file.name, file_path: data.url, type: "file" }])
         } catch (error) {
-          console.error("Error uploading file:", error);
+          console.error("Error uploading file:", error)
         }
       }
-    };
-    input.click();
-  };
+    }
+    input.click()
+  }
 
   const handleNewFolder = async () => {
-    if (!newFolderName.trim()) return;
+    if (!newFolderName.trim()) return
 
     try {
       const response = await fetch("/api/document-vault", {
         method: "PUT",
         body: JSON.stringify({ folderName: newFolderName }),
         headers: { "Content-Type": "application/json" },
-      });
+      })
 
-      if (!response.ok) throw new Error("Failed to create folder");
+      if (!response.ok) throw new Error("Failed to create folder")
 
-      setIsFolderDialogOpen(false);
-      setItems((prevItems) => [...prevItems, { file_name: newFolderName, file_path: `/${newFolderName}`, type: "folder" }]); // Add folder to list
-      setNewFolderName("");
+      setIsFolderDialogOpen(false)
+      setItems((prevItems) => [
+        ...prevItems,
+        { file_name: newFolderName, file_path: `/${newFolderName}`, type: "folder" },
+      ])
+      setNewFolderName("")
     } catch (error) {
-      console.error("Error creating folder:", error);
-    }
-  };
-
-  // In your DocumentVaultContent component:
-const handleDelete = async (fileName: string, type: "file" | "folder", filePath: string) => {
-  if (confirm(`Are you sure you want to delete ${fileName}?`)) {
-    try {
-      // Send the DELETE request to the backend
-      const response = await fetch("/api/document-vault", {
-        method: "DELETE",
-        body: JSON.stringify({ fileName, type, filePath }),
-        headers: { "Content-Type": "application/json" },
-      });
-
-      if (!response.ok) throw new Error("Failed to delete item");
-
-      // Remove the item from the state after successful deletion
-      setItems((prevItems) => prevItems.filter((item) => item.file_name !== fileName));
-
-      console.log(`${fileName} deleted successfully`);
-    } catch (error) {
-      console.error("Error deleting item:", error);
+      console.error("Error creating folder:", error)
     }
   }
-};
+
+  const handleDelete = async (fileName: string, type: "file" | "folder", filePath: string) => {
+    if (confirm(`Are you sure you want to delete ${fileName}?`)) {
+      try {
+        const response = await fetch("/api/document-vault", {
+          method: "DELETE",
+          body: JSON.stringify({ fileName, type, filePath }),
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (!response.ok) throw new Error("Failed to delete item")
+
+        setItems((prevItems) => prevItems.filter((item) => item.file_name !== fileName))
+
+        console.log(`${fileName} deleted successfully`)
+      } catch (error) {
+        console.error("Error deleting item:", error)
+      }
+    }
+  }
+
+  const GridViewItem = ({ item }: { item: VaultItem }) => (
+    <Card className="w-40 h-40 relative group">
+      <CardContent className="p-4 flex flex-col items-center justify-center h-full">
+        {item.type === "folder" ? (
+          <a
+            href={`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`}
+            className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            <Folder className="h-12 w-12 mb-2 stroke-current" />
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+          </a>
+        ) : (
+          <a
+            href={item.file_path}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
+          >
+            <Upload className="h-12 w-12 mb-2 stroke-current" />
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+          </a>
+        )}
+      </CardContent>
+      <Button
+        size="icon"
+        variant="ghost"
+        className="absolute top-1 right-1 h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900 opacity-0 group-hover:opacity-100 transition-opacity"
+        onClick={(e) => {
+          e.preventDefault()
+          e.stopPropagation()
+          handleDelete(item.file_name, item.type, item.file_path)
+        }}
+      >
+        <Trash2 className="h-4 w-4 stroke-current" />
+        <span className="sr-only">Delete {item.file_name}</span>
+      </Button>
+    </Card>
+  )
 
   return (
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
-      <h2 className="text-lg font-bold mb-4">{folderName}</h2>
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-lg font-bold">{folderName}</h2>
+        <ToggleGroup type="single" value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid")}>
+          <ToggleGroupItem value="list" aria-label="List view">
+            <List className="h-4 w-4" />
+          </ToggleGroupItem>
+          <ToggleGroupItem value="grid" aria-label="Grid view">
+            <Grid className="h-4 w-4" />
+          </ToggleGroupItem>
+        </ToggleGroup>
+      </div>
 
-      {/* Display uploaded files and folders */}
-      <ul className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
-        {items.length > 0 ? (
-          items.map((item, index) => (
-            <li key={index} className="py-2 border-b border-gray-300 dark:border-gray-700 flex items-center">
-              {item.type === "folder" ? (
-                <>
-                  <Folder className="h-4 w-4 mr-2 text-blue-500" />
-                  <a href={`/document-vault/${item.file_name}`} className="text-blue-500 font-semibold">
-                    {item.file_name}
-                  </a>
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2 text-green-500" />
-                  <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-                    {item.file_name}
-                  </a>
-                </>
-              )}
-              <Button
-                size="sm"
-                className="ml-4"
-                onClick={() => handleDelete(item.file_name, item.type, item.file_path)}
+      {viewType === "list" ? (
+        <ul className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg shadow-md">
+          {items.length > 0 ? (
+            items.map((item, index) => (
+              <li
+                key={index}
+                className="py-2 border-b border-gray-300 dark:border-gray-700 flex items-center justify-between"
               >
-                Delete
-              </Button>
-            </li>
-          ))
-        ) : (
-          <p>No files or folders found.</p>
-        )}
-      </ul>
-
-      {/* Display last uploaded file info */}
-      {fileData && (
-        <div className="p-4 mt-4 bg-gray-100 dark:bg-gray-800 rounded-lg shadow-md text-center">
-          <p>File name length: {fileData.length}</p>
-          <a href={fileData.url} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-            View File
-          </a>
+                <div className="flex items-center">
+                  {item.type === "folder" ? (
+                    <>
+                      <Folder className="h-4 w-4 mr-2 stroke-current" />
+                      <a
+                        href={`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`}
+                        className="text-blue-500 font-semibold"
+                      >
+                        {item.file_name}
+                      </a>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4 mr-2 stroke-current" />
+                      <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                        {item.file_name}
+                      </a>
+                    </>
+                  )}
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900"
+                  onClick={() => handleDelete(item.file_name, item.type, item.file_path)}
+                >
+                  <Trash2 className="h-4 w-4 stroke-current" />
+                  <span className="sr-only">Delete {item.file_name}</span>
+                </Button>
+              </li>
+            ))
+          ) : (
+            <p>No files or folders found.</p>
+          )}
+        </ul>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          {items.length > 0 ? (
+            items.map((item, index) => <GridViewItem key={index} item={item} />)
+          ) : (
+            <p>No files or folders found.</p>
+          )}
         </div>
       )}
 
-      {/* Floating Action Button with Dropdown */}
       <div className="fixed bottom-6 right-6">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="lg" className="rounded-full shadow-lg bg-white text-black hover:bg-gray-100 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700">
+            <Button
+              size="lg"
+              className="rounded-full shadow-lg bg-white text-black hover:bg-gray-100 dark:bg-neutral-800 dark:text-white dark:hover:bg-neutral-700"
+            >
               <Plus className="h-5 w-5 mr-2" />
               New
             </Button>
@@ -178,7 +245,6 @@ const handleDelete = async (fileName: string, type: "file" | "folder", filePath:
         </DropdownMenu>
       </div>
 
-      {/* New Folder Dialog */}
       <Dialog open={isFolderDialogOpen} onOpenChange={setIsFolderDialogOpen}>
         <DialogContent>
           <DialogHeader>
@@ -191,5 +257,6 @@ const handleDelete = async (fileName: string, type: "file" | "folder", filePath:
         </DialogContent>
       </Dialog>
     </div>
-  );
+  )
 }
+

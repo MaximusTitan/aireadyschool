@@ -134,7 +134,7 @@ const LandingPage = () => {
       <header className="container mx-auto px-4 pt-12 pb-16 text-center relative">
         <div className="absolute inset-0 -z-10 bg-[radial-gradient(45%_40%_at_50%_50%,rgba(255,192,203,0.1),transparent)] dark:bg-[radial-gradient(45%_40%_at_50%_50%,rgba(255,192,203,0.05),transparent)]" />
         <div className="mb-12 relative">
-          <div className="absolute -inset-1 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full blur-2xl opacity-10 dark:opacity-20" />
+          <div className="absolute -inset-1 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full blur-2xl opacity-10 dark:opacity-20" />
           <Image
             src={logo}
             alt="AI Ready School"
@@ -154,7 +154,7 @@ const LandingPage = () => {
         <div className="flex flex-col sm:flex-row justify-center gap-4 max-w-md mx-auto">
           <Button
             size="lg"
-            className="bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25 dark:shadow-pink-500/10"
+            className="bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shadow-lg shadow-rose-500/25 dark:shadow-rose-500/10"
           >
             Signup for a Demo
           </Button>
@@ -172,7 +172,7 @@ const LandingPage = () => {
       {/* Video Section */}
       <section className="container mx-auto px-4 py-16">
         <div className="aspect-video max-w-4xl mx-auto rounded-2xl overflow-hidden relative group cursor-pointer">
-          <div className="absolute inset-0 bg-gradient-to-br from-pink-500 to-purple-500 opacity-10 group-hover:opacity-20 transition-opacity" />
+          <div className="absolute inset-0 bg-gradient-to-br from-rose-500 to-orange-500 opacity-10 group-hover:opacity-20 transition-opacity" />
           <div className="absolute inset-0 bg-neutral-100 dark:bg-neutral-800 -z-10" />
           <div className="absolute inset-0 flex items-center justify-center">
             <Button
@@ -180,7 +180,7 @@ const LandingPage = () => {
               size="icon"
               className="h-20 w-20 rounded-full bg-white/90 dark:bg-white/80 hover:bg-white dark:hover:bg-white shadow-xl group-hover:scale-105 transition-transform"
             >
-              <Play className="h-10 w-10 text-pink-500" />
+              <Play className="h-10 w-10 text-rose-500" />
             </Button>
           </div>
         </div>
@@ -192,11 +192,11 @@ const LandingPage = () => {
           {roles.map((role, index) => (
             <Card
               key={role.title}
-              className="group relative overflow-hidden border-0 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-pink-500/5 transition-shadow"
+              className="group relative overflow-hidden border-0 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-rose-500/5 transition-shadow"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardContent className="p-8">
-                <h2 className="text-2xl font-semibold mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <h2 className="text-2xl font-semibold mb-6 bg-gradient-to-r from-rose-500 to-orange-500 bg-clip-text text-transparent">
                   {role.title}
                 </h2>
                 <div className="space-y-4">
@@ -227,7 +227,7 @@ const LandingPage = () => {
               key={index}
               className="flex items-center gap-4 p-4 rounded-xl bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm border border-gray-100 dark:border-neutral-800"
             >
-              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-gradient-to-br from-pink-500 to-purple-500 flex items-center justify-center">
+              <div className="flex-shrink-0 h-10 w-10 rounded-lg bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center">
                 <Check className="h-5 w-5 text-white" />
               </div>
               <span className="text-gray-600 dark:text-gray-300">
@@ -247,14 +247,14 @@ const LandingPage = () => {
           {["Starter", "Silver", "Gold"].map((tier, index) => (
             <Card
               key={tier}
-              className="relative group overflow-hidden border-0 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-pink-500/5 transition-shadow"
+              className="relative group overflow-hidden border-0 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-rose-500/5 transition-shadow"
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-orange-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <CardContent className="p-8">
-                <h3 className="text-2xl font-semibold text-center mb-6 bg-gradient-to-r from-pink-500 to-purple-500 bg-clip-text text-transparent">
+                <h3 className="text-2xl font-semibold text-center mb-6 bg-gradient-to-r from-rose-500 to-orange-500 bg-clip-text text-transparent">
                   {tier}
                 </h3>
-                <Button className="w-full bg-gradient-to-r from-pink-500 to-purple-500 hover:from-pink-600 hover:to-purple-600 text-white shadow-lg shadow-pink-500/25 dark:shadow-pink-500/10">
+                <Button className="w-full bg-gradient-to-r from-rose-500 to-orange-500 hover:from-rose-600 hover:to-orange-600 text-white shadow-lg shadow-rose-500/25 dark:shadow-rose-500/10">
                   Get Started
                 </Button>
               </CardContent>

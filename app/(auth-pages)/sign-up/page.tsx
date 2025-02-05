@@ -4,8 +4,9 @@ import { SubmitButton } from "@/components/submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
-import { PasswordInput } from "@/components/PasswordInput"; // Added import
-import Image from "next/image"; // Added import
+import { PasswordInput } from "@/components/PasswordInput";
+import Image from "next/image";
+import logo from "@/public/logo.webp";
 import {
   Select,
   SelectTrigger,
@@ -14,7 +15,7 @@ import {
   SelectGroup,
   SelectLabel,
   SelectItem,
-} from "@/components/ui/select"; // Added imports
+} from "@/components/ui/select";
 
 export default async function Signup(props: {
   searchParams: Promise<Message>;
@@ -32,36 +33,31 @@ export default async function Signup(props: {
   }
 
   return (
-    <div
-      className="min-h-screen bg-gradient-to-b from-white to-gray-50 dark:from-neutral-900 dark:to-neutral-950 flex items-center justify-center w-screen" // Added w-screen
-      style={{
-        background:
-          "radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(250,220,255,0.3) 35%, rgba(255,255,255,0.3) 100%)",
-      }}
-    >
-      <form className="w-full max-w-xl px-16 py-12 bg-white dark:bg-neutral-800 shadow-sm dark:shadow-lg rounded-lg border border-neutral-200 dark:border-neutral-700 flex flex-col">
+    <div className="min-h-screen w-screen bg-[radial-gradient(circle,rgba(255,255,255,1)_0%,rgba(255,182,193,0.3)_25%,rgba(255,255,255,1)_80%)] dark:from-neutral-900 dark:to-neutral-950 flex items-center justify-center">
+      <form className="w-full max-w-xl px-16 py-12 bg-white shadow-sm dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 flex flex-col">
         <div className="flex justify-center w-full">
           <Image
-            src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/ai-ready-school%20(1).png" // Provide the correct logo path
-            alt="AI Ready School Logo"
+            src={logo}
+            alt="AI Ready School"
             width={150}
             height={150}
-            className="mb-4"
+            className="mx-auto relative"
+            priority
           />
         </div>
-        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500 mb-4 text-left">
+        <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500 mb-4 text-left">
           Sign up
         </h1>
-        <p className="text-sm text-left text-gray-600 mb-6">
+        <p className="text-sm text-gray-600 dark:text-gray-300 mb-6 text-left">
           Already have an account?{" "}
-          <Link href="/sign-in" className="text-pink-500 font-medium underline">
+          <Link href="/sign-in" className="text-rose-600 font-medium underline">
             Sign in
           </Link>
         </p>
 
         <div className="flex flex-col gap-6">
           <div className="flex flex-col gap-1">
-            <Label htmlFor="email" className="text-gray-700">
+            <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">
               Email
             </Label>
             <Input
@@ -69,12 +65,15 @@ export default async function Signup(props: {
               type="email"
               placeholder="you@example.com"
               required
-              className="border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+              className="border-gray-300 dark:border-neutral-700 focus:border-rose-500 focus:ring-rose-500"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="password" className="text-gray-700">
+            <Label
+              htmlFor="password"
+              className="text-gray-700 dark:text-gray-300"
+            >
               Password
             </Label>
             <PasswordInput
@@ -82,16 +81,16 @@ export default async function Signup(props: {
               placeholder="Your password"
               minLength={6}
               required
-              className="border-gray-300 focus:border-pink-500 focus:ring-pink-500"
+              className="border-gray-300 dark:border-neutral-700 focus:border-rose-500 focus:ring-rose-500"
             />
           </div>
 
           <div className="flex flex-col gap-1">
-            <Label htmlFor="role" className="text-gray-700">
+            <Label htmlFor="role" className="text-gray-700 dark:text-gray-300">
               Role
             </Label>
             <Select name="role" required>
-              <SelectTrigger className="border-gray-300 focus:border-pink-500 focus:ring-pink-500 p-2 rounded-md">
+              <SelectTrigger className="border-gray-300 dark:border-neutral-700 focus:border-rose-500 focus:ring-rose-500 p-2 rounded-md">
                 <SelectValue placeholder="Select role" />
               </SelectTrigger>
               <SelectContent>
@@ -109,14 +108,14 @@ export default async function Signup(props: {
           <SubmitButton
             formAction={signUpAction}
             pendingText="Signing up..."
-            className="bg-pink-500 hover:bg-pink-600 text-white py-3 text-lg font-medium rounded-md"
+            className="bg-gradient-to-r from-rose-400 to-orange-400 hover:from-rose-500 hover:to-orange-500 text-white py-3 text-lg font-medium rounded-md shadow-lg shadow-rose-500/50"
           >
             Sign up
           </SubmitButton>
 
-          <p className="text-center text-sm text-gray-600 mt-4">
+          <p className="text-center text-sm text-gray-600 dark:text-gray-300 mt-4">
             By signing up, you agree to our{" "}
-            <Link href="/privacy-policy" className="text-pink-500 underline">
+            <Link href="/privacy-policy" className="text-rose-500 underline">
               Privacy Policy
             </Link>
             .

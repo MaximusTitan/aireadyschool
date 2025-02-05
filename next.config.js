@@ -47,6 +47,16 @@ const nextConfig = {
       },
     ];
   },
+  // Add the redirects function here
+  async redirects() {
+    return [
+      {
+        source: "/",
+        destination: "/sign-in",
+        permanent: false, // Use 'true' if the redirect is permanent
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

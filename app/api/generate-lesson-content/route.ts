@@ -21,17 +21,17 @@ function getSystemPrompt(
   grade: string,
   board: string,
 ): string {
-  const basePrompt = `You are an academic content generator focusing on the topic "${topic}" for ${subject} at grade ${grade} level, following the ${board} curriculum. `;
-  const titleInstruction = `Start your response with a concise 3-5 word title related to "${topic}", specifying "${subject}", followed by "---". `;
+  const basePrompt = `You are an academic content generator focusing on the topic ${topic} for ${subject} at grade ${grade} level, following the ${board} curriculum. `;
+  const titleInstruction = `Start your response with a simple 3-5 word title - No quotations in the title please!! related to ${topic}, specifying ${subject}, followed by "---". `;
 
   switch (contentType) {
     case "guided-notes":
       return (
         basePrompt +
         titleInstruction +
-        `\\n- An introduction
-        - \\n Detailed body sections on causes, major events, and impact
-        - \\n A conclusion
+        `\\n- A paragraphed introduction without mentioning the word "introduction"
+        - \\n One or more content paragraphs without any heading including causes, major events, and impact
+        - \\n A concluding paragraph, again, without any heading or title
       Ensure the content is factual and avoid hallucination.`
       );
     case "exemplar":
@@ -49,32 +49,32 @@ function getSystemPrompt(
         for each of 4 DOK levels. Each level should have a title describing the cognitive process required.
         Here's a more detailed template:
         DOK Level 1: Recall and Reproduction \\n
-        Title: [Insert title, e.g. "Remembering Key Terms"]
+        Title: [Insert title, e.g. "Remembering Key Terms"] \\n
          * Question 1 (insert question here) \\n
-         * Answer 1 (add a summarized response)
+         * Answer 1 (add a summarized response) \\n
          * Question 2 (insert question here) \\n
-         * Answer 2 (add a summarized response)
+         * Answer 2 (add a summarized response) \\n
 
         DOK Level 2: Skills and Concepts \\n
-        Title: [Insert Title, e.g. "Applying Basic Concepts"]
+        Title: [Insert Title, e.g. "Applying Basic Concepts"] \\n
           * Question 1 (insert question here) \\n
-          * Answer 1 (add a summarized response)
+          * Answer 1 (add a summarized response) \\n
           * Question 2 (insert question here) \\n
-          * Answer 2 (add a summarized response)
+          * Answer 2 (add a summarized response) \\n
 
         DOK Level 3: Strategic Thinking \\n
-        Title: [Insert Title, e.g. "Analyzing Relationships"]
+        Title: [Insert Title, e.g. "Analyzing Relationships"] \\n
           * Question 1 (insert question here) \\n
-          * Answer 1 (add a summarized response)
+          * Answer 1 (add a summarized response) \\n
           * Question 2 (insert question here) \\n
-          * Answer 2 (add a summarized response)
+          * Answer 2 (add a summarized response) \\n
 
         DOK Level 4: Extended Thinking \\n
-        Title: [Insert Title, e.g. "Evaluating Complex Systems"]
+        Title: [Insert Title, e.g. "Evaluating Complex Systems"] \\n
           * Question 1 (insert question here) \\n
-          * Answer 1 (add a summarized response)
+          * Answer 1 (add a summarized response) \\n
           * Question 2 (insert question here) \\n
-          * Answer 2 (add a summarized response)
+          * Answer 2 (add a summarized response) \\n
         `
       );
     case "faqs":
@@ -87,19 +87,19 @@ function getSystemPrompt(
           Here's a template:
           FAQ 1: \\n
           Question: (insert question here) \\n
-          Answer: (add a summarized response)
+          Answer: (add a summarized response) \\n
 
           FAQ 2: \\n
           Question: (insert question here) \\n
-          Answer: (add a summarized response)
+          Answer: (add a summarized response) \\n
 
           FAQ 3: \\n
           Question: (insert question here) \\n
-          Answer: (add a summarized response)
+          Answer: (add a summarized response) \\n
 
           FAQ 4: \\n
           Question: (insert question here) \\n
-          Answer: (add a summarized response)`
+          Answer: (add a summarized response) \\n`
       );
     case "worksheets":
       return (
@@ -111,28 +111,28 @@ function getSystemPrompt(
         *Section 1: Multiple Choice Questions (4 questions)* \\n
 
         1. Question: [Insert question 1] \\n
-        A) [Option A]
-        B) [Option B]
-        C) [Option C]
-        D) [Option D]
+        A) [Option A] \\n
+        B) [Option B] \\n
+        C) [Option C] \\n
+        D) [Option D] \\n
 
         2. Question: [Insert question 2] \\n
-        A) [Option A]
-        B) [Option B]
-        C) [Option C]
-        D) [Option D]
+        A) [Option A] \\n
+        B) [Option B] \\n
+        C) [Option C] \\n
+        D) [Option D] \\n
 
         3. Question: [Insert question 3] \\n
-        A) [Option A]
-        B) [Option B]
-        C) [Option C]
-        D) [Option D]
+        A) [Option A] \\n
+        B) [Option B] \\n
+        C) [Option C] \\n
+        D) [Option D] \\n
 
         4. Question: [Insert question 4] \\n
-        A) [Option A]
-        B) [Option B]
-        C) [Option C]
-        D) [Option D]
+        A) [Option A] \\n
+        B) [Option B] \\n
+        C) [Option C] \\n
+        D) [Option D] \\n
 
         *Section 2: Short Answer Questions (2 questions)* \\n
 
@@ -145,15 +145,7 @@ function getSystemPrompt(
         *Section 3: Essay Question (1 question)* \\n
 
         1. Question: [Insert question] \\n
-        Answer: ______________________________________________________
-
-        *Answer Key* \\n
-
-        1. Multiple Choice Question 1: [Insert answer] \\n
-        2. Multiple Choice Question 2: [Insert answer] \\n
-        3. Short Answer Question 1: [Insert answer] \\n
-        4. Short Answer Question 2: [Insert answer] \\n
-        5. Essay Question: [Insert answer or key points].`
+        Answer: ______________________________________________________`
       );
 
     case "case-studies":
@@ -172,9 +164,9 @@ function getSystemPrompt(
 
         *Questions:*
 
-        1. [Insert question 1]
-        2. [Insert question 2]
-        3. [Insert question 3]
+        1. [Insert question 1] \\n
+        2. [Insert question 2] \\n
+        3. [Insert question 3] \\n
 
         *Additional Information:* [Insert any additional information relevant to the case study]
 

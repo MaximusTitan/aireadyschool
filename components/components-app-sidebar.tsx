@@ -78,7 +78,7 @@ export function AppSidebar() {
     navMain: [
       { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
       {
-        title: "AI Tools",
+        title: "AI Apps",
         url: "/tools",
         icon: SquareTerminal,
         isActive: true,

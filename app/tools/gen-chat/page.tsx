@@ -13,6 +13,7 @@ import {
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MathProblem } from "./components/math-problem";
 import { QuizCard } from "./components/quiz-card";
+import { MindMapViewer } from "./components/mind-map-viewer";
 
 // Add SimulationWrapper component
 const SimulationWrapper = ({ code }: { code: string }) => {
@@ -63,6 +64,11 @@ const AVAILABLE_COMMANDS = [
     command: "@visualize",
     description: "Generate interactive visualizations",
     examples: ["@visualize physics gravity", "@visualize biology cell"],
+  },
+  {
+    command: "@mindmap",
+    description: "Generate mind maps",
+    examples: ["@mindmap machine learning", "@mindmap solar system"],
   },
 ];
 
@@ -197,6 +203,21 @@ export default function Page() {
           {
             tool: "generateVisualization",
             parameters: { subject, concept },
+          },
+        ],
+      };
+      await append(userMessage);
+    } else if (toolName === "mindmap") {
+      const topic = parts.slice(1).join(" ");
+
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `Generate a mind map about ${topic}`,
+        toolCalls: [
+          {
+            tool: "generateMindMap",
+            parameters: { topic },
           },
         ],
       };
@@ -446,6 +467,12 @@ export default function Page() {
                                 Generating visualization...
                               </div>
                             </div>
+                          </div>
+                        );
+                      } else if (toolName === "generateMindMap") {
+                        return (
+                          <div key={toolCallId} className="mt-3">
+                            <MindMapViewer data={toolInvocation.result} />
                           </div>
                         );
                       }

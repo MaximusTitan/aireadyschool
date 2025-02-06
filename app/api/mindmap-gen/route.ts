@@ -1,5 +1,6 @@
 import { openai } from '@ai-sdk/openai';
-import { generateText } from 'ai';
+import { generateObject } from 'ai';
+import { z } from 'zod';
 
 export async function POST(req: Request) {
   const { topic } = await req.json();
@@ -9,45 +10,51 @@ export async function POST(req: Request) {
     return Response.json({ error: "Topic is required." }, { status: 400 });
   }
 
-  // Updated prompt to output a JSON object with nodes and links
-  const prompt = `You are an expert mind map generator. Create a mind map for the topic "${topic}" and output your result strictly as a JSON object with the keys "nodes" and "links".
-Format:
-{
-  "nodes": [
-    { "id": "uniqueId", "label": "Node Label" },
-    ...
-  ],
-  "links": [
-    { "source": "parentNodeId", "target": "childNodeId" },
-    ...
-  ]
-}
-Ensure the JSON is valid and does not include any extra text.`;
+  // Define the mind map structure and schema
+  const mindMapSchema = z.object({
+    mindMap: z.object({
+      nodes: z.array(
+        z.object({
+          id: z.string(),
+          label: z.string(),
+        })
+      ),
+      links: z.array(
+        z.object({
+          source: z.string(),
+          target: z.string(),
+        })
+      ),
+    }),
+  });
 
   try {
-    const { text } = await generateText({
-      model: openai("gpt-4o"),
-      prompt: prompt,
-      temperature: 0.7,
-      maxTokens: 500,
-    });
+    const result = await generateObject({
+      model: openai('gpt-4o-2024-08-06', {
+        structuredOutputs: true,
+      }),
+      schemaName: 'mindMap',
+      schemaDescription: `Generate a mind map for the topic "${topic}" with nodes and links.`,
+      schema: mindMapSchema,
+      prompt: `Generate a detailed mind map for the topic "${topic}" with at least 10 nodes and relevant links. Make sure the output strictly follows this JSON structure:
 
-    let mindMap;
-    try {
-      mindMap = JSON.parse(text.trim());
-      // Validate the structure
-      if (!mindMap.nodes || !Array.isArray(mindMap.nodes) || mindMap.nodes.length === 0) {
-        throw new Error('Invalid mind map structure');
-      }
-    } catch (error) {
-      // Fallback with a basic structure
-      mindMap = {
-        nodes: [{ id: 'root', label: topic }],
-        links: []
-      };
-    }
+{
+  "mindMap": {
+    "nodes": [
+      { "id": "uniqueId", "label": "Node Label" },
+      ...
+    ],
+    "links": [
+      { "source": "parentNodeId", "target": "childNodeId" },
+      ...
+    ]
+  }
+}`,
+    temperature: 0.7,
+    maxTokens: 500,
+  });
 
-    return Response.json({ mindMap });
+    return Response.json({ mindMap: result.object.mindMap });
   } catch (err) {
     return Response.json({ error: "Failed to generate mind map." }, { status: 500 });
   }

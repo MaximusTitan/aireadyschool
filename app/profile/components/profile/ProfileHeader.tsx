@@ -174,6 +174,20 @@ export default function ProfileHeader() {
     setError(null);
 
     try {
+      // Delete old image if it exists
+      if (profilePictureUrl) {
+        const oldFilePath = profilePictureUrl.split("/").pop();
+        if (oldFilePath) {
+          const { error: deleteError } = await supabase.storage
+            .from("profile-pictures")
+            .remove([oldFilePath]);
+
+          if (deleteError) {
+            console.error("Error deleting old image:", deleteError);
+          }
+        }
+      }
+
       const fileExt = file.name.split(".").pop();
       const fileName = `${userEmail}-${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;

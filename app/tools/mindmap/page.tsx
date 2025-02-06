@@ -8,6 +8,7 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
 } from "reactflow";
+import { Info } from "lucide-react";
 import "reactflow/dist/style.css";
 
 const MindMapPage = () => {
@@ -15,6 +16,7 @@ const MindMapPage = () => {
   const [mindMapData, setMindMapData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [layout, setLayout] = useState<"circular" | "tree">("tree");
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
@@ -45,21 +47,34 @@ const MindMapPage = () => {
   };
 
   useEffect(() => {
-    if (!mindMapData) return;
+    if (!mindMapData || !mindMapData.nodes || mindMapData.nodes.length === 0)
+      return;
 
-    const centerX = 200,
-      centerY = 200,
-      baseSpacing = 150;
+    const centerX = 400,
+      centerY = 300,
+      baseSpacing = 250;
     const graph: Record<string, string[]> = {};
+
     mindMapData.nodes.forEach((node: any) => {
-      graph[node.id] = [];
-    });
-    mindMapData.links.forEach((link: any) => {
-      if (graph[link.source]) graph[link.source].push(link.target);
-      if (graph[link.target]) graph[link.target].push(link.source);
+      if (node && node.id) {
+        graph[node.id] = [];
+      }
     });
 
-    const mainNodeId = mindMapData.nodes[0].id;
+    if (mindMapData.links) {
+      mindMapData.links.forEach((link: any) => {
+        if (link && link.source && link.target) {
+          if (graph[link.source]) graph[link.source].push(link.target);
+          if (graph[link.target]) graph[link.target].push(link.source);
+        }
+      });
+    }
+
+    const firstNode = mindMapData.nodes[0];
+    if (!firstNode || !firstNode.id) return;
+
+    const mainNodeId = firstNode.id;
+
     const parentMapping: Record<string, string | null> = {};
     const levels: Record<string, number> = {};
     const queue: string[] = [];
@@ -92,7 +107,10 @@ const MindMapPage = () => {
     positions[mainNodeId] = { x: centerX, y: centerY };
     angles[mainNodeId] = 0;
 
-    const computePositions = (parentId: string, parentAngle: number | null) => {
+    const computeCircularPositions = (
+      parentId: string,
+      parentAngle: number | null
+    ) => {
       const children = childrenMapping[parentId];
       if (!children || !children.length) return;
       if (parentId === mainNodeId) {
@@ -106,10 +124,10 @@ const MindMapPage = () => {
           };
           positions[child.id] = pos;
           angles[child.id] = angle;
-          computePositions(child.id, angle);
+          computeCircularPositions(child.id, angle);
         });
       } else {
-        const gap = Math.PI / 4;
+        const gap = Math.PI / 3;
         const count = children.length;
         const startAngle = (parentAngle || 0) - (gap * (count - 1)) / 2;
         children.forEach((child, idx) => {
@@ -120,12 +138,61 @@ const MindMapPage = () => {
           };
           positions[child.id] = pos;
           angles[child.id] = angle;
-          computePositions(child.id, angle);
+          computeCircularPositions(child.id, angle);
         });
       }
     };
 
-    computePositions(mainNodeId, 0);
+    const getSubtreeWidth = (nodeId: string, level: number): number => {
+      const children = childrenMapping[nodeId] || [];
+      if (children.length === 0) return 1;
+
+      return Math.max(
+        children.length,
+        children.reduce(
+          (sum, child) => sum + getSubtreeWidth(child.id, level + 1),
+          0
+        )
+      );
+    };
+
+    const computeTreePositions = (
+      parentId: string,
+      level: number,
+      startX: number,
+      availableWidth: number
+    ) => {
+      const children = childrenMapping[parentId] || [];
+      if (!children.length) return;
+
+      const verticalSpacing = 100;
+      const horizontalSpacing = Math.min(200, availableWidth / children.length);
+
+      let currentX = startX;
+
+      children.forEach((child) => {
+        const subtreeWidth = getSubtreeWidth(child.id, level + 1);
+        const childSpace = subtreeWidth * horizontalSpacing;
+
+        const pos = {
+          x: currentX + childSpace / 2,
+          y: 50 + level * verticalSpacing,
+        };
+
+        positions[child.id] = pos;
+        computeTreePositions(child.id, level + 1, currentX, childSpace);
+
+        currentX += childSpace;
+      });
+    };
+
+    if (layout === "circular") {
+      computeCircularPositions(mainNodeId, 0);
+    } else {
+      const totalWidth = getSubtreeWidth(mainNodeId, 0) * 200;
+      positions[mainNodeId] = { x: centerX, y: 50 };
+      computeTreePositions(mainNodeId, 1, centerX - totalWidth / 2, totalWidth);
+    }
 
     const newNodes = mindMapData.nodes.map((node: any) => ({
       id: node.id,
@@ -140,53 +207,125 @@ const MindMapPage = () => {
 
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [mindMapData]);
+  }, [mindMapData, layout]);
 
   return (
-    <div className="min-h-screen p-4">
-      <h1 className="text-3xl font-bold mb-6">Mind Map Generator</h1>
-      <form
-        onSubmit={handleSubmit}
-        className="mb-4 flex flex-col sm:flex-row items-start sm:items-center"
-      >
-        <label htmlFor="topic" className="sr-only">
-          Topic
-        </label>
-        <input
-          id="topic"
-          type="text"
-          value={topic}
-          onChange={(e) => setTopic(e.target.value)}
-          placeholder="Enter a topic"
-          className="border p-2 flex-1 mb-2 sm:mb-0 sm:mr-2"
-        />
-        <button
-          type="submit"
-          disabled={loading || !topic.trim()}
-          className="bg-blue-500 text-white p-2 disabled:opacity-50 rounded"
-        >
-          {loading ? "Generating..." : "Generate Mind Map"}
-        </button>
-      </form>
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div
-        className="mindmap-container border p-4 rounded shadow min-h-[300px]"
-        style={{ height: "500px" }}
-      >
-        {mindMapData ? (
-          <ReactFlow
-            nodes={nodes}
-            edges={edges}
-            onNodesChange={onNodesChange}
-            onEdgesChange={onEdgesChange}
-          >
-            <MiniMap />
-            <Controls />
-            <Background />
-          </ReactFlow>
-        ) : (
-          <p className="text-gray-500">Your mind map will appear here.</p>
+    <div className="min-h-screen p-4 bg-white">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-4xl font-bold text-gray-900">
+            Mind Map Generator
+          </h1>
+        </div>
+
+        <div className="mb-8 bg-gray-100 p-6 rounded-lg shadow-lg">
+          <div className="flex items-start space-x-2 mb-4">
+            <Info className="text-gray-700 mt-1" size={20} />
+            <p className="text-gray-700">
+              Enter any topic and get an AI-generated mind map to help visualize
+              concepts and relationships.
+            </p>
+          </div>
+
+          <div className="flex flex-col lg:flex-row justify-between gap-4">
+            <form
+              onSubmit={handleSubmit}
+              className="flex-1 flex flex-col sm:flex-row gap-3"
+            >
+              <div className="flex-1">
+                <input
+                  id="topic"
+                  type="text"
+                  value={topic}
+                  onChange={(e) => setTopic(e.target.value)}
+                  placeholder="Enter a topic (e.g., 'Machine Learning Basics')"
+                  className="w-full px-4 py-3 rounded-lg border border-gray-300 
+                           focus:border-gray-500 focus:ring-2 focus:ring-gray-200 transition-all"
+                  disabled={loading}
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={loading || !topic.trim()}
+                className="px-6 py-3 bg-gray-200 text-gray-800 font-semibold rounded-lg 
+                         hover:bg-gray-300 disabled:opacity-50 disabled:cursor-not-allowed 
+                         transition-all duration-200 shadow-md hover:shadow-lg 
+                         flex items-center justify-center min-w-[160px]"
+              >
+                {loading ? (
+                  <div className="flex items-center gap-2">
+                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                      <circle
+                        className="opacity-25"
+                        cx="12"
+                        cy="12"
+                        r="10"
+                        stroke="currentColor"
+                        strokeWidth="4"
+                        fill="none"
+                      />
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                      />
+                    </svg>
+                    <span>Generating...</span>
+                  </div>
+                ) : (
+                  "Generate Mind Map"
+                )}
+              </button>
+            </form>
+
+            <select
+              value={layout}
+              onChange={(e) => setLayout(e.target.value as "circular" | "tree")}
+              className="px-4 py-3 rounded-lg border border-gray-300
+                       focus:border-gray-500 focus:ring-2 focus:ring-gray-200
+                       bg-white transition-all cursor-pointer"
+            >
+              <option value="tree">Tree Layout</option>
+              <option value="circular">Circular Layout</option>
+            </select>
+          </div>
+        </div>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 border-l-4 border-red-500 text-red-700">
+            <p className="font-medium">Error</p>
+            <p>{error}</p>
+          </div>
         )}
+
+        <div
+          className="mindmap-container rounded-lg shadow-xl overflow-hidden bg-white border"
+          style={{ height: "600px" }}
+        >
+          {mindMapData ? (
+            <ReactFlow
+              nodes={nodes}
+              edges={edges}
+              onNodesChange={onNodesChange}
+              onEdgesChange={onEdgesChange}
+            >
+              <MiniMap />
+              <Controls />
+              <Background />
+            </ReactFlow>
+          ) : (
+            <div className="h-full flex items-center justify-center">
+              <div className="text-center p-8">
+                <p className="text-xl mb-2 text-gray-600">
+                  Your mind map will appear here
+                </p>
+                <p className="text-sm text-gray-500">
+                  Start by entering a topic above
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

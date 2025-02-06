@@ -216,7 +216,7 @@ export default function P5Page() {
         >
           <ChevronLeft className="w-6 h-6" />
         </Link>
-        <h1 className="text-2xl font-bold">P5.js Playground</h1>
+        <h1 className="text-2xl font-bold">Creative Coding Playground</h1>
       </div>
 
       <div className="flex gap-4">

@@ -21,6 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { initSupabase } from "@/utils/supabase";
+import { categories } from "../config/toolCategories";
 
 interface ToolCardProps {
   title: string;
@@ -64,38 +65,47 @@ const ToolCard: React.FC<ToolCardProps> = ({
 
   return (
     <Card
-      className="group hover:shadow-lg hover:bg-gradient-to-br hover:from-white hover:to-rose-100/60 transition-all duration-200 cursor-pointer dark:bg-neutral-900 dark:border-neutral-800 dark:hover:from-neutral-900 dark:hover:to-rose-900/20"
+      className={`group border border-neutral-200 relative overflow-hidden hover:shadow-xl hover:scale-[1.02] hover:bg-gradient-to-br hover:from-white hover:to-rose-100/60 
+      transition-all duration-300 ease-in-out cursor-pointer 
+      dark:bg-neutral-900 dark:border-neutral-800 dark:hover:from-neutral-900 dark:hover:to-rose-900/20
+      ${isComingSoon ? "opacity-75" : ""}`}
       onClick={handleClick}
     >
-      <CardHeader className="space-y-1">
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-rose-100/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+      <CardHeader className="space-y-2">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-lg font-semibold dark:text-neutral-100">
+          <CardTitle className="text-lg font-semibold tracking-tight dark:text-neutral-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
             {title}
           </CardTitle>
           {isHot && (
-            <span className="px-2 py-1 text-xs font-semibold bg-neutral-100 text-neutral-600 rounded-full dark:bg-neutral-950 dark:text-neutral-300">
+            <span className="px-2 py-1 text-xs font-semibold bg-rose-100 text-rose-600 rounded-full dark:bg-rose-900/50 dark:text-rose-300 animate-pulse">
               HOT
             </span>
           )}
           {isComingSoon && (
-            <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full">
+            <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full dark:bg-yellow-900/50 dark:text-yellow-300">
               Coming Soon
             </span>
           )}
         </div>
-        <CardDescription className="text-sm text-neutral-500 dark:text-neutral-400">
+        <CardDescription className="text-sm text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-800 dark:group-hover:text-neutral-300 transition-colors line-clamp-2">
           {description}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex justify-end">
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-            {!isComingSoon && (
-              <button className="text-xs px-3 py-1 bg-neutral-800 text-white rounded-full hover:bg-neutral-600 transition-colors dark:bg-neutral-600 dark:hover:bg-neutral-700">
-                Try Now
+          {!isComingSoon && (
+            <div className="transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
+              <button
+                className="text-xs px-4 py-1.5 bg-neutral-800 text-white rounded-full 
+                hover:bg-rose-500 hover:shadow-lg hover:scale-105 
+                transition-all duration-300 ease-out
+                dark:bg-neutral-700 dark:hover:bg-rose-600"
+              >
+                Try Now →
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -135,268 +145,6 @@ const ToolsPage = () => {
 
     fetchUser();
   }, []);
-
-  const categories: {
-    [key: string]: {
-      title: string;
-      description: string;
-      route: string;
-      isHot?: boolean;
-      isComingSoon?: boolean;
-    }[];
-  } = {
-    Student: [
-      {
-        title: "Assessment Generator",
-        description:
-          "Create and share interactive multiple choice questions for students",
-        route: "/tools/mcq-generator",
-      },
-      {
-        title: "Evaluator",
-        description: "Evaluate student answers",
-        route: "/tools/evaluator",
-      },
-      {
-        title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
-        route: "/tools/text-tools",
-      },
-      {
-        title: "Comic Strip Generator",
-        description: "Generate comics",
-        route: "/tools/comic-generator",
-      },
-      {
-        title: "Research Assistant",
-        description: "Get help with your research",
-        route: "/tools/research",
-      },
-      {
-        title: "Project Helper",
-        description: "Get help with your projects",
-        route: "/tools/project-helper",
-      },
-      {
-        title: "Lesson Content Generator",
-        description: "Generate lesson content",
-        route: "/tools/lesson-content-generator",
-      },
-      {
-        title: "YouTube Summary",
-        description: "Generate questions and summaries from YouTube videos",
-        route: "/tools/youtube-assistant",
-      },
-      {
-        title: "Chat with Docs",
-        description:
-          "Powerful RAG-based document chat system for intelligent document interactions",
-        route: "/tools/chat-with-docs",
-        isHot: true,
-      },
-      {
-        title: "Image Generator",
-        description: "Create stunning images with Flux AI technology",
-        route: "/tools/image-generator",
-        isHot: true,
-      },
-      {
-        title: "Video Generator",
-        description: "Generate videos from images",
-        route: "/tools/video-generator",
-      },
-      {
-        title: "Presentation Generator",
-        description: "Create presentations",
-        route: "/tools/presentation",
-        isHot: true,
-      },
-      {
-        title: "Video Story Generator",
-        description: "Generate video stories from text",
-        route: "/tools/video-story-generator",
-        isComingSoon: true,
-      },
-      {
-        title: "Song Generator",
-        description: "Generate songs from lyrics",
-        route: "/tools/song-generator",
-      },
-      {
-        title: "Story Generator",
-        description: "Generate stories from prompts",
-        route: "/tools/story-generator",
-      },
-
-      {
-        title: "P5.JS",
-        description: "Code in P5.js",
-        route: "/tools/p5",
-      },
-      {
-        title: "Study Plan Generator",
-        description: "Plan your study schedule",
-        route: "/tools/study-planner",
-        isComingSoon: true,
-      },
-      {
-        title: "Code Playground",
-        description: "Code in various languages",
-        route: "/tools/code-playground",
-      },
-      {
-        title: "Canvas",
-        description: "Generate using Canvas",
-        route: "/canvas",
-      },
-      {
-        title: "Science Tutor",
-        description: "Learn Science concepts",
-        route: "/tools/learn-science",
-      },
-    ],
-    Teacher: [
-      {
-        title: "Lesson Plan Generator",
-        description: "Create lesson plans",
-        route: "/tools/lesson-planner",
-      },
-      {
-        title: "Evaluator",
-        description: "Evaluate student answers",
-        route: "/tools/evaluator",
-      },
-      {
-        title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
-        route: "/tools/text-tools",
-      },
-      {
-        title: "Teachable Machine",
-        description: "Train a machine learning model",
-        route: "/tools/teachable-machine",
-      },
-      {
-        title: "Assessment Generator",
-        description: "Create interactive assessments",
-        route: "/tools/mcq-generator",
-      },
-      {
-        title: "Personalized Learning Plan",
-        description: "Plan individualized education for students",
-        route: "/tools/plp",
-      },
-      {
-        title: "YouTube Summary",
-        description: "Video summaries and questions",
-        route: "/tools/youtube-assistant",
-      },
-      {
-        title: "Chat with Docs",
-        description: "Document chat system",
-        route: "/tools/chat-with-docs",
-        isHot: true,
-      },
-      {
-        title: "Assignment Generator",
-        description: "Generate assignments",
-        route: "/tools/assignment-generator",
-      },
-      {
-        title: "Lesson Content Generator",
-        description: "Create lesson content",
-        route: "/tools/lesson-content-generator",
-      },
-      {
-        title: "Image Generator",
-        description: "Create stunning images",
-        route: "/tools/image-generator",
-        isHot: true,
-      },
-      {
-        title: "Video Generator",
-        description: "Generate videos from images",
-        route: "/tools/video-generator",
-      },
-      {
-        title: "Video Story Generator",
-        description: "Generate video stories from text",
-        route: "/tools/video-story-generator",
-        isComingSoon: true,
-      },
-      {
-        title: "Presentation Generator",
-        description: "Create presentations",
-        route: "/tools/presentation",
-        isHot: true,
-      },
-      {
-        title: "Canvas",
-        description: "Generate using Canvas",
-        route: "/canvas",
-      },
-    ],
-    School: [
-      {
-        title: "Text Tools",
-        description:
-          "Rewrite, proofread, translate, generate questions, expand, summarize texts",
-        route: "/tools/text-tools",
-      },
-      {
-        title: "YouTube Summary",
-        description: "Video summaries and questions",
-        route: "/tools/youtube-assistant",
-      },
-      {
-        title: "Chat with Docs",
-        description: "Document chat system",
-        route: "/tools/chat-with-docs",
-        isHot: true,
-      },
-      {
-        title: "Image Generator",
-        description: "Create stunning images",
-        route: "/tools/image-generator",
-        isHot: true,
-      },
-      {
-        title: "Video Generator",
-        description: "Generate videos from images",
-        route: "/tools/video-generator",
-      },
-      {
-        title: "Video Story Generator",
-        description: "Generate video stories from text",
-        route: "/tools/video-story-generator",
-        isComingSoon: true,
-      },
-      {
-        title: "Assignment Generator",
-        description: "Generate assignments",
-        route: "/tools/assignment-generator",
-      },
-      {
-        title: "Lesson Content Generator",
-        description: "Create lesson content",
-        route: "/tools/lesson-content-generator",
-      },
-      {
-        title: "Presentation Generator",
-        description: "Create presentations",
-        route: "/tools/presentation",
-        isHot: true,
-      },
-      {
-        title: "School Intelligence",
-        description: "Get insights about your school",
-        route: "/tools/school-intelligence",
-        isComingSoon: true,
-      },
-    ],
-  };
 
   const tools =
     userRole === "Admin"
@@ -528,11 +276,11 @@ const ToolsPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[url('/background-gradient.png')] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
+    <div className="min-h-screen bg-[url('/background-opacity.png')] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
       {" "}
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-4">
         <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center">
+          <div className="flex items-center p-4">
             <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
               AI Tools
             </h1>
@@ -544,7 +292,7 @@ const ToolsPage = () => {
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-8 p-4">
           <div className="flex space-x-4">
             <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
               All Tools
@@ -564,7 +312,7 @@ const ToolsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-4">
           {filteredTools.map((tool, index) => (
             <ToolCard
               key={index}
@@ -576,91 +324,98 @@ const ToolsPage = () => {
             />
           ))}
         </div>
-        {/* Chat Bubble */}
-        <div className="fixed bottom-4 right-4 z-50">
-          <button
-            onClick={toggleChat}
-            className="bg-rose-300 hover:bg-rose-400 text-white rounded-full p-3 shadow-lg transition-colors duration-200"
-          >
-            <MessageCircle size={24} />
-          </button>
-        </div>
 
-        {/* Chat Dialog */}
-        {isChatOpen && (
-          <div className="fixed bottom-20 right-4 w-96 bg-white dark:bg-neutral-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[70vh]">
-            <div className="p-4 border-b dark:border-neutral-700 flex justify-between items-center">
-              <div className="font-semibold">Chat</div>
-              {/* Dropdown for Database Selection */}
-              <div className="flex items-center space-x-2">
-                <select
-                  value={selectedDatabase || ""}
-                  onChange={(e) => handleDatabaseSelection(e.target.value)}
-                  className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
-                >
-                  <option value="" disabled>
-                    Select Database
-                  </option>
-                  {databases.map((db, idx) => (
-                    <option key={idx} value={db}>
-                      {db}
-                    </option>
-                  ))}
-                </select>
-                {/* Plugin Icon Button */}
-                <button
-                  onClick={() => {
-                    console.log(
-                      `Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`
-                    );
-                    setIsPluginClicked(true);
-                  }}
-                  className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
-                >
-                  <Plug size={16} />
-                </button>
-              </div>
-            </div>
-            <div className="flex-grow overflow-y-auto p-4 space-y-4">
-              {messages.map((msg, index) => (
-                <div
-                  key={index}
-                  className={`p-2 rounded-lg ${
-                    msg.isUser
-                      ? "bg-neutral-100 dark:bg-neutral-700"
-                      : msg.error
-                        ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
-                        : "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-200"
-                  }`}
-                >
-                  {msg.text}
-                  {msg.error && (
-                    <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                      <p className="text-xs font-semibold mb-1">Error:</p>
-                      <pre className="text-xs overflow-x-auto">{msg.error}</pre>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            <div className="p-4 border-t dark:border-neutral-700 flex">
-              <input
-                ref={inputRef}
-                type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Type your query..."
-                className="flex-grow px-3 py-2 bg-neutral-100 dark:bg-neutral-700 rounded-l-lg focus:outline-none"
-              />
+        {/* Chat Bubble - Only show for admin */}
+        {userRole === "Admin" && (
+          <>
+            <div className="fixed bottom-4 right-4 z-50">
               <button
-                onClick={sendMessage}
-                className="bg-rose-300 hover:bg-rose-400 text-white px-4 rounded-r-lg transition-colors duration-200"
+                onClick={toggleChat}
+                className="bg-rose-300 hover:bg-rose-400 text-white rounded-full p-3 shadow-lg transition-colors duration-200"
               >
-                <Send size={20} />
+                <MessageCircle size={24} />
               </button>
             </div>
-          </div>
+
+            {/* Chat Dialog */}
+            {isChatOpen && (
+              <div className="fixed bottom-20 right-4 w-96 bg-white dark:bg-neutral-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[70vh]">
+                <div className="p-4 border-b dark:border-neutral-700 flex justify-between items-center">
+                  <div className="font-semibold">Chat</div>
+                  {/* Dropdown for Database Selection */}
+                  <div className="flex items-center space-x-2">
+                    <select
+                      value={selectedDatabase || ""}
+                      onChange={(e) => handleDatabaseSelection(e.target.value)}
+                      className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
+                    >
+                      <option value="" disabled>
+                        Select Database
+                      </option>
+                      {databases.map((db, idx) => (
+                        <option key={idx} value={db}>
+                          {db}
+                        </option>
+                      ))}
+                    </select>
+                    {/* Plugin Icon Button */}
+                    <button
+                      onClick={() => {
+                        console.log(
+                          `Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`
+                        );
+                        setIsPluginClicked(true);
+                      }}
+                      className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
+                    >
+                      <Plug size={16} />
+                    </button>
+                  </div>
+                </div>
+                <div className="flex-grow overflow-y-auto p-4 space-y-4">
+                  {messages.map((msg, index) => (
+                    <div
+                      key={index}
+                      className={`p-2 rounded-lg ${
+                        msg.isUser
+                          ? "bg-neutral-100 dark:bg-neutral-700"
+                          : msg.error
+                            ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                            : "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-200"
+                      }`}
+                    >
+                      {msg.text}
+                      {msg.error && (
+                        <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 rounded-lg">
+                          <p className="text-xs font-semibold mb-1">Error:</p>
+                          <pre className="text-xs overflow-x-auto">
+                            {msg.error}
+                          </pre>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                <div className="p-4 border-t dark:border-neutral-700 flex">
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyPress={handleKeyPress}
+                    placeholder="Type your query..."
+                    className="flex-grow px-3 py-2 bg-neutral-100 dark:bg-neutral-700 rounded-l-lg focus:outline-none"
+                  />
+                  <button
+                    onClick={sendMessage}
+                    className="bg-rose-300 hover:bg-rose-400 text-white px-4 rounded-r-lg transition-colors duration-200"
+                  >
+                    <Send size={20} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

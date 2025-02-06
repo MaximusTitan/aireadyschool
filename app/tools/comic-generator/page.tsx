@@ -2,12 +2,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
+import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 import {
   X,
-  Send,
   Maximize2,
   FileJson,
   FileText,
@@ -18,16 +18,17 @@ import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
-
-// Add this near the top with other imports
 import localFont from "next/font/local";
 
+// Initialize your custom font
 const comicNeue = localFont({
   src: "../../../public/fonts/ComicNeue-Bold.ttf",
   weight: "700",
   variable: "--font-comic",
   display: "swap",
 });
+
+const supabase = createClient();
 
 export default function ComicGenerator() {
   const router = useRouter();
@@ -42,7 +43,7 @@ export default function ComicGenerator() {
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadedImages, setLoadedImages] = useState<boolean[]>([]);
 
-  // Replace the existing useEffect with this updated version
+  // Set prompt from query string if available
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const topic = searchParams.get("topic");
@@ -51,7 +52,7 @@ export default function ComicGenerator() {
     }
   }, []);
 
-  // Add a new useEffect to handle auto-submission after prompt is set
+  // Auto-submit if a topic is provided in the URL
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const topic = searchParams.get("topic");
@@ -71,40 +72,57 @@ export default function ComicGenerator() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault?.(); // Make preventDefault optional for programmatic calls
+    e.preventDefault?.(); // Allow programmatic calls without event
     setImageData({ urls: [], descriptions: [] });
     setLoadedImages([]);
     setLoading(true);
 
     try {
+      // Generate prompts based on the input
       const promptResponse = await fetch("/api/prompt-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt }),
       });
-
       const promptData = await promptResponse.json();
       if (!promptResponse.ok) throw new Error(promptData.message);
 
+      // Generate images based on the prompts
       const imageResponse = await fetch("/api/image-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompts: promptData.prompts }),
       });
-
-      const imageData = await imageResponse.json();
-      if (!imageResponse.ok) throw new Error(imageData.message);
+      const imageGenData = await imageResponse.json();
+      if (!imageResponse.ok) throw new Error(imageGenData.message);
 
       // Pre-load all images in parallel
-      const preloadPromises: Promise<HTMLImageElement>[] =
-        imageData.imageUrls.map((url: string) => loadImage(url));
+      const preloadPromises: Promise<HTMLImageElement>[] = imageGenData.imageUrls.map(
+        (url: string) => loadImage(url)
+      );
       await Promise.all(preloadPromises);
 
+      // Save generated data to state
       setImageData({
-        urls: imageData.imageUrls,
+        urls: imageGenData.imageUrls,
         descriptions: promptData.prompts,
       });
-      setLoadedImages(new Array(imageData.imageUrls.length).fill(true));
+      setLoadedImages(new Array(imageGenData.imageUrls.length).fill(true));
+
+      // -------------------------------
+      // SUPABASE SAVE LOGIC
+      // -------------------------------
+      const { error } = await supabase.from("comics").insert([
+        {
+          prompt,
+          image_urls: imageGenData.imageUrls,
+          descriptions: promptData.prompts,
+        },
+      ]);
+      if (error) {
+        console.error("Error saving comic record:", error);
+      }
+      // -------------------------------
     } catch (error) {
       console.error("Error generating comic:", error);
     } finally {
@@ -179,7 +197,7 @@ export default function ComicGenerator() {
         "FAST"
       );
 
-      // Add description
+      // Add description text
       pdf.setFontSize(12);
       const splitText = pdf.splitTextToSize(
         imageData.descriptions[i],
@@ -339,7 +357,7 @@ export default function ComicGenerator() {
                           !loadedImages[index] && "opacity-0"
                         )}
                         sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
-                        priority={index < 2} // Prioritize loading first two images
+                        priority={index < 2}
                         onLoad={() => {
                           const newLoadedImages = [...loadedImages];
                           newLoadedImages[index] = true;

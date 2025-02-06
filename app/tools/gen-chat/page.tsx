@@ -171,7 +171,7 @@ export default function Page() {
       await append(userMessage);
     } else if (toolName === "visualize") {
       const subject = parts[1] || "physics";
-      const concept = parts.slice(2).join(" ") || "gravity";
+      const concept = parts.slice(2).join(" ") || "";
       const userMessage = {
         id: String(Date.now()),
         role: "user" as const,
@@ -247,6 +247,7 @@ export default function Page() {
             handleAnswerSubmit={handleAnswerSubmit}
             handleImageGeneration={handleImageGeneration}
             handleVisualization={handleVisualization}
+            onSimulationCode={(code: string) => setSimulationCode(code)}
           />
 
           <CommandInput

@@ -7,26 +7,20 @@ import { Bot, User } from "lucide-react";
 
 // SimulationWrapper moved here
 const SimulationWrapper = ({ code }: { code: string }) => {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.innerHTML = "";
-      const simulationDiv = document.createElement("div");
-      simulationDiv.innerHTML = code;
-      containerRef.current.appendChild(simulationDiv);
-      const scripts = simulationDiv.getElementsByTagName("script");
-      for (let i = 0; i < scripts.length; i++) {
-        const script = scripts[i];
-        const newScript = document.createElement("script");
-        newScript.text = script.text;
-        script.parentNode?.replaceChild(newScript, script);
-      }
-    }
+    if (!iframeRef.current) return;
+    const doc = iframeRef.current.contentDocument;
+    if (!doc) return;
+    doc.open();
+    doc.write(code);
+    doc.close();
   }, [code]);
+
   return (
-    <div
-      ref={containerRef}
-      className="w-full border rounded-lg p-4 bg-white shadow-md"
+    <iframe
+      ref={iframeRef}
+      style={{ width: "100%", height: "600px", border: "none" }}
     />
   );
 };
@@ -61,6 +55,7 @@ type ChatAreaProps = {
     subject: string,
     concept: string
   ) => Promise<{ code?: string }>;
+  onSimulationCode: (code: string) => void;
 };
 
 export const ChatArea = ({
@@ -74,6 +69,7 @@ export const ChatArea = ({
   handleAnswerSubmit,
   handleImageGeneration,
   handleVisualization,
+  onSimulationCode,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -206,7 +202,7 @@ export const ChatArea = ({
                             .trim();
                         }
                         simulationCodeRef.current = cleaned;
-                        // Using a setter is expected in parent for simulationCode update.
+                        onSimulationCode(cleaned);
                       }
                     });
                   }

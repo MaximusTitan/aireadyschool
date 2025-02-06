@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { usePathname } from "next/navigation"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Card, CardContent } from "@/components/ui/card"
+import { createClient } from "@/utils/supabase/client"
 
 type VaultItem = {
   file_name: string
@@ -22,6 +23,7 @@ export default function DocumentVaultContent() {
   const [newFolderName, setNewFolderName] = useState("")
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false)
   const [viewType, setViewType] = useState<"list" | "grid">("list")
+  const [userEmail, setUserEmail] = useState<string | null>(null)
   const pathname = usePathname()
 
   const folderName = pathname.split("/").pop() || ""
@@ -32,14 +34,25 @@ export default function DocumentVaultContent() {
         const response = await fetch(`/api/document-vault?folder_name=document-vault`)
         if (!response.ok) throw new Error("Failed to fetch files")
 
-    const data = await response.json()
-      setItems(data.files)
+        const data = await response.json()
+        setItems(data.files)
       } catch (error) {
         console.error("Error fetching files:", error)
+      }
     }
-  }
 
     fetchItems()
+  }, [])
+
+  useEffect(() => {
+    async function fetchUserEmail() {
+      const supabase = createClient()
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      setUserEmail(user?.email ?? null)
+    }
+    fetchUserEmail()
   }, [])
 
   const handleFileUpload = async () => {
@@ -52,6 +65,7 @@ export default function DocumentVaultContent() {
         const file = target.files[0]
         const formData = new FormData()
         formData.append("file", file)
+        formData.append("userEmail", userEmail || "")
 
         try {
           const response = await fetch("/api/document-vault", {
@@ -78,7 +92,7 @@ export default function DocumentVaultContent() {
     try {
       const response = await fetch("/api/document-vault", {
         method: "PUT",
-        body: JSON.stringify({ folderName: newFolderName }),
+        body: JSON.stringify({ folderName: newFolderName, userEmail }),
         headers: { "Content-Type": "application/json" },
       })
 
@@ -100,7 +114,7 @@ export default function DocumentVaultContent() {
       try {
         const response = await fetch("/api/document-vault", {
           method: "DELETE",
-          body: JSON.stringify({ fileName, type, filePath }),
+          body: JSON.stringify({ fileName, type, filePath, userEmail }),
           headers: { "Content-Type": "application/json" },
         })
 
@@ -157,7 +171,13 @@ export default function DocumentVaultContent() {
   return (
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">{folderName.replace(/-/g, " ").split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h2>
+        <h2 className="text-lg font-bold">
+          {folderName
+            .replace(/-/g, " ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")}
+        </h2>
         <ToggleGroup type="single" value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid")}>
           <ToggleGroupItem value="list" aria-label="List view">
             <List className="h-4 w-4" />

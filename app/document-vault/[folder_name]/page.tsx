@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Card, CardContent } from "@/components/ui/card"
+import { createClient } from "@/utils/supabase/client"
 
 type VaultItem = {
   file_name: string
@@ -20,11 +21,25 @@ export default function FolderView() {
   const decodedFolderName = decodeURIComponent(folder_name as string)
   const [items, setItems] = useState<VaultItem[]>([])
   const [viewType, setViewType] = useState<"list" | "grid">("list")
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  const fetchUserEmail = useCallback(async () => {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    setUserEmail(user?.email ?? null)
+  }, [])
+
+  useEffect(() => {
+    fetchUserEmail()
+  }, [fetchUserEmail])
 
   const fetchItems = useCallback(async () => {
     try {
       const folderParam = decodedFolderName ? `?folder_name=${encodeURIComponent(decodedFolderName)}` : ""
-      const response = await fetch(`/api/document-vault${folderParam}`)
+      const userEmailParam = userEmail ? `&userEmail=${encodeURIComponent(userEmail)}` : ""
+      const response = await fetch(`/api/document-vault${folderParam}${userEmailParam}`)
       if (!response.ok) throw new Error("Failed to fetch files")
 
       const data = await response.json()
@@ -32,11 +47,13 @@ export default function FolderView() {
     } catch (error) {
       console.error("Error fetching files:", error)
     }
-  }, [decodedFolderName])
+  }, [decodedFolderName, userEmail])
 
   useEffect(() => {
-    fetchItems()
-  }, [fetchItems])
+    if (userEmail) {
+      fetchItems()
+    }
+  }, [fetchItems, userEmail])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files?.length) return
@@ -44,6 +61,7 @@ export default function FolderView() {
 
     const formData = new FormData()
     formData.append("file", file)
+    formData.append("userEmail", userEmail || "")
 
     try {
       const response = await fetch(`/api/document-vault?folder_name=${encodeURIComponent(decodedFolderName)}`, {
@@ -69,7 +87,7 @@ export default function FolderView() {
 
     const response = await fetch(`/api/document-vault`, {
       method: "PUT",
-      body: JSON.stringify({ folderName, parentFolder }),
+      body: JSON.stringify({ folderName, parentFolder, userEmail }),
       headers: { "Content-Type": "application/json" },
     })
 
@@ -86,7 +104,7 @@ export default function FolderView() {
       try {
         const response = await fetch("/api/document-vault", {
           method: "DELETE",
-          body: JSON.stringify({ fileName, type, filePath }),
+          body: JSON.stringify({ fileName, type, filePath, userEmail }),
           headers: { "Content-Type": "application/json" },
         })
 
@@ -143,7 +161,13 @@ export default function FolderView() {
   return (
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">{decodedFolderName.replace(/-/g, " ").split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h2>
+        <h2 className="text-lg font-bold">
+          {decodedFolderName
+            .replace(/-/g, " ")
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ")}
+        </h2>
         <ToggleGroup type="single" value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid")}>
           <ToggleGroupItem value="list" aria-label="List view">
             <List className="h-4 w-4" />

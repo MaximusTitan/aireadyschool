@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import type React from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,17 +13,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ContentBlock } from "./components/ContentBlock";
 import { GeneratedContent } from "./components/GeneratedContent";
 
-const generateText = async function (
+const generateText = async (
   topic: string,
   subject: string,
   grade: string,
   board: string,
   contentType: string,
-  retries = 3
-): Promise<{ title: string; result: string }> {
+  retries = 3,
+): Promise<{ title: string; result: string }> => {
   try {
     const textResponse = await fetch("/api/generate-lesson-content", {
       method: "POST",
@@ -47,7 +47,7 @@ const generateText = async function (
           grade,
           board,
           contentType,
-          retries - 1
+          retries - 1,
         );
       } else {
         throw new Error("Failed to generate a response in the valid format");
@@ -63,7 +63,7 @@ const generateText = async function (
         grade,
         board,
         contentType,
-        retries - 1
+        retries - 1,
       );
     } else {
       throw new Error("Failed to generate a response in the valid format");
@@ -71,7 +71,7 @@ const generateText = async function (
   }
 };
 
-const generateImage = async function (prompt: string): Promise<string> {
+const generateImage = async (prompt: string): Promise<string> => {
   const imageResponse = await fetch("/api/generate-fal-image", {
     method: "POST",
     headers: {
@@ -89,7 +89,7 @@ const generateImage = async function (prompt: string): Promise<string> {
   return imageData.result;
 };
 
-const ContentGenerator = function () {
+const ContentGenerator = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [topic, setTopic] = useState("");
   const [subject, setSubject] = useState("");
@@ -100,7 +100,7 @@ const ContentGenerator = function () {
   const [generatedImage, setGeneratedImage] = useState<string | null>(null);
   const [lessonTitle, setLessonTitle] = useState("");
 
-  const generateContent = async function () {
+  const generateContent = async () => {
     setIsLoading(true);
     setTextContent("");
     setGeneratedImage(null);
@@ -113,7 +113,7 @@ const ContentGenerator = function () {
         subject,
         grade,
         board,
-        contentType
+        contentType,
       );
       setTextContent(textData.result);
       setLessonTitle(textData.title);
@@ -136,16 +136,30 @@ const ContentGenerator = function () {
   };
 
   return (
-    <Card className="content-generator-card w-full max-w-3xl mx-auto rounded-lg overflow-hidden">
+    <Card className="content-generator-card w-full max-w-5xl mx-auto rounded-lg overflow-hidden">
       <CardHeader>
-        <CardTitle>Lesson Content Generator</CardTitle>
+        <CardTitle className="text-3xl font-bold">
+          Lesson Content Generator
+        </CardTitle>
       </CardHeader>
-      <CardContent className="content-block space-y-6">
-        <ContentBlock
-          title="Topic: "
-          description="What would you like to learn about today?"
-        >
-          <Label htmlFor="textInput"> Please enter the topic:</Label>
+      <CardContent className="content-block space-y-4">
+        <div>
+          <Label htmlFor="subjectInput" className="text-sm">
+            Subject
+          </Label>
+          <Input
+            id="subjectInput"
+            type="text"
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            placeholder="Enter subject.."
+            className="text-input mt-1"
+          />
+        </div>
+        <div>
+          <Label htmlFor="textInput" className="text-sm">
+            Topic
+          </Label>
           <Input
             id="textInput"
             type="text"
@@ -153,82 +167,72 @@ const ContentGenerator = function () {
             onChange={(e) => setTopic(e.target.value)}
             onKeyDown={handleKeyPressed}
             placeholder="Ask me about any topic..."
-            className="text-input mb-4 text-black"
+            className="text-input mt-1"
           />
-        </ContentBlock>
-        <ContentBlock title="Subject" description="Specify the subject area">
-          <Label htmlFor="subjectInput">Subject:</Label>
-          <Input
-            id="subjectInput"
-            type="text"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            placeholder="Enter subject.."
-            className="text-input mb-4 text-black"
-          />
-        </ContentBlock>
-        <ContentBlock title="Grade" description="Select the grade level">
-          <Label htmlFor="gradeSelect">Grade:</Label>
-          <Select value={grade} onValueChange={setGrade}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select grade..." />
-            </SelectTrigger>
-            <SelectContent>
-              {[...Array(12)].map((_, i) => (
-                <SelectItem key={i + 1} value={(i + 1).toString()}>
-                  Grade {i + 1}
+        </div>
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="gradeSelect" className="text-sm">
+              Grade
+            </Label>
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectTrigger className="w-full mt-1">
+                <SelectValue placeholder="Select grade..." />
+              </SelectTrigger>
+              <SelectContent>
+                {[...Array(12)].map((_, i) => (
+                  <SelectItem key={i + 1} value={(i + 1).toString()}>
+                    Grade {i + 1}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label htmlFor="boardInput" className="text-sm">
+              Educational Board
+            </Label>
+            <Input
+              id="boardInput"
+              type="text"
+              value={board}
+              onChange={(e) => setBoard(e.target.value)}
+              placeholder="Enter educational board..."
+              className="text-input mt-1"
+            />
+          </div>
+          <div>
+            <Label htmlFor="contentTypeSelect" className="text-sm">
+              Content Type
+            </Label>
+            <Select value={contentType} onValueChange={setContentType}>
+              <SelectTrigger className="w-full mt-1">
+                <SelectValue placeholder="Select content type..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="guided-notes">Guided Notes</SelectItem>
+                <SelectItem value="exemplar">Exemplar</SelectItem>
+                <SelectItem value="depth-of-knowledge">
+                  Depth of Knowledge Questions
                 </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </ContentBlock>
-        <ContentBlock
-          title="Educational Board"
-          description="Specify the educational board"
-        >
-          <Label htmlFor="boardInput">Educational Board:</Label>
-          <Input
-            id="boardInput"
-            type="text"
-            value={board}
-            onChange={(e) => setBoard(e.target.value)}
-            placeholder="Enter educational board..."
-            className="text-input mb-4 text-black"
-          />
-        </ContentBlock>
-
-        <ContentBlock
-          title="Content Selection"
-          description="Select the type of content to generate"
-        >
-          <Label htmlFor="contentTypeSelect">Content Type:</Label>
-          <Select value={contentType} onValueChange={setContentType}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select content type..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="guided-notes">Guided Notes</SelectItem>
-              <SelectItem value="exemplar">Exemplar</SelectItem>
-              <SelectItem value="depth-of-knowledge">
-                Depth of Knowledge Questions
-              </SelectItem>
-              <SelectItem value="faqs">FAQs</SelectItem>
-              <SelectItem value="worksheets">Worksheets</SelectItem>
-              <SelectItem value="case-studies">Case Studies</SelectItem>
-              <SelectItem value="scenario-activities">
-                Scenario Based Activities
-              </SelectItem>
-              <SelectItem value="glossary">Glossary</SelectItem>
-            </SelectContent>
-          </Select>
-        </ContentBlock>
+                <SelectItem value="faqs">FAQs</SelectItem>
+                <SelectItem value="worksheets">Worksheets</SelectItem>
+                <SelectItem value="case-studies">Case Studies</SelectItem>
+                <SelectItem value="scenario-activities">
+                  Scenario Based Activities
+                </SelectItem>
+                <SelectItem value="glossary">Glossary</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
         <Button
           onClick={generateContent}
           disabled={
             !topic || !subject || !grade || !board || !contentType || isLoading
           }
           variant="default"
-          className="generate-button"
+          className="generate-button w-full mt-4"
         >
           Create Lesson
         </Button>
@@ -240,6 +244,7 @@ const ContentGenerator = function () {
               text={textContent}
               imageUrl={generatedImage || undefined}
               title={lessonTitle}
+              contentType={contentType}
             />
           )
         )}

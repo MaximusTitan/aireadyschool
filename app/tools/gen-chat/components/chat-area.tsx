@@ -87,7 +87,7 @@ export const ChatArea = ({
     <div className="flex flex-1 pb-20 relative">
       <div
         className={cn(
-          "flex-1 overflow-y-auto space-y-4 p-4 transition-all duration-300 scrollbar-thin scrollbar-thumb-neutral-200 scrollbar-track-transparent hover:scrollbar-thumb-neutral-300",
+          "flex-1 overflow-y-auto space-y-4 p-4 transition-all duration-300",
           hasActiveTools && isToolsPanelOpen ? "mr-[33%]" : ""
         )}
       >
@@ -153,7 +153,7 @@ export const ChatArea = ({
             <div className="w-[33vw] border-l bg-white max-h-[calc(100vh-137px)]">
               {" "}
               {/* Adjusted max-height */}
-              <div className="h-full overflow-y-auto p-4 scrollbar-thin scrollbar-thumb-neutral-200 scrollbar-track-transparent hover:scrollbar-thumb-neutral-300">
+              <div className="h-full overflow-y-auto p-4">
                 {toolInvocations.map((invocation: any) => {
                   const { toolName, toolCallId, state, result } = invocation;
                   // For pending state, show a spinner placeholder

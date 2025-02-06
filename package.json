@@ -91,7 +91,6 @@
     "sharp": "^0.33.5",
     "shortid": "^2.2.16",
     "sonner": "^1.5.0",
-    "tailwind-scrollbar": "^4.0.0",
     "vega": "^5.30.0",
     "vega-embed": "^6.29.0",
     "vega-lite": "^5.22.0",
@@ -110,9 +109,9 @@
     "@types/react-dom": "18.2.18",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/react-virtualized": "^9.21.30",
-    "postcss": "8.4.33",
+    "postcss": "^8.4.33",
     "tailwind-merge": "^2.5.2",
-    "tailwindcss": "^4.0.4",
+    "tailwindcss": "^3.4.1",
     "tailwindcss-animate": "^1.0.7",
     "typescript": "5.3.3"
   }

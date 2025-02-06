@@ -21,7 +21,7 @@ export function ContentBlock({
   children,
 }: ContentBlockProps) {
   return (
-    <Card className="overflow-hidden">
+    <Card>
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>

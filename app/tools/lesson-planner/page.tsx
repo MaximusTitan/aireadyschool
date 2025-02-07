@@ -1,12 +1,16 @@
-import { Suspense } from "react"
-import OutputContent from "./output-content"
+import { Chat } from "./components/chat";
+import { Metadata } from "next";
 
-export default function OutputPage() {
+export const metadata: Metadata = {
+  title: "Lesson Planner - AI Ready School",
+  description:
+    "Create lesson plans with ease using AI Ready School's lesson planner tool.",
+};
+
+export default function Home() {
   return (
-    <Suspense fallback={<div>Loading...</div>}>
-      <OutputContent />
-    </Suspense>
-  )
+    <main className="flex min-h-screen flex-col p-6">
+      <Chat />
+    </main>
+  );
 }
-
-

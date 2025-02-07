@@ -1,17 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { SkillsSection } from "./skills/SkillsSection";
-import Header from "./profile/Header";
-import ProfileHeader from "./profile/ProfileHeader";
-import InterestsSection from "./profile/InterestsSection";
-import VideoSection from "./media/VideoSection";
-import PresentationSection from "./media/PresentationSection";
-import ArtworkSection from "./media/ArtworkSection";
-import ResearchWorkSection from "./media/ResearchWorkSection";
+import { useState, useEffect } from "react";
+import Header from "../profile/components/profile/Header";
+import { CognitiveAssessment } from "./components/CognitiveAssessment";
 import { createClient } from "@/utils/supabase/client";
 
-export function StudentPortfolio() {
+export default function CognitivePage() {
   const [studentEmail, setStudentEmail] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +22,6 @@ export function StudentPortfolio() {
     } = await supabase.auth.getUser();
 
     if (error) {
-      console.error("Error fetching user:", error);
       setError("Failed to authenticate user");
       setIsLoading(false);
       return;
@@ -57,17 +50,7 @@ export function StudentPortfolio() {
       <Header />
       <main className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-8">
-          {studentEmail && (
-            <>
-              <ProfileHeader />
-              <SkillsSection />
-              <InterestsSection />
-              <VideoSection />
-              <PresentationSection />
-              <ArtworkSection />
-              <ResearchWorkSection />
-            </>
-          )}
+          {studentEmail && <CognitiveAssessment studentEmail={studentEmail} />}
         </div>
       </main>
     </div>

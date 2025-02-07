@@ -141,7 +141,7 @@ export async function POST(request: Request) {
         rubricContent = rubricTextInput
       }
 
-      systemPrompt = `You are an expert educational evaluator with the following rubric:\n${rubricContent}\n\nYour task is to analyze the given student assignment and provide a comprehensive evaluation based on the provided rubric.`
+      systemPrompt = `You are an expert educational evaluator with the following rubric:\n${rubricContent}\n\nYour task is to analyze the given student assignment and provide a comprehensive evaluation based on the provided rubric. Provide output in Markdown format. Do not reply any title.`
     }
 
     // Prepare the prompt for the AI

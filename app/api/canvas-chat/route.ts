@@ -1,3 +1,5 @@
+// Used in Canvas tool - app/canvas
+
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { logTokenUsage } from '@/utils/logTokenUsage';
@@ -20,6 +22,7 @@ export async function POST(req: Request): Promise<Response> {
 
   const prompt = `${topic}`;
 
+  // Generate text using GPT-4o
   const { text, usage } = await generateText({
     model: openai('gpt-4o'),
     prompt: prompt,
@@ -27,6 +30,7 @@ export async function POST(req: Request): Promise<Response> {
     maxTokens: 5000,
   });
 
+  // Log token usage
   if (usage) {
     await logTokenUsage(
       'Text Generation', 

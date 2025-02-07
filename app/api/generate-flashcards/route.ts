@@ -3,10 +3,19 @@ import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import type { Flashcard } from "@/app/tools/flash-card/types/flashcard"
 import { nanoid } from "nanoid"
+import { createClient } from "@/utils/supabase/server"
+import { logTokenUsage } from '@/utils/logTokenUsage'
 
 export const maxDuration = 60
 
 export async function POST(req: Request) {
+  const supabase = await createClient();
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+
+  if (authError) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { text, cardCount = 5 } = await req.json()
 
@@ -35,12 +44,23 @@ export async function POST(req: Request) {
     `
 
     try {
-      const { text: generatedText } = await generateText({
-        model: openai("gpt-4-turbo"),
+      const { text: generatedText, usage } = await generateText({
+        model: openai("gpt-4o"),
         prompt,
         temperature: 0.7,
         maxTokens: 1000,
       })
+
+      // Log token usage
+      if (usage) {
+        await logTokenUsage(
+          'Flashcards',
+          'GPT-4o',
+          usage.promptTokens,
+          usage.completionTokens,
+          user?.email
+        );
+      }
 
       // Extract JSON content from the response
       const jsonMatch = generatedText.match(/\[[\s\S]*\]/)

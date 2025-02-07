@@ -1,7 +1,7 @@
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
 import { createClient } from '@/utils/supabase/server';
-import { cookies } from 'next/headers';
+import { logTokenUsage } from '@/utils/logTokenUsage';
 
 export async function POST(req: Request) {
   // Create Supabase client
@@ -38,12 +38,23 @@ export async function POST(req: Request) {
     Please write the story:`;
 
   try {
-    const { text } = await generateText({
-      model: openai('gpt-4'),
+    const { text, usage } = await generateText({
+      model: openai('gpt-4o'),
       prompt: prompt,
       temperature: 0.7,
       maxTokens: Math.max(wordCount * 2, 1000),
     });
+
+    // Log token usage
+    if (usage) {
+      await logTokenUsage(
+        'Story Generator',
+        'GPT-4o',
+        usage.promptTokens,
+        usage.completionTokens,
+        user.email
+      );
+    }
 
     // Save to database
     const { data: story, error: dbError } = await supabase

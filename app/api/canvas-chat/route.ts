@@ -33,7 +33,7 @@ export async function POST(req: Request): Promise<Response> {
   // Log token usage
   if (usage) {
     await logTokenUsage(
-      'Text Generation', 
+      'Canvas', 
       'GPT-4o', 
       usage.promptTokens, 
       usage.completionTokens, 

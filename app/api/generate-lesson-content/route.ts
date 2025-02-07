@@ -1,6 +1,8 @@
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import { logTokenUsage } from '@/utils/logTokenUsage';
 
 export const runtime = "edge";
 
@@ -263,6 +265,14 @@ export async function POST(req: Request) {
     );
   }
 
+  // Add auth check
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { topic, subject, grade, board, contentType } = await req.json();
 
@@ -282,7 +292,7 @@ export async function POST(req: Request) {
     );
 
     const response = streamText({
-      model: openai("gpt-4"),
+      model: openai("gpt-4o"),
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -290,6 +300,17 @@ export async function POST(req: Request) {
           content: `Generate ${contentType} content for the topic: ${topic}`,
         },
       ],
+      onFinish: async ({ usage }) => {
+        if (usage) {
+          await logTokenUsage(
+            'Lesson Content Generator',
+            'GPT-4o',
+            usage.promptTokens,
+            usage.completionTokens,
+            user?.email
+          );
+        }
+      }
     });
 
     let fullResponse = "";

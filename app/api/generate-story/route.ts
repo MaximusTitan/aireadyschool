@@ -33,7 +33,7 @@ export async function POST(req: Request) {
     - Create memorable characters and engaging dialogue
     - Ensure a clear beginning, middle, and end structure
     - Include themes that resonate with ${ageGroup} readers
-    - Give a new better title to the story
+    - Give a new better title to the story. Do not inclue "Title" in the title.
     
     Please write the story:`;
 

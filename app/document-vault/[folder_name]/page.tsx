@@ -43,7 +43,12 @@ export default function FolderView() {
       if (!response.ok) throw new Error("Failed to fetch files")
 
       const data = await response.json()
-      setItems(data.files)
+      setItems(
+        data.files.map((item: VaultItem) => ({
+          ...item,
+          file_path: item.file_path.replace(/^\//, "").replace(/\/$/, ""),
+        }))
+      )
     } catch (error) {
       console.error("Error fetching files:", error)
     }
@@ -62,6 +67,7 @@ export default function FolderView() {
     const formData = new FormData()
     formData.append("file", file)
     formData.append("userEmail", userEmail || "")
+    formData.append("fullPath", decodedFolderName)
 
     try {
       const response = await fetch(`/api/document-vault?folder_name=${encodeURIComponent(decodedFolderName)}`, {
@@ -83,17 +89,18 @@ export default function FolderView() {
     const folderName = prompt("Enter new folder name:")
     if (!folderName) return
 
-    const parentFolder = decodedFolderName !== "document-vault" ? decodedFolderName : ""
+    const fullPath = decodedFolderName !== "document-vault" ? `${decodedFolderName}/${folderName}` : folderName
 
     const response = await fetch(`/api/document-vault`, {
       method: "PUT",
-      body: JSON.stringify({ folderName, parentFolder, userEmail }),
+      body: JSON.stringify({ folderName, fullPath, userEmail }),
       headers: { "Content-Type": "application/json" },
     })
 
     if (response.ok) {
-      console.log("Folder created successfully!")
-      fetchItems()
+      const data = await response.json()
+      console.log("Folder created successfully!", data)
+      setItems((prevItems) => [...prevItems, { file_name: folderName, file_path: data.path, type: "folder" }])
     } else {
       console.error("Folder creation failed")
     }
@@ -124,7 +131,7 @@ export default function FolderView() {
       <CardContent className="p-4 flex flex-col items-center justify-center h-full">
         {item.type === "folder" ? (
           <button
-            onClick={() => router.push(`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`)}
+            onClick={() => router.push(`/document-vault/${item.file_name}`)}
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
@@ -132,9 +139,7 @@ export default function FolderView() {
           </button>
         ) : (
           <a
-            href={item.file_path}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/document-vault/${item.file_path}`}
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Upload className="h-12 w-12 mb-2 stroke-current" />
@@ -191,9 +196,7 @@ export default function FolderView() {
                     <>
                       <Folder className="h-4 w-4 mr-2 stroke-current" />
                       <button
-                        onClick={() =>
-                          router.push(`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`)
-                        }
+                        onClick={() => router.push(`/document-vault/${item.file_name}`)}
                         className="text-blue-500 font-semibold"
                       >
                         {item.file_name}
@@ -202,7 +205,12 @@ export default function FolderView() {
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2 stroke-current" />
-                      <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                      <a
+                        href={`/document-vault/${item.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500"
+                      >
                         {item.file_name}
                       </a>
                     </>

@@ -8,19 +8,20 @@ export async function POST(req: NextRequest) {
     const formData = await req.formData()
     const file = formData.get("file") as File | null
     const userEmail = formData.get("userEmail") as string | null
+    const fullPath = formData.get("fullPath") as string | null
 
     if (!file) {
       return NextResponse.json({ error: "No file uploaded" }, { status: 400 })
     }
 
-    // Extract folder name from request URL
-    const { searchParams } = new URL(req.url)
-    const folderName = searchParams.get("folder_name") || "document-vault" // Default to root
+    if (!fullPath) {
+      return NextResponse.json({ error: "Full path is required" }, { status: 400 })
+    }
 
-    console.log("Saving file to folder:", folderName)
+    console.log("Saving file to folder:", fullPath)
 
     const buffer = Buffer.from(await file.arrayBuffer())
-    const filePath = `${folderName}/${Date.now()}-${file.name}`
+    const filePath = `${fullPath}/${Date.now()}-${file.name}`
 
     // Upload file to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
@@ -39,15 +40,19 @@ export async function POST(req: NextRequest) {
     const { data } = supabase.storage.from("document-vault").getPublicUrl(filePath)
     const publicUrl = data.publicUrl
 
+    // Get the parent folder name
+    const parentFolder = fullPath.split("/").pop() || "document-vault"
+
     // Insert file metadata into the database
     const { error: insertError } = await supabase.from("document-vault").insert([
       {
         file_name: file.name,
-        parent_folder: folderName,
-        file_path: publicUrl, // Use public URL
+        parent_folder: parentFolder,
+        file_path: filePath,
+        public_url: publicUrl,
         created_at: new Date().toISOString(),
         type: "file",
-        user_email: userEmail, // Add this line
+        user_email: userEmail,
       },
     ])
 
@@ -71,7 +76,7 @@ export async function GET(req: Request) {
     const folderName = searchParams.get("folder_name") || "document-vault"
     const userEmail = searchParams.get("userEmail")
 
-    console.log("Received Folder Name:", folderName) // Debugging log
+    console.log("Received Folder Name:", folderName)
     console.log("User Email:", userEmail)
 
     const query = supabase.from("document-vault").select("*").eq("parent_folder", folderName)
@@ -94,37 +99,44 @@ export async function GET(req: Request) {
   }
 }
 
-export async function PUT(req: Request) {
+export async function PUT(req: NextRequest) {
   try {
     const supabase = await createClient()
-    const { folderName, parentFolder, userEmail } = await req.json() // Get both values from request
+    const { folderName, fullPath, userEmail } = await req.json()
 
     if (!folderName) {
       return NextResponse.json({ error: "Folder name is required" }, { status: 400 })
     }
 
+    if (!fullPath) {
+      return NextResponse.json({ error: "Full path is required" }, { status: 400 })
+    }
+
     // Construct the full folder path
-    const folderPath = parentFolder ? `${parentFolder}/${folderName}/` : `${folderName}/`
+    const filePath = `${fullPath}/`
 
     // Create an empty folder by adding a placeholder file
     const { error } = await supabase.storage
       .from("document-vault")
-      .upload(`${folderPath}.placeholder`, new Blob([]), { upsert: false })
+      .upload(`${filePath}.placeholder`, new Blob([]), { upsert: false })
 
     if (error) {
       console.error("Supabase folder creation error:", error.message)
       return NextResponse.json({ error: "Folder creation failed" }, { status: 500 })
     }
 
+    // Get the parent folder name
+    const parentFolder = fullPath.split("/").slice(0, -1).pop() || "document-vault"
+
     // Insert folder record into database
     const { error: insertError } = await supabase.from("document-vault").insert([
       {
         file_name: folderName,
-        parent_folder: parentFolder || "document-vault", // Store the actual parent folder name
-        file_path: folderPath,
+        parent_folder: parentFolder,
+        file_path: filePath,
         type: "folder",
         created_at: new Date().toISOString(),
-        user_email: userEmail, // Add this line
+        user_email: userEmail,
       },
     ])
 
@@ -133,7 +145,7 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Failed to insert folder record" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, path: filePath })
   } catch (error) {
     console.error("Error creating folder:", error)
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
@@ -166,7 +178,7 @@ export async function DELETE(req: NextRequest) {
       .delete()
       .eq("file_name", fileName)
       .eq("file_path", filePath)
-      .eq("user_email", userEmail) // Add this line
+      .eq("user_email", userEmail)
 
     if (dbError) {
       console.error("Error deleting record from database:", dbError.message)

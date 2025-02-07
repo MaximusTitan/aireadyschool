@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Plus, Upload, Folder, Trash2, Grid, List } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -26,12 +26,25 @@ export default function DocumentVaultContent() {
   const [userEmail, setUserEmail] = useState<string | null>(null)
   const pathname = usePathname()
 
-  const folderName = pathname.split("/").pop() || ""
+  const folderName = pathname.split("/").pop() || "document-vault"
+
+  const fetchUserEmail = useCallback(async () => {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    setUserEmail(user?.email ?? null)
+  }, [])
+
+  useEffect(() => {
+    fetchUserEmail()
+  }, [fetchUserEmail])
 
   useEffect(() => {
     async function fetchItems() {
       try {
-        const response = await fetch(`/api/document-vault?folder_name=document-vault`)
+        const userEmailParam = userEmail ? `&userEmail=${encodeURIComponent(userEmail)}` : ""
+        const response = await fetch(`/api/document-vault?folder_name=${folderName}${userEmailParam}`)
         if (!response.ok) throw new Error("Failed to fetch files")
 
         const data = await response.json()
@@ -42,18 +55,7 @@ export default function DocumentVaultContent() {
     }
 
     fetchItems()
-  }, [])
-
-  useEffect(() => {
-    async function fetchUserEmail() {
-      const supabase = createClient()
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      setUserEmail(user?.email ?? null)
-    }
-    fetchUserEmail()
-  }, [])
+  }, [folderName, userEmail])
 
   const handleFileUpload = async () => {
     const input = document.createElement("input")
@@ -66,6 +68,7 @@ export default function DocumentVaultContent() {
         const formData = new FormData()
         formData.append("file", file)
         formData.append("userEmail", userEmail || "")
+        formData.append("fullPath", folderName)
 
         try {
           const response = await fetch("/api/document-vault", {
@@ -89,20 +92,20 @@ export default function DocumentVaultContent() {
   const handleNewFolder = async () => {
     if (!newFolderName.trim()) return
 
+    const fullPath = folderName !== "document-vault" ? `${folderName}/${newFolderName}` : newFolderName
+
     try {
       const response = await fetch("/api/document-vault", {
         method: "PUT",
-        body: JSON.stringify({ folderName: newFolderName, userEmail }),
+        body: JSON.stringify({ folderName: newFolderName, fullPath, userEmail }),
         headers: { "Content-Type": "application/json" },
       })
 
       if (!response.ok) throw new Error("Failed to create folder")
 
+      const data = await response.json()
       setIsFolderDialogOpen(false)
-      setItems((prevItems) => [
-        ...prevItems,
-        { file_name: newFolderName, file_path: `/${newFolderName}`, type: "folder" },
-      ])
+      setItems((prevItems) => [...prevItems, { file_name: newFolderName, file_path: data.path, type: "folder" }])
       setNewFolderName("")
     } catch (error) {
       console.error("Error creating folder:", error)
@@ -134,7 +137,7 @@ export default function DocumentVaultContent() {
       <CardContent className="p-4 flex flex-col items-center justify-center h-full">
         {item.type === "folder" ? (
           <a
-            href={`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`}
+            href={`/document-vault/${item.file_name}`}
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
@@ -142,7 +145,7 @@ export default function DocumentVaultContent() {
           </a>
         ) : (
           <a
-            href={item.file_path}
+            href={item.file_name}
             target="_blank"
             rel="noopener noreferrer"
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
@@ -200,17 +203,14 @@ export default function DocumentVaultContent() {
                   {item.type === "folder" ? (
                     <>
                       <Folder className="h-4 w-4 mr-2 stroke-current" />
-                      <a
-                        href={`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`}
-                        className="text-blue-500 font-semibold"
-                      >
+                      <a href={`/document-vault/${item.file_name}`} className="text-blue-500 font-semibold">
                         {item.file_name}
                       </a>
                     </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2 stroke-current" />
-                      <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                      <a href={item.file_name} target="_blank" rel="noopener noreferrer" className="text-blue-500">
                         {item.file_name}
                       </a>
                     </>

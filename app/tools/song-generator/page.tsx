@@ -7,6 +7,19 @@ import { FiMusic, FiLoader, FiPlay, FiPause } from "react-icons/fi";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { createClient } from '@/utils/supabase/client';
+
+// Types for Supabase
+type Song = {
+  id: string;
+  user_id: string;
+  prompt: string;
+  lyrics: string;
+  reference_audio_url: string;
+  generated_audio_url: string;
+  song_description: string;
+  created_at: string;
+}
 
 const REFERENCE_SONGS = [
   {
@@ -71,6 +84,7 @@ const AudioPlayer = ({
 
 const SongGenerator = () => {
   const { toast } = useToast();
+  const supabase = createClient();
 
   const [prompt, setPrompt] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -79,18 +93,30 @@ const SongGenerator = () => {
   const [generatedAudio, setGeneratedAudio] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(
-    null
-  );
+  const [playingAudio, setPlayingAudio] = useState<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState<string | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isMounted, setIsMounted] = useState(false);
   const [isGeneratingLyrics, setIsGeneratingLyrics] = useState(false);
   const [songDescription, setSongDescription] = useState("");
   const [lyricsType, setLyricsType] = useState<"ai" | "custom">("ai");
+  const [savedSongs, setSavedSongs] = useState<Song[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
+    const fetchSavedSongs = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { data } = await supabase
+          .from('songs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (data) setSavedSongs(data);
+      }
+    };
+    
+    fetchSavedSongs();
+
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
@@ -118,29 +144,45 @@ const SongGenerator = () => {
     try {
       const response = await fetch("/api/generate-song", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          prompt,
-          audioUrl: finalAudioUrl,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, audioUrl: finalAudioUrl }),
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to generate song");
-      }
-
+      if (!response.ok) throw new Error("Failed to generate song");
       const data = await response.json();
       setGeneratedAudio(data.audioUrl);
+
+      // Save to Supabase
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const { error: saveError } = await supabase
+          .from('songs')
+          .insert({
+            user_id: session.user.id,
+            prompt,
+            lyrics: prompt,
+            reference_audio_url: finalAudioUrl,
+            generated_audio_url: data.audioUrl,
+            song_description: songDescription
+          });
+
+        if (saveError) throw saveError;
+
+        // Refresh saved songs
+        const { data: newSongs } = await supabase
+          .from('songs')
+          .select('*')
+          .order('created_at', { ascending: false });
+        if (newSongs) setSavedSongs(newSongs);
+      }
+
       toast({
         title: "Success",
-        description: "Your song has been generated!",
+        description: "Your song has been generated and saved!",
         variant: "default",
       });
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : "Something went wrong";
+      const message = err instanceof Error ? err.message : "Something went wrong";
       toast({
         title: "Error",
         description: message,
@@ -152,12 +194,13 @@ const SongGenerator = () => {
     }
   };
 
+  // Rest of your existing functions remain unchanged
   const handleSongSelect = useCallback(
     (song: (typeof REFERENCE_SONGS)[0]) => {
       setSelectedSong(song.url);
       setUseCustomUrl(false);
     },
-    [] // removed useCustomLyrics dependency since we don't set lyrics anymore
+    []
   );
 
   const togglePlay = useCallback(
@@ -174,7 +217,6 @@ const SongGenerator = () => {
         return;
       }
 
-      // Select the song when playing starts
       const selectedRefSong = REFERENCE_SONGS.find((song) => song.url === url);
       if (selectedRefSong) {
         handleSongSelect(selectedRefSong);

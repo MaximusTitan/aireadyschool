@@ -1,7 +1,18 @@
 import { openai } from '@ai-sdk/openai';
 import { generateText } from 'ai';
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
+  // Create Supabase client
+  const supabase = await createClient();
+
+  // Check authentication
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { title, description, genre, ageGroup, tone, length } = await req.json();
 
   const wordCount = {
@@ -12,7 +23,7 @@ export async function POST(req: Request) {
 
   const prompt = `Create a ${tone} story for ${ageGroup} readers in the ${genre} genre.
     Title: "${title}"
-    Description: ${description}
+    ${description ? `Description: ${description}` : ''}
     Target length: approximately ${wordCount} words
 
     Story Guidelines:
@@ -22,15 +33,43 @@ export async function POST(req: Request) {
     - Create memorable characters and engaging dialogue
     - Ensure a clear beginning, middle, and end structure
     - Include themes that resonate with ${ageGroup} readers
+    - Give a new better title to the story
     
     Please write the story:`;
 
-  const { text } = await generateText({
-    model: openai('gpt-4o'),
-    prompt: prompt,
-    temperature: 0.7,
-    maxTokens: Math.max(wordCount * 2, 1000),
-  });
+  try {
+    const { text } = await generateText({
+      model: openai('gpt-4'),
+      prompt: prompt,
+      temperature: 0.7,
+      maxTokens: Math.max(wordCount * 2, 1000),
+    });
 
-  return Response.json({ story: text });
+    // Save to database
+    const { data: story, error: dbError } = await supabase
+      .from('stories')
+      .insert({
+        user_email: user.email,
+        title,
+        description,
+        genre,
+        age_group: ageGroup,
+        tone,
+        length,
+        story: text,
+      })
+      .select('*')  // Select all fields
+      .single();
+
+    if (dbError) throw dbError;
+
+    return Response.json({ 
+      story: text, 
+      storyId: story.id,
+      fullStory: story // Return full story object
+    });
+  } catch (error) {
+    console.error('Error:', error);
+    return Response.json({ error: 'Failed to generate story' }, { status: 500 });
+  }
 }

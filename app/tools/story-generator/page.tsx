@@ -226,6 +226,7 @@ export default function GenerateStory() {
                 </label>
                 <select
                   name="genre"
+                  title="Genre"
                   className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
                     focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
                   required
@@ -242,6 +243,7 @@ export default function GenerateStory() {
                 </label>
                 <select
                   name="ageGroup"
+                  title="Age Group"
                   className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
                     focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
                   required
@@ -260,6 +262,7 @@ export default function GenerateStory() {
                 </label>
                 <select
                   name="tone"
+                  title="Story Tone"
                   className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
                     focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
                   required
@@ -269,21 +272,7 @@ export default function GenerateStory() {
                   <option value="dramatic">Dramatic</option>
                   <option value="educational">Educational</option>
                 </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-2">
-                  Story Length
-                </label>
-                <select
-                  name="length"
-                  className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
-                    focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
-                  required
-                >
-                  <option value="short">Short</option>
-                  <option value="medium">Medium</option>
-                  <option value="long">Long</option>
-                </select>
+              
               </div>
             </div>
 

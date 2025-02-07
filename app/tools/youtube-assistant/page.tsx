@@ -412,8 +412,7 @@ const YoutubeAssistantPage = () => {
                   </Card>
                   <div className="md:col-span-1">
                     <div
-                      className="relative w-full"
-                      style={{ paddingBottom: "56.25%" }}
+                      className="relative w-full video-embed"
                     >
                       <iframe
                         className="absolute top-0 left-0 w-full h-full rounded-lg"

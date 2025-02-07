@@ -3,6 +3,8 @@ import { Button } from "@/components/ui/button";
 import MCQQuestion from "./MCQQuestion";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
+import { downloadAssessment } from "@/utils/exportAssessment";
+import { Download } from "lucide-react";
 
 interface AssessmentProps {
   assessment: any[];
@@ -11,6 +13,7 @@ interface AssessmentProps {
   showResults: boolean;
   userAnswers: any[];
   assessmentId?: string; // Make assessmentId optional
+  topic: string; // Add this prop
 }
 
 export default function Assessment({
@@ -20,6 +23,7 @@ export default function Assessment({
   showResults,
   userAnswers,
   assessmentId,
+  topic,
 }: AssessmentProps) {
   const [answers, setAnswers] = useState<any[]>(
     userAnswers.length > 0
@@ -107,6 +111,16 @@ export default function Assessment({
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-end mb-4">
+        <Button 
+          onClick={() => downloadAssessment(assessment, assessmentType, topic, 'pdf', showResults)}
+          className="bg-neutral-900 hover:bg-neutral-700"
+        >
+          <Download className="mr-2 h-4 w-4" />
+          Download {showResults ? "PDF with Answers" : "Questions PDF"}
+        </Button>
+      </div>
+
       {assessment.map((question, index) => (
         <div key={index} className="border rounded-lg p-4">
           {assessmentType === "mcq" && (
@@ -150,19 +164,28 @@ export default function Assessment({
           <h2 className="text-2xl font-bold">
             Your Score: {calculateScore()} / {assessment.length}
           </h2>
-          <Button
-            onClick={handleSaveResults}
-            className="mt-4 mr-2 bg-neutral-900 hover:bg-neutral-700"
-            disabled={isSaving}
-          >
-            {isSaving ? "Saving..." : "Save Results"}
-          </Button>
-          <Button
-            onClick={() => window.location.reload()}
-            className="mt-4 bg-neutral-900 hover:bg-neutral-700"
-          >
-            Start New Assessment
-          </Button>
+          <div className="flex justify-center gap-2 mt-4">
+            <Button
+              onClick={handleSaveResults}
+              className="bg-neutral-900 hover:bg-neutral-700"
+              disabled={isSaving}
+            >
+              {isSaving ? "Saving..." : "Save Results"}
+            </Button>
+            <Button 
+              onClick={() => downloadAssessment(assessment, assessmentType, topic, 'pdf', true)}
+              className="bg-neutral-900 hover:bg-neutral-700"
+            >
+              <Download className="mr-2 h-4 w-4" />
+              Download PDF with Answers
+            </Button>
+            <Button
+              onClick={() => window.location.reload()}
+              className="bg-neutral-900 hover:bg-neutral-700"
+            >
+              Start New Assessment
+            </Button>
+          </div>
           {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
         </div>
       )}

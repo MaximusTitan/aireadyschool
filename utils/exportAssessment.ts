@@ -16,11 +16,15 @@ export function formatAssessmentForDownload(
   let content = `Assessment Topic: ${topic}\n\n`;
 
   assessment.forEach((q, index) => {
-    content += `Question ${index + 1}: ${q.question}\n`;
+    // Remove the number from the question if it starts with a number
+    const questionText = q.question.replace(/^\d+[\.\)\s]+/, '').trim();
+    content += `Question ${index + 1}: ${questionText}\n`;
 
     if (assessmentType === "mcq" && q.options) {
       q.options.forEach((option, i) => {
-        content += `${String.fromCharCode(65 + i)}) ${option}\n`;
+        // Remove the letter prefix if it exists in the option
+        const optionText = option.replace(/^[A-D][\.\)\s]+/, '').trim();
+        content += `${String.fromCharCode(65 + i)}) ${optionText}\n`;
       });
       if (includeAnswers) {
         content += `Correct Answer: ${String.fromCharCode(

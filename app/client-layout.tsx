@@ -60,6 +60,7 @@ export default function ClientLayout({
     pathname.startsWith("/games") ||
     pathname.startsWith("/logs") ||
     pathname.startsWith("/document-vault") ||
+    pathname.startsWith("/connect-database") ||
     (pathname.startsWith("/profile") &&
       userRole === "Student" &&
       hasCognitiveAssessment);

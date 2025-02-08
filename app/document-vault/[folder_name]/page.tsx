@@ -87,13 +87,15 @@ export default function FolderView() {
 
   const handleNewFolder = async () => {
     const folderName = prompt("Enter new folder name:")
-    if (!folderName) return
+    if (!folderName || folderName.includes("_")) return
 
     const fullPath = decodedFolderName !== "document-vault" ? `${decodedFolderName}/${folderName}` : folderName
 
+    const sanitizedFolderName = folderName.replace(/ /g, "_")
+
     const response = await fetch(`/api/document-vault`, {
       method: "PUT",
-      body: JSON.stringify({ folderName, fullPath, userEmail }),
+      body: JSON.stringify({ folderName: sanitizedFolderName, fullPath, userEmail }),
       headers: { "Content-Type": "application/json" },
     })
 
@@ -135,7 +137,7 @@ export default function FolderView() {
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
           </button>
         ) : (
           <a
@@ -143,7 +145,7 @@ export default function FolderView() {
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Upload className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
           </a>
         )}
       </CardContent>
@@ -199,7 +201,7 @@ export default function FolderView() {
                         onClick={() => router.push(`/document-vault/${item.file_name}`)}
                         className="text-blue-500 font-semibold"
                       >
-                        {item.file_name}
+                        {item.file_name.replace(/_/g, " ")}
                       </button>
                     </>
                   ) : (
@@ -211,7 +213,7 @@ export default function FolderView() {
                         rel="noopener noreferrer"
                         className="text-blue-500"
                       >
-                        {item.file_name}
+                        {item.file_name.replace(/_/g, " ")}
                       </a>
                     </>
                   )}

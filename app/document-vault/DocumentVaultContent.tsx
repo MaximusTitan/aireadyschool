@@ -91,14 +91,15 @@ export default function DocumentVaultContent() {
   }
 
   const handleNewFolder = async () => {
-    if (!newFolderName.trim()) return
+    if (!newFolderName.trim() || newFolderName.includes("_")) return
 
     const fullPath = folderName !== "document-vault" ? `${folderName}/${newFolderName}` : newFolderName
+    const sanitizedFolderName = newFolderName.replace(/ /g, "_")
 
     try {
       const response = await fetch("/api/document-vault", {
         method: "PUT",
-        body: JSON.stringify({ folderName: newFolderName, fullPath, userEmail }),
+        body: JSON.stringify({ folderName: sanitizedFolderName, fullPath, userEmail }),
         headers: { "Content-Type": "application/json" },
       })
 
@@ -138,21 +139,21 @@ export default function DocumentVaultContent() {
       <CardContent className="p-4 flex flex-col items-center justify-center h-full">
         {item.type === "folder" ? (
           <a
-            href={`/document-vault/${item.file_name}`}
+            href={`/document-vault/${item.file_name.replace(/_/g, " ")}`}
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
           </a>
         ) : (
           <a
-            href={item.file_name}
+            href={item.file_path}
             target="_blank"
             rel="noopener noreferrer"
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Upload className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
           </a>
         )}
       </CardContent>
@@ -209,14 +210,14 @@ export default function DocumentVaultContent() {
                         <>
                           <Folder className="h-4 w-4 mr-2 stroke-current" />
                           <a href={`/document-vault/${item.file_name}`} className="text-blue-500 font-semibold">
-                            {item.file_name}
+                            {item.file_name.replace(/_/g, " ")}
                           </a>
                         </>
                       ) : (
                         <>
                           <Upload className="h-4 w-4 mr-2 stroke-current" />
-                          <a href={item.file_name} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-                            {item.file_name}
+                          <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                            {item.file_name.replace(/_/g, " ")}
                           </a>
                         </>
                       )}

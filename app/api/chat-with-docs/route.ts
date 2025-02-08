@@ -1,3 +1,5 @@
+// Used in Chat With Docs - tools/chat-with-docs
+
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
@@ -18,6 +20,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'No authorization header' }, { status: 401 });
     }
 
+    // Get user from Supabase auth
     const { data: { user }, error: authError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''));
     if (authError || !user?.email) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
@@ -43,7 +46,7 @@ export async function POST(request: Request) {
         match_threshold: 0.7,
         match_count: 5,
         selected_files: selectedDocs || [],
-        user_email: user.email  // Add user email to filter
+        user_email: user.email
       }
     );
 
@@ -83,6 +86,7 @@ export async function POST(request: Request) {
       max_tokens: 500
     });
 
+    // Return response with context and match count
     return NextResponse.json({ 
       response: completion.choices[0]?.message?.content || 'No response generated',
       hasContext: documents && documents.length > 0,

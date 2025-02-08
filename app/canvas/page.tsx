@@ -194,7 +194,7 @@ export default function CanvasPage() {
 
     try {
       if (mode === "text") {
-        const response = await fetch("/api/ai", {
+        const response = await fetch("/api/canvas-chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ topic: inputValue }),

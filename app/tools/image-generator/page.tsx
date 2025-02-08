@@ -54,7 +54,7 @@ export default function Page() {
     handleSubmit: handleChatSubmit,
     isLoading: isChatLoading,
   } = useChat({
-    api: "/api/chat",
+    api: "/api/image-chat",
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingImageRequests] = useState(() => new Set<string>());

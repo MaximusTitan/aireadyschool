@@ -27,7 +27,7 @@ export function ChatHistory() {
     setError(null);
     try {
       const response = await fetch(
-        `/api/chat-history?email=${encodeURIComponent(email)}`
+        `/api/research-chat-history?email=${encodeURIComponent(email)}`
       );
       if (!response.ok) {
         throw new Error("Failed to fetch chat history");

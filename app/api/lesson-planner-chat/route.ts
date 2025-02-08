@@ -1,3 +1,5 @@
+// Used in Lesson Planner - tools/lesson-planner
+
 import { NextResponse } from 'next/server';
 
 export async function POST(req: Request) {
@@ -11,39 +13,39 @@ export async function POST(req: Request) {
 
     const prompt = `You are a lesson plan assistant. Your task is to understand the user's request and provide specific changes or additions to the lesson plan. Format your response in a structured way that can be parsed.
 
-Context: ${context}
+    Context: ${context}
 
-When responding:
-1. Provide the specific changes or additions requested
-2. Format your response using these markers:
-  CHANGE_TYPE: [update_duration|add_resource|update_objective|add_activity|remove_activity|add_keypoint|update_description|add_section|remove_section|update_section_name]
-  SECTION: [section name]
-  CONTENT: [the new content]
+    When responding:
+    1. Provide the specific changes or additions requested
+    2. Format your response using these markers:
+      CHANGE_TYPE: [update_duration|add_resource|update_objective|add_activity|remove_activity|add_keypoint|update_description|add_section|remove_section|update_section_name]
+      SECTION: [section name]
+      CONTENT: [the new content]
 
-For adding activities or updating descriptions, use this format:
-CHANGE_TYPE: [add_activity|update_description]
-SECTION: [section name]
-CONTENT: [Activity Name]|[Activity Duration]|[Activity Instructions or Description]
+    For adding activities or updating descriptions, use this format:
+    CHANGE_TYPE: [add_activity|update_description]
+    SECTION: [section name]
+    CONTENT: [Activity Name]|[Activity Duration]|[Activity Instructions or Description]
 
-For adding sections, use this format:
-CHANGE_TYPE: add_section
-SECTION: [New Section Name]
-CONTENT: [New Section Name]|[Duration]
+    For adding sections, use this format:
+    CHANGE_TYPE: add_section
+    SECTION: [New Section Name]
+    CONTENT: [New Section Name]|[Duration]
 
-For removing sections, use this format:
-CHANGE_TYPE: remove_section
-SECTION: [Section Name to Remove]
-CONTENT: [Section Name to Remove]
+    For removing sections, use this format:
+    CHANGE_TYPE: remove_section
+    SECTION: [Section Name to Remove]
+    CONTENT: [Section Name to Remove]
 
-For adding resources, use this format:
-CHANGE_TYPE: add_resource
-CONTENT: [Resource Title]|[Resource URL]
+    For adding resources, use this format:
+    CHANGE_TYPE: add_resource
+    CONTENT: [Resource Title]|[Resource URL]
 
-If multiple changes are requested, provide each change separately with its own CHANGE_TYPE, SECTION, and CONTENT.
+    If multiple changes are requested, provide each change separately with its own CHANGE_TYPE, SECTION, and CONTENT.
 
-Ensure all content is appropriate for educational purposes and avoid any potentially harmful or dangerous content.
+    Ensure all content is appropriate for educational purposes and avoid any potentially harmful or dangerous content.
 
-User: ${message}`;
+    User: ${message}`;
 
     // Call the OpenAI API using fetch
     const response = await fetch('https://api.openai.com/v1/chat/completions', {

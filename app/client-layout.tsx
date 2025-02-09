@@ -19,6 +19,7 @@ export default function ClientLayout({
   const [hasCognitiveAssessment, setHasCognitiveAssessment] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userStatus, setUserStatus] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUserAndAssessment = async () => {
@@ -27,9 +28,11 @@ export default function ClientLayout({
       } = await supabase.auth.getSession();
       const role = session?.user?.user_metadata?.role;
       const email = session?.user?.email;
+      const status = session?.user?.user_metadata?.status;
 
       setUserRole(role);
       setUserEmail(email ?? null);
+      setUserStatus(status ?? null);
 
       if (role === "Student" && email) {
         const { data } = await supabase
@@ -44,6 +47,16 @@ export default function ClientLayout({
 
     checkUserAndAssessment();
   }, []);
+
+  // Redirect to verification waiting page if status is disabled
+  if (
+    userStatus === "disabled" &&
+    pathname !== "/verification-waiting" &&
+    pathname !== "/sign-in"
+  ) {
+    window.location.href = "/verification-waiting";
+    return null;
+  }
 
   const showSidebar =
     pathname.startsWith("/tools") ||

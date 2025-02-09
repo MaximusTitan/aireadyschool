@@ -23,6 +23,7 @@ export const signUpAction = async (formData: FormData) => {
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
         role: role,
+        status: 'disabled'  // Set initial status as disabled
       },
     },
   });
@@ -72,7 +73,8 @@ export const schoolSignUpAction = async (formData: FormData, site_id: string) =>
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
         role: role,
-        site_id: site_id.toLowerCase(), // Ensure site_id is lowercase
+        site_id: site_id.toLowerCase(),
+        status: 'disabled'  // Set initial status as disabled
       },
     },
   });

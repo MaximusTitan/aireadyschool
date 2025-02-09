@@ -37,6 +37,13 @@ export const updateSession = async (request: NextRequest) => {
     // Refresh session if expired - required for Server Components
     const { data: user, error } = await supabase.auth.getUser();
     
+    // Check user status and redirect if disabled
+    if (user?.user?.user_metadata?.status === "disabled" && 
+        !request.nextUrl.pathname.startsWith("/verification-waiting") &&
+        !request.nextUrl.pathname.startsWith("/sign-in")) {
+      return NextResponse.redirect(new URL("/verification-waiting", request.url));
+    }
+
     const url = request.nextUrl;
     const pathname = url.pathname;
   

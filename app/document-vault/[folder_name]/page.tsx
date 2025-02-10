@@ -169,11 +169,7 @@ export default function FolderView() {
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-bold">
-          {decodedFolderName
-            .replace(/-/g, " ")
-            .split(" ")
-            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ")}
+          {decodedFolderName.replace(/_/g, " ")}
         </h2>
         <ToggleGroup type="single" value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid")}>
           <ToggleGroupItem value="list" aria-label="List view">

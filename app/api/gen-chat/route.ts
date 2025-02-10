@@ -1,4 +1,4 @@
-import { openai } from '@ai-sdk/openai';
+import { anthropic } from '@ai-sdk/anthropic';
 import { streamText, smoothStream } from 'ai';
 import { tools } from '@/app/tools/gen-chat/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
   const { messages } = await request.json();
 
   const result = streamText({
-    model: openai('gpt-4o'),
+    model: anthropic('claude-3-5-sonnet-20240620'),
     system: getSystemPrompt(messages),
     messages,
     maxSteps: 5,

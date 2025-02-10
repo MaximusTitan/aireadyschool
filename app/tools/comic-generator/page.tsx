@@ -390,6 +390,8 @@ export default function ComicGenerator() {
             <button
               onClick={() => setShowModal(false)}
               className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+              aria-label="Close modal"
+              title="Close modal"
             >
               <X className="h-6 w-6" />
             </button>

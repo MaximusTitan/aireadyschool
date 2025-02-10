@@ -39,43 +39,43 @@ export default function UserListItem({ user }: { user: any }) {
   };
 
   return isEditing ? (
-    <>
-      <form
-        onSubmit={handleSubmit}
-        className="bg-background border rounded-lg shadow-sm p-6 space-y-4"
-      >
+    <form
+      onSubmit={handleSubmit}
+      className="bg-background border rounded-lg shadow p-6 space-y-4"
+    >
+      <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <label className="block mb-1 text-foreground">Email</label>
+          <label className="text-sm font-medium text-foreground">Email</label>
           <input
             type="email"
             value={formData.email}
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, email: e.target.value }))
             }
-            className="w-full border rounded p-2 bg-background text-foreground"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
 
         <div>
-          <label className="block mb-1 text-foreground">Name</label>
+          <label className="text-sm font-medium text-foreground">Name</label>
           <input
             type="text"
             value={formData.name}
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, name: e.target.value }))
             }
-            className="w-full border rounded p-2 bg-background text-foreground"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
 
         <div>
-          <label className="block mb-1 text-foreground">Role</label>
+          <label className="text-sm font-medium text-foreground">Role</label>
           <select
             value={formData.role}
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, role: e.target.value }))
             }
-            className="w-full border rounded p-2 bg-background text-foreground"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             {ALLOWED_ROLES.map((role) => (
               <option key={role} value={role}>
@@ -86,13 +86,13 @@ export default function UserListItem({ user }: { user: any }) {
         </div>
 
         <div>
-          <label className="block mb-1 text-foreground">Status</label>
+          <label className="text-sm font-medium text-foreground">Status</label>
           <select
             value={formData.status}
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, status: e.target.value }))
             }
-            className="w-full border rounded p-2 bg-background text-foreground"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           >
             {USER_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -103,7 +103,7 @@ export default function UserListItem({ user }: { user: any }) {
         </div>
 
         <div>
-          <label className="block mb-1 text-foreground">
+          <label className="text-sm font-medium text-foreground">
             New Password (leave empty to keep current)
           </label>
           <input
@@ -112,123 +112,87 @@ export default function UserListItem({ user }: { user: any }) {
             onChange={(e) =>
               setFormData((prev) => ({ ...prev, password: e.target.value }))
             }
-            className="w-full border rounded p-2 bg-background text-foreground"
+            className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
           />
         </div>
+      </div>
 
-        <div className="flex gap-2 pt-4 border-t">
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="flex-1 bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90 transition-colors disabled:bg-primary/50"
-          >
-            {status === "loading" ? (
-              <span className="flex items-center justify-center">
-                <svg
-                  className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                  xmlns="http://www.w3.org/2000/svg"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    className="opacity-25"
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  ></circle>
-                  <path
-                    className="opacity-75"
-                    fill="currentColor"
-                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                  ></path>
-                </svg>
-                Saving...
-              </span>
-            ) : (
-              "Save Changes"
-            )}
-          </button>
-          <button
-            type="button"
-            onClick={() => setIsEditing(false)}
-            className="flex-1 bg-secondary text-secondary-foreground px-4 py-2 rounded-md hover:bg-secondary/80 transition-colors"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
-
-      {showConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full">
-            <h3 className="text-lg font-medium mb-4">Confirm Changes</h3>
-            <p className="text-gray-600 mb-6">
-              Are you sure you want to save these changes?
+      <div className="flex items-center justify-end gap-2 pt-4 border-t">
+        <button
+          type="button"
+          onClick={() => setIsEditing(false)}
+          className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          disabled={status === "loading"}
+          className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 disabled:opacity-50"
+        >
+          {status === "loading" ? "Saving..." : "Save Changes"}
+        </button>
+      </div>
+    </form>
+  ) : (
+    <div className="bg-background border rounded-lg p-4 hover:shadow-md transition-shadow">
+      <div className="flex items-start justify-between">
+        <div className="flex gap-4">
+          <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+            <span className="text-lg font-semibold text-primary">
+              {user.user_metadata?.name?.[0] || user.email[0].toUpperCase()}
+            </span>
+          </div>
+          <div className="space-y-1">
+            <h3 className="font-medium text-foreground">{user.email}</h3>
+            <p className="text-sm text-muted-foreground">
+              {user.user_metadata?.name || "No name set"}
             </p>
             <div className="flex gap-2">
-              <button
-                onClick={() => setShowConfirm(false)}
-                className="flex-1 bg-white border border-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => {
-                  setShowConfirm(false);
-                  handleSubmit({ preventDefault: () => {} } as React.FormEvent);
-                }}
-                className="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-              >
-                Confirm
-              </button>
+              <RoleBadge role={user.user_metadata?.role || "Student"} />
+              <StatusBadge status={user.user_metadata?.status || "disabled"} />
             </div>
           </div>
         </div>
-      )}
-    </>
-  ) : (
-    <div className="bg-background border rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start">
-        <div className="space-y-1">
-          <h3 className="font-medium text-foreground">{user.email}</h3>
-          <p className="text-sm text-muted-foreground">
-            Name: {user.user_metadata?.name || "N/A"}
-          </p>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              user.user_metadata?.role === "Admin"
-                ? "bg-purple-100 text-purple-800"
-                : user.user_metadata?.role === "Teacher"
-                  ? "bg-blue-100 text-blue-800"
-                  : "bg-green-100 text-green-800"
-            }`}
-          >
-            {user.user_metadata?.role || "Student"}
-          </span>
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-              user.user_metadata?.status === "active"
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            } ml-2`}
-          >
-            {(user.user_metadata?.status || "disabled")
-              .charAt(0)
-              .toUpperCase() +
-              (user.user_metadata?.status || "disabled").slice(1)}
-          </span>
-        </div>
         <button
           onClick={() => setIsEditing(true)}
-          className="text-muted-foreground hover:text-foreground"
+          className="p-2 hover:bg-secondary rounded-full"
         >
-          <span className="sr-only">Edit</span>
-          <PencilIcon className="h-5 w-5" />
+          <PencilIcon className="h-4 w-4" />
         </button>
       </div>
     </div>
+  );
+}
+
+function RoleBadge({ role }: { role: string }) {
+  const colors = {
+    Admin: "bg-purple-100 text-purple-800",
+    Teacher: "bg-blue-100 text-blue-800",
+    School: "bg-orange-100 text-orange-800",
+    Student: "bg-green-100 text-green-800",
+  };
+
+  return (
+    <span
+      className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${colors[role as keyof typeof colors]}`}
+    >
+      {role}
+    </span>
+  );
+}
+
+function StatusBadge({ status }: { status: string }) {
+  return (
+    <span
+      className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+        status === "active"
+          ? "bg-green-100 text-green-800"
+          : "bg-red-100 text-red-800"
+      }`}
+    >
+      {status.charAt(0).toUpperCase() + status.slice(1)}
+    </span>
   );
 }
 

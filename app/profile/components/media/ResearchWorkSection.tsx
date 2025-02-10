@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FileText, Edit2, Check, X, Loader2, FileIcon } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
+import { DocumentVaultSelector } from "./DocumentVaultSelector";
 
 import {
   Dialog,
@@ -24,6 +25,15 @@ export interface ResearchWork {
   student_email: string;
 }
 
+interface VaultItem {
+  id: string;
+  file_name: string;
+  file_path: string;
+  parent_folder: string;
+  type: "folder" | "file";
+  public_url: string | null;
+}
+
 export default function ResearchWorkSection() {
   const [researchWorks, setResearchWorks] = useState<ResearchWork[]>([]);
   const [editingResearchWork, setEditingResearchWork] = useState<{
@@ -34,48 +44,52 @@ export default function ResearchWorkSection() {
   const [error, setError] = useState<string | null>(null);
   const researchWorkInputRef = useRef<HTMLInputElement>(null);
 
-  const validTypes = [
-    "application/pdf",
-    "application/msword",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ];
-
   useEffect(() => {
-    const fetchResearchWorks = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user?.email) {
-        const { data, error } = await supabase
-          .from("research_works")
-          .select("*")
-          .eq("student_email", user.email)
-          .order("updated_at", { ascending: false });
-
-        if (!error && data) {
-          setResearchWorks(data);
-        }
-      }
-    };
-
     fetchResearchWorks();
   }, []);
+
+  const fetchResearchWorks = async () => {
+    const supabase = createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user?.email) {
+      const { data, error } = await supabase
+        .from("research_works")
+        .select("*")
+        .eq("student_email", user.email)
+        .order("updated_at", { ascending: false });
+
+      if (!error && data) {
+        setResearchWorks(data);
+      }
+    }
+  };
 
   const handleResearchWorkUpload = async (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
-    if (!file || !validTypes.includes(file.type)) {
-      setError("Please upload only PDF or Word documents");
+    if (!file) {
+      setError("No file selected");
       return;
     }
 
+    await uploadFile(file);
+  };
+
+  const handleVaultDocumentSelect = (document: VaultItem) => {
+    uploadVaultDocument(document).catch((error) => {
+      console.error("Error processing vault document:", error);
+      setError("Failed to process document from vault");
+    });
+  };
+
+  const uploadFile = async (file: File) => {
     setIsUploading(true);
     const supabase = createClient();
 
-    // Get current user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -103,7 +117,7 @@ export default function ResearchWorkSection() {
       const { error: dbError, data: researchWork } = await supabase
         .from("research_works")
         .insert({
-          student_email: user.email, // Use authenticated user's email
+          student_email: user.email,
           title: file.name,
           file_url: publicUrl,
         })
@@ -118,6 +132,37 @@ export default function ResearchWorkSection() {
       setError("Failed to upload file");
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const uploadVaultDocument = async (document: VaultItem) => {
+    const supabase = createClient();
+
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.email) {
+      setError("User not authenticated");
+      return;
+    }
+
+    try {
+      const { error: dbError, data: researchWork } = await supabase
+        .from("research_works")
+        .insert({
+          student_email: user.email,
+          title: document.file_name,
+          file_url: document.file_path,
+        })
+        .select()
+        .single();
+
+      if (dbError) throw dbError;
+
+      setResearchWorks((prev) => [researchWork, ...prev]);
+    } catch (error) {
+      console.error("Error handling vault document:", error);
+      setError("Failed to add document from vault");
     }
   };
 
@@ -311,24 +356,27 @@ export default function ResearchWorkSection() {
             </div>
           </div>
         ))}
-        <div
-          className="aspect-video bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors flex items-center justify-center cursor-pointer"
-          onClick={() => researchWorkInputRef.current?.click()}
-        >
-          <div className="flex flex-col items-center">
-            {isUploading ? (
-              <>
-                <Loader2 className="w-12 h-12 text-gray-400 animate-spin" />
-                <span className="mt-2 text-sm text-gray-500">{`Uploading...`}</span>
-              </>
-            ) : (
-              <>
-                <FileText className="w-12 h-12 text-gray-400" />
-                <span className="mt-2 text-sm text-gray-500">
-                  Upload Research Work
-                </span>
-              </>
-            )}
+        <div className="aspect-video bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors flex flex-col items-center justify-center cursor-pointer p-4">
+          <div className="flex flex-col items-center mb-4">
+            <FileText className="w-12 h-12 text-gray-400 mb-2" />
+            <span className="text-sm text-gray-500">Upload Research Work</span>
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={() => researchWorkInputRef.current?.click()}
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                "Upload from Device"
+              )}
+            </Button>
+            <DocumentVaultSelector onSelect={handleVaultDocumentSelect} />
           </div>
         </div>
       </div>

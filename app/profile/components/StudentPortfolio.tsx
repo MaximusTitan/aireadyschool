@@ -9,6 +9,7 @@ import VideoSection from "./media/VideoSection";
 import PresentationSection from "./media/PresentationSection";
 import ArtworkSection from "./media/ArtworkSection";
 import ResearchWorkSection from "./media/ResearchWorkSection";
+import { AppSection } from "./media/AppSection";
 import { createClient } from "@/utils/supabase/client";
 
 export function StudentPortfolio() {
@@ -66,6 +67,7 @@ export function StudentPortfolio() {
               <PresentationSection />
               <ArtworkSection />
               <ResearchWorkSection />
+              <AppSection />
             </>
           )}
         </div>

@@ -1,197 +1,228 @@
-"use client";
+"use client"
 
-import type React from "react";
-import { useState, useRef, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Video, Edit2, Check, X, Loader2 } from "lucide-react";
-import { createClient } from "@/utils/supabase/client";
-
-interface VideoSectionProps {}
+import type React from "react"
+import { useState, useRef, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Video, Edit2, Check, X, Loader2 } from "lucide-react"
+import { createClient } from "@/utils/supabase/client"
 
 interface VideoItem {
-  id: string;
-  file_url: string;
-  title: string;
-  updated_at: string;
-  student_email: string;
+  id: string
+  file_url: string
+  title: string
+  updated_at: string
+  student_email: string
+  is_embed: boolean
 }
 
-export default function VideoSection({}: VideoSectionProps) {
-  const [videos, setVideos] = useState<VideoItem[]>([]);
-  const [editingVideo, setEditingVideo] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
-  const videoInputRef = useRef<HTMLInputElement>(null);
+const VideoSection: React.FC = () => {
+  const [videos, setVideos] = useState<VideoItem[]>([])
+  const [editingVideo, setEditingVideo] = useState<{ id: string; title: string } | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const [error, setError] = useState<string | null>(null)
+  const [embedUrl, setEmbedUrl] = useState("")
+  const videoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    loadVideos();
-  }, []);
+    loadVideos()
+  }, [])
 
   const loadVideos = async () => {
-    const supabase = createClient();
+    const supabase = createClient()
     const {
       data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return;
+    } = await supabase.auth.getUser()
+    if (!user) return
 
     const { data, error } = await supabase
       .from("videos")
       .select("*")
       .eq("student_email", user.email)
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
 
     if (error) {
-      setError("Failed to load videos");
-      return;
+      setError("Failed to load videos")
+      return
     }
 
-    setVideos(data || []);
-  };
+    setVideos(data || [])
+  }
 
-  const handleVideoUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = event.target.files?.[0];
+  const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
     if (!file || !file.type.startsWith("video/")) {
-      setError("Please upload only video files");
-      return;
+      setError("Please upload only video files")
+      return
     }
 
-    setIsUploading(true);
-    setUploadProgress(0);
+    setIsUploading(true)
+    setUploadProgress(0)
 
-    const supabase = createClient();
+    const supabase = createClient()
     const {
       data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.email) return;
+    } = await supabase.auth.getUser()
+    if (!user?.email) return
 
     try {
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${Math.random()}.${fileExt}`;
+      const fileExt = file.name.split(".").pop()
+      const fileName = `${Math.random()}.${fileExt}`
       const { error: uploadError, data } = await supabase.storage
         .from("videos")
-        .upload(`${user.email}/${fileName}`, file);
+        .upload(`${user.email}/${fileName}`, file, {
+        })
 
-      if (uploadError) throw uploadError;
+      if (uploadError) throw uploadError
 
       const {
         data: { publicUrl },
-      } = supabase.storage
-        .from("videos")
-        .getPublicUrl(`${user.email}/${fileName}`);
+      } = supabase.storage.from("videos").getPublicUrl(`${user.email}/${fileName}`)
 
       const { error: dbError } = await supabase.from("videos").insert({
         student_email: user.email,
         title: file.name,
         file_url: publicUrl,
-      });
+        is_embed: false,
+      })
 
-      if (dbError) throw dbError;
+      if (dbError) throw dbError
 
-      await loadVideos();
+      await loadVideos()
     } catch (error) {
-      console.error("Error handling video:", error);
-      setError("Failed to upload video");
+      console.error("Error handling video:", error)
+      setError("Failed to upload video")
     } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
+      setIsUploading(false)
+      setUploadProgress(0)
     }
-  };
+  }
 
   const handleVideoTitleEdit = (id: string, title: string) => {
-    setEditingVideo({ id, title });
-  };
+    setEditingVideo({ id, title })
+  }
 
   const handleVideoTitleSave = async () => {
-    if (!editingVideo) return;
+    if (!editingVideo) return
 
-    const supabase = createClient();
+    const supabase = createClient()
     const { error } = await supabase
       .from("videos")
       .update({
         title: editingVideo.title,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", editingVideo.id);
+      .eq("id", editingVideo.id)
 
     if (error) {
-      setError("Failed to update title");
-      return;
+      setError("Failed to update title")
+      return
     }
 
-    await loadVideos();
-    setEditingVideo(null);
-  };
+    await loadVideos()
+    setEditingVideo(null)
+  }
 
   const handleVideoDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this video?")) return;
+    if (!confirm("Are you sure you want to delete this video?")) return
 
-    const supabase = createClient();
-    const video = videos.find((v) => v.id === id);
-    if (!video) return;
+    const supabase = createClient()
+    const video = videos.find((v) => v.id === id)
+    if (!video) return
 
-    const fileName = video.file_url.split("/").pop();
+    const fileName = video.file_url.split("/").pop()
     const {
       data: { user },
-    } = await supabase.auth.getUser();
-    if (!user?.email || !fileName) return;
+    } = await supabase.auth.getUser()
+    if (!user?.email || !fileName) return
 
-    // Delete from storage
-    await supabase.storage.from("videos").remove([`${user.email}/${fileName}`]);
+    if (!video.is_embed) {
+      // Delete from storage
+      await supabase.storage.from("videos").remove([`${user.email}/${fileName}`])
+    }
 
     // Delete from database
-    await supabase.from("videos").delete().eq("id", id);
+    await supabase.from("videos").delete().eq("id", id)
 
-    await loadVideos();
-  };
+    await loadVideos()
+  }
+
+  const handleEmbedSubmit = async () => {
+    if (!embedUrl) return
+
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    if (!user?.email) return
+
+    try {
+      const { error } = await supabase.from("videos").insert({
+        student_email: user.email,
+        title: "Embedded Video",
+        file_url: embedUrl,
+        is_embed: true,
+      })
+
+      if (error) throw error
+
+      await loadVideos()
+      setEmbedUrl("")
+    } catch (error) {
+      console.error("Error adding embed:", error)
+      setError("Failed to add video embed")
+    }
+  }
+
+  const getEmbedUrl = (url: string) => {
+    const youtubeRegex = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/
+    const match = url.match(youtubeRegex)
+    if (match && match[2].length === 11) {
+      return `https://www.youtube.com/embed/${match[2]}`
+    }
+    // Add support for other video platforms here if needed
+    return url
+  }
 
   return (
     <div className="mt-12">
       <h2 className="text-xl font-bold mb-4">Videos</h2>
       {error && <p className="text-red-500 mb-4">{error}</p>}
+      <div className="mb-4">
+        <div className="flex items-center gap-2">
+          <Input
+            type="text"
+            placeholder="Enter video embed URL"
+            value={embedUrl}
+            onChange={(e) => setEmbedUrl(e.target.value)}
+            className="flex-grow"
+          />
+          <Button onClick={handleEmbedSubmit}>Add Embed</Button>
+        </div>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {videos.map((video, index) => (
-          <div
-            key={video.id}
-            className="bg-gray-100 rounded-lg overflow-hidden"
-          >
+        {videos.map((video) => (
+          <div key={video.id} className="bg-gray-100 rounded-lg overflow-hidden">
             <div className="aspect-video">
-              <video
-                src={video.file_url}
-                controls
-                className="w-full h-full object-cover"
-              />
+              {video.is_embed ? (
+                <iframe src={getEmbedUrl(video.file_url)} className="w-full h-full" allowFullScreen />
+              ) : (
+                <video src={video.file_url} controls className="w-full h-full object-cover" />
+              )}
             </div>
             <div className="p-4">
               {editingVideo?.id === video.id ? (
                 <div className="flex items-center gap-2">
                   <Input
                     value={editingVideo.title}
-                    onChange={(e) =>
-                      setEditingVideo((prev) =>
-                        prev ? { ...prev, title: e.target.value } : prev
-                      )
-                    }
+                    onChange={(e) => setEditingVideo((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
                     className="flex-grow"
                   />
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={handleVideoTitleSave}
-                  >
+                  <Button size="icon" variant="ghost" onClick={handleVideoTitleSave}>
                     <Check className="h-4 w-4" />
                   </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => setEditingVideo(null)}
-                  >
+                  <Button size="icon" variant="ghost" onClick={() => setEditingVideo(null)}>
                     <X className="h-4 w-4" />
                   </Button>
                 </div>
@@ -199,28 +230,17 @@ export default function VideoSection({}: VideoSectionProps) {
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold">{video.title}</h3>
                   <div>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() =>
-                        handleVideoTitleEdit(video.id, video.title)
-                      }
-                    >
+                    <Button size="icon" variant="ghost" onClick={() => handleVideoTitleEdit(video.id, video.title)}>
                       <Edit2 className="h-4 w-4" />
                     </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => handleVideoDelete(video.id)}
-                    >
+                    <Button size="icon" variant="ghost" onClick={() => handleVideoDelete(video.id)}>
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               )}
               <p className="text-sm text-gray-500 mt-1">
-                Last updated on{" "}
-                {new Date(video.updated_at).toLocaleDateString()}
+                Last updated on {new Date(video.updated_at).toLocaleDateString()}
               </p>
             </div>
           </div>
@@ -253,5 +273,8 @@ export default function VideoSection({}: VideoSectionProps) {
         disabled={isUploading}
       />
     </div>
-  );
+  )
 }
+
+export default VideoSection
+

@@ -181,6 +181,22 @@ export const quizAnswerEvaluationTool = createTool({
   },
 });
 
+export const userDetailsTool = createTool({
+  description: 'Collect user details for personalized learning',
+  parameters: z.object({
+    name: z.string().describe('Name of the user'),
+    age: z.number().describe('Age of the user'),
+    grade: z.number().describe('Grade/class of the user'),
+    subjects: z.array(z.string()).describe('Subjects the user is interested in'),
+  }),
+  execute: async function (params) {
+    return {
+      ...params,
+      timestamp: new Date().toISOString(),
+    };
+  },
+});
+
 export const tools = {
   generateMathProblem: mathProblemTool,
   evaluateAnswer: evaluateAnswerTool,
@@ -189,4 +205,5 @@ export const tools = {
   conceptVisualizer: conceptVisualizer,
   generateMindMap: mindMapTool,
   evaluateQuizAnswer: quizAnswerEvaluationTool,
+  collectUserDetails: userDetailsTool,
 };

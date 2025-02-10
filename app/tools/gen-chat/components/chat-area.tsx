@@ -108,7 +108,9 @@ export const ChatArea = ({
     (message) => message.toolInvocations || []
   );
 
-  const hasActiveTools = toolInvocations.length > 0;
+  const hasActiveTools = toolInvocations.some(
+    (tool) => tool.toolName !== "collectUserDetails"
+  );
 
   return (
     <div className="flex flex-1 pb-20 relative">

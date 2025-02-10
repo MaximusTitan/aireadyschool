@@ -37,11 +37,47 @@ function detectSubject(messages: any[]): Subject {
   return 'generic';
 }
 
+interface UserDetails {
+  name?: string;
+  age?: number;
+  grade?: number;
+  subjects?: string[];
+}
+
 function getSystemPrompt(messages: any[]): string {
   const subject = detectSubject(messages);
   const basePrompt = prompts[subject];
+  
+  // Get user details from messages if available
+  const userDetailsMessage = messages.find(m => 
+    m.toolCalls?.some((t: any) => t.tool === 'collectUserDetails' && t.state === 'result')
+  );
+  
+  let userDetails: UserDetails = {};
+  if (userDetailsMessage) {
+    const toolCall = userDetailsMessage.toolCalls.find((t: any) => t.tool === 'collectUserDetails');
+    userDetails = toolCall.result;
+  }
+
+  // Add user details to prompt if available
+  const userDetailsPrompt = userDetails.age ? `
+Student Profile:
+- Name: ${userDetails.name}
+- Age: ${userDetails.age}
+- Grade: ${userDetails.grade}
+- Interests: ${userDetails.subjects?.join(', ')}
+
+Adapt your teaching style according to this student's profile.
+` : `
+I haven't collected the student's details yet. Start by asking about:
+- Name of the student
+- Age and grade level
+- Subjects they're interested in
+Use the collectUserDetails tool to store this information.
+`;
 
   return `${basePrompt}
+${userDetailsPrompt}
 
 You can use various tools to enhance the learning experience:
 - Generate interactive math problems

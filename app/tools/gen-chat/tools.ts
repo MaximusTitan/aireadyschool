@@ -91,103 +91,15 @@ export const quizTool = createTool({
   description: 'Generate a quiz question',
   parameters: z.object({
     subject: z.string().describe('The subject area'),
-    difficulty: z.string().describe('The difficulty level'),
+    difficulty: z.enum(['easy', 'medium', 'hard']).describe('The difficulty level'),
+    topic: z.string().optional().describe('Specific topic within the subject'),
   }),
-  execute: async function ({ subject, difficulty }) {
-    // Generate appropriate questions based on subject and difficulty
-    let question, options, correctAnswer, explanation;
-
-    switch (subject.toLowerCase()) {
-      case 'science':
-        if (difficulty === 'easy') {
-          const questions = [
-            {
-              q: "What is the closest planet to the Sun?",
-              o: ["Venus", "Mars", "Mercury", "Earth"],
-              a: "Mercury",
-              e: "Mercury is the first planet from the Sun, making it the closest!"
-            },
-            {
-              q: "What is the state of matter that has no fixed shape?",
-              o: ["Solid", "Liquid", "Gas", "Plasma"],
-              a: "Liquid",
-              e: "Liquids flow and take the shape of their container!"
-            }
-          ];
-          ({ q: question, o: options, a: correctAnswer, e: explanation } = 
-            questions[Math.floor(Math.random() * questions.length)]);
-        } else {
-          const questions = [
-            {
-              q: "Which of these is NOT a greenhouse gas?",
-              o: ["Carbon dioxide", "Nitrogen", "Methane", "Water vapor"],
-              a: "Nitrogen",
-              e: "While nitrogen is abundant in our atmosphere, it's not a greenhouse gas!"
-            },
-            {
-              q: "What is the process by which plants convert light into energy?",
-              o: ["Photosynthesis", "Respiration", "Fermentation", "Digestion"],
-              a: "Photosynthesis",
-              e: "Photosynthesis uses sunlight to convert CO2 and water into glucose and oxygen!"
-            }
-          ];
-          ({ q: question, o: options, a: correctAnswer, e: explanation } = 
-            questions[Math.floor(Math.random() * questions.length)]);
-        }
-        break;
-
-      case 'history':
-        if (difficulty === 'easy') {
-          const questions = [
-            {
-              q: "Who was the first President of the United States?",
-              o: ["Thomas Jefferson", "George Washington", "John Adams", "Benjamin Franklin"],
-              a: "George Washington",
-              e: "George Washington served as the first U.S. President from 1789 to 1797!"
-            },
-            {
-              q: "Which civilization built the pyramids of Giza?",
-              o: ["Romans", "Greeks", "Egyptians", "Persians"],
-              a: "Egyptians",
-              e: "The ancient Egyptians built the pyramids as tombs for their pharaohs!"
-            }
-          ];
-          ({ q: question, o: options, a: correctAnswer, e: explanation } = 
-            questions[Math.floor(Math.random() * questions.length)]);
-        } else {
-          const questions = [
-            {
-              q: "In which year did the Berlin Wall fall?",
-              o: ["1987", "1989", "1991", "1993"],
-              a: "1989",
-              e: "The Berlin Wall fell on November 9, 1989, marking the end of divided Berlin!"
-            },
-            {
-              q: "Who wrote 'The Art of War'?",
-              o: ["Confucius", "Sun Tzu", "Lao Tzu", "Buddha"],
-              a: "Sun Tzu",
-              e: "Sun Tzu wrote this influential military treatise around 500 BCE!"
-            }
-          ];
-          ({ q: question, o: options, a: correctAnswer, e: explanation } = 
-            questions[Math.floor(Math.random() * questions.length)]);
-        }
-        break;
-
-      default:
-        question = "What is the capital of France?";
-        options = ["London", "Paris", "Berlin", "Madrid"];
-        correctAnswer = "Paris";
-        explanation = "Paris has been the capital of France since 508 CE!";
-    }
-
+  execute: async function ({ subject, difficulty, topic }) {
     return {
-      topic: subject,
-      question,
-      options,
-      correctAnswer,
-      explanation,
-      difficulty
+      subject,
+      difficulty,
+      topic,
+      pending: true
     };
   },
 });
@@ -240,6 +152,35 @@ export const mindMapTool = createTool({
   },
 });
 
+export const quizAnswerEvaluationTool = createTool({
+  description: 'Evaluate a quiz answer and provide detailed feedback',
+  parameters: z.object({
+    selectedAnswer: z.object({
+      id: z.string(),
+      text: z.string(),
+      isCorrect: z.boolean(),
+    }),
+    question: z.string(),
+    allOptions: z.array(z.object({
+      id: z.string(),
+      text: z.string(),
+      isCorrect: z.boolean(),
+    })),
+    subject: z.string(),
+    difficulty: z.string(),
+    explanation: z.string(),
+    isCorrect: z.boolean(),
+  }),
+  execute: async function(params) {
+    return {
+      ...params,
+      feedback: params.isCorrect 
+        ? `Correct! ${params.explanation}`
+        : `Not quite. ${params.explanation} Let's try another question about ${params.subject}!`
+    };
+  },
+});
+
 export const tools = {
   generateMathProblem: mathProblemTool,
   evaluateAnswer: evaluateAnswerTool,
@@ -247,4 +188,5 @@ export const tools = {
   generateImage: imageGeneratorTool,
   conceptVisualizer: conceptVisualizer,
   generateMindMap: mindMapTool,
+  evaluateQuizAnswer: quizAnswerEvaluationTool,
 };

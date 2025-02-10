@@ -33,6 +33,10 @@ export default function Page() {
     Record<string, { url: string; credits: number }>
   >({});
   const [pendingVisualizations] = useState(() => new Set<string>());
+  const [pendingQuizzes] = useState(() => new Set<string>());
+  const [generatedQuizzes, setGeneratedQuizzes] = useState<Record<string, any>>(
+    {}
+  );
 
   const handleAnswerSubmit = async (data: {
     studentAnswer: number;
@@ -54,6 +58,40 @@ export default function Page() {
     };
     await append(userMessage);
   };
+
+  const handleQuizAnswer = useCallback(
+    async (data: {
+      selectedOption: { id: string; text: string; isCorrect: boolean };
+      question: string;
+      allOptions: Array<{ id: string; text: string; isCorrect: boolean }>;
+      subject: string;
+      difficulty: string;
+      explanation: string;
+    }) => {
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `I chose: "${data.selectedOption.text}" for the question: "${data.question}"`,
+        toolCalls: [
+          {
+            tool: "evaluateQuizAnswer",
+            parameters: {
+              selectedAnswer: data.selectedOption,
+              question: data.question,
+              allOptions: data.allOptions,
+              subject: data.subject,
+              difficulty: data.difficulty,
+              explanation: data.explanation,
+              isCorrect: data.selectedOption.isCorrect,
+            },
+          },
+        ],
+        isHidden: true, // Add this flag
+      };
+      await append(userMessage);
+    },
+    [append]
+  );
 
   const handleImageGeneration = async (
     toolCallId: string,
@@ -101,6 +139,50 @@ export default function Page() {
       }));
     }
   };
+
+  const handleQuizGeneration = useCallback(
+    async (
+      toolCallId: string,
+      params: {
+        subject: string;
+        difficulty: string;
+      }
+    ) => {
+      if (pendingQuizzes.has(toolCallId)) {
+        return;
+      }
+
+      pendingQuizzes.add(toolCallId);
+      try {
+        const response = await fetch("/api/gen-quiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to generate quiz");
+        }
+
+        const data = await response.json();
+        setGeneratedQuizzes((prev) => ({
+          ...prev,
+          [toolCallId]: data,
+        }));
+      } catch (error) {
+        console.error("Quiz generation failed:", error);
+        setGeneratedQuizzes((prev) => ({
+          ...prev,
+          [toolCallId]: {
+            error: "Failed to generate quiz",
+          },
+        }));
+      } finally {
+        pendingQuizzes.delete(toolCallId);
+      }
+    },
+    [pendingQuizzes]
+  );
 
   const handleVisualization = async (subject: string, concept: string) => {
     try {
@@ -243,12 +325,16 @@ export default function Page() {
             simulationCode={simulationCode}
             simulationCodeRef={simulationCodeRef}
             generatedImages={generatedImages}
+            generatedQuizzes={generatedQuizzes}
+            pendingQuizzes={pendingQuizzes}
             pendingImageRequests={pendingImageRequests}
             completedImages={completedImages}
             pendingVisualizations={pendingVisualizations}
             handleAnswerSubmit={handleAnswerSubmit}
             handleImageGeneration={handleImageGeneration}
+            handleQuizGeneration={handleQuizGeneration}
             handleVisualization={handleVisualization}
+            handleQuizAnswer={handleQuizAnswer}
             onSimulationCode={(code: string) => setSimulationCode(code)}
           />
         </main>

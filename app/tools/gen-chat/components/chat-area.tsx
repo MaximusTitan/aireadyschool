@@ -56,6 +56,28 @@ type ChatAreaProps = {
     concept: string
   ) => Promise<{ code?: string }>;
   onSimulationCode: (code: string) => void;
+  generatedQuizzes: Record<string, any>;
+  pendingQuizzes: Set<string>;
+  handleQuizGeneration: (
+    toolCallId: string,
+    params: { subject: string; difficulty: string }
+  ) => Promise<void>;
+  handleQuizAnswer: (data: {
+    selectedOption: {
+      id: string;
+      text: string;
+      isCorrect: boolean;
+    };
+    question: string;
+    allOptions: Array<{
+      id: string;
+      text: string;
+      isCorrect: boolean;
+    }>;
+    subject: string;
+    difficulty: string;
+    explanation: string; // Added this field
+  }) => Promise<void>;
 };
 
 export const ChatArea = ({
@@ -70,6 +92,10 @@ export const ChatArea = ({
   handleImageGeneration,
   handleVisualization,
   onSimulationCode,
+  generatedQuizzes,
+  pendingQuizzes,
+  handleQuizGeneration,
+  handleQuizAnswer,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
@@ -92,48 +118,52 @@ export const ChatArea = ({
           hasActiveTools && isToolsPanelOpen ? "mr-[33%]" : ""
         )}
       >
-        {messages.map((message) => (
-          <div
-            key={message.id}
-            className={cn(
-              "flex gap-2",
-              message.role === "user" ? "justify-end" : "justify-start"
-            )}
-          >
-            {message.role === "assistant" && (
-              <div className="w-6 h-6 rounded-full bg-rose-300 flex items-center justify-center">
-                <span className="text-xs text-neutral-800">
-                  <Bot size={16} />
-                </span>
-              </div>
-            )}
+        {messages
+          .filter((message: any) => !message.isHidden) // Add this filter
+          .map((message) => (
             <div
+              key={message.id}
               className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-2 border-neutral-200",
-                message.role === "user"
-                  ? " text-white"
-                  : "bg-white border border-neutral-200"
+                "flex gap-2",
+                message.role === "user" ? "justify-end" : "justify-start"
               )}
             >
-              <div className="text-sm leading-relaxed prose prose-sm max-w-none">
-                <ReactMarkdown
-                  className={message.role === "user" ? "text-white" : ""}
-                >
-                  {message.content}
-                </ReactMarkdown>
+              {message.role === "assistant" && (
+                <div className="w-6 h-6 rounded-full bg-rose-300 flex items-center justify-center">
+                  <span className="text-xs text-neutral-800">
+                    <Bot size={16} />
+                  </span>
+                </div>
+              )}
+              <div
+                className={cn(
+                  "max-w-[85%] rounded-2xl px-4 py-2 border-neutral-200",
+                  message.role === "user"
+                    ? "bg-neutral-500 text-white"
+                    : "bg-white border border-neutral-200"
+                )}
+              >
+                <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                  <ReactMarkdown
+                    className={
+                      message.role === "user"
+                        ? "prose prose-sm text-white"
+                        : "prose prose-sm"
+                    }
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
               </div>
-              {/* Removed inline tool output rendering */}
-              {/* // ...existing code... */}
+              {message.role === "user" && (
+                <div className="w-6 h-6 rounded-full bg-neutral-500 flex items-center justify-center">
+                  <span className="text-xs text-white">
+                    <User size={16} />
+                  </span>
+                </div>
+              )}
             </div>
-            {message.role === "user" && (
-              <div className="w-6 h-6 rounded-full bg-neutral-500 flex items-center justify-center">
-                <span className="text-xs text-white">
-                  <User size={16} />
-                </span>
-              </div>
-            )}
-          </div>
-        ))}
+          ))}
         <div ref={messagesEndRef} className="h-4" />
       </div>
 
@@ -181,23 +211,40 @@ export const ChatArea = ({
                           />
                         </div>
                       );
-                    case "generateQuiz":
+                    case "generateQuiz": {
+                      // Only generate if we don't have the quiz data and haven't started generating
+                      if (
+                        !generatedQuizzes[toolCallId] &&
+                        result.pending &&
+                        !pendingQuizzes.has(toolCallId)
+                      ) {
+                        handleQuizGeneration(toolCallId, {
+                          subject: result.subject,
+                          difficulty: result.difficulty,
+                        });
+                      }
+
+                      // Show loading state
+                      if (!generatedQuizzes[toolCallId]) {
+                        return (
+                          <div key={toolCallId} className="mb-4">
+                            <div className="animate-pulse">
+                              <div className="h-24 bg-neutral-100 rounded" />
+                              <div className="text-xs text-neutral-500 mt-2">
+                                Generating quiz...
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const quizData = generatedQuizzes[toolCallId];
                       return (
                         <div key={toolCallId} className="mb-4">
-                          <QuizCard
-                            {...result}
-                            onAnswer={(isCorrect) =>
-                              handleAnswerSubmit({
-                                studentAnswer: isCorrect ? 1 : 0,
-                                correctAnswer: 1,
-                                question: "Quiz Question",
-                                topic: "quiz",
-                                level: "basic",
-                              })
-                            }
-                          />
+                          <QuizCard {...quizData} onAnswer={handleQuizAnswer} />
                         </div>
                       );
+                    }
                     case "generateImage": {
                       const shouldTriggerGeneration =
                         result.pending &&

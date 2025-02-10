@@ -7,9 +7,9 @@ import { FiMusic, FiLoader, FiPlay, FiPause } from "react-icons/fi";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { createClient } from '@/utils/supabase/client';
+import { createClient } from "@/utils/supabase/client";
 
-// Types for Supabase
+// Types for Supabase songs
 type Song = {
   id: string;
   user_id: string;
@@ -19,7 +19,7 @@ type Song = {
   generated_audio_url: string;
   song_description: string;
   created_at: string;
-}
+};
 
 const REFERENCE_SONGS = [
   {
@@ -84,7 +84,6 @@ const AudioPlayer = ({
 
 const SongGenerator = () => {
   const { toast } = useToast();
-  const supabase = createClient();
 
   const [prompt, setPrompt] = useState("");
   const [audioUrl, setAudioUrl] = useState("");
@@ -100,21 +99,24 @@ const SongGenerator = () => {
   const [isGeneratingLyrics, setIsGeneratingLyrics] = useState(false);
   const [songDescription, setSongDescription] = useState("");
   const [lyricsType, setLyricsType] = useState<"ai" | "custom">("ai");
+
+  // State for user song history
   const [savedSongs, setSavedSongs] = useState<Song[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
+    const supabase = createClient();
     const fetchSavedSongs = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { data } = await supabase
-          .from('songs')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .from("songs")
+          .select("*")
+          .order("created_at", { ascending: false });
         if (data) setSavedSongs(data);
       }
     };
-    
+
     fetchSavedSongs();
 
     return () => {
@@ -129,7 +131,7 @@ const SongGenerator = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-
+    const supabase = createClient();
     const finalAudioUrl = useCustomUrl ? audioUrl : selectedSong;
     if (!finalAudioUrl) {
       toast({
@@ -144,43 +146,49 @@ const SongGenerator = () => {
     try {
       const response = await fetch("/api/generate-song", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, audioUrl: finalAudioUrl }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt,
+          audioUrl: finalAudioUrl,
+        }),
       });
 
-      if (!response.ok) throw new Error("Failed to generate song");
+      if (!response.ok) {
+        throw new Error("Failed to generate song");
+      }
+
       const data = await response.json();
       setGeneratedAudio(data.audioUrl);
+      toast({
+        title: "Success",
+        description: "Your song has been generated!",
+        variant: "default",
+      });
 
-      // Save to Supabase
+      // Save generated song to Supabase
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         const { error: saveError } = await supabase
-          .from('songs')
+          .from("songs")
           .insert({
             user_id: session.user.id,
-            prompt,
+            prompt: prompt,
             lyrics: prompt,
             reference_audio_url: finalAudioUrl,
             generated_audio_url: data.audioUrl,
-            song_description: songDescription
+            song_description: songDescription,
           });
-
         if (saveError) throw saveError;
 
-        // Refresh saved songs
+        // Refresh saved songs (song history)
         const { data: newSongs } = await supabase
-          .from('songs')
-          .select('*')
-          .order('created_at', { ascending: false });
+          .from("songs")
+          .select("*")
+          .order("created_at", { ascending: false });
         if (newSongs) setSavedSongs(newSongs);
       }
-
-      toast({
-        title: "Success",
-        description: "Your song has been generated and saved!",
-        variant: "default",
-      });
     } catch (err) {
       const message = err instanceof Error ? err.message : "Something went wrong";
       toast({
@@ -194,7 +202,6 @@ const SongGenerator = () => {
     }
   };
 
-  // Rest of your existing functions remain unchanged
   const handleSongSelect = useCallback(
     (song: (typeof REFERENCE_SONGS)[0]) => {
       setSelectedSong(song.url);
@@ -217,6 +224,7 @@ const SongGenerator = () => {
         return;
       }
 
+      // Select the song when playing starts
       const selectedRefSong = REFERENCE_SONGS.find((song) => song.url === url);
       if (selectedRefSong) {
         handleSongSelect(selectedRefSong);
@@ -312,10 +320,7 @@ const SongGenerator = () => {
   return (
     <div className="min-h-screen bg-white">
       <div className="flex items-center gap-3 ml-8 mx-auto">
-        <Link
-          href="/tools"
-          className="hover:bg-gray-100 p-2 rounded-full transition-all"
-        >
+        <Link href="/tools" className="hover:bg-gray-100 p-2 rounded-full transition-all">
           <ChevronLeft className="text-gray-900" />
         </Link>
         <h1 className="text-3xl font-bold text-gray-900">Song Generator</h1>
@@ -325,9 +330,7 @@ const SongGenerator = () => {
       <div className="container mx-auto p-6 max-w-6xl">
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
-            <label className="block text-gray-700 font-bold mb-3">
-              Song Lyrics
-            </label>
+            <label className="block text-gray-700 font-bold mb-3">Song Lyrics</label>
 
             <RadioGroup
               value={lyricsType}
@@ -336,19 +339,13 @@ const SongGenerator = () => {
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="ai" id="lyrics-ai" />
-                <Label
-                  htmlFor="lyrics-ai"
-                  className="text-sm text-gray-700 font-medium"
-                >
+                <Label htmlFor="lyrics-ai" className="text-sm text-gray-700 font-medium">
                   Generate lyrics with AI
                 </Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="custom" id="lyrics-custom" />
-                <Label
-                  htmlFor="lyrics-custom"
-                  className="text-sm text-gray-700"
-                >
+                <Label htmlFor="lyrics-custom" className="text-sm text-gray-700">
                   Write custom lyrics
                 </Label>
               </div>
@@ -370,11 +367,7 @@ const SongGenerator = () => {
                     disabled={isGeneratingLyrics || !songDescription}
                     className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 disabled:bg-gray-200 disabled:cursor-not-allowed transition-all"
                   >
-                    {isGeneratingLyrics ? (
-                      <FiLoader className="animate-spin" />
-                    ) : (
-                      "Generate"
-                    )}
+                    {isGeneratingLyrics ? <FiLoader className="animate-spin" /> : "Generate"}
                   </button>
                 </div>
               </div>
@@ -394,21 +387,15 @@ const SongGenerator = () => {
               required
             />
             <div className="flex justify-between mt-2">
-              <span className="text-sm text-gray-500">
-                Use clear, descriptive lyrics for better results
-              </span>
-              <span
-                className={`text-sm ${characterCount > characterLimit * 0.9 ? "text-red-500" : "text-gray-500"}`}
-              >
+              <span className="text-sm text-gray-500">Use clear, descriptive lyrics for better results</span>
+              <span className={`text-sm ${characterCount > characterLimit * 0.9 ? "text-red-500" : "text-gray-500"}`}>
                 {characterCount}/{characterLimit}
               </span>
             </div>
           </div>
 
           <div className="space-y-4">
-            <label className="block text-gray-700 font-bold mb-2">
-              Reference Audio
-            </label>
+            <label className="block text-gray-700 font-bold mb-2">Reference Audio</label>
 
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -417,9 +404,7 @@ const SongGenerator = () => {
                     key={song.url}
                     onClick={() => handleSongSelect(song)}
                     className={`p-4 border rounded-lg text-left transition-all flex items-center justify-between group hover:border-gray-400 cursor-pointer ${
-                      !useCustomUrl && selectedSong === song.url
-                        ? "border-gray-900 bg-gray-50"
-                        : "border-gray-200"
+                      !useCustomUrl && selectedSong === song.url ? "border-gray-900 bg-gray-50" : "border-gray-200"
                     }`}
                   >
                     <div className="font-medium">{song.name}</div>
@@ -491,9 +476,7 @@ const SongGenerator = () => {
         {generatedAudio && (
           <div className="mt-8 p-6 border border-gray-200 rounded-lg bg-gray-50">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
-                Your Generated Song
-              </h2>
+              <h2 className="text-xl font-bold text-gray-900">Your Generated Song</h2>
               <button
                 onClick={() => handleDownload(generatedAudio)}
                 className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all"
@@ -504,12 +487,49 @@ const SongGenerator = () => {
             <AudioPlayer
               url={generatedAudio}
               isPlaying={isPlaying === generatedAudio}
-              onToggle={() =>
-                togglePlay(generatedAudio, new Event("click") as any)
-              }
+              onToggle={() => togglePlay(generatedAudio, new Event("click") as any)}
             />
           </div>
         )}
+
+        {/* User Song History Section */}
+        <div className="mt-8 p-6 border border-gray-200 rounded-lg bg-gray-50">
+          <h2 className="text-xl font-bold text-gray-900">Your Song History</h2>
+          {savedSongs.length === 0 ? (
+            <p className="text-gray-500">No songs generated yet.</p>
+          ) : (
+            savedSongs.map((song) => (
+              <div key={song.id} className="mt-4 p-4 border rounded-lg bg-gray-50">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-semibold">
+                      {song.song_description || "Untitled Song"}
+                    </h3>
+                    <p className="text-sm text-gray-600">{new Date(song.created_at).toLocaleString()}</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <button
+                      onClick={(e) => togglePlay(song.generated_audio_url, e)}
+                      className="p-2 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition-all"
+                    >
+                      {isPlaying === song.generated_audio_url ? (
+                        <FiPause className="w-4 h-4" />
+                      ) : (
+                        <FiPlay className="w-4 h-4" />
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDownload(song.generated_audio_url)}
+                      className="px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-all"
+                    >
+                      Download
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
     </div>
   );

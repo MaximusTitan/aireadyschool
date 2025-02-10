@@ -96,7 +96,6 @@ export const categories: {
       title: "Study Plan Generator",
       description: "Plan your study schedule",
       route: "/tools/study-planner",
-      isComingSoon: true,
     },
     {
       title: "Code Playground",
@@ -109,9 +108,9 @@ export const categories: {
       route: "/canvas",
     },
     {
-      title: "Science Tutor",
-      description: "Learn Science concepts",
-      route: "/tools/learn-science",
+      title: "AI Tutor",
+      description: "Get help with your studies",
+      route: "/tools/gen-chat",
     },
   ],
   Teacher: [
@@ -193,6 +192,11 @@ export const categories: {
       title: "Canvas",
       description: "Generate using Canvas",
       route: "/canvas",
+    },
+    {
+      title: "AI Tutor",
+      description: "Get help with your studies",
+      route: "/tools/gen-chat",
     },
   ],
   School: [

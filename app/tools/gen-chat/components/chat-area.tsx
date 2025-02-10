@@ -130,7 +130,7 @@ export const ChatArea = ({
             >
               {message.role === "assistant" && (
                 <div className="w-6 h-6 rounded-full bg-rose-300 flex items-center justify-center">
-                  <span className="text-xs text-neutral-800">
+                  <span className="text-xs text-black-800">
                     <Bot size={16} />
                   </span>
                 </div>
@@ -139,24 +139,24 @@ export const ChatArea = ({
                 className={cn(
                   "max-w-[85%] rounded-2xl px-4 py-2 border-neutral-200",
                   message.role === "user"
-                    ? "bg-neutral-500 text-white"
+                    ? "bg-black text-white"
                     : "bg-white border border-neutral-200"
                 )}
               >
-                <div className="text-sm leading-relaxed prose prose-sm max-w-none">
-                  <ReactMarkdown
-                    className={
-                      message.role === "user"
-                        ? "prose prose-sm text-white"
-                        : "prose prose-sm"
-                    }
-                  >
-                    {message.content}
-                  </ReactMarkdown>
-                </div>
+                {message.role === "user" ? (
+                  <div className="text-sm leading-relaxed text-white">
+                    <span>{message.content}</span>
+                  </div>
+                ) : (
+                  <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                    <ReactMarkdown className="prose prose-sm [&>p]:last:mb-0">
+                      {message.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
               </div>
               {message.role === "user" && (
-                <div className="w-6 h-6 rounded-full bg-neutral-500 flex items-center justify-center">
+                <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
                   <span className="text-xs text-white">
                     <User size={16} />
                   </span>

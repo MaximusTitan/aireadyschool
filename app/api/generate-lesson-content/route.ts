@@ -1,6 +1,7 @@
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/client";
 
 export const runtime = "edge";
 
@@ -14,6 +15,12 @@ type ContentType =
   | "scenario-activities"
   | "glossary";
 
+const imageRequiredTypes: ContentType[] = [
+  "guided-notes",
+  "case-studies",
+  "scenario-activities",
+];
+
 function getSystemPrompt(
   contentType: ContentType,
   topic: string,
@@ -21,8 +28,12 @@ function getSystemPrompt(
   grade: string,
   board: string,
 ): string {
-  const basePrompt = `You are an academic content generator focusing on the topic ${topic} for ${subject} at grade ${grade} level, following the ${board} curriculum. `;
-  const titleInstruction = `Start your response with a simple 3-5 word title - No quotations in the title please!! related to ${topic}, specifying ${subject}, followed by "---". `;
+  const basePrompt = `You are an academic content generator focusing on the
+    topic ${topic} for ${subject} at grade ${grade} level, following the ${board}
+    curriculum. `;
+  const titleInstruction = `Start your response with a simple 3-5 word title -
+    No quotations in the title please!! related to ${topic}, specifying ${subject},
+    followed by "---". `;
 
   switch (contentType) {
     case "guided-notes":
@@ -262,6 +273,14 @@ export async function POST(req: Request) {
       { status: 500 },
     );
   }
+  const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   try {
     const { topic, subject, grade, board, contentType } = await req.json();
@@ -303,10 +322,49 @@ export async function POST(req: Request) {
       throw new Error("Failed to generate content in the expected format");
     }
 
-    return NextResponse.json({
-      title: title,
-      result: content,
-    });
+    let imageUrl = null;
+
+    // Image content storage only if contentType requires image
+    if (imageRequiredTypes.includes(contentType as ContentType)) {
+      const imageResponse = await fetch("/api/generate-fal-image", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ prompt: title }),
+      });
+      if (!imageResponse.ok) {
+        throw new Error("Failed to generate image");
+      }
+      const imageData = await imageResponse.json();
+      imageUrl = imageData.supabaseImageUrl;
+
+      // Save the content to supabase
+      const { data, error } = await supabase
+        .from("lesson_content")
+        .insert({
+          user_email: user.email,
+          title,
+          topic,
+          subject,
+          grade,
+          board,
+          content_type: contentType,
+          text_content: content,
+          image_url: imageUrl,
+        })
+        .select();
+      if (error) {
+        console.error("Error saving to Supabase:", error);
+        throw new Error("Failed to save content to database");
+      }
+
+      return NextResponse.json({
+        title: title,
+        result: content,
+        imageUrl: imageUrl,
+      });
+    }
   } catch (error) {
     console.error("Error:", error);
     return NextResponse.json(

@@ -228,13 +228,19 @@ const ContentGenerator = () => {
         </div>
         <Button
           onClick={generateContent}
+          className="w-full mt-6 transition-all"
           disabled={
             !topic || !subject || !grade || !board || !contentType || isLoading
           }
-          variant="default"
-          className="generate-button w-full mt-4"
         >
-          Create Lesson
+          {isLoading ? (
+            <div className="flex items-center justify-center gap-2">
+              <span className="animate-spin">⏳</span>
+              Generating...
+            </div>
+          ) : (
+            "Create Lesson"
+          )}
         </Button>
         {isLoading ? (
           <p>Loading...</p>

@@ -1,21 +1,37 @@
 "use client";
 
-import { createContext, useContext, useState } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  Dispatch,
+  SetStateAction,
+  useMemo,
+} from "react";
+import { Filters, DEFAULT_FILTERS } from "./types";
 
 type SearchContextType = {
   search: string;
   setSearch: (search: string) => void;
+  filters: Filters;
+  setFilters: Dispatch<SetStateAction<Filters>>;
 };
 
 const SearchContext = createContext<SearchContextType | undefined>(undefined);
 
 export function SearchProvider({ children }: { children: React.ReactNode }) {
   const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<Filters>(() => ({
+    ...DEFAULT_FILTERS,
+  }));
+
+  const value = useMemo(
+    () => ({ search, setSearch, filters, setFilters }),
+    [search, filters]
+  );
 
   return (
-    <SearchContext.Provider value={{ search, setSearch }}>
-      {children}
-    </SearchContext.Provider>
+    <SearchContext.Provider value={value}>{children}</SearchContext.Provider>
   );
 }
 

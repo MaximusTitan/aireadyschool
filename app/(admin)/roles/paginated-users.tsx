@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useSearch } from "./search-context";
 import UserListItem from "./user-list-item";
+import { UserRole, UserStatus } from "./types";
 import {
   Pagination,
   PaginationContent,
@@ -16,28 +17,41 @@ const ITEMS_PER_PAGE = 10;
 
 export function PaginatedUsers({ users }: { users: any[] }) {
   const [currentPage, setCurrentPage] = useState(1);
-  const { search } = useSearch();
+  const { search, filters } = useSearch();
 
-  // Filter users based on search
-  const filteredUsers = users.filter((user) => {
-    const searchLower = search.toLowerCase();
-    const email = user.email.toLowerCase();
-    const name = (user.user_metadata?.name || "").toLowerCase();
-    const role = (user.user_metadata?.role || "").toLowerCase();
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      const searchLower = search.toLowerCase();
+      const email = user.email.toLowerCase();
+      const name = (user.user_metadata?.name || "").toLowerCase();
+      const role = user.user_metadata?.role || "";
+      const status = user.user_metadata?.status || "";
 
-    return (
-      email.includes(searchLower) ||
-      name.includes(searchLower) ||
-      role.includes(searchLower)
-    );
-  });
+      const matchesSearch =
+        email.includes(searchLower) ||
+        name.includes(searchLower) ||
+        role.toLowerCase().includes(searchLower);
 
-  const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+      const matchesRole =
+        filters.roles.length === 0 || filters.roles.includes(role as UserRole);
 
-  // Reset to first page when search changes
-  if (currentPage > totalPages) {
+      const matchesStatus =
+        filters.status.length === 0 ||
+        filters.status.includes(status as UserStatus);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [users, search, filters]);
+
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / ITEMS_PER_PAGE)
+  );
+
+  // Use useEffect to handle page reset
+  useEffect(() => {
     setCurrentPage(1);
-  }
+  }, [search, filters.roles, filters.status]);
 
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,

@@ -73,7 +73,7 @@ export async function POST(req: Request) {
       throw new Error("Invalid assessment format: Expected an array of questions")
     }
 
-    // Save the assessment to the database
+    // Save the assessment to the database, adding user_email
     const { data, error } = await supabase
       .from("assessments")
       .insert({
@@ -86,6 +86,7 @@ export async function POST(req: Request) {
         difficulty,
         questions: assessment,
         learning_outcomes: learningOutcomes,
+        user_email: user.email  // <-- new field for user-specific assessment
       })
       .select()
 

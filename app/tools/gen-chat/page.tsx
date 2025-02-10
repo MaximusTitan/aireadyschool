@@ -74,7 +74,7 @@ export default function Page() {
     }
     pendingImageRequests.add(toolCallId);
     try {
-      const response = await fetch("/api/generate-recraft", {
+      const response = await fetch("/api/gen-chat-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
@@ -158,9 +158,10 @@ export default function Page() {
           {
             tool: "generateImage",
             parameters: {
+              pending: true,
               prompt,
               style,
-              imageSize: "landscape_4_3",
+              imageSize: "square_hd",
               numInferenceSteps: 1,
               numImages: 1,
               enableSafetyChecker: true,

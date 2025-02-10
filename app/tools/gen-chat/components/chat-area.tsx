@@ -191,21 +191,24 @@ export const ChatArea = ({
                           />
                         </div>
                       );
-                    case "generateImage":
-                      if (result.pending) {
-                        if (
-                          !pendingImageRequests.has(toolCallId) &&
-                          !completedImages.has(toolCallId)
-                        ) {
-                          handleImageGeneration(toolCallId, {
-                            prompt: result.prompt,
-                            style: result.style,
-                            imageSize: result.imageSize,
-                            numInferenceSteps: 1,
-                            numImages: 1,
-                            enableSafetyChecker: true,
-                          });
-                        }
+                    case "generateImage": {
+                      const shouldTriggerGeneration =
+                        result.pending &&
+                        !pendingImageRequests.has(toolCallId) &&
+                        !completedImages.has(toolCallId);
+
+                      if (shouldTriggerGeneration) {
+                        handleImageGeneration(toolCallId, {
+                          prompt: result.prompt,
+                          style: result.style,
+                          imageSize: result.imageSize || "square_hd",
+                          numInferenceSteps: 1,
+                          numImages: 1,
+                          enableSafetyChecker: true,
+                        });
+                      }
+
+                      if (!generatedImages[toolCallId] && result.pending) {
                         return (
                           <div key={toolCallId} className="mb-4">
                             <div className="animate-pulse">
@@ -217,31 +220,32 @@ export const ChatArea = ({
                           </div>
                         );
                       }
+
+                      const imageData = generatedImages[toolCallId];
+                      if (!imageData) return null;
+
                       return (
                         <div key={toolCallId} className="mb-4 space-y-2">
-                          {generatedImages[toolCallId] ? (
-                            generatedImages[toolCallId].url === "error" ? (
-                              <div className="text-sm text-red-500">
-                                Failed to generate image. Please try again.
-                              </div>
-                            ) : (
-                              <>
-                                <img
-                                  src={generatedImages[toolCallId].url}
-                                  alt={result.prompt}
-                                  className="max-w-96 rounded-lg"
-                                />
-                                <div className="text-xs text-neutral-500">
-                                  Credits remaining:{" "}
-                                  {generatedImages[toolCallId].credits}
-                                </div>
-                              </>
-                            )
+                          {imageData.url === "error" ? (
+                            <div className="text-sm text-red-500">
+                              Failed to generate image. Please try again.
+                            </div>
                           ) : (
-                            <div />
+                            <>
+                              <img
+                                src={imageData.url}
+                                alt={result.prompt}
+                                className="w-full max-w-md rounded-lg"
+                                loading="lazy"
+                              />
+                              <div className="text-xs text-neutral-500">
+                                Credits remaining: {imageData.credits}
+                              </div>
+                            </>
                           )}
                         </div>
                       );
+                    }
                     case "conceptVisualizer":
                       if (simulationCode) {
                         return (

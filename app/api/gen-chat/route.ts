@@ -3,9 +3,57 @@ import { streamText, smoothStream } from 'ai';
 import { tools } from '@/app/tools/gen-chat/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
+import {
+  SCIENCE_TEACHER_PROMPT,
+  MATH_TEACHER_PROMPT,
+  ENGLISH_TEACHER_PROMPT,
+  GENERIC_TEACHER_PROMPT
+} from '@/app/utils/systemPrompt';
+
+type Subject = 'science' | 'math' | 'english' | 'generic';
+
+const prompts: Record<Subject, string> = {
+  science: SCIENCE_TEACHER_PROMPT,
+  math: MATH_TEACHER_PROMPT,
+  english: ENGLISH_TEACHER_PROMPT,
+  generic: GENERIC_TEACHER_PROMPT
+};
+
+function detectSubject(messages: any[]): Subject {
+  const lastUserMessage = messages
+    .slice()
+    .reverse()
+    .find(m => m.role === 'user')?.content.toLowerCase() || '';
+
+  if (lastUserMessage.includes('math') || lastUserMessage.includes('calculation')) {
+    return 'math';
+  }
+  if (lastUserMessage.includes('science') || lastUserMessage.includes('experiment')) {
+    return 'science';
+  }
+  if (lastUserMessage.includes('english') || lastUserMessage.includes('writing')) {
+    return 'english';
+  }
+  return 'generic';
+}
+
+function getSystemPrompt(messages: any[]): string {
+  const subject = detectSubject(messages);
+  const basePrompt = prompts[subject];
+
+  return `${basePrompt}
+
+You can use various tools to enhance the learning experience:
+- Generate interactive math problems
+- Create quizzes
+- Generate educational images
+- Create concept visualizations
+- Generate mind maps
+
+Always provide clear explanations and encourage active learning.`;
+}
 
 export async function POST(request: Request) {
-  // Add auth check
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   
@@ -17,14 +65,7 @@ export async function POST(request: Request) {
 
   const result = streamText({
     model: openai('gpt-4o'),
-    system: `You are a friendly and encouraging educational assistant. 
-    When generating math problems, vary the difficulty and types of questions.
-    When evaluating answers:
-    - Give specific feedback about what went right or wrong
-    - Provide tips for improvement
-    - Use encouraging language
-    - For correct answers, challenge them with a slightly harder question
-    - For incorrect answers, offer a similar problem to try again`,
+    system: getSystemPrompt(messages),
     messages,
     maxSteps: 5,
     tools,

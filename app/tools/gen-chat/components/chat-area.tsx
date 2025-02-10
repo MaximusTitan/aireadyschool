@@ -4,6 +4,7 @@ import { MathProblem } from "./math-problem";
 import { QuizCard } from "./quiz-card";
 import { MindMapViewer } from "./mind-map-viewer";
 import { Bot, User, PanelRightClose, PanelRightOpen } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 // SimulationWrapper moved here
 const SimulationWrapper = ({ code }: { code: string }) => {
@@ -108,18 +109,24 @@ export const ChatArea = ({
             )}
             <div
               className={cn(
-                "max-w-[85%] rounded-2xl px-4 py-2 shadow-sm",
+                "max-w-[85%] rounded-2xl px-4 py-2 border-neutral-200",
                 message.role === "user"
-                  ? "bg-neutral-800 text-white"
+                  ? " text-white"
                   : "bg-white border border-neutral-200"
               )}
             >
-              <div className="text-sm leading-relaxed">{message.content}</div>
+              <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+                <ReactMarkdown
+                  className={message.role === "user" ? "text-white" : ""}
+                >
+                  {message.content}
+                </ReactMarkdown>
+              </div>
               {/* Removed inline tool output rendering */}
               {/* // ...existing code... */}
             </div>
             {message.role === "user" && (
-              <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center">
+              <div className="w-6 h-6 rounded-full bg-neutral-500 flex items-center justify-center">
                 <span className="text-xs text-white">
                   <User size={16} />
                 </span>

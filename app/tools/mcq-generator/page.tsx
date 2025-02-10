@@ -367,6 +367,7 @@ export default function Home() {
               showResults={showResults}
               userAnswers={userAnswers}
               assessmentId={assessmentId || ""} // Provide a default empty string
+              topic={formData.topic} // Add this prop
             />
           )}
           {error && (

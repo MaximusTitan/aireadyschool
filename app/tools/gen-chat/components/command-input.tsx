@@ -4,29 +4,29 @@ import { useState, useRef, KeyboardEvent } from "react";
 
 const AVAILABLE_COMMANDS = [
   {
-    command: "@math",
+    command: "/math",
     description: "Generate math problems",
-    examples: ["@math easy addition", "@math medium multiplication"],
+    examples: ["/math easy addition", "/math medium multiplication"],
   },
   {
-    command: "@quiz",
+    command: "/quiz",
     description: "Create interactive quizzes",
-    examples: ["@quiz science easy", "@quiz history medium"],
+    examples: ["/quiz science easy", "/quiz history medium"],
   },
   {
-    command: "@image",
+    command: "/image",
     description: "Generate educational images",
-    examples: ["@image solar system realistic", "@image cell structure vector"],
+    examples: ["/image solar system realistic", "/image cell structure vector"],
   },
   {
-    command: "@visualize",
+    command: "/visualize",
     description: "Generate interactive visualizations",
-    examples: ["@visualize physics gravity", "@visualize biology cell"],
+    examples: ["/visualize physics gravity", "/visualize biology cell"],
   },
   {
-    command: "@mindmap",
+    command: "/mindmap",
     description: "Generate mind maps",
-    examples: ["@mindmap machine learning", "@mindmap solar system"],
+    examples: ["/mindmap machine learning", "/mindmap solar system"],
   },
 ];
 
@@ -51,7 +51,7 @@ export const CommandInput = ({
     const value = e.target.value;
     onInputChange(value);
 
-    if (value.startsWith("@")) {
+    if (value.startsWith("/")) {
       setShowCommands(true);
       const searchTerm = value.toLowerCase();
       const filtered = AVAILABLE_COMMANDS.filter((cmd) =>
@@ -92,7 +92,7 @@ export const CommandInput = ({
           placeholder={
             isLoading
               ? "Thinking..."
-              : "Type @ for commands or ask a question..."
+              : "Type / for commands or ask a question..."
           }
           className="flex-1 p-3 rounded-lg bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition-all"
           disabled={isLoading}

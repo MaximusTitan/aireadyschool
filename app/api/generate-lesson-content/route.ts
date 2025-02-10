@@ -1,6 +1,10 @@
 import { streamText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { NextResponse } from "next/server";
+import { createClient } from "@/utils/supabase/server";
+import { logTokenUsage } from '@/utils/logTokenUsage';
+import { Buffer } from "buffer";
+import { uploadImageToSupabase } from "@/utils/uploadImage";
 
 export const runtime = "edge";
 
@@ -263,6 +267,14 @@ export async function POST(req: Request) {
     );
   }
 
+  // Add auth check
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const { topic, subject, grade, board, contentType } = await req.json();
 
@@ -282,7 +294,7 @@ export async function POST(req: Request) {
     );
 
     const response = streamText({
-      model: openai("gpt-4"),
+      model: openai("gpt-4o"),
       messages: [
         { role: "system", content: systemPrompt },
         {
@@ -290,6 +302,17 @@ export async function POST(req: Request) {
           content: `Generate ${contentType} content for the topic: ${topic}`,
         },
       ],
+      onFinish: async ({ usage }) => {
+        if (usage) {
+          await logTokenUsage(
+            'Lesson Content Generator',
+            'GPT-4o',
+            usage.promptTokens,
+            usage.completionTokens,
+            user?.email
+          );
+        }
+      }
     });
 
     let fullResponse = "";
@@ -303,9 +326,40 @@ export async function POST(req: Request) {
       throw new Error("Failed to generate content in the expected format");
     }
 
+    // Handle image generation and upload
+    let imageUrl = null;
+    if (title) {
+      try {
+        const imageRes = await fetch(new URL("/api/generate-fal-image", req.url).toString(), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ prompt: title }),
+        });
+        const imageData = await imageRes.json();
+        
+        if (imageData.result && user) {
+            imageUrl = await uploadImageToSupabase(imageData.result, user.id);
+          }
+      } catch (uploadError) {
+        console.error('Image upload failed:', uploadError);
+        // Continue without image if upload fails
+      }
+    }
+
+    // Insert into database even if image upload failed
+    const { error: insertError } = await supabase.from("lesson_cont_gen").insert({
+      user_email: user?.email,
+      title,
+      content,
+      image_url: imageUrl,
+    });
+
+    if (insertError) throw insertError;
+
     return NextResponse.json({
-      title: title,
+      title,
       result: content,
+      imageUrl,
     });
   } catch (error) {
     console.error("Error:", error);

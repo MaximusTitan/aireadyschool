@@ -1,10 +1,16 @@
 // app/api/generate/route.ts
 import { NextResponse } from 'next/server'
 import { fal } from "@fal-ai/client"
+import { createClient } from '@/utils/supabase/server';
+import { cookies } from 'next/headers';
+import { uploadImageToStorage } from '@/utils/supabase/storage';
 
 export async function POST(request: Request) {
+  const cookieStore = cookies();
+  const supabase = await createClient();
+
   try {
-    const { prompt } = await request.json()
+    const { prompt, storyId } = await request.json();
     
     // Enhance the prompt for better story-related images
     const enhancedPrompt = `Illustration for a story scene: ${prompt}. Digital art style, vibrant colors, story book illustration, detailed, professional quality`;
@@ -27,7 +33,20 @@ export async function POST(request: Request) {
       throw new Error('No image generated');
     }
 
-    return NextResponse.json({ imageUrl: result.data.images[0].url });
+    const generatedImageUrl = result.data.images[0].url;
+
+    // Upload to Supabase storage
+    const storageUrl = await uploadImageToStorage(generatedImageUrl, storyId);
+
+    // Update the story with the storage URL
+    const { error: dbError } = await supabase
+      .from('stories')
+      .update({ image_url: storageUrl })
+      .eq('id', storyId);
+
+    if (dbError) throw dbError;
+
+    return NextResponse.json({ imageUrl: storageUrl });
   } catch (error) {
     console.error('Error:', error)
     return NextResponse.json(

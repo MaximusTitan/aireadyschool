@@ -267,7 +267,7 @@ export function CognitiveAssessment({
       {isComplete && (
         <div className="fixed bottom-8 right-8">
           <button
-            onClick={() => router.push("/tools")}
+            onClick={() => router.push("/profile")}
             className="bg-green-600 text-white px-6 py-3 rounded-full 
                      shadow-lg hover:bg-green-700 transition-colors
                      flex items-center space-x-2"

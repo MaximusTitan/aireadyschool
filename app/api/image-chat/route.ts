@@ -1,3 +1,5 @@
+// Used in Image Generator Buddy Chat - tools/image-generator
+
 import { openai } from '@ai-sdk/openai';
 import { streamText, smoothStream } from 'ai';
 import { tools } from '@/app/tools/image-generator/tools';

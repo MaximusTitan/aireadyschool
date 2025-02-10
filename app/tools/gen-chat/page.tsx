@@ -171,11 +171,11 @@ export default function Page() {
       await append(userMessage);
     } else if (toolName === "visualize") {
       const subject = parts[1] || "physics";
-      const concept = parts.slice(2).join(" ") || "gravity";
+      const concept = parts.slice(2).join(" ") || "";
       const userMessage = {
         id: String(Date.now()),
         role: "user" as const,
-        content: `Generate a visualization for ${concept} in ${subject}`,
+        content: `Generate a visualization of ${concept} ${subject}`,
         toolCalls: [
           { tool: "generateVisualization", parameters: { subject, concept } },
         ],
@@ -195,7 +195,7 @@ export default function Page() {
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.startsWith("@")) {
+    if (input.startsWith("/")) {
       await handleDirectCommand(input);
       setInput("");
     } else {
@@ -209,7 +209,9 @@ export default function Page() {
 
   return (
     <TooltipProvider>
-      <div className="max-w-4xl mx-auto flex flex-col min-h-[100vh]">
+      <div className="mx-auto flex flex-col min-h-[100vh] max-w-6xl">
+        {" "}
+        {/* increased width */}
         <header className="sticky top-0 z-10 backdrop-blur-sm bg-white/80 border-b">
           <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -234,7 +236,6 @@ export default function Page() {
             )}
           </div>
         </header>
-
         <main className="flex-1 overflow-hidden flex flex-col">
           <ChatArea
             messages={messages}
@@ -247,15 +248,15 @@ export default function Page() {
             handleAnswerSubmit={handleAnswerSubmit}
             handleImageGeneration={handleImageGeneration}
             handleVisualization={handleVisualization}
-          />
-
-          <CommandInput
-            input={input}
-            isLoading={isLoading}
-            onInputChange={handleInputChange}
-            onSubmit={handleFormSubmit}
+            onSimulationCode={(code: string) => setSimulationCode(code)}
           />
         </main>
+        <CommandInput
+          input={input}
+          isLoading={isLoading}
+          onInputChange={handleInputChange}
+          onSubmit={handleFormSubmit}
+        />
       </div>
     </TooltipProvider>
   );

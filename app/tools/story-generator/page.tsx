@@ -17,6 +17,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { jsPDF } from "jspdf"; // Added jsPDF import
 
 interface StoryResponse {
   story: string;
@@ -36,27 +37,46 @@ export default function GenerateStory() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const ITEMS_PER_PAGE = 6;
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  // Fetch current user email
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email ?? "");
+      }
+    };
+    fetchUser();
+  }, []);
 
   useEffect(() => {
-    loadUserStories();
-  }, [currentPage]);
+    if (userEmail) {
+      loadUserStories();
+    }
+  }, [currentPage, userEmail]);
 
   const loadUserStories = async () => {
     const supabase = createClient();
 
-    // Get total count
+    // Get total count filtered by user_email
     const { count } = await supabase
       .from("stories")
-      .select("*", { count: "exact", head: true });
+      .select("*", { count: "exact", head: true })
+      .eq("user_email", userEmail);
 
     if (count) {
       setTotalPages(Math.ceil(count / ITEMS_PER_PAGE));
     }
 
-    // Get paginated data
+    // Get paginated data filtered by user_email
     const { data } = await supabase
       .from("stories")
       .select("*")
+      .eq("user_email", userEmail)
       .order("created_at", { ascending: false })
       .range(
         (currentPage - 1) * ITEMS_PER_PAGE,
@@ -168,6 +188,76 @@ export default function GenerateStory() {
     return `# ${title}\n\n${content}`;
   };
 
+  // Updated PDF download function with centered title and individual paragraphs for content
+  const handleDownloadPdf = async () => {
+    if (!result) return;
+    const doc = new jsPDF();
+    const margin = 10;
+    const pageHeight = doc.internal.pageSize.height;
+    const pageWidth = doc.internal.pageSize.width;
+    const availableWidth = pageWidth - margin * 2;
+    let yOffset = margin;
+  
+    if (result.imageUrl) {
+      try {
+        const response = await fetch(result.imageUrl);
+        const blob = await response.blob();
+        const base64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = (error) => reject(error);
+          reader.readAsDataURL(blob);
+        });
+        doc.addImage(base64, "JPEG", margin, yOffset, availableWidth, 100);
+        yOffset += 110;
+      } catch (err) {
+        console.error("Error loading image", err);
+      }
+    }
+  
+    // Split the story into paragraphs using newline
+    const paragraphs = result.story.split("\n").filter(Boolean);
+    // Title is the first paragraph
+    const titleText = paragraphs[0] || "";
+    // Remaining paragraphs are the content
+    const contentParagraphs = paragraphs.slice(1);
+  
+    // Add title in bold with larger font size and center it
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(16);
+    const titleLines = doc.splitTextToSize(titleText, availableWidth);
+    titleLines.forEach((line: string): void => {
+      if (yOffset + 16 > pageHeight - margin) {
+        doc.addPage();
+        yOffset = margin;
+      }
+      // Center the title using align option
+      doc.text(line, pageWidth / 2, yOffset, { align: "center" });
+      yOffset += 14;
+    });
+    yOffset += 4; // gap after title
+  
+    // Add content paragraphs separately
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    const lineHeight = 6;
+    contentParagraphs.forEach((para: string) => {
+      // Split each paragraph into lines
+      const lines = doc.splitTextToSize(para, availableWidth);
+      lines.forEach((line: string) => {
+        if (yOffset + lineHeight > pageHeight - margin) {
+          doc.addPage();
+          yOffset = margin;
+        }
+        doc.text(line, margin, yOffset);
+        yOffset += lineHeight;
+      });
+      yOffset += lineHeight; // extra gap between paragraphs
+    });
+  
+    doc.save(`story_${result.storyId || "download"}.pdf`);
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       <div className="flex items-center gap-3 max-w-6xl mx-auto mb-12">
@@ -182,7 +272,7 @@ export default function GenerateStory() {
         </h1>
       </div>
 
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto"></div>
         <div className="mb-16">
           <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-8">
             <div>
@@ -272,7 +362,6 @@ export default function GenerateStory() {
                   <option value="dramatic">Dramatic</option>
                   <option value="educational">Educational</option>
                 </select>
-              
               </div>
             </div>
 
@@ -327,27 +416,18 @@ export default function GenerateStory() {
               </div>
             </article>
 
+            {/* Replace Print Story with PDF Download */}
             <div className="flex justify-center mt-8 no-print">
               <button
-                onClick={() => window.print()}
+                onClick={() => handleDownloadPdf()}
                 className="inline-flex items-center px-6 py-3 text-sm font-medium 
                   text-gray-700 bg-white border border-gray-300 rounded-lg 
                   hover:bg-gray-50 transition-colors"
               >
-                <svg
-                  className="w-4 h-4 mr-2"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
-                  />
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
                 </svg>
-                Print Story
+                Download PDF
               </button>
             </div>
           </div>
@@ -407,6 +487,5 @@ export default function GenerateStory() {
           </div>
         </div>
       </div>
-    </div>
   );
 }

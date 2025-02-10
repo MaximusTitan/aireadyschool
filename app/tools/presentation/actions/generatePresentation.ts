@@ -44,7 +44,7 @@ async function generateImagesForSlide(slide: any, theme: string): Promise<string
   }
 }
 
-export async function generatePresentation(prompt: string, theme: string, slideCount: number): Promise<Presentation> {
+export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean): Promise<Presentation> {
 
   // Ensure slideCount is within the allowed range
   const validSlideCount = Math.max(2, Math.min(8, slideCount))

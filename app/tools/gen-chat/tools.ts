@@ -230,10 +230,21 @@ export const conceptVisualizer = createTool({
   },
 })
 
+export const mindMapTool = createTool({
+  description: 'Generate a mind map for a given topic',
+  parameters: z.object({
+    topic: z.string().describe('The topic to create a mind map for'),
+  }),
+  execute: async function ({ topic }) {
+    return { topic, pending: true };
+  },
+});
+
 export const tools = {
   generateMathProblem: mathProblemTool,
   evaluateAnswer: evaluateAnswerTool,
   generateQuiz: quizTool,
   generateImage: imageGeneratorTool,
   conceptVisualizer: conceptVisualizer,
+  generateMindMap: mindMapTool,
 };

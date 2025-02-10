@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Card, CardContent } from "@/components/ui/card"
+import { createClient } from "@/utils/supabase/client"
 
 type VaultItem = {
   file_name: string
@@ -20,23 +21,44 @@ export default function FolderView() {
   const decodedFolderName = decodeURIComponent(folder_name as string)
   const [items, setItems] = useState<VaultItem[]>([])
   const [viewType, setViewType] = useState<"list" | "grid">("list")
+  const [userEmail, setUserEmail] = useState<string | null>(null)
+
+  const fetchUserEmail = useCallback(async () => {
+    const supabase = createClient()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser()
+    setUserEmail(user?.email ?? null)
+  }, [])
+
+  useEffect(() => {
+    fetchUserEmail()
+  }, [fetchUserEmail])
 
   const fetchItems = useCallback(async () => {
     try {
       const folderParam = decodedFolderName ? `?folder_name=${encodeURIComponent(decodedFolderName)}` : ""
-      const response = await fetch(`/api/document-vault${folderParam}`)
+      const userEmailParam = userEmail ? `&userEmail=${encodeURIComponent(userEmail)}` : ""
+      const response = await fetch(`/api/document-vault${folderParam}${userEmailParam}`)
       if (!response.ok) throw new Error("Failed to fetch files")
 
       const data = await response.json()
-      setItems(data.files)
+      setItems(
+        data.files.map((item: VaultItem) => ({
+          ...item,
+          file_path: item.file_path.replace(/^\//, "").replace(/\/$/, ""),
+        }))
+      )
     } catch (error) {
       console.error("Error fetching files:", error)
     }
-  }, [decodedFolderName])
+  }, [decodedFolderName, userEmail])
 
   useEffect(() => {
-    fetchItems()
-  }, [fetchItems])
+    if (userEmail) {
+      fetchItems()
+    }
+  }, [fetchItems, userEmail])
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files?.length) return
@@ -44,6 +66,8 @@ export default function FolderView() {
 
     const formData = new FormData()
     formData.append("file", file)
+    formData.append("userEmail", userEmail || "")
+    formData.append("fullPath", decodedFolderName)
 
     try {
       const response = await fetch(`/api/document-vault?folder_name=${encodeURIComponent(decodedFolderName)}`, {
@@ -63,19 +87,22 @@ export default function FolderView() {
 
   const handleNewFolder = async () => {
     const folderName = prompt("Enter new folder name:")
-    if (!folderName) return
+    if (!folderName || folderName.includes("_")) return
 
-    const parentFolder = decodedFolderName !== "document-vault" ? decodedFolderName : ""
+    const fullPath = decodedFolderName !== "document-vault" ? `${decodedFolderName}/${folderName}` : folderName
+
+    const sanitizedFolderName = folderName.replace(/ /g, "_")
 
     const response = await fetch(`/api/document-vault`, {
       method: "PUT",
-      body: JSON.stringify({ folderName, parentFolder }),
+      body: JSON.stringify({ folderName: sanitizedFolderName, fullPath, userEmail }),
       headers: { "Content-Type": "application/json" },
     })
 
     if (response.ok) {
-      console.log("Folder created successfully!")
-      fetchItems()
+      const data = await response.json()
+      console.log("Folder created successfully!", data)
+      setItems((prevItems) => [...prevItems, { file_name: folderName, file_path: data.path, type: "folder" }])
     } else {
       console.error("Folder creation failed")
     }
@@ -86,7 +113,7 @@ export default function FolderView() {
       try {
         const response = await fetch("/api/document-vault", {
           method: "DELETE",
-          body: JSON.stringify({ fileName, type, filePath }),
+          body: JSON.stringify({ fileName, type, filePath, userEmail }),
           headers: { "Content-Type": "application/json" },
         })
 
@@ -106,21 +133,19 @@ export default function FolderView() {
       <CardContent className="p-4 flex flex-col items-center justify-center h-full">
         {item.type === "folder" ? (
           <button
-            onClick={() => router.push(`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`)}
+            onClick={() => router.push(`/document-vault/${item.file_name}`)}
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
           </button>
         ) : (
           <a
-            href={item.file_path}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`/document-vault/${item.file_path}`}
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Upload className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name}</p>
+            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
           </a>
         )}
       </CardContent>
@@ -143,7 +168,9 @@ export default function FolderView() {
   return (
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-bold">{decodedFolderName.replace(/-/g, " ").split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</h2>
+        <h2 className="text-lg font-bold">
+          {decodedFolderName.replace(/_/g, " ")}
+        </h2>
         <ToggleGroup type="single" value={viewType} onValueChange={(value) => setViewType(value as "list" | "grid")}>
           <ToggleGroupItem value="list" aria-label="List view">
             <List className="h-4 w-4" />
@@ -167,19 +194,22 @@ export default function FolderView() {
                     <>
                       <Folder className="h-4 w-4 mr-2 stroke-current" />
                       <button
-                        onClick={() =>
-                          router.push(`/document-vault/${item.file_name.replace(/\s+/g, "-").toLowerCase()}`)
-                        }
+                        onClick={() => router.push(`/document-vault/${item.file_name}`)}
                         className="text-blue-500 font-semibold"
                       >
-                        {item.file_name}
+                        {item.file_name.replace(/_/g, " ")}
                       </button>
                     </>
                   ) : (
                     <>
                       <Upload className="h-4 w-4 mr-2 stroke-current" />
-                      <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
-                        {item.file_name}
+                      <a
+                        href={`/document-vault/${item.file_path}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500"
+                      >
+                        {item.file_name.replace(/_/g, " ")}
                       </a>
                     </>
                   )}

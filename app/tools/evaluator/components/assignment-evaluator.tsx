@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
+import Markdown from "react-markdown";
 
 interface Evaluation {
   contentUnderstanding: { score: number; comment: string };
@@ -148,11 +149,8 @@ export function AssignmentEvaluator() {
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4">
       <Card>
-        <CardHeader>
-          <CardTitle>Assignment Evaluation Tool</CardTitle>
-        </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
             <div className="grid md:grid-cols-2 gap-6">
               <div className="space-y-4">
                 <Tooltip>
@@ -320,8 +318,8 @@ export function AssignmentEvaluator() {
           <CardContent>
             {typeof evaluation === "string" ? (
               <div className="prose max-w-none">
-                <div className="whitespace-pre-wrap p-4 bg-muted rounded-lg">
-                  {evaluation}
+                <div className=" p-4 bg-muted rounded-lg">
+                  <Markdown>{evaluation}</Markdown>
                 </div>
               </div>
             ) : (

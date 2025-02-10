@@ -157,7 +157,7 @@ export default function Home() {
     setLoading(true);
 
     try {
-      const response = await fetch("/api/chat-docs", {
+      const response = await fetch("/api/chat-with-docs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

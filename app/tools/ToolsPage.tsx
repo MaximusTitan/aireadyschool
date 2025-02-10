@@ -282,7 +282,7 @@ const ToolsPage = () => {
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center p-4">
             <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
-              AI Tools
+              AI Apps
             </h1>
             {userRole && (
               <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
@@ -295,7 +295,7 @@ const ToolsPage = () => {
         <div className="flex items-center justify-between mb-8 p-4">
           <div className="flex space-x-4">
             <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
-              All Tools
+              All Apps
             </button>
           </div>
           <div className="flex items-center space-x-4">

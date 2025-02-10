@@ -283,7 +283,7 @@ export function Chat() {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await fetch("/api/generate-lesson-plan", {
+      const response = await fetch("/api/lesson-plan-generator", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -333,7 +333,7 @@ export function Chat() {
 
       try {
         if (lessonPlan) {
-          const response = await fetch("/api/chat-lesson-planner", {
+          const response = await fetch("/api/lesson-planner-chat", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

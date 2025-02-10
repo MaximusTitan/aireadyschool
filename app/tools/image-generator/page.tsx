@@ -25,12 +25,15 @@ import {
   Download,
   Image as ImageIcon,
   SendIcon,
+  Expand,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { createClient } from "@/utils/supabase/client";
 import { useEffect, useRef, useState } from "react";
 import { useChat } from "ai/react";
+import { Pagination } from "@/components/ui/pagination-img-gen";
+import { ImageModal } from "@/components/ui/image-modal";
 
 // Existing aspect ratio map
 const aspectRatioMap = {
@@ -41,6 +44,14 @@ const aspectRatioMap = {
   landscape_4_3: "aspect-[4/3]",
   landscape_16_9: "aspect-[16/9]",
 };
+
+interface GeneratedImage {
+  image_url: string; // Changed from url to match database column
+  prompt: string;
+  aspect_ratio: string; // Changed from aspectRatio to match database column
+  created_at: string;
+  bucket_path: string;
+}
 
 export default function Page() {
   // Add loading state for initial data fetch
@@ -54,7 +65,7 @@ export default function Page() {
     handleSubmit: handleChatSubmit,
     isLoading: isChatLoading,
   } = useChat({
-    api: "/api/chat",
+    api: "/api/image-chat",
   });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [pendingImageRequests] = useState(() => new Set<string>());
@@ -294,6 +305,73 @@ export default function Page() {
     return "grid-cols-2 gap-4";
   };
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalImages, setTotalImages] = useState(0);
+  const [previousImages, setPreviousImages] = useState<GeneratedImage[]>([]);
+  const imagesPerPage = 6;
+
+  // Add state for fullscreen modal
+  const [selectedImage, setSelectedImage] = useState<GeneratedImage | null>(
+    null
+  );
+
+  // Add function to fetch previous images
+  const fetchPreviousImages = async (page: number) => {
+    try {
+      const supabase = createClient();
+      const from = (page - 1) * imagesPerPage;
+      const to = from + imagesPerPage - 1;
+
+      // Get total count first
+      const { count } = await supabase
+        .from("generated_images")
+        .select("*", { count: "exact", head: true })
+        .eq("user_email", userEmail);
+
+      // Then get paginated data
+      const { data } = await supabase
+        .from("generated_images")
+        .select("*")
+        .eq("user_email", userEmail)
+        .order("created_at", { ascending: false })
+        .range(from, to);
+
+      if (data) {
+        setPreviousImages(data);
+        setTotalImages(count || 0);
+      }
+    } catch (error) {
+      console.error("Error fetching previous images:", error);
+    }
+  };
+
+  // Update useEffect to fetch previous images when page changes
+  useEffect(() => {
+    if (userEmail && userEmail !== "guest@example.com") {
+      fetchPreviousImages(currentPage);
+    }
+  }, [currentPage, userEmail]);
+
+  // Add handler for page changes
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  // Add handler for navigating between images in fullscreen
+  const handleNavigateImage = (direction: "next" | "previous") => {
+    if (!selectedImage) return;
+
+    const currentIndex = previousImages.findIndex(
+      (img) => img.image_url === selectedImage.image_url
+    );
+
+    if (direction === "next" && currentIndex < previousImages.length - 1) {
+      setSelectedImage(previousImages[currentIndex + 1]);
+    } else if (direction === "previous" && currentIndex > 0) {
+      setSelectedImage(previousImages[currentIndex - 1]);
+    }
+  };
+
   if (initialLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -399,18 +477,18 @@ export default function Page() {
                         }
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select style" />
+                            <SelectValue placeholder="Select style" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="realistic_image">
-                            Realistic Image
-                          </SelectItem>
-                          <SelectItem value="digital_illustration">
-                            Digital Illustration
-                          </SelectItem>
-                          <SelectItem value="vector_illustration">
-                            Vector Illustration
-                          </SelectItem>
+                            <SelectItem value="realistic_image">
+                              Realistic Image
+                            </SelectItem>
+                            <SelectItem value="digital_illustration">
+                              Digital Illustration
+                            </SelectItem>
+                            <SelectItem value="vector_illustration">
+                              Vector Illustration
+                            </SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
@@ -581,77 +659,142 @@ export default function Page() {
             </TabsContent>
           </Tabs>
 
-          {/* Result Card - Now shown regardless of active tab */}
+          {/* Modified Result Card - Shows only most recent image */}
           <Card className="border-neutral-500/20 shadow-lg">
             <CardHeader>
               <CardDescription className="text-lg">
-                Generated Results
+                Latest Generated Result
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loading ? (
-                <div
-                  className={`grid ${getGridLayout(settings.num_images)} gap-4`}
-                >
-                  {Array(settings.num_images)
-                    .fill(0)
-                    .map((_, i) => (
-                      <div key={i} className="relative">
-                        <div
-                          className={`animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg ${
-                            aspectRatioMap[
-                              settings.image_size as keyof typeof aspectRatioMap
-                            ]
-                          }`}
-                        />
-                        <div className="absolute bottom-2 left-2 right-2">
-                          <div className="h-2 bg-neutral-300 dark:bg-neutral-600 rounded animate-pulse" />
-                        </div>
-                      </div>
-                    ))}
+                <div className="relative">
+                  <div
+                    className={`animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg aspect-square`}
+                  />
                 </div>
               ) : generatedImages.length > 0 ? (
-                <div
-                  className={`grid ${getGridLayout(generatedImages.length)} gap-4`}
-                >
-                  {generatedImages.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <div
-                        className={`${aspectRatioMap[image.aspectRatio as keyof typeof aspectRatioMap]}`}
-                      >
-                        <img
-                          src={image.url}
-                          alt={image.prompt}
-                          className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:brightness-75"
-                        />
-                      </div>
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Button
-                          variant="secondary"
-                          onClick={() => handleDownload(image.url)}
-                          className="transform scale-95 group-hover:scale-100 transition-transform"
-                        >
-                          <Download className="h-4 w-4 mr-2" />
-                          Download
-                        </Button>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
-                        <p className="text-white text-sm truncate">
-                          {image.prompt}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                <div className="relative group">
+                  <div
+                    className={`${
+                      aspectRatioMap[
+                        generatedImages[0].aspectRatio as keyof typeof aspectRatioMap
+                      ]
+                    }`}
+                  >
+                    <img
+                      src={generatedImages[0].url}
+                      alt={generatedImages[0].prompt}
+                      className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:brightness-75"
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleDownload(generatedImages[0].url)}
+                      className="transform scale-95 group-hover:scale-100 transition-transform"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Download
+                    </Button>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent">
+                    <p className="text-white text-sm truncate">
+                      {generatedImages[0].prompt}
+                    </p>
+                  </div>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center h-[300px] text-neutral-500">
                   <ImageIcon className="h-12 w-12 mb-4" />
-                  <p>Your generated images will appear here</p>
+                  <p>Generate an image to see it here</p>
                 </div>
               )}
             </CardContent>
           </Card>
         </div>
+
+        {/* Previous Images Section */}
+        {previousImages.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-6">Previous Generations</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {previousImages.map((image, index) => (
+                <div key={index} className="relative group">
+                  <div
+                    className={`${
+                      aspectRatioMap[
+                        image.aspect_ratio as keyof typeof aspectRatioMap
+                      ] || "aspect-square"
+                    }`}
+                  >
+                    <img
+                      src={image.image_url}
+                      alt={image.prompt}
+                      className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:brightness-75"
+                      loading="lazy"
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => setSelectedImage(image)}
+                      className="transform scale-95 group-hover:scale-100 transition-transform"
+                    >
+                      <Expand className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => handleDownload(image.image_url)}
+                      className="transform scale-95 group-hover:scale-100 transition-transform"
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent">
+                    <p className="text-white text-sm truncate">{image.prompt}</p>
+                    <p className="text-white/70 text-xs">
+                      {new Date(image.created_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Fullscreen Modal */}
+            <ImageModal
+              isOpen={!!selectedImage}
+              onClose={() => setSelectedImage(null)}
+              imageUrl={selectedImage?.image_url || ""}
+              prompt={selectedImage?.prompt || ""}
+              date={selectedImage?.created_at}
+              onDownload={handleDownload}
+              onPrevious={() => handleNavigateImage("previous")}
+              onNext={() => handleNavigateImage("next")}
+              hasPrevious={
+                previousImages.findIndex(
+                  (img) => img.image_url === selectedImage?.image_url
+                ) > 0
+              }
+              hasNext={
+                previousImages.findIndex(
+                  (img) => img.image_url === selectedImage?.image_url
+                ) < previousImages.length - 1
+              }
+            />
+
+            {/* Pagination */}
+            <div className="mt-8 flex justify-center">
+              <Pagination
+                currentPage={currentPage}
+                totalPages={Math.ceil(totalImages / imagesPerPage)}
+                onPageChange={handlePageChange}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

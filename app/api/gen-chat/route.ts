@@ -69,7 +69,8 @@ export async function POST(request: Request) {
     messages,
     maxSteps: 5,
     tools,
-    maxTokens: 1000,
+    temperature: 0.5,
+    maxTokens: 500,
     experimental_transform: smoothStream({
       delayInMs: 5,
       chunking: 'word',

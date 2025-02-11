@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,8 @@ import { LoadingSpinner } from "./loading-spinner";
 import { SavedStudyPlans } from "./saved-study-plans";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useStudyPlans } from "../contexts/StudyPlanContext";
+import { PdfDownloadButton } from "./pdf-download-button";
+import { createClient } from "@/utils/supabase/client";
 
 interface StudyPlanInput {
   grade: string;
@@ -65,6 +67,15 @@ export function AIStudyPlanner() {
   const [error, setError] = useState<string | null>(null);
   const { addStudyPlan } = useStudyPlans();
 
+  // Auto-scroll to generated plan when available
+  useEffect(() => {
+    if (studyPlan) {
+      setTimeout(() => {
+        document.getElementById("generatedPlan")?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [studyPlan]);
+
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -101,7 +112,12 @@ export function AIStudyPlanner() {
         if (response.ok) {
           setStudyPlan(data);
 
-          // Save study plan to Supabase
+          // Get the current user email from Supabase
+          const supabase = createClient();
+          const { data: { user } } = await supabase.auth.getUser();
+          const userEmail = user?.email || "";
+
+          // Save study plan to Supabase with user_email
           const saveResponse = await fetch("/api/save-study-plan", {
             method: "POST",
             headers: {
@@ -119,6 +135,7 @@ export function AIStudyPlanner() {
                 input.availableStudyTimePerDay
               ),
               studyPlan: data.studyPlan,
+              user_email: userEmail  // include the user email
             }),
           });
 
@@ -300,104 +317,107 @@ export function AIStudyPlanner() {
             </Alert>
           )}
           {studyPlan && (
-            <Card className="mt-6">
-              <CardHeader>
-                <CardTitle>Your Personalized Study Plan</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <h3 className="text-lg font-semibold">Plan Overview</h3>
-                      <p>
-                        <strong>Subject:</strong> {studyPlan.metadata.subject}
-                      </p>
-                      <p>
-                        <strong>Grade:</strong> {studyPlan.metadata.grade}
-                      </p>
-                      <p>
-                        <strong>Board:</strong> {studyPlan.metadata.board}
-                      </p>
+            <div id="generatedPlan">
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle>Your Personalized Study Plan</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <h3 className="text-lg font-semibold">Plan Overview</h3>
+                        <p>
+                          <strong>Subject:</strong> {studyPlan.metadata.subject}
+                        </p>
+                        <p>
+                          <strong>Grade:</strong> {studyPlan.metadata.grade}
+                        </p>
+                        <p>
+                          <strong>Board:</strong> {studyPlan.metadata.board}
+                        </p>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">Study Details</h3>
+                        <p>
+                          <strong>Duration:</strong>{" "}
+                          {studyPlan.metadata.availableDays} days
+                        </p>
+                        <p>
+                          <strong>Daily Study Time:</strong>{" "}
+                          {studyPlan.metadata.availableStudyTimePerDay} hours
+                        </p>
+                      </div>
                     </div>
                     <div>
-                      <h3 className="text-lg font-semibold">Study Details</h3>
-                      <p>
-                        <strong>Duration:</strong>{" "}
-                        {studyPlan.metadata.availableDays} days
-                      </p>
-                      <p>
-                        <strong>Daily Study Time:</strong>{" "}
-                        {studyPlan.metadata.availableStudyTimePerDay} hours
-                      </p>
+                      <h3 className="text-lg font-semibold">Learning Goal</h3>
+                      <p>{studyPlan.metadata.learningGoal}</p>
                     </div>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-semibold">Learning Goal</h3>
-                    <p>{studyPlan.metadata.learningGoal}</p>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full border-collapse border border-gray-300">
-                      <thead>
-                        <tr className="bg-gray-100">
-                          <th className="border border-gray-300 px-4 py-2">
-                            Day
-                          </th>
-                          <th className="border border-gray-300 px-4 py-2">
-                            Focus Areas
-                          </th>
-                          <th className="border border-gray-300 px-4 py-2">
-                            Activities
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {studyPlan.studyPlan.map((day) => (
-                          <tr key={day.day}>
-                            <td className="border border-gray-300 px-4 py-2 font-medium">
-                              {day.day}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2">
-                              {day.focusAreas.length === 1 ? (
-                                <p>
-                                  <strong>{day.focusAreas[0].topic}:</strong>{" "}
-                                  {day.focusAreas[0].objective}
-                                </p>
-                              ) : (
-                                <ul className="list-disc pl-5">
-                                  {day.focusAreas.map((area, index) => (
-                                    <li key={index}>
-                                      <strong>{area.topic}:</strong>{" "}
-                                      {area.objective}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </td>
-                            <td className="border border-gray-300 px-4 py-2">
-                              {day.activities.length === 1 ? (
-                                <p>
-                                  <strong>{day.activities[0].action}:</strong>{" "}
-                                  {day.activities[0].suggestion}
-                                </p>
-                              ) : (
-                                <ul className="list-disc pl-5">
-                                  {day.activities.map((activity, index) => (
-                                    <li key={index}>
-                                      <strong>{activity.action}:</strong>{" "}
-                                      {activity.suggestion}
-                                    </li>
-                                  ))}
-                                </ul>
-                              )}
-                            </td>
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse border border-gray-300">
+                        <thead>
+                          <tr className="bg-gray-100">
+                            <th className="border border-gray-300 px-4 py-2">
+                              Day
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2">
+                              Focus Areas
+                            </th>
+                            <th className="border border-gray-300 px-4 py-2">
+                              Activities
+                            </th>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                        </thead>
+                        <tbody>
+                          {studyPlan.studyPlan.map((day) => (
+                            <tr key={day.day}>
+                              <td className="border border-gray-300 px-4 py-2 font-medium">
+                                {day.day}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                {day.focusAreas.length === 1 ? (
+                                  <p>
+                                    <strong>{day.focusAreas[0].topic}:</strong>{" "}
+                                    {day.focusAreas[0].objective}
+                                  </p>
+                                ) : (
+                                  <ul className="list-disc pl-5">
+                                    {day.focusAreas.map((area, index) => (
+                                      <li key={index}>
+                                        <strong>{area.topic}:</strong>{" "}
+                                        {area.objective}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                              <td className="border border-gray-300 px-4 py-2">
+                                {day.activities.length === 1 ? (
+                                  <p>
+                                    <strong>{day.activities[0].action}:</strong>{" "}
+                                    {day.activities[0].suggestion}
+                                  </p>
+                                ) : (
+                                  <ul className="list-disc pl-5">
+                                    {day.activities.map((activity, index) => (
+                                      <li key={index}>
+                                        <strong>{activity.action}:</strong>{" "}
+                                        {activity.suggestion}
+                                      </li>
+                                    ))}
+                                  </ul>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+              <PdfDownloadButton plan={studyPlan} />
+            </div>
           )}
         </TabsContent>
         <TabsContent value="saved">

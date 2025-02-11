@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { jsPDF } from "jspdf";
+import 'jspdf-autotable';
 import { marked } from "marked";
 import DOMPurify from "dompurify";
 

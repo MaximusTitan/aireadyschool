@@ -71,12 +71,12 @@ export const categories: {
       route: "/tools/presentation",
       isHot: true,
     },
-    {
-      title: "Video Story Generator",
-      description: "Generate video stories from text",
-      route: "/tools/video-story-generator",
-      isComingSoon: true,
-    },
+    // {
+    //   title: "Video Story Generator",
+    //   description: "Generate video stories from text",
+    //   route: "/tools/video-story-generator",
+    //   isComingSoon: true,
+    // },
     {
       title: "Song Generator",
       description: "Generate songs from lyrics",
@@ -176,12 +176,12 @@ export const categories: {
       description: "Generate videos from images",
       route: "/tools/video-generator",
     },
-    {
-      title: "Video Story Generator",
-      description: "Generate video stories from text",
-      route: "/tools/video-story-generator",
-      isComingSoon: true,
-    },
+    // {
+    //   title: "Video Story Generator",
+    //   description: "Generate video stories from text",
+    //   route: "/tools/video-story-generator",
+    //   isComingSoon: true,
+    // },
     {
       title: "Presentation Generator",
       description: "Create presentations",
@@ -227,12 +227,12 @@ export const categories: {
       description: "Generate videos from images",
       route: "/tools/video-generator",
     },
-    {
-      title: "Video Story Generator",
-      description: "Generate video stories from text",
-      route: "/tools/video-story-generator",
-      isComingSoon: true,
-    },
+    // {
+    //   title: "Video Story Generator",
+    //   description: "Generate video stories from text",
+    //   route: "/tools/video-story-generator",
+    //   isComingSoon: true,
+    // },
     {
       title: "Assignment Generator",
       description: "Generate assignments",
@@ -249,11 +249,11 @@ export const categories: {
       route: "/tools/presentation",
       isHot: true,
     },
-    {
-      title: "School Intelligence",
-      description: "Get insights about your school",
-      route: "/tools/school-intelligence",
-      isComingSoon: true,
-    },
+    // {
+    //   title: "School Intelligence",
+    //   description: "Get insights about your school",
+    //   route: "/tools/school-intelligence",
+    //   isComingSoon: true,
+    // },
   ],
 };

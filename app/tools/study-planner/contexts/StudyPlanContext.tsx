@@ -30,38 +30,46 @@ export function StudyPlanProvider({ children }: { children: React.ReactNode }) {
   const [studyPlans, setStudyPlans] = useState<StudyPlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
 
   useEffect(() => {
-    fetchStudyPlans();
-
-    const channel = supabase
-      .channel("study_plans_changes")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "study_plans" },
-        (payload) => {
-          setStudyPlans((currentPlans) => [
-            payload.new as StudyPlan,
-            ...currentPlans,
-          ]);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && user.email) {
+        setUserEmail(user.email);
+        await fetchStudyPlans(user.email);
+        // Subscribe to new inserts and update only if user_email matches
+        const channel = supabase
+          .channel("study_plans_changes")
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "study_plans" },
+            (payload) => {
+              if (payload.new.user_email === user.email) {
+                setStudyPlans((currentPlans) => [payload.new as StudyPlan, ...currentPlans]);
+              }
+            }
+          )
+          .subscribe();
+        return () => {
+          supabase.removeChannel(channel);
+        };
+      } else {
+        setError("User not authenticated");
+        setIsLoading(false);
+      }
+    }
+    init();
   }, []);
 
-  const fetchStudyPlans = async () => {
+  const fetchStudyPlans = async (email: string) => {
     try {
       const { data, error } = await supabase
         .from("study_plans")
         .select("*")
+        .eq("user_email", email)
         .order("created_at", { ascending: false });
-
       if (error) throw error;
-
       setStudyPlans(data);
     } catch (err: any) {
       console.error("Error fetching study plans:", err);

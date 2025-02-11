@@ -323,6 +323,7 @@ const ToolsPage = () => {
           <>
             <div className="fixed bottom-4 right-4 z-50">
               <button
+                title="Open Chat"
                 onClick={toggleChat}
                 className="bg-rose-300 hover:bg-rose-400 text-white rounded-full p-3 shadow-lg transition-colors duration-200"
               >
@@ -338,6 +339,7 @@ const ToolsPage = () => {
                   {/* Dropdown for Database Selection */}
                   <div className="flex items-center space-x-2">
                     <select
+                      title="Select Database"
                       value={selectedDatabase || ""}
                       onChange={(e) => handleDatabaseSelection(e.target.value)}
                       className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
@@ -353,6 +355,8 @@ const ToolsPage = () => {
                     </select>
                     {/* Plugin Icon Button */}
                     <button
+                      title="Use plugin"
+                      aria-label="Use plugin"
                       onClick={() => {
                         console.log(
                           `Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`
@@ -362,6 +366,7 @@ const ToolsPage = () => {
                       className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
                     >
                       <Plug size={16} />
+                      <span className="sr-only">Use plugin</span>
                     </button>
                   </div>
                 </div>
@@ -401,6 +406,8 @@ const ToolsPage = () => {
                   />
                   <button
                     onClick={sendMessage}
+                    title="Send Message"
+                    aria-label="Send Message"
                     className="bg-rose-300 hover:bg-rose-400 text-white px-4 rounded-r-lg transition-colors duration-200"
                   >
                     <Send size={20} />

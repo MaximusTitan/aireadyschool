@@ -53,6 +53,7 @@ export async function POST(req: Request) {
     5. The JSON should be valid and properly formatted.
     6. Keep focus areas and activities brief and to-the-point for better table formatting.
     7. DO NOT include any explanations, markdown formatting, or additional text outside of the JSON structure.
+    8. Make sure to add mock test in the last day of the study plan.
 
     Respond ONLY with the JSON array, nothing else.`
 

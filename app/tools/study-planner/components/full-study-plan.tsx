@@ -6,6 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { LoadingSpinner } from "./loading-spinner";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
+import { PdfDownloadButton } from "./pdf-download-button";
 
 const supabase = createClient();
 
@@ -43,7 +44,7 @@ export function FullStudyPlan({ planId, onClose }: FullStudyPlanProps) {
 
   useEffect(() => {
     fetchStudyPlan();
-  }, []); // Removed planId from dependencies
+  }, [planId]); // Add planId to dependencies array to trigger fetch when planId changes
 
   const fetchStudyPlan = async () => {
     try {
@@ -102,96 +103,99 @@ export function FullStudyPlan({ planId, onClose }: FullStudyPlanProps) {
   );
 
   return (
-    <Card className="mt-6">
-      <CardHeader>
-        <CardTitle className="flex justify-between items-center">
-          <span>Full Study Plan: {studyPlan.subject}</span>
-          <Button onClick={onClose}>Close</Button>
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <h3 className="text-lg font-semibold">Plan Overview</h3>
-              <p>
-                <strong>Subject:</strong> {studyPlan.subject}
-              </p>
-              <p>
-                <strong>Grade:</strong> {studyPlan.grade}
-              </p>
-              <p>
-                <strong>Board:</strong> {studyPlan.board}
-              </p>
+    <>
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle className="flex justify-between items-center">
+            <span>Full Study Plan: {studyPlan.subject}</span>
+            <Button onClick={onClose}>Close</Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="text-lg font-semibold">Plan Overview</h3>
+                <p>
+                  <strong>Subject:</strong> {studyPlan.subject}
+                </p>
+                <p>
+                  <strong>Grade:</strong> {studyPlan.grade}
+                </p>
+                <p>
+                  <strong>Board:</strong> {studyPlan.board}
+                </p>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">Study Details</h3>
+                <p>
+                  <strong>Duration:</strong> {studyPlan.available_days} days
+                </p>
+                <p>
+                  <strong>Daily Study Time:</strong>{" "}
+                  {studyPlan.available_study_time} hours
+                </p>
+              </div>
             </div>
             <div>
-              <h3 className="text-lg font-semibold">Study Details</h3>
-              <p>
-                <strong>Duration:</strong> {studyPlan.available_days} days
-              </p>
-              <p>
-                <strong>Daily Study Time:</strong>{" "}
-                {studyPlan.available_study_time} hours
-              </p>
+              <h3 className="text-lg font-semibold">Learning Goal</h3>
+              <p>{studyPlan.learning_goal}</p>
             </div>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">Learning Goal</h3>
-            <p>{studyPlan.learning_goal}</p>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">Areas of Improvement</h3>
-            <p>{studyPlan.areas_of_improvement}</p>
-          </div>
-          <div>
-            <h3 className="text-lg font-semibold">Syllabus</h3>
-            <p>{studyPlan.syllabus}</p>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-100">
-                  <th className="border border-gray-300 px-4 py-2">Day</th>
-                  <th className="border border-gray-300 px-4 py-2">
-                    Focus Areas
-                  </th>
-                  <th className="border border-gray-300 px-4 py-2">
-                    Activities
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {days.map((day) => (
-                  <tr key={day.day}>
-                    <td className="border border-gray-300 px-4 py-2 font-medium">
-                      {day.day}
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2">
-                      <ul className="list-disc pl-5">
-                        {day.focusAreas.map((area, index) => (
-                          <li key={index}>
-                            <strong>{area.topic}:</strong> {area.objective}
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
-                    <td className="border border-gray-300 px-4 py-2">
-                      <ul className="list-disc pl-5">
-                        {day.activities.map((activity, index) => (
-                          <li key={index}>
-                            <strong>{activity.action}:</strong>{" "}
-                            {activity.suggestion}
-                          </li>
-                        ))}
-                      </ul>
-                    </td>
+            <div>
+              <h3 className="text-lg font-semibold">Areas of Improvement</h3>
+              <p>{studyPlan.areas_of_improvement}</p>
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold">Syllabus</h3>
+              <p>{studyPlan.syllabus}</p>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse border border-gray-300">
+                <thead>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-4 py-2">Day</th>
+                    <th className="border border-gray-300 px-4 py-2">
+                      Focus Areas
+                    </th>
+                    <th className="border border-gray-300 px-4 py-2">
+                      Activities
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {days.map((day) => (
+                    <tr key={day.day}>
+                      <td className="border border-gray-300 px-4 py-2 font-medium">
+                        {day.day}
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        <ul className="list-disc pl-5">
+                          {day.focusAreas.map((area, index) => (
+                            <li key={index}>
+                              <strong>{area.topic}:</strong> {area.objective}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                      <td className="border border-gray-300 px-4 py-2">
+                        <ul className="list-disc pl-5">
+                          {day.activities.map((activity, index) => (
+                            <li key={index}>
+                              <strong>{activity.action}:</strong>{" "}
+                              {activity.suggestion}
+                            </li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+      <PdfDownloadButton plan={studyPlan} />
+    </>
   );
 }

@@ -19,7 +19,8 @@ export type SlideLayout =
   | 'bulletPoints' // Added new layout types
   | 'timelineSlide'
   | 'comparisonSlide'
-  | 'statisticSlide';
+  | 'statisticSlide'
+  | 'textLeft' | 'textRight';
 
 export interface Slide {
   id: string
@@ -72,6 +73,7 @@ export interface Slide {
 
 
 export interface Presentation {
+  transition: string;
 
   id: string;
 

@@ -184,7 +184,8 @@ export async function exportToPDF(presentation: Presentation): Promise<ArrayBuff
     }
 
     console.log('PDF generation completed')
-    return (await pdfDoc.save()).buffer as ArrayBuffer
+    const pdfBytes = await pdfDoc.save()
+    return new Uint8Array(pdfBytes).buffer
   } catch (error) {
     console.error('Error generating PDF:', error)
     throw new Error(`Failed to generate PDF: ${error instanceof Error ? error.message : String(error)}`)

@@ -1,0 +1,379 @@
+[data-theme] {
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }
+  
+  /* Base styles for reveal */
+  .reveal {
+    font-size: 24px;
+  }
+  
+  .reveal .slides section {
+    height: 100%;
+    padding: 1em;
+    font-size: 18px;
+    line-height: 1.4;
+  }
+  
+  /* Modern Theme */
+  .theme-modern,
+  [data-theme="modern"] {
+    background: linear-gradient(135deg, #2b4162 0%, #12100e 100%);
+    color: #ffffff;
+  }
+  
+  .theme-modern .reveal {
+    background: linear-gradient(135deg, #2b4162 0%, #12100e 100%);
+    color: #ffffff;
+  }
+  
+  .theme-modern .reveal .slides section {
+    background: transparent;
+  }
+  
+  .theme-modern .reveal h1,
+  .theme-modern .reveal h2,
+  .theme-modern .reveal h3 {
+    color: #ffffff;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .theme-modern .reveal p,
+  .theme-modern .reveal li {
+    color: rgba(255, 255, 255, 0.9);
+    font-family: "Inter", sans-serif;
+  }
+  
+  .reveal ul {
+    list-style: none !important; /* Remove default bullets */
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .reveal ul li {
+    position: relative;
+    padding-left: 1.5em;
+    margin-bottom: 0.8em;
+    line-height: 1.4;
+  }
+  
+  .reveal ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5em;
+    color: currentColor;
+    opacity: 0.7;
+  }
+  
+  /* Corporate Theme */
+  .theme-corporate,
+  [data-theme="corporate"] {
+    background: #ffffff;
+    color: #1a1a1a;
+  }
+  
+  .theme-corporate .reveal {
+    background: #ffffff;
+    color: #1a1a1a;
+  }
+  
+  .theme-corporate .reveal .slides section {
+    background: #ffffff;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+  }
+  
+  .theme-corporate .reveal h1,
+  .theme-corporate .reveal h2,
+  .theme-corporate .reveal h3 {
+    color: #1a1a1a;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    font-weight: 700;
+  }
+  
+  .theme-corporate .reveal p,
+  .theme-corporate .reveal li {
+    color: #4a4a4a;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+  }
+  
+  .reveal ul {
+    list-style: none !important; /* Remove default bullets */
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .reveal ul li {
+    position: relative;
+    padding-left: 1.5em;
+    margin-bottom: 0.8em;
+    line-height: 1.4;
+  }
+  
+  .reveal ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5em;
+    color: currentColor;
+    opacity: 0.7;
+  }
+  
+  /* Creative Theme */
+  .theme-creative,
+  [data-theme="creative"] {
+    background: linear-gradient(120deg, #ff6b6b 0%, #4ecdc4 100%);
+    color: #ffffff;
+  }
+  
+  .theme-creative .reveal {
+    background: linear-gradient(120deg, #ff6b6b 0%, #4ecdc4 100%);
+    color: #ffffff;
+  }
+  
+  .theme-creative .reveal .slides section {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+  }
+  
+  .theme-creative .reveal h1,
+  .theme-creative .reveal h2,
+  .theme-creative .reveal h3 {
+    color: #ffffff;
+    font-family: "Poppins", sans-serif;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+  
+  .theme-creative .reveal p,
+  .theme-creative .reveal li {
+    color: rgba(255, 255, 255, 0.95);
+    font-family: "Poppins", sans-serif;
+    font-weight: 300;
+  }
+  
+  .reveal ul {
+    list-style: none !important; /* Remove default bullets */
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .reveal ul li {
+    position: relative;
+    padding-left: 1.5em;
+    margin-bottom: 0.8em;
+    line-height: 1.4;
+  }
+  
+  .reveal ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5em;
+    color: currentColor;
+    opacity: 0.7;
+  }
+  
+  /* Minimal Theme */
+  .theme-minimal,
+  [data-theme="minimal"] {
+    background: #f8f9fa;
+    color: #212529;
+  }
+  
+  .theme-minimal .reveal {
+    background: #f8f9fa;
+    color: #212529;
+  }
+  
+  .theme-minimal .reveal .slides section {
+    background: #ffffff;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  }
+  
+  .theme-minimal .reveal h1,
+  .theme-minimal .reveal h2,
+  .theme-minimal .reveal h3 {
+    color: #212529;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+    font-weight: 500;
+  }
+  
+  .theme-minimal .reveal p,
+  .theme-minimal .reveal li {
+    color: #495057;
+    font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, sans-serif;
+    line-height: 1.7;
+  }
+  
+  .reveal ul {
+    list-style: none !important; /* Remove default bullets */
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .reveal ul li {
+    position: relative;
+    padding-left: 1.5em;
+    margin-bottom: 0.8em;
+    line-height: 1.4;
+  }
+  
+  .reveal ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5em;
+    color: currentColor;
+    opacity: 0.7;
+  }
+  
+  /* Dark Theme */
+  .theme-dark,
+  [data-theme="dark"] {
+    background: #000000;
+    color: #ffffff;
+  }
+  
+  .theme-dark .reveal {
+    background: #000000;
+    color: #ffffff;
+  }
+  
+  .theme-dark .reveal .slides section {
+    background: #111111;
+    border: 1px solid #333333;
+    border-radius: 8px;
+  }
+  
+  .theme-dark .reveal h1,
+  .theme-dark .reveal h2,
+  .theme-dark .reveal h3 {
+    color: #ffffff;
+    font-family: "Space Grotesk", sans-serif;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  
+  .theme-dark .reveal p,
+  .theme-dark .reveal li {
+    color: rgba(255, 255, 255, 0.9);
+    font-family: "Space Grotesk", sans-serif;
+  }
+  
+  .reveal ul {
+    list-style: none !important; /* Remove default bullets */
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .reveal ul li {
+    position: relative;
+    padding-left: 1.5em;
+    margin-bottom: 0.8em;
+    line-height: 1.4;
+  }
+  
+  .reveal ul li::before {
+    content: "•";
+    position: absolute;
+    left: 0.5em;
+    color: currentColor;
+    opacity: 0.7;
+  }
+  
+  /* Common styles for all themes */
+  .reveal {
+    font-size: 24px;
+  }
+  
+  .reveal .slides section {
+    padding: 2em;
+    text-align: left !important;
+    overflow: hidden;
+  }
+  
+  .reveal h1,
+  .reveal h2 {
+    font-size: 2.5rem;
+    line-height: 1.2;
+    margin-bottom: 0.5em;
+    text-align: left !important;
+  }
+  
+  .reveal h3 {
+    font-size: 1.8em;
+    margin-bottom: 0.5em;
+    text-align: left !important;
+  }
+  
+  .reveal p,
+  .reveal li {
+    font-size: 1.125rem;
+    line-height: 1.6;
+    margin-bottom: 1em;
+    text-align: left !important;
+  }
+  
+  .reveal ul {
+    margin: 1em 0;
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin-left: 0 !important;
+  }
+  
+  .reveal ol {
+    margin: 1em 0;
+    text-align: left !important;
+  }
+  
+  .reveal img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Override Reveal.js defaults */
+  .reveal-viewport {
+    background: inherit !important;
+  }
+  
+  .reveal .slides section {
+    top: 0 !important;
+  }
+  
+  .reveal .progress {
+    color: var(--theme-accent, #0066cc);
+  }
+  
+  .reveal .controls {
+    color: var(--theme-accent, #0066cc);
+  }
+  
+  /* Ensure proper contrast for editing */
+  .reveal input,
+  .reveal textarea {
+    color: inherit !important;
+    background-color: rgba(127, 127, 127, 0.1) !important;
+  }
+  
+  /* Slide transitions */
+  .reveal .slides section {
+    transition: transform 0.3s ease, opacity 0.3s ease;
+  }
+  
+  /* Override any Reveal.js default styles */
+  .reveal ul ul,
+  .reveal ul ol,
+  .reveal ol ol,
+  .reveal ol ul {
+    list-style: none !important;
+  }
+  
+  

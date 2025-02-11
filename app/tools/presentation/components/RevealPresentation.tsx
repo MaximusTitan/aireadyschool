@@ -39,26 +39,38 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
 
   useEffect(() => {
     const handleFullscreenChange = () => {
-      setIsFullscreen(!!document.fullscreenElement)
-    }
+      const isFullscreenMode = !!(
+        document.fullscreenElement ||
+        (document as any).webkitFullscreenElement ||
+        (document as any).msFullscreenElement
+      );
+      setIsFullscreen(isFullscreenMode);
+    };
 
-    document.addEventListener("fullscreenchange", handleFullscreenChange)
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange)
-  }, [])
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", handleFullscreenChange);
+    document.addEventListener("msfullscreenchange", handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
+      document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+    };
+  }, []);
 
   useEffect(() => {
-    let deck: RevealType.Api | null = null
-    let isDestroyed = false
+    let deck: RevealType.Api | null = null;
+    let cleanup = false;
 
     const initializeReveal = async () => {
-      if (!revealRef.current || !containerRef.current || isDestroyed) return
+      if (!revealRef.current || !containerRef.current || cleanup) return;
 
       try {
         const themeClasses = ["modern", "corporate", "creative", "minimal", "dark"]
-          .map((t) => `theme-${t}`)
+          .map((t) => `theme-${t}`);
 
-        // Create new instance
-        deck = new Reveal(revealRef.current, {
+        // Initialize Reveal with safeguards
+        const config = {
           width: isFullscreen ? window.innerWidth : SLIDE_WIDTH,
           height: isFullscreen ? window.innerHeight : SLIDE_HEIGHT,
           margin: 0,
@@ -68,8 +80,8 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
           keyboard: true,
           touch: true,
           controls: true,
-          controlsLayout: "edges",
-          controlsBackArrows: "visible",
+          controlsLayout: "edges" as "edges",
+          controlsBackArrows: "visible" as "visible",
           progress: true,
           slideNumber: true,
           overview: true,
@@ -78,37 +90,51 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
           maxScale: 2.0,
           viewDistance: 4,
           display: "block",
-        })
+          // Add these to prevent event listener issues
+          dependencies: [],
+          plugins: []
+        };
 
-        // Initialize first
-        await deck.initialize()
+        deck = new Reveal(revealRef.current, config);
 
-        // Then update classes if component is still mounted
-        if (!isDestroyed) {
-          revealRef.current?.classList.remove(...themeClasses)
-          revealRef.current?.classList.add(`theme-${theme}`)
+        // Initialize and handle classes after successful initialization
+        await deck.initialize();
 
-          containerRef.current?.classList.remove(...themeClasses)
-          containerRef.current?.classList.add(`theme-${theme}`)
+        if (!cleanup && revealRef.current && containerRef.current) {
+          revealRef.current.classList.remove(...themeClasses);
+          revealRef.current.classList.add(`theme-${theme}`);
+          containerRef.current.classList.remove(...themeClasses);
+          containerRef.current.classList.add(`theme-${theme}`);
         }
       } catch (error) {
-        console.error('Error initializing Reveal:', error)
+        console.error('Error initializing Reveal:', error);
       }
-    }
+    };
 
-    initializeReveal()
+    initializeReveal();
 
+    // Cleanup function
     return () => {
-      isDestroyed = true
+      cleanup = true;
       if (deck) {
         try {
-          deck.destroy()
+          // Remove event listeners manually before destroying
+          const container = revealRef.current;
+          if (container) {
+            const events = ['touchstart', 'touchmove', 'touchend', 'click', 'keydown'];
+            events.forEach(event => {
+              container.removeEventListener(event, () => {});
+            });
+          }
+          
+          deck.destroy();
         } catch (error) {
-          console.error('Error destroying Reveal:', error)
+          // Ignore cleanup errors
+          console.warn('Non-critical error during Reveal cleanup:', error);
         }
       }
-    }
-  }, [isFullscreen, theme, transition, editedSlides])
+    };
+  }, [isFullscreen, theme, transition, editedSlides]);
 
   const handleSlideChange = (index: number, field: keyof Slide, value: string | string[]) => {
     const updatedSlides = [...editedSlides]

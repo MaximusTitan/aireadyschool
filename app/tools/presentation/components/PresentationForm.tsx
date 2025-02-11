@@ -367,19 +367,31 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     }
   }
 
-  const handlePresent = (e: React.MouseEvent) => {
-    e.preventDefault()
-    if (presentationRef.current) {
-      presentationRef.current.requestFullscreen().catch((err) => {
-        console.error("Error attempting to enable full-screen mode:", err)
-        toast({
-          title: "Error",
-          description: "Could not enter fullscreen mode. Please try again.",
-          variant: "destructive",
-        })
-      })
+  const handlePresent = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    try {
+      if (presentationRef.current) {
+        // Check if fullscreen is supported and enter fullscreen
+        if (document.fullscreenEnabled) {
+          await presentationRef.current.requestFullscreen();
+        } else if ((document as any).webkitRequestFullscreen) {
+          await (presentationRef.current as any).webkitRequestFullscreen();
+        } else if ((document as any).msRequestFullscreen) {
+          await (presentationRef.current as any).msRequestFullscreen();
+        } else {
+          throw new Error('Fullscreen not supported');
+        }
+      }
+    } catch (error) {
+      console.error("Fullscreen error:", error);
+      toast({
+        title: "Fullscreen Error",
+        description: "Could not enter fullscreen mode. Please try using F11 instead.",
+        variant: "destructive",
+      });
     }
-  }
+  };
 
   const addRelevantTopic = () => {
     if (relevantTopic.trim() !== "") {
@@ -658,7 +670,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
       )}
       <div className="mt-4 p-4 bg-blue-100 border border-blue-300 rounded-md text-blue-800">
         <p className="text-sm font-medium">
-          Press 'F' to enter fullscreen view and 'Esc' to exit. Enhance your presentation experience!
+          Click the Present button to enter fullscreen mode and 'Esc' to exit.
         </p>
       </div>
     </div>

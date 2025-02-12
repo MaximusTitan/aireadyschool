@@ -2,12 +2,12 @@
 
 import { fal } from "@fal-ai/client"
 
-if (!process.env.FAL_KEY) {
-  console.error('FAL_KEY is not set. Please set this environment variable in your Vercel project settings.')
+if (!process.env.FLUX_API_KEY) {
+  console.error('FLUX_API_KEY is not set. Please set this environment variable in your Vercel project settings.')
 }
 
 fal.config({
-  credentials: process.env.FAL_KEY,
+  credentials: process.env.FLUX_API_KEY,
 })
 
 const MAX_RETRIES = 3
@@ -18,8 +18,8 @@ async function delay(ms: number) {
 }
 
 async function attemptImageGeneration(prompt: string, attempt: number = 1): Promise<string> {
-  if (!process.env.FAL_KEY) {
-    throw new Error('FAL_KEY is not set. Image generation is unavailable.')
+  if (!process.env.FLUX_API_KEY) {
+    throw new Error('FLUX_API_KEY is not set. Image generation is unavailable.')
   }
 
   try {
@@ -68,8 +68,8 @@ async function attemptImageGeneration(prompt: string, attempt: number = 1): Prom
 }
 
 export async function generateImage(prompt: string): Promise<string> {
-  if (!process.env.FAL_KEY) {
-    console.error('FAL_KEY is not set. Using placeholder image.')
+  if (!process.env.FLUX_API_KEY) {
+    console.error('FLUX_API_KEY is not set. Using placeholder image.')
     return `https://via.placeholder.com/1024x1024?text=${encodeURIComponent('Image generation unavailable')}`
   }
 

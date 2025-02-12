@@ -1,28 +1,24 @@
-"use client";
+"use client"
 
-import { Slide } from "../types/presentation";
-import { TitleSlide } from "./slides/TitleSlide";
-import { ContentWithImageSlide } from "./slides/ContentWithImageSlide";
-import { SplitContentSlide } from "./slides/SplitContentSlide";
-import { FullBleedSlide } from "./slides/FullBleedSlide";
-import { GridLayoutSlide } from "./slides/GridLayoutSlide";
-import { QuoteSlide } from "./slides/QuoteSlide";
-import { TimelineSlide } from "./slides/TimelineSlide";
-import { ComparisonSlide } from "./slides/ComparisonSlide";
-import { StatisticSlide } from "./slides/StatisticSlide";
-import { BulletPointsSlide } from "./slides/BulletPointsSlide";
+import type { Slide } from "../types/presentation"
+import { TitleSlide } from "./slides/TitleSlide"
+import { ContentWithImageSlide } from "./slides/ContentWithImageSlide"
+import { SplitContentSlide } from "./slides/SplitContentSlide"
+import { FullBleedSlide } from "./slides/FullBleedSlide"
+import { GridLayoutSlide } from "./slides/GridLayoutSlide"
+import { QuoteSlide } from "./slides/QuoteSlide"
+import { TimelineSlide } from "./slides/TimelineSlide"
+import { ComparisonSlide } from "./slides/ComparisonSlide"
+import { StatisticSlide } from "./slides/StatisticSlide"
+import { BulletPointsSlide } from "./slides/BulletPointsSlide"
 
 interface SlideRendererProps {
-  slide: Slide;
-  theme: string;
-  dimensions: { width: number; height: number };
+  slide: Slide
+  theme: string
+  dimensions: { width: number; height: number }
 }
 
-export function SlideRenderer({
-  slide,
-  theme,
-  dimensions,
-}: SlideRendererProps) {
+export function SlideRenderer({ slide, theme, dimensions }: SlideRendererProps) {
   const commonProps = {
     slide,
     theme,
@@ -36,7 +32,7 @@ export function SlideRenderer({
       "--margin-horizontal": `${dimensions.width * 0.1}px`,
       "--margin-vertical": `${dimensions.height * 0.05}px`,
     } as React.CSSProperties,
-  };
+  }
 
   return (
     <div
@@ -51,29 +47,30 @@ export function SlideRenderer({
       {(() => {
         switch (slide.layout) {
           case "titleSlide":
-            return <TitleSlide {...commonProps} />;
+            return <TitleSlide {...commonProps} />
           case "contentWithImage":
-            return <ContentWithImageSlide {...commonProps} />;
+            return <ContentWithImageSlide {...commonProps} />
           case "splitContent":
-            return <SplitContentSlide {...commonProps} />;
+            return <SplitContentSlide {...commonProps} />
           case "fullBleed":
-            return <FullBleedSlide {...commonProps} />;
+            return <FullBleedSlide {...commonProps} />
           case "gridLayout":
-            return <GridLayoutSlide {...commonProps} />;
+            return <GridLayoutSlide {...commonProps} />
           case "quoteSlide":
-            return <QuoteSlide {...commonProps} />;
+            return <QuoteSlide {...commonProps} />
           case "timelineSlide":
-            return <TimelineSlide {...commonProps} />;
+            return <TimelineSlide {...commonProps} />
           case "comparisonSlide":
-            return <ComparisonSlide {...commonProps} />;
+            return <ComparisonSlide {...commonProps} />
           case "statisticSlide":
-            return <StatisticSlide {...commonProps} />;
+            return <StatisticSlide {...commonProps} />
           case "bulletPoints":
-            return <BulletPointsSlide {...commonProps} />;
+            return <BulletPointsSlide {...commonProps} />
           default:
-            return <div>Unsupported layout: {slide.layout}</div>;
+            return <div>Unsupported layout: {slide.layout}</div>
         }
       })()}
     </div>
-  );
+  )
 }
+

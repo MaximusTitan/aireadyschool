@@ -1,10 +1,16 @@
 "use client"
 
 import { useState } from "react"
-import PresentationForm from "./components/PresentationForm"
+import dynamic from 'next/dynamic'
 import type { Presentation } from "./types/presentation"
 import { toast } from "@/hooks/use-toast"
 import { ErrorBoundary, type FallbackProps } from "react-error-boundary"
+
+// Dynamically import PresentationForm with no SSR
+const PresentationForm = dynamic(
+  () => import('./components/PresentationForm'),
+  { ssr: false }
+)
 
 function ErrorFallback({ error, resetErrorBoundary }: FallbackProps) {
   return (

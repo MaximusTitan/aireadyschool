@@ -11,7 +11,7 @@ interface AIGenerationResult {
   theme: string
   transition: string
 }
-
+//mayur
 export async function generateUsingAI(prompt: string): Promise<AIGenerationResult> {
   try {
     const result = await generateText({

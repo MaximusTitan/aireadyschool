@@ -14,7 +14,7 @@ const DashboardPage = async () => {
   }
 
   return (
-    <div>
+    <div className="ml-[118px] mt-[12px] p-6">
       <h1>Welcome to the App!</h1>
       <p>Your email: {user?.email}</p>
       <p>Your role: {userRole}</p>

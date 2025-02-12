@@ -1,8 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Switch } from "@/components/ui/switch"
-import DatabaseConnectionForm from "@/app/connect-database/DatabaseConnectForm"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,6 +8,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { ChatBubble } from "./chat-bubble"
 import { ChatWindow } from "./chat-window"
 import { createClient } from "@/utils/supabase/client"
+import DatabaseConnectionForm from "@/app/connect-database/DatabaseConnectForm"
+import HubSpotConnectionForm from "@/app/connect-database/HubSpotConnectionForm"
+
 const supabase = createClient()
 
 type ToastProps = {
@@ -25,6 +26,8 @@ const Toast = ({ message, type }: ToastProps) => (
   </div>
 )
 
+type ConnectionType = "sql" | "supabase" | "hubspot"
+
 export default function ConnectDatabasePage() {
   const [supabaseUrl, setSupabaseUrl] = useState("")
   const [supabaseAnonKey, setSupabaseAnonKey] = useState("")
@@ -33,7 +36,7 @@ export default function ConnectDatabasePage() {
   const [toast, setToast] = useState<ToastProps | null>(null)
   const [databaseName, setDatabaseName] = useState<string | null>(null)
   const [isChatOpen, setIsChatOpen] = useState(false)
-  const [connectionType, setConnectionType] = useState<"supabase" | "sql">("supabase")
+  const [connectionType, setConnectionType] = useState<ConnectionType>("supabase")
 
   useEffect(() => {
     if (toast) {
@@ -47,7 +50,6 @@ export default function ConnectDatabasePage() {
     setIsLoading(true)
 
     try {
-      // Fetch user email
       const {
         data: { user },
       } = await supabase.auth.getUser()
@@ -58,9 +60,7 @@ export default function ConnectDatabasePage() {
 
       const response = await fetch("/api/connect-database", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ supabaseUrl, supabaseAnonKey, databaseName: databaseNameInput, email }),
       })
 
@@ -70,47 +70,29 @@ export default function ConnectDatabasePage() {
         throw new Error(result.error || "Failed to connect to database")
       }
 
-      // Check for specific messages in the response
       if (result.message) {
-        setToast({
-          message: result.message,
-          type: "error", // You can change this to "success" if you want to treat it as a success message
-        })
+        setToast({ message: result.message, type: "error" })
       } else {
         setDatabaseName(result.databaseName)
-        setToast({
-          message: `Successfully connected to the database: ${databaseNameInput}`,
-          type: "success",
-        })
+        setToast({ message: `Successfully connected to ${databaseNameInput}`, type: "success" })
       }
     } catch (error) {
-      console.error("Error connecting to database:", error)
-      setToast({
-        message: "Failed to connect to the database. Please check your credentials and try again.",
-        type: "error",
-      })
+      setToast({ message: "Failed to connect. Please check your credentials and try again.", type: "error" })
     } finally {
       setIsLoading(false)
     }
   }
 
-  return (
-    <div className="container mx-auto py-10">
-      <div className="flex justify-center items-center mb-6">
-        <span className={`mr-2 ${connectionType === "sql" ? "font-bold" : ""}`}>SQL</span>
-        <Switch
-          checked={connectionType === "supabase"}
-          onCheckedChange={(checked) => setConnectionType(checked ? "supabase" : "sql")}
-        />
-        <span className={`ml-2 ${connectionType === "supabase" ? "font-bold" : ""}`}>Supabase</span>
-      </div>
-
-      {connectionType === "supabase" ? (
-        <>
+  const renderConnectionForm = () => {
+    switch (connectionType) {
+      case "sql":
+        return <DatabaseConnectionForm />
+      case "supabase":
+        return (
           <Card className="max-w-md mx-auto">
             <CardHeader>
-              <CardTitle>Connect to Your Database</CardTitle>
-              <CardDescription>Enter your Supabase credentials to connect your database.</CardDescription>
+              <CardTitle>Connect to Supabase</CardTitle>
+              <CardDescription>Enter your Supabase credentials to connect.</CardDescription>
             </CardHeader>
             <form onSubmit={handleSubmit}>
               <CardContent className="space-y-4">
@@ -155,24 +137,46 @@ export default function ConnectDatabasePage() {
               </CardFooter>
             </form>
           </Card>
-          {toast && <Toast message={toast.message} type={toast.type} />}
-          {databaseName && (
-            <>
-              <div className="mt-4 text-center">Connected to: {databaseNameInput}</div>
-            </>
-          )}
-          <ChatBubble onClick={() => setIsChatOpen(true)} />
-          {isChatOpen && (
-            <ChatWindow
-              onClose={() => setIsChatOpen(false)}
-              databaseName={databaseNameInput}
-              supabaseUrl={supabaseUrl}
-              supabaseAnonKey={supabaseAnonKey}
-            />
-          )}
-        </>
-      ) : (
-        <DatabaseConnectionForm />
+        )
+      case "hubspot":
+        return <HubSpotConnectionForm />
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div className="container mx-auto py-10">
+      <div className="flex justify-center items-center mb-6">
+        <div className="inline-flex rounded-md shadow-sm" role="group">
+          {(["sql", "supabase", "hubspot"] as const).map((type) => (
+            <Button
+              key={type}
+              onClick={() => setConnectionType(type)}
+              variant={connectionType === type ? "default" : "outline"}
+              className={`${
+                connectionType === type ? "bg-primary text-primary-foreground" : "bg-background"
+              } px-4 py-2 text-sm font-medium uppercase`}
+            >
+              {type}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {renderConnectionForm()}
+
+      {toast && <Toast message={toast.message} type={toast.type} />}
+      {databaseName && <div className="mt-4 text-center">Connected to: {databaseNameInput}</div>}
+
+      <ChatBubble onClick={() => setIsChatOpen(true)} />
+      {isChatOpen && (
+        <ChatWindow
+          onClose={() => setIsChatOpen(false)}
+          databaseName={databaseNameInput}
+          supabaseUrl={supabaseUrl}
+          supabaseAnonKey={supabaseAnonKey}
+        />
       )}
     </div>
   )

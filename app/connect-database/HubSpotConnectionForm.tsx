@@ -8,16 +8,26 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, CheckCircle2 } from "lucide-react"
 
-export default function HubSpotConnectionForm() {
+interface HubSpotConnectionFormProps {
+  crmAccessToken: string | null;
+  setCrmAccessToken: React.Dispatch<React.SetStateAction<string | null>>;
+  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  isLoading: boolean;
+}
+
+const HubSpotConnectionForm: React.FC<HubSpotConnectionFormProps> = ({
+  crmAccessToken,
+  setCrmAccessToken,
+  handleSubmit,
+  isLoading,
+}) => {
   const [accessToken, setAccessToken] = useState("")
   const [crmName, setCrmName] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
   const [connectionStatus, setConnectionStatus] = useState<{ success: boolean; message: string } | null>(null)
   const [isConnected, setIsConnected] = useState(false)
 
   const handleConnect = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setIsLoading(true)
     setConnectionStatus(null)
 
     try {
@@ -38,8 +48,6 @@ export default function HubSpotConnectionForm() {
     } catch (error) {
       console.error("Error connecting to HubSpot:", error)
       setConnectionStatus({ success: false, message: "An unexpected error occurred. Please try again." })
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -90,4 +98,6 @@ export default function HubSpotConnectionForm() {
     </Card>
   )
 }
+
+export default HubSpotConnectionForm
 

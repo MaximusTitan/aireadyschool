@@ -4,18 +4,12 @@ import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card"
-import { MessageCircle, Send, Plug, Search } from "lucide-react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
+import { MessageCircle, Send, Plug } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 import DatabaseConnectionForm from "@/app/connect-database/DatabaseConnectForm"
 import HubSpotConnectionForm from "@/app/connect-database/HubSpotConnectionForm"
+import SupabaseConnectionForm from "@/app/connect-database/SupabaseConnectionForm"
 
 const supabase = createClient()
 
@@ -33,15 +27,18 @@ type ToastProps = {
 
 const Toast = ({ message, type }: ToastProps) => (
   <div
-    className={`fixed bottom-4 right-4 p-4 rounded-md text-white ${
-      type === "success" ? "bg-green-500" : "bg-red-500"
-    }`}
+    className={`fixed bottom-4 right-4 p-4 rounded-md text-white ${type === "success" ? "bg-green-500" : "bg-red-500"}`}
   >
     {message}
   </div>
 )
 
 type ConnectionType = "sql" | "supabase" | "hubspot"
+
+interface DatabaseOption {
+  name: string
+  category: "CRM" | "SQL" | "Cloud"
+}
 
 export default function ConnectDatabasePage() {
   // Supabase & connection form state
@@ -57,16 +54,17 @@ export default function ConnectDatabasePage() {
   const [isChatOpen, setIsChatOpen] = useState(false)
   const [message, setMessage] = useState("")
   const [messages, setMessages] = useState<ChatMessage[]>([])
-  const [defaultMessage, setDefaultMessage] = useState(
-    "Hi, I'm the Aiready AI Assistant. How can I help you today?"
-  )
+  const [defaultMessage, setDefaultMessage] = useState("Hi, I'm the Aiready AI Assistant. How can I help you today?")
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Plugin & database selection state (for chat bubble)
   const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null)
-  const [databases, setDatabases] = useState<string[]>([])
+  const [selectedDatabaseCategory, setSelectedDatabaseCategory] = useState<"Cloud" | "CRM" | "SQL" | null>(null)
+  const [databases, setDatabases] = useState<DatabaseOption[]>([])
   const [isPluginClicked, setIsPluginClicked] = useState(false)
   const [supabaseKey, setSupabaseKey] = useState("")
+  const [crmAccessToken, setCrmAccessToken] = useState<string | null>(null);
+  const [sqlDetails, setSqlDetails] = useState<any>(null);
 
   useEffect(() => {
     if (toast) {
@@ -75,132 +73,194 @@ export default function ConnectDatabasePage() {
     }
   }, [toast])
 
-  // Fetch available databases from the connected_db table
+  // Fetch available databases from all tables
   useEffect(() => {
     const fetchDatabases = async () => {
-      const { data, error } = await supabase.from("connected_db").select("database_name")
-      if (error) {
-        console.error("Error fetching databases:", error)
-      } else if (data) {
-        setDatabases(data.map((db: any) => db.database_name))
-      }
+      const { data: supabaseData } = await supabase.from("connected_db").select("database_name")
+      const { data: crmData } = await supabase.from("connected_crm").select("crm_name")
+      const { data: sqlData } = await supabase.from("connect_sql_database").select("database_name")
+
+      console.log("Fetched data:", { supabaseData, crmData, sqlData })
+
+      const allDatabases: DatabaseOption[] = [
+        ...(supabaseData
+          ? supabaseData.map((db: any) => ({ name: db.database_name, category: "Cloud" as const }))
+          : []),
+        ...(crmData ? crmData.map((db: any) => ({ name: db.crm_name, category: "CRM" as const })) : []),
+        ...(sqlData ? sqlData.map((db: any) => ({ name: db.database_name, category: "SQL" as const })) : []),
+      ]
+
+      console.log("Processed databases:", allDatabases)
+
+      setDatabases(allDatabases)
     }
     fetchDatabases()
   }, [])
 
-  // When a user selects a database, fetch its connection details
-  const handleDatabaseSelection = async (database: string) => {
-    setSelectedDatabase(database)
-    const { data, error } = await supabase
-      .from("connected_db")
-      .select("supabase_url, anon_key")
-      .eq("database_name", database)
-      .single()
-    if (error) {
-      console.error("Error fetching database details:", error)
-    } else if (data) {
-      setSupabaseUrl(data.supabase_url)
-      setSupabaseKey(data.anon_key)
-      // Optionally, reinitialize your client here if needed
-    }
-  }
+  useEffect(() => {
+    console.log("Current databases state:", databases)
+  }, [databases])
 
+  // When a user selects a database, fetch its connection details
+  const handleDatabaseSelection = async (database: string, category: "Cloud" | "CRM" | "SQL") => {
+    setSelectedDatabase(database);
+    setSelectedDatabaseCategory(category);
+
+    try {
+      let data, error;
+  
+      if (category === "Cloud") {
+        ({ data, error } = await supabase
+          .from("connected_db")
+          .select("supabase_url, anon_key")
+          .eq("database_name", database)
+          .single());
+  
+        if (error) throw error;
+        if (data) {
+          setSupabaseUrl(data.supabase_url);
+          setSupabaseKey(data.anon_key);
+        }
+      } else if (category === "CRM") {
+        ({ data, error } = await supabase
+          .from("connected_crm")
+          .select("access_token")
+          .eq("crm_name", database)
+          .single());
+  
+        if (error) throw error;
+        if (data) {
+          console.log("CRM Access Token:", data.access_token);
+          setCrmAccessToken(data.access_token);
+          // Store access token or use it as needed
+        }
+      } else if (category === "SQL") {
+        ({ data, error } = await supabase
+          .from("connect_sql_database")
+          .select("host, port, database, user_name, password")
+          .eq("database_name", database)
+          .single());
+  
+        if (error) throw error;
+        if (data) {
+          console.log("SQL Database Details:", data);
+          setSqlDetails(data);
+          // Store or use SQL connection details as needed
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching database details:", err);
+    }
+  };
+  
   // Supabase connection form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    setIsLoading(true)
+    e.preventDefault();
+    setIsLoading(true);
+  
     try {
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
       if (!user || !user.email) {
-        throw new Error("User not authenticated")
+        throw new Error("User not authenticated");
       }
-      const email = user.email
-      const response = await fetch("/api/connect-database", {
+      const email = user.email;
+  
+      let requestBody = {};
+      let apiEndpoint = "";
+  
+      if (selectedDatabaseCategory === "Cloud") {
+        apiEndpoint = "/api/connect-database";
+        requestBody = {
+          supabaseUrl,
+          supabaseAnonKey,
+          databaseName: selectedDatabase,
+          email,
+        };
+      } else if (selectedDatabaseCategory === "CRM") {
+        apiEndpoint = "/api/connect-hubspot";
+        requestBody = {
+          crmName: selectedDatabase,
+          email,
+          accessToken: crmAccessToken, // Assuming crmAccessToken is stored from handleDatabaseSelection
+        };
+      } else if (selectedDatabaseCategory === "SQL") {
+        apiEndpoint = "/api/connect-sql-database";
+        requestBody = {
+          databaseName: selectedDatabase,
+          email,
+          host: sqlDetails?.host,
+          port: sqlDetails?.port,
+          database: sqlDetails?.database,
+          userName: sqlDetails?.user_name,
+          password: sqlDetails?.password,
+        };
+      } else {
+        throw new Error("Invalid database category selected");
+      }
+  
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ supabaseUrl, supabaseAnonKey, databaseName: databaseNameInput, email }),
-      })
-      const result = await response.json()
+        body: JSON.stringify(requestBody),
+      });
+  
+      const result = await response.json();
+  
       if (!response.ok) {
-        throw new Error(result.error || "Failed to connect to database")
+        throw new Error(result.error || "Failed to connect to database");
       }
-      if (result.message) {
-        setToast({ message: result.message, type: "error" })
-      } else {
-        setDatabaseName(result.databaseName)
-        setToast({ message: `Successfully connected to ${databaseNameInput}`, type: "success" })
-      }
+  
+      setToast({ message: `Successfully connected to ${selectedDatabase}`, type: "success" });
     } catch (error) {
-      setToast({ message: "Failed to connect. Please check your credentials and try again.", type: "error" })
+      console.error("Error submitting connection:", error);
+      setToast({ message: "Failed to connect. Please check your credentials and try again.", type: "error" });
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
+  
 
   // Render the correct connection form based on the selected type
   const renderConnectionForm = () => {
     switch (connectionType) {
       case "sql":
-        return <DatabaseConnectionForm />
+        return (
+          <DatabaseConnectionForm
+            sqlDetails={sqlDetails}
+            setSqlDetails={setSqlDetails}
+            handleSubmit={handleSubmit}
+            isLoading={isLoading}
+          />
+        )
       case "supabase":
         return (
-          <Card className="max-w-md mx-auto">
-            <CardHeader>
-              <CardTitle>Connect to Supabase</CardTitle>
-              <CardDescription>Enter your Supabase credentials to connect.</CardDescription>
-            </CardHeader>
-            <form onSubmit={handleSubmit}>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="supabaseUrl">Supabase URL</Label>
-                  <Input
-                    id="supabaseUrl"
-                    type="url"
-                    placeholder="https://your-project.supabase.co"
-                    value={supabaseUrl}
-                    onChange={(e) => setSupabaseUrl(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="supabaseAnonKey">Supabase Anon Key</Label>
-                  <Input
-                    id="supabaseAnonKey"
-                    type="password"
-                    placeholder="Your Supabase Anon Key"
-                    value={supabaseAnonKey}
-                    onChange={(e) => setSupabaseAnonKey(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="databaseName">Database Name</Label>
-                  <Input
-                    id="databaseName"
-                    type="text"
-                    placeholder="Enter a name for your database connection"
-                    value={databaseNameInput}
-                    onChange={(e) => setDatabaseNameInput(e.target.value)}
-                    required
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? "Connecting..." : "Connect"}
-                </Button>
-              </CardFooter>
-            </form>
-          </Card>
+          <SupabaseConnectionForm
+            supabaseUrl={supabaseUrl}
+            setSupabaseUrl={setSupabaseUrl}
+            supabaseAnonKey={supabaseAnonKey}
+            setSupabaseAnonKey={setSupabaseAnonKey}
+            databaseNameInput={databaseNameInput}
+            setDatabaseNameInput={setDatabaseNameInput}
+            handleSubmit={handleSubmit}
+            isLoading={isLoading}
+          />
         )
       case "hubspot":
-        return <HubSpotConnectionForm />
+        return (
+          <HubSpotConnectionForm
+            crmAccessToken={crmAccessToken}
+            setCrmAccessToken={setCrmAccessToken}
+            handleSubmit={handleSubmit}
+            isLoading={isLoading}
+          />
+        )
       default:
         return null
     }
-  }
+  } 
+  
 
   // Toggle the chat dialog open/close state
   const toggleChat = () => {
@@ -213,19 +273,51 @@ export default function ConnectDatabasePage() {
   // Send a message and, based on the plugin toggle, use the appropriate API endpoint
   const sendMessage = async () => {
     if (message.trim()) {
-      setMessages((prev) => [...prev, { text: message, isUser: true }])
-      setMessage("")
+      setMessages((prev) => [...prev, { text: message, isUser: true }]);
+      setMessage("");
       try {
-        const response = await fetch(isPluginClicked ? "/api/query-database" : "/api/processSqlQuery", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: message,
+        // Build a base request body with the query.
+        let requestBody: any = { query: message };
+  
+        // Add parameters according to the selected category.
+        if (selectedDatabaseCategory === "Cloud") {
+          // For Cloud (Supabase) connections.
+          requestBody = {
+            ...requestBody,
             supabaseUrl: supabaseUrl,
             supabaseKey: supabaseKey,
-          }),
-        })
-        const processedResult = await response.json()
+          };
+        } else if (selectedDatabaseCategory === "CRM") {
+          // For CRM (e.g., HubSpot) connections.
+          requestBody = {
+            ...requestBody,
+            crmAccessToken: crmAccessToken, // assuming this is stored in state
+          };
+        } else if (selectedDatabaseCategory === "SQL") {
+          // For direct SQL connections.
+          requestBody = {
+            ...requestBody,
+            host: sqlDetails.host,
+            port: sqlDetails.port,
+            database: sqlDetails.database,
+            userName: sqlDetails.user_name, // note: adjust key names as your backend expects
+            password: sqlDetails.password,
+          };
+        } else {
+          throw new Error("No valid database category selected.");
+        }
+  
+        // Determine which API endpoint to use.
+        // (For example, you might always use /api/query-database when the plugin is clicked.)
+        const endpoint = isPluginClicked ? "/api/query-database" : "/api/processSqlQuery";
+  
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+  
+        const processedResult = await response.json();
         if (processedResult.success) {
           setMessages((prev) => [
             ...prev,
@@ -234,12 +326,12 @@ export default function ConnectDatabasePage() {
               isUser: false,
               naturalLanguageResponse: processedResult.naturalLanguageResponse,
             },
-          ])
+          ]);
         } else {
-          throw new Error(processedResult.error || "Unknown error occurred while processing the query.")
+          throw new Error(processedResult.error || "Unknown error occurred while processing the query.");
         }
       } catch (error) {
-        console.error("Error processing query:", error)
+        console.error("Error processing query:", error);
         setMessages((prev) => [
           ...prev,
           {
@@ -249,10 +341,11 @@ export default function ConnectDatabasePage() {
             isUser: false,
             error: error instanceof Error ? error.message : "Unknown error",
           },
-        ])
+        ]);
       }
     }
-  }
+  };
+  
 
   // Allow sending the message with the Enter key
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -314,15 +407,20 @@ export default function ConnectDatabasePage() {
             <div className="flex items-center space-x-2">
               <select
                 value={selectedDatabase || ""}
-                onChange={(e) => handleDatabaseSelection(e.target.value)}
+                onChange={(e) => {
+                  const selectedDb = databases.find(db => db.name === e.target.value);
+                  if (selectedDb) {
+                    handleDatabaseSelection(selectedDb.name, selectedDb.category);
+                  }
+                }}
                 className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
               >
                 <option value="" disabled>
                   Select Database
                 </option>
                 {databases.map((db, idx) => (
-                  <option key={idx} value={db}>
-                    {db}
+                  <option key={idx} value={db.name}>
+                    {db.category}: {db.name || "Unnamed Database"}
                   </option>
                 ))}
               </select>
@@ -330,8 +428,16 @@ export default function ConnectDatabasePage() {
                 title="Use plugin"
                 aria-label="Use plugin"
                 onClick={() => {
-                  console.log(`Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`)
-                  setIsPluginClicked(true)
+                  if (selectedDatabaseCategory === "CRM") {
+                    console.log(`Using CRM Access Token: ${crmAccessToken}`);
+                  } else if (selectedDatabaseCategory === "SQL") {
+                    console.log("Using SQL Details:", sqlDetails);
+                  } else if (selectedDatabaseCategory === "Cloud") {
+                    console.log(`Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`);
+                  } else {
+                    console.log("No valid database selected");
+                  }
+                  setIsPluginClicked(true);
                 }}
                 className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
               >
@@ -349,8 +455,8 @@ export default function ConnectDatabasePage() {
                   msg.isUser
                     ? "bg-neutral-100 dark:bg-neutral-700"
                     : msg.error
-                    ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
-                    : "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-200"
+                      ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
+                      : "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-200"
                 }`}
               >
                 {msg.text}
@@ -388,3 +494,4 @@ export default function ConnectDatabasePage() {
     </div>
   )
 }
+

@@ -1,8 +1,8 @@
 import { createClient } from "@/utils/supabase/client"
 
-const supabase = await createClient()
-
 export async function generateLessonPlan(formData: FormData) {
+  const supabase = createClient();
+  
   // Call the new API endpoint
   const res = await fetch("/api/generateLessonPlan", {
     method: "POST",

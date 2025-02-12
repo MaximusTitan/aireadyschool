@@ -10,6 +10,12 @@ import {
   GENERIC_TEACHER_PROMPT
 } from '@/app/utils/systemPrompt';
 
+export const runtime = 'edge';
+
+if (!process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY) {
+  throw new Error('Missing DEEPGRAM_API_KEY environment variable');
+}
+
 type Subject = 'science' | 'math' | 'english' | 'generic';
 
 const prompts: Record<Subject, string> = {

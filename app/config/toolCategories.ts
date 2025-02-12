@@ -156,11 +156,17 @@ export const categories: {
       icon: CanvasIcon
     },
     {
-      title: "Science Tutor",
-      description: "Learn Science concepts",
-      route: "/tools/learn-science",
+      title: "AI Tutor",
+      description: "Learn with AI tutor",
+      route: "/tools/gen-chat",
       icon: Atom
     },
+    // {
+    //   title: "Science Tutor",
+    //   description: "Learn Science concepts",
+    //   route: "/tools/learn-science",
+    //   icon: Atom
+    // },
   ],
   Teacher: [
     {
@@ -256,6 +262,12 @@ export const categories: {
       description: "Generate using Canvas",
       route: "/canvas",
       icon: CanvasIcon
+    },
+    {
+      title: "AI Tutor",
+      description: "Learn with AI tutor",
+      route: "/tools/gen-chat",
+      icon: Atom
     },
   ],
   School: [

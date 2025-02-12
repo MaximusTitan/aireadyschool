@@ -292,57 +292,27 @@ export default function Page() {
 
   return (
     <TooltipProvider>
-      <div className="mx-auto flex flex-col min-h-[100vh] max-w-6xl">
-        {" "}
-        {/* increased width */}
-        <header className="sticky top-0 z-10 backdrop-blur-sm bg-white/80 border-b">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold text-neutral-800">
-                Learning Buddy
-              </h1>
-              <span className="text-xs px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">
-                AI Powered
-              </span>
-            </div>
-            {remainingCredits !== null && (
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-neutral-600">
-                  Credits:{" "}
-                  <span className="font-medium">{remainingCredits}</span>
-                </div>
-                <div className="h-4 w-px bg-neutral-200" />
-                <button className="text-sm text-neutral-600 hover:text-neutral-900">
-                  Help
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-        <main className="flex-1 overflow-hidden flex flex-col">
-          <ChatArea
-            messages={messages}
-            simulationCode={simulationCode}
-            simulationCodeRef={simulationCodeRef}
-            generatedImages={generatedImages}
-            generatedQuizzes={generatedQuizzes}
-            pendingQuizzes={pendingQuizzes}
-            pendingImageRequests={pendingImageRequests}
-            completedImages={completedImages}
-            pendingVisualizations={pendingVisualizations}
-            handleAnswerSubmit={handleAnswerSubmit}
-            handleImageGeneration={handleImageGeneration}
-            handleQuizGeneration={handleQuizGeneration}
-            handleVisualization={handleVisualization}
-            handleQuizAnswer={handleQuizAnswer}
-            onSimulationCode={(code: string) => setSimulationCode(code)}
-          />
-        </main>
-        <CommandInput
+      <div className="flex h-screen">
+        <ChatArea
+          messages={messages}
           input={input}
           isLoading={isLoading}
           onInputChange={handleInputChange}
           onSubmit={handleFormSubmit}
+          simulationCode={simulationCode}
+          simulationCodeRef={simulationCodeRef}
+          generatedImages={generatedImages}
+          generatedQuizzes={generatedQuizzes}
+          pendingQuizzes={pendingQuizzes}
+          pendingImageRequests={pendingImageRequests}
+          completedImages={completedImages}
+          pendingVisualizations={pendingVisualizations}
+          handleAnswerSubmit={handleAnswerSubmit}
+          handleImageGeneration={handleImageGeneration}
+          handleQuizGeneration={handleQuizGeneration}
+          handleVisualization={handleVisualization}
+          handleQuizAnswer={handleQuizAnswer}
+          onSimulationCode={(code: string) => setSimulationCode(code)}
         />
       </div>
     </TooltipProvider>

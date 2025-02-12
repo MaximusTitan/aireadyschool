@@ -16,7 +16,10 @@ const layouts: SlideLayout[] = [
   'bulletPoints'
 ]
 
-async function generateImagesForSlide(slide: any, theme: string): Promise<string> {
+async function generateImagesForSlide(slide: any, theme: string, generateImages: boolean = true): Promise<string> {
+  if (!generateImages) {
+    return `/placeholder.svg?text=${encodeURIComponent(slide.title)}`
+  }
 
   const basePrompt = slide.title
   const stylePrompts = {
@@ -44,7 +47,7 @@ async function generateImagesForSlide(slide: any, theme: string): Promise<string
   }
 }
 
-export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean): Promise<Presentation> {
+export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean, generateImages: boolean = true): Promise<Presentation> {
 
   // Ensure slideCount is within the allowed range
   const validSlideCount = Math.max(2, Math.min(8, slideCount))
@@ -104,7 +107,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       content.slides.map(async (slide: any, index: number) => {
         
         try {
-          const image = await generateImagesForSlide(slide, theme)
+          const image = await generateImagesForSlide(slide, theme, generateImages)
 
           return {
             id: nanoid(),
@@ -152,6 +155,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       topic: prompt,
       slides,
       theme,
+      transition: 'fade', // Adding default transition
     }
   } catch (error) {
     console.error('Error in generatePresentation:', error)
@@ -161,7 +165,6 @@ export async function generatePresentation(prompt: string, theme: string, slideC
     } else {
       console.error('Unknown error type:', typeof error)
     }
-    // Return a basic presentation with an error slide
     return {
       id: nanoid(),
       topic: prompt,
@@ -174,9 +177,10 @@ export async function generatePresentation(prompt: string, theme: string, slideC
         order: 0,
       }],
       theme,
+      transition: 'fade', // Adding default transition
+    }
     }
   }
-}
 
 export { generateImagesForSlide as regenerateImage }
 

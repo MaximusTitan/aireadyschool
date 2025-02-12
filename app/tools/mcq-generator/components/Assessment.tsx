@@ -5,6 +5,7 @@ import TrueFalseQuestion from "./TrueFalseQuestion";
 import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
 import { downloadAssessment } from "@/utils/exportAssessment";
 import { Download } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface AssessmentProps {
   assessment: any[];
@@ -32,6 +33,10 @@ export default function Assessment({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  // New state for summary explanation and chat
+  const [explanation, setExplanation] = useState("");
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState<string[]>([]);
 
   useEffect(() => {
     setAnswers(
@@ -106,6 +111,40 @@ export default function Assessment({
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // New function to fetch summary explanation
+  const fetchSummaryExplanation = async (followUpMessage?: string) => {
+    try {
+      const payload: any = { assessment, userAnswers: answers };
+      if (followUpMessage) {
+        payload.message = followUpMessage;
+      }
+      const response = await fetch("/api/assessment-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (data.explanation) {
+        // Append new message to chat history if followUpMessage exists
+        if (followUpMessage) {
+          setChatHistory((prev) => [...prev, `You: ${followUpMessage}`, `Bot: ${data.explanation}`]);
+        } else {
+          setExplanation(data.explanation);
+          setChatHistory([`Bot: ${data.explanation}`]);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching summary:", error);
+    }
+  };
+
+  const handleChatSubmit = async () => {
+    if (chatInput.trim()) {
+      await fetchSummaryExplanation(chatInput.trim());
+      setChatInput("");
     }
   };
 
@@ -187,6 +226,47 @@ export default function Assessment({
             </Button>
           </div>
           {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
+          {/* New section for summary explanation and chat */}
+          <div className="mt-8 border-t pt-4">
+            <Button
+              onClick={() => fetchSummaryExplanation()}
+              className="bg-blue-600 hover:bg-blue-500 text-white"
+            >
+              Get Summary Explanation
+            </Button>
+            {explanation && (
+              <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
+                <h3 className="font-semibold mb-2">Summary Explanation:</h3>
+                {/* Changed className to reduce extra spacing */}
+                <ReactMarkdown className="prose prose-sm leading-tight">{explanation}</ReactMarkdown>
+              </div>
+            )}
+            {chatHistory.length > 0 && (
+              <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
+                <h3 className="font-semibold mb-2">Chat:</h3>
+                <div className="space-y-2">
+                  {chatHistory.map((msg, idx) => (
+                    <div key={idx} className="p-2 rounded bg-white shadow-sm">
+                      {/* Changed className to reduce extra spacing */}
+                      <ReactMarkdown className="prose prose-sm leading-tight">{msg}</ReactMarkdown>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex space-x-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask a follow-up question..."
+                className="border rounded p-2 flex-grow"
+              />
+              <Button onClick={handleChatSubmit} className="bg-green-600 hover:bg-green-500 text-white">
+                Send
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

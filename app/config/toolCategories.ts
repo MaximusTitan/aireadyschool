@@ -141,7 +141,6 @@ export const categories: {
       title: "Study Plan Generator",
       description: "Plan your study schedule",
       route: "/tools/study-planner",
-      isComingSoon: true,
       icon: Calendar
     },
     {

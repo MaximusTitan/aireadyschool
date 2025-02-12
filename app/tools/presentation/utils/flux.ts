@@ -29,9 +29,6 @@ async function attemptImageGeneration(prompt: string, attempt: number = 1): Prom
       input: {
         prompt,
         image_size: "square_hd", // Using valid image size from the API spec
-        num_inference_steps: 10,
-        guidance_scale: 7.5,
-        negative_prompt: "ugly, blurry, poor quality, distorted",
         style: "digital_illustration"
       },
       logs: true,

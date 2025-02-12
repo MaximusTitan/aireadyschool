@@ -153,7 +153,7 @@ export function AppSidebar() {
           alt="AI Ready School"
           width={140}
           height={130}
-          className={state === "expanded" ? "ml-2" : ""}
+          className={state === "expanded" ? "ml-6" : ""}
         />
       </Link>
     );
@@ -181,17 +181,17 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             {navData.navMain.map((item) => (
-              <SidebarMenuItem key={item.title} className="mt-2">
+              <SidebarMenuItem key={item.title} className="mt-[-0.5rem] ">
                 <SidebarMenuButton tooltip={item.title} asChild>
                   <Link href={item.url}>
                     {item.icon && (
                       <item.icon
-                        className="font-bold text-primary"
+                        className="font-bold text-rose-500 mr-[0.5rem] "
                         size={36}
                         strokeWidth={2}
                       />
                     )}
-                    <span className="font-semibold text-lg">{item.title}</span>
+                    <span className="font-semibold text-[14px]">{item.title}</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

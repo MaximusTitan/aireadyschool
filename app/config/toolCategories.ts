@@ -117,6 +117,7 @@ export const categories: {
       description: "Generate video stories from text",
       route: "/tools/video-story-generator",
       isComingSoon: true,
+      icon: Video,
     },
     {
       title: "Song Generator",
@@ -140,7 +141,7 @@ export const categories: {
       title: "Study Plan Generator",
       description: "Plan your study schedule",
       route: "/tools/study-planner",
-      isComingSoon: true,
+      icon: Calendar
     },
     {
       title: "Code Playground",
@@ -158,6 +159,7 @@ export const categories: {
       title: "Science Tutor",
       description: "Learn Science concepts",
       route: "/tools/learn-science",
+      icon: Atom
     },
   ],
   Teacher: [
@@ -240,6 +242,7 @@ export const categories: {
       description: "Generate video stories from text",
       route: "/tools/video-story-generator",
       isComingSoon: true,
+      icon: Video
     },
     {
       title: "Presentation Generator",
@@ -252,6 +255,7 @@ export const categories: {
       title: "Canvas",
       description: "Generate using Canvas",
       route: "/canvas",
+      icon: CanvasIcon
     },
   ],
   School: [
@@ -292,6 +296,7 @@ export const categories: {
       description: "Generate video stories from text",
       route: "/tools/video-story-generator",
       isComingSoon: true,
+      icon: Video
     },
     {
       title: "Assignment Generator",
@@ -317,6 +322,7 @@ export const categories: {
       description: "Get insights about your school",
       route: "/tools/school-intelligence",
       isComingSoon: true,
+      icon: BarChart3
     },
   ],
 };

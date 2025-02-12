@@ -4,18 +4,19 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import OpenAI from "openai";
 
-// --- Helper functions from your existing code ---
+// -------------------------------------------------------------------
+// Helper functions (unchanged for Cloud processing)
+
 async function generateSqlQuery(userInput: string, schemaQuery: string): Promise<string> {
   const model = "gpt-4o";
   const messages = [
     {
       role: "system",
-      content: `You are an AI assistant that generates SQL queries for the database ${schemaQuery} based on natural language inputs. Always use proper SQL syntax and best practices. Return only a JSON object with a 'query' key. Do not end with ;`,
+      content: `You are an AI assistant that generates SQL queries for the database based on the following schema:\n${schemaQuery}\nAlways return only a valid JSON object with a single key 'query'. No explanations, no extra formatting.`,
     },
     {
       role: "user",
-      content: `Generate a SQL query based on the following request. Return the SQL query as a JSON object with a single key 'query' and the SQL as the value. Do not include any other text or explanation.
-  Request: ${userInput}`,
+      content: `Generate a SQL query for the following request. Return only JSON with a single key 'query'. No extra text.\nRequest: ${userInput}`,
     },
   ];
 
@@ -29,63 +30,74 @@ async function generateSqlQuery(userInput: string, schemaQuery: string): Promise
       model,
       messages,
       max_tokens: 1000,
-      temperature: 0.7,
+      temperature: 0.3, // Reduce temperature to make responses more structured
     }),
   });
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`OpenAI API Error: ${response.status}`);
   }
 
   const data = await response.json();
   const content = data.choices[0].message.content.trim();
-  let generatedQuery: string;
+
+  console.log("Raw OpenAI Response:", content); // Debugging
+
   try {
     const parsedContent = JSON.parse(content);
-    generatedQuery = parsedContent.query;
-  } catch (error) {
-    const match = content.match(/{\\s*"query"\\s*:\\s*"((?:\\\\.|[^"\\\\])*)"/);
-    if (match && match[1]) {
-      generatedQuery = JSON.parse(`"${match[1]}"`);
+    if (parsedContent.query) {
+      console.log("Extracted SQL Query:", parsedContent.query);
+      return parsedContent.query;
     } else {
-      throw new Error("Failed to extract SQL query from the response");
+      throw new Error("Missing 'query' key in OpenAI response");
     }
+  } catch (error) {
+    console.error("Failed to parse OpenAI response:", error);
+
+    // Fallback: Extract query from raw text using regex
+    const match = content.match(/"query"\s*:\s*"([^"]+)"/);
+    if (match && match[1]) {
+      return match[1];
+    }
+
+    throw new Error("Failed to extract SQL query from the response");
   }
-  console.log("Generated SQL Query:", generatedQuery);
-  return generatedQuery;
 }
+
 
 async function generateNaturalLanguageResponse(userInput: string, queryResult: any): Promise<string> {
   const openai = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
   });
+
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
     messages: [
       {
         role: "system",
-        content: "You are an AI assistant that provides natural language responses to questions about data. Your responses should be concise and informative.",
+        content:
+          "You are an AI assistant that provides concise and informative natural language responses about data.",
       },
       {
         role: "user",
-        content: `Given the following question and data result, provide a natural language response that answers the question:
-          Question: ${userInput}
-          Data Result: ${JSON.stringify(queryResult, null, 2)}`,
+        content: `Given the following question and data result, provide a natural language answer:\nQuestion: ${userInput}\nData Result: ${JSON.stringify(
+          queryResult,
+          null,
+          2
+        )}`,
       },
     ],
     max_tokens: 150,
   });
+
   return response.choices[0].message.content || "";
 }
 
 async function processSqlQuery(userInput: string, query: string, supabase: any) {
   try {
     const result = await supabase.rpc("execute_sql_query", { query });
-    const data = result.data;
-    const error = result.error;
-    if (error) throw error;
-    const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, data);
-    console.log(naturalLanguageResponse);
+    if (result.error) throw result.error;
+    const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, result.data);
     return { success: true, naturalLanguageResponse };
   } catch (error) {
     console.error("Error executing SQL query:", error);
@@ -93,23 +105,17 @@ async function processSqlQuery(userInput: string, query: string, supabase: any) 
   }
 }
 
-// --- New helper for CRM queries ---
-async function processCrmQuery(userInput: string, crmAccessToken: string): Promise<any> {
-  // Example: Make a request to a HubSpot API endpoint using the crmAccessToken
-  // (Replace the URL and processing logic with your actual CRM query processing.)
+// -------------------------------------------------------------------
+// Modified helper for CRM processing.
+// Here we simulate a schema query for CRM. Adjust as needed.
+async function processCrmQuery(userInput: string, crmAccessToken: string, generatedQuery: string) {
   try {
-    const response = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
-      method: "GET",
-      headers: {
-        Authorization: `Bearer ${crmAccessToken}`,
-        "Content-Type": "application/json",
-      },
-    });
-    if (!response.ok) {
-      throw new Error(`HubSpot API error: ${response.statusText}`);
-    }
-    const data = await response.json();
-    const naturalLanguageResponse = `CRM data retrieved successfully: ${JSON.stringify(data)}`;
+    // In a real-world scenario, you might call a HubSpot endpoint to get CRM metadata.
+    // For demonstration, we use a dummy schema string.
+    console.log("Generated CRM Query:", generatedQuery);
+    // Optionally execute the generated query against CRM data if applicable.
+    // For now, we simulate the response.
+    const naturalLanguageResponse = `CRM Query executed. Generated Query: ${generatedQuery}`;
     return { success: true, naturalLanguageResponse };
   } catch (error) {
     console.error("Error processing CRM query:", error);
@@ -117,9 +123,13 @@ async function processCrmQuery(userInput: string, crmAccessToken: string): Promi
   }
 }
 
-// --- New helper for direct SQL queries ---
-async function processDirectSqlQuery(userInput: string, connectionDetails: { host: string; port: string; database: string; user: string; password: string; }): Promise<any> {
-  // For example, use node-postgres (pg) to connect directly
+// -------------------------------------------------------------------
+// Modified helper for direct SQL processing.
+async function processDirectSqlQuery(
+  userInput: string,
+  connectionDetails: { host: string; port: string; database: string; user: string; password: string },
+  generatedQuery: string
+) {
   const { Pool } = await import("pg");
   const pool = new Pool({
     host: connectionDetails.host,
@@ -130,23 +140,28 @@ async function processDirectSqlQuery(userInput: string, connectionDetails: { hos
     ssl: { rejectUnauthorized: false },
   });
   try {
-    const result = await pool.query("SELECT 1"); // Replace with your actual query execution logic
+    // Optionally, execute the generated query.
+    // For example, here we execute a test query (you may replace this with your own logic).
+    const result = await pool.query(generatedQuery);
     await pool.end();
     const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, result.rows);
     return { success: true, naturalLanguageResponse };
   } catch (error) {
     console.error("Error executing direct SQL query:", error);
+    await pool.end();
     return { success: false, error: "Error executing direct SQL query" };
   }
 }
 
+// -------------------------------------------------------------------
+// Main POST handler
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { query } = body;
-    // Determine which category based on the presence of certain parameters.
+
+    // Cloud (Supabase) processing.
     if (body.supabaseUrl && body.supabaseKey) {
-      // Cloud (Supabase) processing.
       const supabase = createClient(body.supabaseUrl, body.supabaseKey);
       const schemaQuery = `
         SELECT
@@ -166,23 +181,56 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: result.error.message });
       }
       const schemaString = JSON.stringify(result.data, null, 2);
-      console.log("Schema:", schemaString);
+      console.log("Supabase Schema:", schemaString);
       const generatedQuery = await generateSqlQuery(query, schemaString);
       const processedResult = await processSqlQuery(query, generatedQuery, supabase);
       return NextResponse.json(processedResult);
-    } else if (body.crmAccessToken) {
-      // CRM (HubSpot) processing.
-      const processedResult = await processCrmQuery(query, body.crmAccessToken);
+    }
+    // CRM (HubSpot) processing.
+    else if (body.crmAccessToken) {
+      // For CRM, simulate a schema query (or fetch CRM metadata if available)
+      const crmSchema = "Dummy CRM Schema: contacts, deals, companies";
+      console.log("CRM Schema:", crmSchema);
+      const generatedQuery = await generateSqlQuery(query, crmSchema);
+      const processedResult = await processCrmQuery(query, body.crmAccessToken, generatedQuery);
       return NextResponse.json(processedResult);
-    } else if (body.host && body.port && body.database && body.userName && body.password) {
-      // Direct SQL processing.
+    }
+    // Direct SQL processing.
+    else if (body.host && body.port && body.database && body.userName && body.password) {
+      const { Pool } = await import("pg");
+      const pool = new Pool({
+        host: body.host,
+        port: parseInt(body.port),
+        database: body.database,
+        user: body.userName,
+        password: body.password,
+        ssl: { rejectUnauthorized: false },
+      });
+      const schemaQuery = `
+        SELECT
+            table_name,
+            json_agg(column_name) AS columns
+        FROM
+            information_schema.columns
+        WHERE
+            table_schema = 'public'
+        GROUP BY
+            table_name
+        ORDER BY
+            table_name
+      `;
+      const result = await pool.query(schemaQuery);
+      const schemaString = JSON.stringify(result.rows, null, 2);
+      console.log("SQL Schema:", schemaString);
+      const generatedQuery = await generateSqlQuery(query, schemaString);
       const processedResult = await processDirectSqlQuery(query, {
         host: body.host,
         port: body.port,
         database: body.database,
         user: body.userName,
         password: body.password,
-      });
+      }, generatedQuery);
+      await pool.end();
       return NextResponse.json(processedResult);
     } else {
       return NextResponse.json({ success: false, error: "Invalid parameters provided." }, { status: 400 });

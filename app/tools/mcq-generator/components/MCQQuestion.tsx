@@ -5,12 +5,11 @@ interface MCQQuestionProps {
   question: {
     question: string;
     options: string[];
-    correctAnswer: number; // assuming correctAnswer is still stored as an index
+    correctAnswer: number;
   };
   index: number;
-  // update userAnswer type to string or null
-  userAnswer: string | null;
-  onChange: (answer: string) => void;
+  userAnswer: number | null;  // Change back to number
+  onChange: (answer: number) => void;  // Change back to number
   showResults: boolean;
 }
 
@@ -27,45 +26,37 @@ export default function MCQQuestion({
         Question {index + 1}: {question.question}
       </h3>
       <RadioGroup
-        // use userAnswer directly (option text) rather than converting a number to a string
-        value={userAnswer || ""}
-        // update onValueChange to pass the selected option text
-        onValueChange={(value) => onChange(value)}
+        value={userAnswer?.toString()}
+        onValueChange={(value) => onChange(parseInt(value))}
         className="space-y-2"
       >
         {question.options.map((option, optionIndex) => (
           <div key={optionIndex} className="flex items-center space-x-2">
             <RadioGroupItem
-              // use option text as the value
-              value={option}
+              value={optionIndex.toString()}
               id={`q${index}-o${optionIndex}`}
               disabled={showResults}
             />
             <Label htmlFor={`q${index}-o${optionIndex}`}>{option}</Label>
             {showResults && (
-              <span
-                className={
-                  // Compare the selected option text to the correct answer using the stored index
-                  question.options[question.correctAnswer] === option
-                    ? "text-green-600"
-                    : userAnswer === option
-                    ? "text-red-600"
-                    : ""
-                }
-              >
-                {question.options[question.correctAnswer] === option
-                  ? "✓"
-                  : userAnswer === option
-                  ? "✗"
-                  : ""}
-              </span>
+              <div className="ml-2 flex space-x-1">
+                {userAnswer === optionIndex && (
+                  <span className={optionIndex === question.correctAnswer ? "text-green-600" : "text-red-600"}>
+                    {optionIndex === question.correctAnswer ? "✓" : "✗"}
+                  </span>
+                )}
+                {optionIndex === question.correctAnswer && userAnswer !== optionIndex && (
+                  <span className="text-green-600 ml-1">✓</span>
+                )}
+              </div>
             )}
           </div>
         ))}
       </RadioGroup>
-      {showResults && userAnswer !== question.options[question.correctAnswer] && (
+      {showResults && userAnswer !== question.correctAnswer && (
         <div className="mt-2 p-2 border rounded bg-red-100 text-sm">
-          Your answer is incorrect. The correct answer is "{question.options[question.correctAnswer]}". Please review the question details.
+          Your answer: {userAnswer !== null ? question.options[userAnswer] : "No answer"}<br/>
+          Correct answer: {question.options[question.correctAnswer]}
         </div>
       )}
     </div>

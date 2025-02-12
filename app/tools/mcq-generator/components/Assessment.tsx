@@ -37,6 +37,7 @@ export default function Assessment({
   const [explanation, setExplanation] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<string[]>([]);
+  const [chatContext, setChatContext] = useState<string>(""); // Add this new state
 
   useEffect(() => {
     setAnswers(
@@ -48,7 +49,13 @@ export default function Assessment({
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     const newAnswers = [...answers];
-    newAnswers[questionIndex] = answer;
+    if (assessmentType === "mcq") {
+      // For MCQ, store the numeric index
+      newAnswers[questionIndex] = typeof answer === "number" ? answer : null;
+    } else {
+      // For other types, store the answer as is
+      newAnswers[questionIndex] = answer;
+    }
     setAnswers(newAnswers);
   };
 
@@ -66,6 +73,7 @@ export default function Assessment({
       if (!question) return score;
 
       if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
+        // Compare numeric indices for MCQ
         return score + (answer === question.correctAnswer ? 1 : 0);
       } else if (
         assessmentType === "truefalse" &&
@@ -128,12 +136,14 @@ export default function Assessment({
       });
       const data = await response.json();
       if (data.explanation) {
-        // Append new message to chat history if followUpMessage exists
         if (followUpMessage) {
+          // Only show follow-up messages in chat history
           setChatHistory((prev) => [...prev, `You: ${followUpMessage}`, `Bot: ${data.explanation}`]);
         } else {
+          // Store initial analysis separately
           setExplanation(data.explanation);
-          setChatHistory([`Bot: ${data.explanation}`]);
+          setChatContext(data.explanation); // Save context but don't show in chat
+          setChatHistory([]); // Reset chat history when getting new explanation
         }
       }
     } catch (error) {

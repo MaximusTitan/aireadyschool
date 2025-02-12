@@ -132,9 +132,9 @@ const SchoolsPage = () => {
 
   return (
     <div className="container mx-auto p-4">
-      <h1 className="text-2xl font-bold mb-4">Manage Schools</h1>
+      <h1 className="text-3xl font-bold mb-6 text-gray-800">Manage Schools</h1>
 
-      <Button onClick={() => setIsAddModalOpen(true)} className="mb-4">
+      <Button onClick={() => setIsAddModalOpen(true)} className="mb-8 mt-6">
         Add New School
       </Button>
 
@@ -285,40 +285,45 @@ const SchoolsPage = () => {
         </DialogContent>
       </Dialog>
 
-      <Table className="w-full">
-        <thead>
-          <tr>
-            <th className="text-left">Name</th>
-            <th className="text-left">Subdomain</th>
-            <th className="text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {schools.map((school) => (
-            <tr key={school.id} className="border-t">
-              <td>{school.name}</td>
-              <td>{school.site_id}</td>
-              <td>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleEdit(school)}
-                >
-                  <Edit size={8} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => handleDelete(school.id)}
-                >
-                  <Trash size={8} />
-                </Button>
-              </td>
-            </tr>
-          ))}
-          {/* Render schools */}
-        </tbody>
-      </Table>
+      <Table className="w-full bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+  <thead className="bg-gray-50 text-gray-700">
+    <tr>
+      <th className="text-left p-4 text-sm font-semibold">Name</th>
+      <th className="text-left p-4 text-sm font-semibold">Subdomain</th>
+      <th className="text-left p-4 text-sm font-semibold">Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {schools.map((school) => (
+      <tr
+        key={school.id}
+        className="border-t hover:bg-gray-100 transition-colors duration-200"
+      >
+        <td className="p-4 text-gray-700 text-sm">{school.name}</td>
+        <td className="p-4 text-gray-600 text-sm">{school.site_id}</td>
+        <td className="p-4 flex space-x-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-blue-600 hover:bg-blue-100 p-2 rounded-md"
+            onClick={() => handleEdit(school)}
+          >
+            <Edit size={16} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-red-600 hover:bg-red-100 p-2 rounded-md"
+            onClick={() => handleDelete(school.id)}
+          >
+            <Trash size={16} />
+          </Button>
+        </td>
+      </tr>
+    ))}
+  </tbody>
+</Table>
+
     </div>
   );
 };

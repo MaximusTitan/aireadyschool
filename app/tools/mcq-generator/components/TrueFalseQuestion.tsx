@@ -59,6 +59,11 @@ export default function TrueFalseQuestion({
           </div>
         ))}
       </RadioGroup>
+      {showResults && userAnswer !== question.correctAnswer && (
+        <div className="mt-2 p-2 border rounded bg-red-100 text-sm">
+          Your answer is incorrect. The correct answer is "{question.correctAnswer ? "True" : "False"}". Please consider the statement carefully.
+        </div>
+      )}
     </div>
   );
 }

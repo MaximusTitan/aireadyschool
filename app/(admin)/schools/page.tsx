@@ -14,7 +14,7 @@ export default async function ProtectedPage() {
   }
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background max-w-[1000px] ml-[125px] mt-[20px] ">
       <SchoolsPage />
     </main>
   );

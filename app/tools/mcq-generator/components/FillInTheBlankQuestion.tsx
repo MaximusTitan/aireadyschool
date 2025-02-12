@@ -84,17 +84,24 @@ export default function FillInTheBlankQuestion({
         </div>
       )}
       {showResults && (
-        <div
-          className={
-            userAnswer?.toLowerCase() === question.answer.toLowerCase()
-              ? "text-green-600"
-              : "text-red-600"
-          }
-        >
-          {userAnswer?.toLowerCase() === question.answer.toLowerCase()
-            ? "Correct!"
-            : `Incorrect. The correct answer is: ${question.answer}`}
-        </div>
+        <>
+          <div
+            className={
+              userAnswer?.toLowerCase() === question.answer.toLowerCase()
+                ? "text-green-600"
+                : "text-red-600"
+            }
+          >
+            {userAnswer?.toLowerCase() === question.answer.toLowerCase()
+              ? "Correct!"
+              : `Incorrect. The correct answer is: ${question.answer}`}
+          </div>
+          {showResults && userAnswer?.toLowerCase() !== question.answer.toLowerCase() && (
+            <div className="mt-2 p-2 border rounded bg-red-100 text-sm">
+              Your answer is incorrect because it does not match the expected word or phrase. The correct answer is "{question.answer}".
+            </div>
+          )}
+        </>
       )}
     </div>
   );

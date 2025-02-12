@@ -414,4 +414,3 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
   )
 }
 
-

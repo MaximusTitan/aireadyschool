@@ -11,6 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
@@ -42,6 +44,8 @@ import {
   PlugIcon as Plugin,
   Folder,
   Gamepad2,
+  Moon,
+  Sun,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -51,10 +55,12 @@ import logo from "@/public/logo.png";
 import logo1 from "@/public/logo1.png";
 import { stat } from "fs";
 import { title } from "process";
+import { useTheme } from "next-themes";
 
 export function AppSidebar() {
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
   const [userRole, setUserRole] = useState<string | null>(null); // User role
+  const { theme, setTheme } = useTheme();
 
   // Fetch the user session from Supabase
   useEffect(() => {
@@ -129,6 +135,12 @@ export function AppSidebar() {
           ]
         : []),
     ],
+    navSecondary: [
+      {
+        title: "Theme",
+        icon: theme === "dark" ? Moon : Sun,
+      },
+    ],
   };
 
   // Add Logo component to switch logos based on sidebar state
@@ -186,9 +198,50 @@ export function AppSidebar() {
             ))}
           </SidebarMenu>
         </SidebarGroup>
+
+        <SidebarSeparator className="my-4" />
+
+        <SidebarGroup>
+          <SidebarMenu>
+            {navData.navSecondary.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <SidebarMenuButton tooltip={item.title}>
+                      <item.icon
+                        className="font-bold text-primary"
+                        size={36}
+                        strokeWidth={2}
+                      />
+                      <span className="font-semibold text-lg">
+                        {item.title}
+                      </span>
+                    </SidebarMenuButton>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent className="w-28" align="start">
+                    <DropdownMenuRadioGroup
+                      value={theme}
+                      onValueChange={setTheme}
+                    >
+                      <DropdownMenuRadioItem value="light">
+                        Light
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="dark">
+                        Dark
+                      </DropdownMenuRadioItem>
+                      <DropdownMenuRadioItem value="system">
+                        System
+                      </DropdownMenuRadioItem>
+                    </DropdownMenuRadioGroup>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        </SidebarGroup>
       </SidebarContent>
 
-      {/* User Avatar and Dropdown Menu in Sidebar Footer */}
+      {/* User Avatar in Footer - remove theme switcher from here */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -265,17 +318,5 @@ export function AppSidebar() {
 
       <SidebarRail />
     </Sidebar>
-  );
-}
-
-// Sidebar Header Component with Theme Switcher
-export function AppSidebarHeader() {
-  return (
-    <SidebarInset>
-      <header className="flex h-12 shrink-0 px-4 items-center justify-between gap-2 border-opacity-75">
-        <SidebarTrigger className="-ml-1" />
-        <ThemeSwitcher />
-      </header>
-    </SidebarInset>
   );
 }

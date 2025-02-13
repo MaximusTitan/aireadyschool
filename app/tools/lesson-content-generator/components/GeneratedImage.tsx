@@ -16,7 +16,7 @@ export function GeneratedImage({ imageUrl }: GeneratedImageProps) {
           src={imageUrl || "/placeholder.svg"}
           alt="Image"
           fill
-          className="rounded-md object-cover"
+          className="rounded-md object-contain"
           priority
         />
       </div>

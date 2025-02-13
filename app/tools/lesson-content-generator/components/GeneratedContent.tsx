@@ -10,7 +10,7 @@ interface GeneratedContentProps {
   imageUrl?: string;
   title: string;
   contentType: string;
-  isImageLoading?: boolean;  // Add this prop
+  isImageLoading?: boolean;
 }
 
 export function GeneratedContent({
@@ -18,21 +18,23 @@ export function GeneratedContent({
   imageUrl,
   title,
   contentType,
-  isImageLoading = false,  // Provide default value
+  isImageLoading = false,
 }: GeneratedContentProps) {
   return (
-    <Card className="generated-content space-y-4 rounded-lg">
-      <CardHeader>
-        <CardTitle className="text-2xl font-bold mb-4">{title}</CardTitle>
+    <Card className="generated-content border-2 shadow-lg overflow-hidden">
+      <CardHeader className="bg-muted/50 border-b">
+        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 bg-clip-text text-transparent">
+          {title}
+        </CardTitle>
       </CardHeader>
-      <CardContent className="flex flex-col gap-6">
+      <CardContent className="p-6 space-y-8">
         {isImageLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <Loader2 className="h-8 w-8 animate-spin" />
+          <div className="flex items-center justify-center h-64 bg-muted/20 rounded-lg">
+            <Loader2 className="h-8 w-8 animate-spin text-neutral-500" />
           </div>
         ) : (
           imageUrl && (
-            <div>
+            <div className="rounded-lg overflow-hidden border-2">
               <GeneratedImage imageUrl={imageUrl} />
             </div>
           )

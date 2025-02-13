@@ -303,6 +303,7 @@ const ToolsPage = () => {
                   {/* Dropdown for Database Selection */}
                   <div className="flex items-center space-x-2">
                     <select
+                      title="Database Selection"
                       value={selectedDatabase || ""}
                       onChange={(e) => handleDatabaseSelection(e.target.value)}
                       className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"

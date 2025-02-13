@@ -14,7 +14,7 @@ export default function UserSearch() {
         placeholder="Search by name or email..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        className="pl-8"
+        className="pl-8 bg-white"
       />
     </div>
   );

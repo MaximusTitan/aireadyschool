@@ -1,13 +1,14 @@
 "use client";
 
-import type React from "react";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { FormProvider, useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { AssignmentForm } from "./components/AssignmentForm";
 import { AssignmentDisplay } from "./components/AssignmentDisplay";
 import { useToast } from "@/hooks/use-toast";
+import { createClient } from "@/utils/supabase/client"; // Import supersbase client for user session
+import { AssignmentHistory } from "./components/AssignmentHistory";
 
 const formSchema = z.object({
   gradeLevel: z.string().min(1, "Grade level is required"),
@@ -27,17 +28,16 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+// Update to accept a payload of form inputs
 const sendAssignmentRequest = async function (
-  prompt: string,
+  payload: any,
   retries = 3
 ): Promise<{ title: string; content: string }> {
   try {
     const response = await fetch("/api/generate-assignment", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ prompt }),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -49,7 +49,7 @@ const sendAssignmentRequest = async function (
     if (!data.title || !data.content) {
       if (retries > 0) {
         console.log("Invalid response format, retrying...");
-        return sendAssignmentRequest(prompt, retries - 1);
+        return sendAssignmentRequest(payload, retries - 1);
       } else {
         throw new Error("Failed to generate a response in the valid format");
       }
@@ -62,7 +62,7 @@ const sendAssignmentRequest = async function (
     // Handle errors and retry if possible
     if (retries > 0) {
       console.log("Error generating assignment, retrying...");
-      return sendAssignmentRequest(prompt, retries - 1);
+      return sendAssignmentRequest(payload, retries - 1);
     } else {
       throw error;
     }
@@ -72,31 +72,50 @@ const sendAssignmentRequest = async function (
 type Assignment = { title: string; content: string };
 
 async function generateAssignment(
-  gradeLevel: string,
-  assignmentType: string,
-  topic: string,
-  learningObjective: string,
-  collaboration: string,
-  dueDate: number
+  data: FormData,
+  userEmail: string
 ): Promise<Assignment> {
-  const timeLeftStr = `${dueDate} day${dueDate > 1 ? "s" : ""}`;
-
-  const prompt = `Generate an assignment topic for a ${gradeLevel} grade 
-  with an assignment type of ${assignmentType} focusing on ${topic}. 
-  The learning objective is to ${learningObjective}. Collaboration is ${
-    collaboration === "Yes" ? "allowed" : "not allowed"
+  const timeLeftStr = `${data.dueDate} day${data.dueDate > 1 ? "s" : ""}`;
+  const prompt = `Generate an assignment topic for a ${data.gradeLevel} grade 
+  with an assignment type of ${data.assignmentType} focusing on ${data.textInput}. 
+  The learning objective is to ${data.learningObjective}. Collaboration is ${
+    data.collaboration === "Yes" ? "allowed" : "not allowed"
   }. 
   This assignment would be due in ${timeLeftStr}. 
   Please decide the complexity of the assignment based on the time left until the due date.`;
 
-  return await sendAssignmentRequest(prompt);
+  return await sendAssignmentRequest({
+    prompt,
+    email: userEmail,
+    gradeLevel: data.gradeLevel,
+    assignmentType: data.assignmentType,
+    textInput: data.textInput,
+    learningObjective: data.learningObjective,
+    collaboration: data.collaboration,
+    dueDate: data.dueDate,
+  });
 }
 
 const AssignmentGenerator: React.FC = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [assignment, setAssignment] = useState<Assignment | null>(null);
+  const [userEmail, setUserEmail] = useState<string>("");
   const outputRef = useRef<HTMLDivElement>(null);
+
+  // Fetch current user email from Supabase
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email ?? "guest@example.com");
+      }
+    };
+    fetchUser();
+  }, []);
 
   const scrollToOutput = () => {
     outputRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -118,19 +137,16 @@ const AssignmentGenerator: React.FC = () => {
     setIsLoading(true);
     try {
       const results = await generateAssignment(
-        data.gradeLevel,
-        data.assignmentType,
-        data.textInput,
-        data.learningObjective,
-        data.collaboration,
-        data.dueDate
+        data,
+        userEmail // pass the email to the generator function
       );
       setAssignment(results);
       toast({
         title: "Assignment Generated",
         description: "Your assignment has been created successfully.",
       });
-      setTimeout(scrollToOutput, 100); // Small delay to ensure content is rendered
+      // Scroll view to the generated content area after creation
+      setTimeout(() => scrollToOutput(), 100);
     } catch (error) {
       console.error("Error generating assignments:", error);
       toast({
@@ -149,6 +165,16 @@ const AssignmentGenerator: React.FC = () => {
         <AssignmentForm isLoading={isLoading} />
         <div ref={outputRef}>
           <AssignmentDisplay assignment={assignment} isLoading={isLoading} />
+          {/* Render AssignmentHistory only when a valid userEmail is set */}
+          {userEmail && (
+            <AssignmentHistory
+              userEmail={userEmail}
+              onSelectAssignment={(selected) => {
+                setAssignment(selected);
+                scrollToOutput();  // Scroll to the content textarea after selection
+              }}
+            />
+          )}
         </div>
       </form>
     </FormProvider>

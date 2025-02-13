@@ -279,6 +279,7 @@ const MindMapPage = () => {
             </form>
 
             <select
+              aria-label="Select mind map layout"
               value={layout}
               onChange={(e) => setLayout(e.target.value as "circular" | "tree")}
               className="px-4 py-3 rounded-lg border border-gray-300

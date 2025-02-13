@@ -1,19 +1,26 @@
 "use client";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardFooter,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
 import logo from "@/public/logo.webp";
+import { LogOut, Mail } from "lucide-react";
 
 export default function VerificationWaiting() {
   const router = useRouter();
   const [isChecking, setIsChecking] = useState(false);
+  const supabase = createClient();
 
   const checkStatus = async () => {
     setIsChecking(true);
-    const supabase = createClient();
     const {
       data: { session },
     } = await supabase.auth.getSession();
@@ -23,6 +30,15 @@ export default function VerificationWaiting() {
       router.push("/tools");
     }
     setIsChecking(false);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    router.push("/sign-in");
+  };
+
+  const handleContactSupport = () => {
+    window.location.href = "mailto:support@aireadyschool.com";
   };
 
   useEffect(() => {
@@ -57,11 +73,30 @@ export default function VerificationWaiting() {
           <Button
             onClick={checkStatus}
             disabled={isChecking}
-            className="mt-4 bg-primary text-white hover:bg-primary/90"
+            className="mt-4 w-full bg-primary text-white hover:bg-primary/90"
           >
             {isChecking ? "Checking..." : "Check Status"}
           </Button>
         </CardContent>
+        <Separator className="my-4" />
+        <CardFooter className="flex flex-col gap-2">
+          <Button
+            onClick={handleContactSupport}
+            variant="outline"
+            className="w-full"
+          >
+            <Mail className="mr-2 h-4 w-4" />
+            Contact Support
+          </Button>
+          <Button
+            onClick={handleSignOut}
+            variant="ghost"
+            className="w-full text-muted-foreground hover:text-destructive"
+          >
+            <LogOut className="mr-2 h-4 w-4" />
+            Sign Out
+          </Button>
+        </CardFooter>
       </Card>
     </div>
   );

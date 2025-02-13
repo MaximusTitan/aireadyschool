@@ -15,7 +15,7 @@ type ListItemProps = React.ComponentPropsWithoutRef<"li">;
 
 const Heading1: React.FC<HeadingProps> = ({ children, ...props }) => (
   <h1
-    className="text-3xl font-semibold leading-none tracking-tight mb-4"
+    className="text-3xl font-bold leading-tight tracking-tight mb-6 text-primary"
     {...props}
   >
     {children}
@@ -24,7 +24,7 @@ const Heading1: React.FC<HeadingProps> = ({ children, ...props }) => (
 
 const Heading2: React.FC<HeadingProps> = ({ children, ...props }) => (
   <h2
-    className="text-2xl font-semibold leading-none tracking-tight mb-3"
+    className="text-2xl font-semibold leading-tight tracking-tight mb-4 text-primary/90"
     {...props}
   >
     {children}
@@ -51,7 +51,7 @@ const Heading4: React.FC<HeadingProps> = ({ children, ...props }) => (
 
 const Paragraph: React.FC<ParagraphProps> = ({ children, ...props }) => (
   <p
-    className="text-base text-muted-foreground mb-4 leading-relaxed"
+    className="text-base text-muted-foreground mb-4 leading-relaxed tracking-wide"
     {...props}
   >
     {children}
@@ -87,7 +87,7 @@ const ListItem: React.FC<ListItemProps> = ({ children, ...props }) => (
 
 export function GeneratedText({ text }: GeneratedTextProps) {
   return (
-    <CardContent className="generated-text mt-4 rounded-md overflow-auto max-h-[70vh] p-4">
+    <CardContent className="generated-text mt-6 rounded-md p-6 prose prose-primary max-w-none transition-all">
       <ReactMarkdown
         components={{
           h1: Heading1,

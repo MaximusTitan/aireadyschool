@@ -37,6 +37,7 @@ export const signUpAction = async (formData: FormData) => {
   const { error: insertError } = await supabase
     .from('users')
     .insert({
+      email: email,
       user_id: signUpData.user!.id,
       role_type: role,
       image_credits: 25,

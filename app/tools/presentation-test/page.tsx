@@ -190,6 +190,9 @@ export default function PresentationTest() {
                     value={editedSlides[currentSlide].title}
                     onChange={(e) => handleTitleEdit(e.target.value)}
                     className="text-2xl font-bold mb-4 w-full p-2 border rounded"
+                    title="Slide title"
+                    placeholder="Enter slide title"
+                    aria-label="Slide title"
                   />
                   <ul className="space-y-3">
                     {editedSlides[currentSlide].content.map((point, i) => (
@@ -199,6 +202,8 @@ export default function PresentationTest() {
                           value={point}
                           onChange={(e) => handleContentEdit(i, e.target.value)}
                           className="flex-1 p-2 border rounded"
+                          aria-label={`Bullet point ${i + 1}`}
+                          placeholder={`Enter bullet point ${i + 1}`}
                         />
                         <button
                           onClick={() => removeBulletPoint(i)}

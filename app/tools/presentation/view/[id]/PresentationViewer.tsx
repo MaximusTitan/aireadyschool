@@ -1,23 +1,23 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { RevealPresentation } from "../../../components/RevealPresentation"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft } from "lucide-react"
-import Link from "next/link"
-import type { Presentation } from "../../../types/presentation"
+import { useState } from "react";
+import { RevealPresentation } from "../../components/RevealPresentation";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import type { Presentation } from "../../types/presentation";
 
 interface PresentationViewerProps {
-  presentation: Presentation
+  presentation: Presentation;
 }
 
 export function PresentationViewer({ presentation }: PresentationViewerProps) {
-  const [isEditing, setIsEditing] = useState(false)
+  const [isEditing, setIsEditing] = useState(false);
 
   const handleSave = (updatedPresentation: Presentation) => {
     // Implement save logic here
-    console.log("Saving presentation:", updatedPresentation)
-  }
+    console.log("Saving presentation:", updatedPresentation);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -36,13 +36,20 @@ export function PresentationViewer({ presentation }: PresentationViewerProps) {
           onSave={handleSave}
           isEditing={isEditing}
           theme={presentation.theme || "modern"}
-          transition={(presentation.transition as "none" | "fade" | "slide" | "convex" | "concave" | "zoom") || "slide"}
+          transition={
+            (presentation.transition as
+              | "none"
+              | "fade"
+              | "slide"
+              | "convex"
+              | "concave"
+              | "zoom") || "slide"
+          }
         />
         <Button onClick={() => setIsEditing(!isEditing)} className="mt-4">
           {isEditing ? "Exit Edit Mode" : "Edit Presentation"}
         </Button>
       </div>
     </div>
-  )
+  );
 }
-

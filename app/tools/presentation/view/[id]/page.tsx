@@ -1,4 +1,4 @@
-import { getPresentation } from "../../../actions/savePresentations";
+import { getPresentation } from "../../actions/savePresentations";
 import { PresentationViewer } from "./PresentationViewer";
 import { notFound } from "next/navigation";
 
@@ -9,11 +9,11 @@ interface PageProps {
 export default async function Page({ params }: PageProps) {
   // Await the params promise
   const { id } = await params;
-  const { presentation } = await getPresentation(id);
+  const result = await getPresentation(id);
 
-  if (!presentation) {
+  if (!result || !result.presentation) {
     return notFound();
   }
 
-  return <PresentationViewer presentation={presentation} />;
+  return <PresentationViewer presentation={result.presentation} />;
 }

@@ -108,7 +108,6 @@ export const ChatArea = ({
   handleQuizAnswer,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isToolsPanelOpen, setIsToolsPanelOpen] = useState(true);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null); // Changed to null initially
   const [isTalking, setIsTalking] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -151,6 +150,11 @@ export const ChatArea = ({
 
   // Updated getGifSource function
   const getGifSource = () => {
+    // Speaking takes priority over other states
+    if (isSpeaking) {
+      return "/o-talking-small.gif";
+    }
+
     // If no messages yet or never interacted, show constant
     if (!lastMessageTime || messages.length === 0) {
       return "/o-constant.gif";
@@ -295,48 +299,37 @@ export const ChatArea = ({
 
   return (
     <div className="flex w-full h-full">
-      {/* Chat Panel */}
-      <div className="flex-1 flex flex-col h-full min-w-0 relative">
-        {/* Floating Bot GIF Container - now positioned relative to chat panel */}
-        <div className="absolute bottom-24 left-4 z-10 w-40 h-40">
+      {/* Buddy GIF Column */}
+      <div className="w-[10%] relative flex items-center justify-center">
+        <div className="w-full px-2">
           <img
             src={getGifSource()}
             alt="AI Assistant"
-            className="w-full h-full object-contain"
+            className="w-full object-contain"
           />
         </div>
+      </div>
 
+      {/* Chat Panel */}
+      <div className="w-[45%] flex flex-col h-full min-w-0 relative border-x">
         <div className="flex-1 overflow-y-auto p-4">
           {messages
             .filter((message: any) => !message.isHidden)
             .map(renderMessage)}
           <div ref={messagesEndRef} />
         </div>
-        <CommandInput
-          input={input}
-          isLoading={isLoading}
-          onInputChange={onInputChange}
-          onSubmit={onSubmit}
-        />
+        <div>
+          <CommandInput
+            input={input}
+            isLoading={isLoading}
+            onInputChange={onInputChange}
+            onSubmit={onSubmit}
+          />
+        </div>
       </div>
 
-      {/* Tools Panel */}
-      <div
-        className={cn(
-          "w-[400px] border-l bg-white h-full flex",
-          isToolsPanelOpen ? "translate-x-0" : "translate-x-[calc(100%-24px)]"
-        )}
-      >
-        <button
-          onClick={() => setIsToolsPanelOpen(!isToolsPanelOpen)}
-          className="h-12 -ml-6 mt-4 flex items-center justify-center w-6 bg-white border border-neutral-200 rounded-l-md hover:bg-neutral-50"
-        >
-          {isToolsPanelOpen ? (
-            <PanelRightClose size={14} />
-          ) : (
-            <PanelRightOpen size={14} />
-          )}
-        </button>
+      {/* Tools Panel - simplified */}
+      <div className="w-[45%] border-l bg-white h-full">
         <div className="flex-1 overflow-hidden flex flex-col">
           <h2 className="text-lg font-semibold p-4 border-b sticky top-0 bg-white z-10">
             Tools

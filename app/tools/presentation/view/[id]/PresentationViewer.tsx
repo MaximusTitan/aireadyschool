@@ -1,11 +1,11 @@
 "use client"
 
 import { useState } from "react"
-import { RevealPresentation } from "../../../components/RevealPresentation"
+import { RevealPresentation } from "../../components/RevealPresentation"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
-import type { Presentation } from "../../../types/presentation"
+import type { Presentation } from "../../types/presentation"
 
 interface PresentationViewerProps {
   presentation: Presentation
@@ -45,4 +45,3 @@ export function PresentationViewer({ presentation }: PresentationViewerProps) {
     </div>
   )
 }
-

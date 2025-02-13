@@ -7,6 +7,31 @@
   /* Base styles for reveal */
   .reveal {
     font-size: 24px;
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+  
+  .reveal .slides {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    margin: auto;
+    pointer-events: auto;
+    text-align: center;
+  }
+  
+  .reveal .slides > section {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .reveal .slides section {
@@ -14,6 +39,8 @@
     padding: 1em;
     font-size: 18px;
     line-height: 1.4;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
   
   /* Modern Theme */
@@ -350,10 +377,20 @@
   
   .reveal .progress {
     color: var(--theme-accent, #0066cc);
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 1000;
   }
   
   .reveal .controls {
     color: var(--theme-accent, #0066cc);
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    z-index: 1000;
   }
   
   /* Ensure proper contrast for editing */
@@ -375,5 +412,4 @@
   .reveal ol ul {
     list-style: none !important;
   }
-  
-  
+

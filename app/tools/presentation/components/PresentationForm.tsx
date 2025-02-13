@@ -676,4 +676,3 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     </div>
   )
 }
-

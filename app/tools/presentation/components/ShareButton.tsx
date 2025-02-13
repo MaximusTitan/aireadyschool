@@ -20,7 +20,8 @@ interface ShareButtonProps {
 
 export function ShareButton({ presentationId }: ShareButtonProps) {
   const [copied, setCopied] = useState(false)
-  const shareUrl = `${window.location.origin}/tools/presentation/${presentationId}`
+  // Update the URL path to match the correct route structure
+  const shareUrl = `${window.location.origin}/tools/presentation/view/${presentationId}`
 
   const copyToClipboard = async () => {
     try {

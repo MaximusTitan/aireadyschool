@@ -8,14 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { createClient } from "@/utils/supabase/client";
 
-interface Affiliate {
-  full_name: string;
-}
-
 export default function SuggestFeatureForm() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [affiliate, setAffiliate] = useState<Affiliate | null>(null);
   const [user, setUser] = useState<any>(null);
   const [error, setError] = useState<string>("");
 
@@ -26,14 +21,6 @@ export default function SuggestFeatureForm() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user) {
         setUser(user);
-        supabase
-          .from("affiliates")
-          .select("*")
-          .eq("work_email", user.email)
-          .single()
-          .then(({ data }) => {
-            if (data) setAffiliate(data);
-          });
       }
     });
   }, [supabase]);
@@ -46,21 +33,28 @@ export default function SuggestFeatureForm() {
     }
     setError("");
     try {
+      const {
+        data: { user: currentUser },
+      } = await supabase.auth.getUser();
+      if (!currentUser) throw new Error("Not authenticated");
+
       const { data, error } = await supabase
         .from("feedback")
         .insert({
           title,
           description,
-          author: affiliate?.full_name,
+          author: currentUser.email,
         })
         .select("id")
         .single();
+
       if (error) throw error;
       router.push(`/feedback/${data.id}`);
       setTitle("");
       setDescription("");
     } catch (error) {
       console.error("Error inserting feature:", error);
+      setError("Failed to submit feedback. Please try again.");
     }
   };
 

@@ -44,23 +44,19 @@ import {
   PlugIcon as Plugin,
   Folder,
   Gamepad2,
-  Moon,
-  Sun,
+  MessageSquareTextIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { ThemeSwitcher } from "./theme-switcher";
 import { signOutAction } from "@/app/actions";
 import logo from "@/public/logo.png";
 import logo1 from "@/public/logo1.png";
 import { stat } from "fs";
 import { title } from "process";
-import { useTheme } from "next-themes";
 
 export function AppSidebar() {
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
   const [userRole, setUserRole] = useState<string | null>(null); // User role
-  const { theme, setTheme } = useTheme();
 
   // Fetch the user session from Supabase
   useEffect(() => {
@@ -135,12 +131,6 @@ export function AppSidebar() {
           ]
         : []),
     ],
-    navSecondary: [
-      {
-        title: "Theme",
-        icon: theme === "dark" ? Moon : Sun,
-      },
-    ],
   };
 
   // Add Logo component to switch logos based on sidebar state
@@ -191,57 +181,17 @@ export function AppSidebar() {
                         strokeWidth={2}
                       />
                     )}
-                    <span className="font-semibold text-[14px]">{item.title}</span>
+                    <span className="font-semibold text-[14px]">
+                      {item.title}
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
         </SidebarGroup>
-
-        <SidebarSeparator className="my-4" />
-
-        <SidebarGroup>
-          <SidebarMenu>
-            {navData.navSecondary.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <SidebarMenuButton tooltip={item.title}>
-                      <item.icon
-                        className="font-bold text-primary"
-                        size={36}
-                        strokeWidth={2}
-                      />
-                      <span className="font-semibold text-lg">
-                        {item.title}
-                      </span>
-                    </SidebarMenuButton>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="w-28" align="start">
-                    <DropdownMenuRadioGroup
-                      value={theme}
-                      onValueChange={setTheme}
-                    >
-                      <DropdownMenuRadioItem value="light">
-                        Light
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="dark">
-                        Dark
-                      </DropdownMenuRadioItem>
-                      <DropdownMenuRadioItem value="system">
-                        System
-                      </DropdownMenuRadioItem>
-                    </DropdownMenuRadioGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        </SidebarGroup>
       </SidebarContent>
 
-      {/* User Avatar in Footer - remove theme switcher from here */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -295,6 +245,19 @@ export function AppSidebar() {
                     <Settings2 className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <form className="w-full">
+                    <Link href={"/feedback"}>
+                      <button
+                        type="submit"
+                        className="flex w-full items-center"
+                      >
+                        <MessageSquareTextIcon className="mr-2 h-4 w-4" />
+                        <span>Feedback</span>
+                      </button>
+                    </Link>
+                  </form>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
                   <form

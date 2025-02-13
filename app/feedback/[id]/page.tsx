@@ -9,11 +9,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useParams, useRouter } from "next/navigation"; // Ensure useRouter is imported
 import { createClient } from "@/utils/supabase/client";
 
-interface Affiliate {
-  full_name: string;
-  work_email: string;
-}
-
 export default function FeedbackDetailPage() {
   const supabase = createClient();
   const { id } = useParams(); // Get the ID from the route
@@ -21,35 +16,29 @@ export default function FeedbackDetailPage() {
   const [feedback, setFeedback] = useState<any>(null);
   const [newComment, setNewComment] = useState("");
   const [user, setUser] = useState<any>(null);
-  const [affiliate, setAffiliate] = useState<Affiliate | null>(null); // Added affiliate state
   const [commentError, setCommentError] = useState<string>("");
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    const fetchData = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (user) {
         setUser(user);
-        supabase
-          .from("affiliates")
-          .select("*")
-          .eq("work_email", user.email)
-          .single()
-          .then(({ data }) => {
-            if (data) setAffiliate(data);
-          });
       }
-    });
 
-    const fetchFeedback = async () => {
       const { data, error } = await supabase
         .from("feedback")
         .select("*")
         .eq("id", id)
         .single();
+
       if (!error && data) {
         setFeedback(data);
       }
     };
-    fetchFeedback();
+
+    fetchData();
   }, [id, supabase]);
 
   const handleUpvote = async () => {
@@ -65,27 +54,47 @@ export default function FeedbackDetailPage() {
   };
 
   const handleAddComment = async () => {
-    if (!feedback || !affiliate || !newComment.trim()) {
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser();
+
+    if (!currentUser) {
+      setCommentError("You must be logged in to comment.");
+      return;
+    }
+
+    if (!feedback) {
+      setCommentError("Cannot add comment at this time.");
+      return;
+    }
+
+    if (!newComment || newComment.trim().length === 0) {
       setCommentError("Comment cannot be empty.");
       return;
     }
+
     setCommentError("");
     const updatedComments = [
-      ...feedback.comments,
+      ...(feedback.comments || []),
       {
-        author: affiliate.full_name, // Changed from user?.email to affiliate.full_name
-        text: newComment,
+        author: currentUser.email,
+        text: newComment.trim(),
         date: new Date().toISOString(),
       },
     ];
+
     const { error } = await supabase
       .from("feedback")
       .update({ comments: updatedComments })
       .eq("id", id);
-    if (!error) {
-      setFeedback({ ...feedback, comments: updatedComments });
-      setNewComment("");
+
+    if (error) {
+      setCommentError("Failed to add comment. Please try again.");
+      return;
     }
+
+    setFeedback({ ...feedback, comments: updatedComments });
+    setNewComment("");
   };
 
   if (!feedback) {

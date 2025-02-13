@@ -2,6 +2,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@supabase/supabase-js"
 import OpenAI from "openai"
+import { Client } from "pg"
 
 async function generateSqlQuery(userInput: string, schemaQuery: string): Promise<string> {
   const model = "gpt-4o"
@@ -81,7 +82,7 @@ async function generateNaturalLanguageResponse(userInput: string, queryResult: a
   return response.choices[0].message.content || ""
 }
 
-async function processSqlQuery(userInput: string, query: string, supabase?: any, crmAccessToken?: string) {
+async function processSqlQuery(userInput: string, query: string, supabase?: any, crmAccessToken?: string, sqlClient?: any) {
   try {
     let data;
     
@@ -92,7 +93,8 @@ async function processSqlQuery(userInput: string, query: string, supabase?: any,
       const error = result.error;
       if (error) throw error;
       
-    } else if (crmAccessToken) {
+    } 
+    else if (crmAccessToken) {
       // Process query using HubSpot API
       const hubspotResponse = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
         method: "GET",
@@ -109,6 +111,11 @@ async function processSqlQuery(userInput: string, query: string, supabase?: any,
       const hubspotData = await hubspotResponse.json();
       data = hubspotData.results; // Extract the contacts list
     }
+    else if (sqlClient) {
+      // Process query using SQL database connection
+      data = await executeSQLQuery(sqlClient, query);
+      if (!data) throw new Error("Failed to execute SQL query");
+    }
 
     // Generate a natural language response based on retrieved data
     const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, data);
@@ -121,6 +128,29 @@ async function processSqlQuery(userInput: string, query: string, supabase?: any,
   }
 }
 
+async function connectToSQLDatabase({ host, port, userName, password, database }: any) {
+  const client = new Client({
+    host,
+    port,
+    user: userName,
+    password,
+    database,
+    ssl: { rejectUnauthorized: false }, // Optional for cloud-hosted databases
+  });
+
+  await client.connect();
+  return client;
+}
+
+async function executeSQLQuery(client: any, query: string) {
+  try {
+    const result = await client.query(query);
+    return result.rows;
+  } catch (error) {
+    console.error("SQL query execution error:", error);
+    return null;
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -202,7 +232,30 @@ export async function POST(request: Request) {
     
     // // // SQL // // //
     if (query && host && port && userName && password && database) {
-      return NextResponse.json({ error: "Not connected to SQL rn" }, { status: 400 });
+      const sqlClient = await connectToSQLDatabase({ host, port, userName, password, database });
+
+      const schemaQuery = `
+        SELECT 
+          table_name, 
+          json_agg(column_name) AS columns 
+        FROM information_schema.columns 
+        WHERE table_schema = 'public' 
+        GROUP BY table_name 
+        ORDER BY table_name
+      `;
+
+      const schemaData = await executeSQLQuery(sqlClient, schemaQuery);
+      if (!schemaData) {
+        return NextResponse.json({ error: "Failed to fetch SQL schema" }, { status: 400 });
+      }
+
+      const schemaString = JSON.stringify(schemaData, null, 2);
+      console.log(schemaString);
+
+      const generatedQuery = await generateSqlQuery(query, schemaString);
+      const processedResult = await processSqlQuery(query, generatedQuery, undefined, undefined, sqlClient);
+
+      return NextResponse.json(processedResult);
     }
 
     return NextResponse.json({ error: "Invalid request" }, { status: 400 });

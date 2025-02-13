@@ -3,10 +3,11 @@ import { cn } from "@/lib/utils";
 import { MathProblem } from "./math-problem";
 import { QuizCard } from "./quiz-card";
 import { MindMapViewer } from "./mind-map-viewer";
-import { Bot, User, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Bot, User, Volume2, VolumeX } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { CommandInput } from "./command-input";
-import { speakText } from "@/utils/audioUtils";
+import { useNowPlaying } from "@/app/hooks/useNowPlaying";
+import { useAudioSettings } from "@/app/hooks/useAudioSettings";
 
 // SimulationWrapper moved here
 const SimulationWrapper = ({ code }: { code: string }) => {
@@ -108,38 +109,18 @@ export const ChatArea = ({
   handleQuizAnswer,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [lastMessageTime, setLastMessageTime] = useState<number | null>(null); // Changed to null initially
+  const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
   const [isTalking, setIsTalking] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [currentSpeakingId, setCurrentSpeakingId] = useState<string | null>(
-    null
-  );
-  const lastProcessedMessageRef = useRef<string | null>(null);
-  const [pendingTTS, setPendingTTS] = useState<{
-    messageId: string;
-    content: string;
-  } | null>(null);
-  const messageBufferRef = useRef<Record<string, string>>({});
+  const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+  const { stop: stopAudio, play: playAudio } = useNowPlaying();
+  const { isAudioEnabled, toggleAudio } = useAudioSettings();
 
-  const handleSpeak = async (text: string) => {
-    try {
-      setIsSpeaking(true);
-      await speakText(text);
-    } catch (error) {
-      console.error("Failed to speak:", error);
-    } finally {
-      setIsSpeaking(false);
-    }
-  };
-
-  // Track when messages change to update last message time and trigger talking
   useEffect(() => {
     if (messages.length > 0) {
       const currentTime = Date.now();
       setLastMessageTime(currentTime);
       setIsTalking(true);
 
-      // Stop talking animation after 3 seconds
       const timer = setTimeout(() => {
         setIsTalking(false);
       }, 3000);
@@ -148,14 +129,7 @@ export const ChatArea = ({
     }
   }, [messages]);
 
-  // Updated getGifSource function
   const getGifSource = () => {
-    // Speaking takes priority over other states
-    if (isSpeaking) {
-      return "/o-talking-small.gif";
-    }
-
-    // If no messages yet or never interacted, show constant
     if (!lastMessageTime || messages.length === 0) {
       return "/o-constant.gif";
     }
@@ -175,47 +149,54 @@ export const ChatArea = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Update the message processing effect to accumulate text
-  useEffect(() => {
-    const processNewMessage = async () => {
-      const lastMessage = messages[messages.length - 1];
-      if (
-        !lastMessage ||
-        lastMessage.isHidden ||
-        lastMessage.role !== "assistant"
-      )
+  const handleTTS = async (messageId: string, text: string) => {
+    try {
+      if (playingMessageId === messageId) {
+        stopAudio();
+        setPlayingMessageId(null);
         return;
-
-      // Accumulate message content
-      messageBufferRef.current[lastMessage.id] = lastMessage.content;
-
-      // Only process completed messages
-      if (!isLoading) {
-        const completeContent = messageBufferRef.current[lastMessage.id];
-        if (
-          completeContent &&
-          lastMessage.id !== lastProcessedMessageRef.current
-        ) {
-          console.log("Processing complete message:", completeContent);
-          try {
-            lastProcessedMessageRef.current = lastMessage.id;
-            setCurrentSpeakingId(lastMessage.id);
-            await speakText(completeContent);
-          } catch (error) {
-            console.error("TTS failed:", error);
-          } finally {
-            setCurrentSpeakingId(null);
-            // Clean up buffer
-            delete messageBufferRef.current[lastMessage.id];
-          }
-        }
       }
-    };
 
-    processNewMessage();
-  }, [messages, isLoading]);
+      stopAudio();
 
-  // Update message rendering to show speaking state
+      const response = await fetch(`/api/gen-chat-tts?model=aura-asteria-en`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(text),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "TTS request failed");
+      }
+
+      const audioBlob = await response.blob();
+      if (audioBlob.size === 0) {
+        throw new Error("Empty audio response received");
+      }
+
+      playAudio(audioBlob, "audio/mp3");
+      setPlayingMessageId(messageId);
+    } catch (error) {
+      console.error("TTS error:", error);
+      setPlayingMessageId(null);
+      // You might want to show a toast notification here
+    }
+  };
+
+  // Add effect to auto-play new messages
+  useEffect(() => {
+    const lastMessage = messages[messages.length - 1];
+    if (
+      isAudioEnabled &&
+      lastMessage?.role === "assistant" &&
+      !playingMessageId &&
+      !isLoading
+    ) {
+      handleTTS(lastMessage.id, lastMessage.content);
+    }
+  }, [messages, isAudioEnabled, isLoading]);
+
   const renderMessage = (message: any) => (
     <div
       key={message.id}
@@ -234,8 +215,7 @@ export const ChatArea = ({
           "max-w-[85%] rounded-2xl px-4 py-2 border-neutral-200",
           message.role === "user"
             ? "bg-black text-white"
-            : "bg-white border border-neutral-200",
-          currentSpeakingId === message.id && "ring-2 ring-rose-300"
+            : "bg-white border border-neutral-200"
         )}
       >
         {message.role === "user" ? (
@@ -243,43 +223,10 @@ export const ChatArea = ({
             <span>{message.content}</span>
           </div>
         ) : (
-          <div className="relative group">
-            <div className="text-sm leading-relaxed prose prose-sm max-w-none">
-              <ReactMarkdown className="prose prose-sm [&>p]:last:mb-0">
-                {message.content}
-              </ReactMarkdown>
-            </div>
-            {currentSpeakingId === message.id && (
-              <div className="absolute right-2 top-2">
-                <div className="w-4 h-4 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
-              </div>
-            )}
-            <button
-              onClick={() => handleSpeak(message.content)}
-              className="absolute -right-8 top-2 opacity-0 group-hover:opacity-100 transition-opacity"
-              disabled={currentSpeakingId !== null}
-            >
-              {currentSpeakingId === message.id ? (
-                <div className="w-4 h-4 border-2 border-rose-300 border-t-rose-500 rounded-full animate-spin" />
-              ) : (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="text-rose-500"
-                >
-                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                </svg>
-              )}
-            </button>
+          <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+            <ReactMarkdown className="prose prose-sm [&>p]:last:mb-0">
+              {message.content}
+            </ReactMarkdown>
           </div>
         )}
       </div>
@@ -307,6 +254,25 @@ export const ChatArea = ({
             alt="AI Assistant"
             className="w-full object-contain"
           />
+          <div className="absolute top-2 right-2 flex flex-col items-center gap-2">
+            <button
+              onClick={toggleAudio}
+              className="flex items-center gap-2 px-3 py-2 rounded-full bg-white hover:bg-gray-50 transition-colors border border-gray-200"
+              title={isAudioEnabled ? "Disable audio" : "Enable audio"}
+            >
+              {isAudioEnabled ? (
+                <>
+                  <Volume2 className="h-4 w-4" />
+                  <span className="text-sm">Audio On</span>
+                </>
+              ) : (
+                <>
+                  <VolumeX className="h-4 w-4" />
+                  <span className="text-sm">Audio Off</span>
+                </>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 

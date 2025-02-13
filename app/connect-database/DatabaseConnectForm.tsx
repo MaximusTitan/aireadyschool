@@ -74,7 +74,7 @@ const DatabaseConnectionForm = ({
                 id={field}
                 name={field}
                 type={field === "password" ? "password" : "text"}
-                value={sqlDetails[field]}
+                value={sqlDetails ? sqlDetails[field] || "" : ""}
                 onChange={handleChange}
                 placeholder={field === "port" ? "5432" : `Enter ${field.replace("_", " ")}`}
               />

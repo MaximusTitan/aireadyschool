@@ -96,7 +96,7 @@ export default async function RolesPage() {
           <CollapsibleSection />
         </Suspense>
 
-        <div className="bg-background rounded-lg shadow-sm border p-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6">
           <div className="flex flex-col gap-4 mb-6">
             <h2 className="text-xl font-semibold text-foreground">
               User Directory

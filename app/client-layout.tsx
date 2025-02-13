@@ -72,6 +72,7 @@ export default function ClientLayout({
     pathname.startsWith("/rooms") ||
     pathname.startsWith("/games") ||
     pathname.startsWith("/logs") ||
+    pathname.startsWith("/roles") ||
     pathname.startsWith("/document-vault") ||
     pathname.startsWith("/connect-database") ||
     pathname.startsWith("/feedback") ||

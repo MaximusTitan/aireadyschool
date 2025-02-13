@@ -97,6 +97,7 @@
     "react-virtualized": "^9.22.5",
     "react-virtualized-auto-sizer": "^1.0.25",
     "reactflow": "^11.11.4",
+    "recharts": "^2.15.1",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
     "remeda": "^2.20.0",

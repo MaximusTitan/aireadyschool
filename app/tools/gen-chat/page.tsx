@@ -2,11 +2,19 @@
 
 import { useChat } from "ai/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { useSidebar } from "@/components/ui/sidebar";
 import { CommandInput } from "./components/command-input";
 import { ChatArea } from "./components/chat-area";
 
 export default function Page() {
+  const { setOpen } = useSidebar();
+
+  // Close sidebar on component mount
+  useEffect(() => {
+    setOpen(false);
+  }, [setOpen]);
+
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const { messages, input, setInput, handleSubmit, append, isLoading } =

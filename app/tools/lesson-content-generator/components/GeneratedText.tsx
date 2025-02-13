@@ -49,8 +49,9 @@ const Heading4: React.FC<HeadingProps> = ({ children, ...props }) => (
   </h4>
 );
 
+// Updated Paragraph with increased text size
 const Paragraph: React.FC<ParagraphProps> = ({ children, ...props }) => (
-  <p className="text-sm text-muted-foreground mb-4 leading-relaxed" {...props}>
+  <p className="text-base text-muted-foreground mb-4 leading-relaxed" {...props}>
     {children}
   </p>
 );
@@ -62,14 +63,14 @@ const Strong: React.FC<ParagraphProps> = ({ children, ...props }) => (
 );
 
 const UnorderedList: React.FC<ListProps> = ({ children, ...props }) => (
-  <ul className="list-disc pl-6 mb-4 text-sm text-muted-foreground" {...props}>
+  <ul className="list-disc pl-6 mb-4 text-base text-muted-foreground" {...props}>
     {children}
   </ul>
 );
 
 const OrderedList: React.FC<ListProps> = ({ children, ...props }) => (
   <ol
-    className="list-decimal pl-6 mb-4 text-sm text-muted-foreground"
+    className="list-decimal pl-6 mb-4 text-base text-muted-foreground"
     {...props}
   >
     {children}
@@ -84,7 +85,7 @@ const ListItem: React.FC<ListItemProps> = ({ children, ...props }) => (
 
 export function GeneratedText({ text }: GeneratedTextProps) {
   return (
-    <CardContent className="generated-text mt-4 bg-secondary rounded-md overflow-auto max-h-[70vh]">
+    <CardContent className="generated-text mt-4 bg-secondary rounded-md p-4">
       <ReactMarkdown
         components={{
           h1: Heading1,

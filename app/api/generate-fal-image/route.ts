@@ -25,7 +25,8 @@ export async function POST(req: Request) {
 
     const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
-        prompt: `Create a detailed, high-quality image based on the following description: ${prompt}.The image should be vivid, realistic, and visually striking.`,
+        prompt: `Create a detailed, high-quality image in landscape orientation based on the following description: ${prompt}. The image should be vivid, realistic, visually striking and generated in landscape mode without altering its aspect ratio.`,
+        image_size : "landscape_16_9"
       },
       logs: true,
       onQueueUpdate: (update) => {

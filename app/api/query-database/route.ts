@@ -81,56 +81,133 @@ async function generateNaturalLanguageResponse(userInput: string, queryResult: a
   return response.choices[0].message.content || ""
 }
 
-async function processSqlQuery(userInput: string, query: string, supabase: any) {
+async function processSqlQuery(userInput: string, query: string, supabase?: any, crmAccessToken?: string) {
   try {
-    const result = await supabase.rpc("execute_sql_query", { query })
-    const data = result.data
-    const error = result.error
-    if (error) throw error
+    let data;
+    
+    if (supabase) {
+      // Process query using Supabase
+      const result = await supabase.rpc("execute_sql_query", { query });
+      data = result.data;
+      const error = result.error;
+      if (error) throw error;
+      
+    } else if (crmAccessToken) {
+      // Process query using HubSpot API
+      const hubspotResponse = await fetch("https://api.hubapi.com/crm/v3/objects/contacts", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${crmAccessToken}`,
+          "Content-Type": "application/json"
+        }
+      });
 
-    const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, data)
-    console.log(naturalLanguageResponse)
+      if (!hubspotResponse.ok) {
+        throw new Error("Failed to fetch HubSpot contacts");
+      }
 
-    return { success: true, naturalLanguageResponse }
+      const hubspotData = await hubspotResponse.json();
+      data = hubspotData.results; // Extract the contacts list
+    }
+
+    // Generate a natural language response based on retrieved data
+    const naturalLanguageResponse = await generateNaturalLanguageResponse(userInput, data);
+    console.log(naturalLanguageResponse);
+
+    return { success: true, naturalLanguageResponse };
   } catch (error) {
-    console.error("Error executing SQL query:", error)
-    return { success: false, error: "Error executing SQL query" }
+    console.error("Error executing SQL/CRM query:", error);
+    return { success: false, error: "Error executing query" };
   }
 }
 
+
 export async function POST(request: Request) {
   try {
-    const { query, supabaseUrl, supabaseKey } = await request.json()
-    // Initialize Supabase client with the provided credentials
-    const supabase = createClient(supabaseUrl, supabaseKey)
-    // Preprocess the schema query
-    const schemaQuery = `
-    SELECT
-        table_name,
-        json_agg(column_name) AS columns
-    FROM
-        information_schema.columns
-    WHERE
-        table_schema = 'public'
-    GROUP BY
-        table_name
-    ORDER BY
-        table_name
-    `
-    const result = await supabase.rpc("execute_sql_query", { query: schemaQuery })
-    const schemaData = result.data
-    const error = result.error
-    if (error) {
-      return NextResponse.json({ success: false, error: error.message })
+    const requestBody = await request.json();
+    const { query, supabaseUrl, supabaseKey, crmAccessToken, host, port, userName, password, database } = requestBody;
+
+    // // // CLOUD // // //
+    if (query && supabaseUrl && supabaseKey) {
+      // Initialize Supabase client with the provided credentials
+      const supabase = createClient(supabaseUrl, supabaseKey);
+
+      // Preprocess the schema query
+      const schemaQuery = `
+      SELECT
+          table_name,
+          json_agg(column_name) AS columns
+      FROM
+          information_schema.columns
+      WHERE
+          table_schema = 'public'
+      GROUP BY
+          table_name
+      ORDER BY
+          table_name
+      `;
+
+      const result = await supabase.rpc("execute_sql_query", { query: schemaQuery });
+      const schemaData = result.data;
+      const error = result.error;
+
+      if (error) {
+        return NextResponse.json({ success: false, error: error.message });
+      }
+
+      const schemaString = JSON.stringify(schemaData, null, 2);
+      console.log(schemaString);
+
+      const generatedQuery = await generateSqlQuery(query, schemaString);
+
+      // Pass the supabase client to processSqlQuery
+      const processedResult = await processSqlQuery(query, generatedQuery, supabase);
+      return NextResponse.json(processedResult);
+    } 
+    
+    // // // CRM // // //
+    if (query && crmAccessToken) {
+      // Fetch HubSpot schema using CRM access token
+      const hubspotResponse = await fetch("https://api.hubapi.com/crm/v3/properties/contacts", {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${crmAccessToken}`,
+          "Content-Type": "application/json"
+        }
+      });
+      
+      const hubspotData = await hubspotResponse.json();
+      
+      if (!hubspotResponse.ok) {
+        return NextResponse.json({ error: "Failed to fetch HubSpot schema" }, { status: 400 });
+      }
+      
+      // Transform the API response into a schema-like format
+      const schemaData = [
+        {
+          table_name: "contacts",
+          columns: hubspotData.results.map((property: any) => property.name) // Extract property names as columns
+        }
+      ];
+      
+      const schemaString = JSON.stringify(schemaData, null, 2);
+      console.log(schemaString);
+      
+      const generatedQuery = await generateSqlQuery(query, schemaString);
+      
+      const processedResult = await processSqlQuery(query, generatedQuery, undefined, crmAccessToken);
+      
+      return NextResponse.json(processedResult);
     }
-    const schemaString = JSON.stringify(schemaData, null, 2)
-    console.log(schemaString)
-    const generatedQuery = await generateSqlQuery(query, schemaString)
-    // Pass the supabase client to processSqlQuery
-    const processedResult = await processSqlQuery(query, generatedQuery, supabase)
-    return NextResponse.json(processedResult)
+    
+    // // // SQL // // //
+    if (query && host && port && userName && password && database) {
+      return NextResponse.json({ error: "Not connected to SQL rn" }, { status: 400 });
+    }
+
+    return NextResponse.json({ error: "Invalid request" }, { status: 400 });
   } catch (error) {
-    console.error("Error executing query:", error)
-    return NextResponse.json({ error: "Failed to execute query" }, { status: 500 })
+    console.error("Error executing query:", error);
+    return NextResponse.json({ error: "Failed to execute query" }, { status: 500 });
   }
 }

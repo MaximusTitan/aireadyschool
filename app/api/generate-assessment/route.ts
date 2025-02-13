@@ -39,6 +39,9 @@ export async function POST(req: Request) {
       case "fillintheblank":
         prompt += `Create fill-in-the-blank questions. Format the output as a JSON array of objects, where each object has 'question' (with a blank represented by '___'), 'answer' (the correct word or phrase to fill the blank), and 'options' (an array of 4 strings including the correct answer) fields.`
         break
+      case "shortanswer":  // new branch
+        prompt += `Create short answer questions. For each question, provide a brief question and its correct answer. Format the output as a JSON array of objects, where each object has 'question' and 'answer' fields.`
+        break
       default:
         throw new Error("Invalid assessment type")
     }

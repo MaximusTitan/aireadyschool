@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import MCQQuestion from "./MCQQuestion";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
+import ShortQuestion from "./ShortQuestion"; // new import
 import { downloadAssessment } from "@/utils/exportAssessment";
 import { Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -38,6 +39,7 @@ export default function Assessment({
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<string[]>([]);
   const [chatContext, setChatContext] = useState<string>(""); // Add this new state
+  const [shortAnswerScores, setShortAnswerScores] = useState<number[]>([]);
 
   useEffect(() => {
     setAnswers(
@@ -46,6 +48,35 @@ export default function Assessment({
         : new Array(assessment.length).fill(null)
     );
   }, [userAnswers, assessment]);
+
+  // New effect to evaluate short answer questions when results are shown
+  useEffect(() => {
+    if (showResults && assessmentType === "shortanswer") {
+      const evaluateAnswers = async () => {
+        try {
+          const payload = {
+            questions: assessment.map((q, index) => ({
+              question: q.question,
+              correctAnswer: q.answer,
+              userAnswer: answers[index] || "",
+            })),
+          };
+          const res = await fetch("/api/evaluate-short-answer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (data.scores && Array.isArray(data.scores)) {
+            setShortAnswerScores(data.scores);
+          }
+        } catch (error) {
+          console.error("Error evaluating short answers:", error);
+        }
+      };
+      evaluateAnswers();
+    }
+  }, [showResults, assessment, answers, assessmentType]);
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     const newAnswers = [...answers];
@@ -71,20 +102,14 @@ export default function Assessment({
     return answers.reduce((score, answer, index) => {
       const question = assessment[index];
       if (!question) return score;
-
       if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
-        // Compare numeric indices for MCQ
         return score + (answer === question.correctAnswer ? 1 : 0);
-      } else if (
-        assessmentType === "truefalse" &&
-        question.correctAnswer !== undefined
-      ) {
+      } else if (assessmentType === "truefalse" && question.correctAnswer !== undefined) {
         return score + (answer === question.correctAnswer ? 1 : 0);
       } else if (assessmentType === "fillintheblank" && question.answer) {
-        return (
-          score +
-          (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
-        );
+        return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
+      } else if (assessmentType === "shortanswer") {
+        return score + (shortAnswerScores[index] || 0);
       }
       return score;
     }, 0);
@@ -199,6 +224,16 @@ export default function Assessment({
               showResults={showResults}
             />
           )}
+          {assessmentType === "shortanswer" && (  // new branch for short answer questions
+            <ShortQuestion
+              question={question}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+              evaluatedScore={shortAnswerScores[index]} // pass evaluated score
+            />
+          )}
         </div>
       ))}
       {!showResults ? (
@@ -211,7 +246,7 @@ export default function Assessment({
       ) : (
         <div className="text-center">
           <h2 className="text-2xl font-bold">
-            Your Score: {calculateScore()} / {assessment.length}
+            Your Score: {calculateScore()} / {assessmentType === "shortanswer" ? assessment.length * 5 : assessment.length}
           </h2>
           <div className="flex justify-center gap-2 mt-4">
             <Button

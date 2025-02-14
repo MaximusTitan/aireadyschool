@@ -49,12 +49,13 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { signOutAction } from "@/app/actions";
-import logo from "@/public/logo.png";
-import logo1 from "@/public/logo1.png";
+import newLogo from "@/public/newLogo.png";
 import { stat } from "fs";
 import { title } from "process";
+import { usePathname } from "next/navigation";
 
 export function AppSidebar() {
+  const pathname = usePathname();
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
   const [userRole, setUserRole] = useState<string | null>(null); // User role
 
@@ -78,7 +79,7 @@ export function AppSidebar() {
   // Define navigation data based on user role
   const navData = {
     navMain: [
-      { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
+      { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
       {
         title: "AI Apps",
         url: "/tools",
@@ -90,11 +91,11 @@ export function AppSidebar() {
         url: "/learn-ai",
         icon: BrainCircuit,
       },
-      {
-        title: "Games",
-        url: "/games",
-        icon: Gamepad2,
-      },
+      // {
+      //   title: "Games",
+      //   url: "/games",
+      //   icon: Gamepad2,
+      // },
 
       ...(userRole === "Admin"
         ? [
@@ -113,21 +114,6 @@ export function AppSidebar() {
               url: "/connect-database",
               icon: Plugin,
             },
-            {
-              title: "Marketing Content Generator",
-              url: "/tools/marketing-content-generator",
-              icon: BadgeCheck,
-            },
-          ]
-        : []),
-
-      ...(userRole === "School"
-        ? [
-            {
-              title: "Marketing Content Generator",
-              url: "/tools/marketing-content-generator",
-              icon: BadgeCheck,
-            },
           ]
         : []),
     ],
@@ -139,7 +125,7 @@ export function AppSidebar() {
     return (
       <Link href="/">
         <Image
-          src={state === "expanded" ? logo : logo1}
+          src={newLogo}
           alt="AI Ready School"
           width={140}
           height={130}
@@ -171,17 +157,33 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             {navData.navMain.map((item) => (
-              <SidebarMenuItem key={item.title} className="mt-[-0.5rem] ">
-                <SidebarMenuButton tooltip={item.title} asChild>
+              <SidebarMenuItem key={item.title} className="mt-[-0.3rem]">
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  asChild
+                  className={
+                    pathname === item.url ? "bg-neutral-100 rounded-lg" : ""
+                  }
+                >
                   <Link href={item.url}>
                     {item.icon && (
                       <item.icon
-                        className="font-bold text-rose-500 mr-[0.5rem] "
-                        size={36}
+                        className={`font-bold mr-[0.5rem] ${
+                          pathname === item.url
+                            ? "text-rose-500 font-extrabold"
+                            : "text-neutral-800"
+                        }`}
+                        size={38}
                         strokeWidth={2}
                       />
                     )}
-                    <span className="font-semibold text-[14px]">
+                    <span
+                      className={`font-semibold text-[16px] ${
+                        pathname === item.url
+                          ? "text-rose-500 font-extrabold"
+                          : ""
+                      }`}
+                    >
                       {item.title}
                     </span>
                   </Link>

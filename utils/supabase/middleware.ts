@@ -4,115 +4,73 @@ import { readDomainId } from "../actions/readDomainId";
 
 export const updateSession = async (request: NextRequest) => {
   try {
-    // Create an unmodified response
-    let initialResponse = NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
+    let response = NextResponse.next();
 
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value),
-            );
-            initialResponse = NextResponse.next({
-              request,
+          getAll: () => request.cookies.getAll(),
+          setAll: (cookiesToSet) => {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              response.cookies.set(name, value, options);
             });
-            cookiesToSet.forEach(({ name, value, options }) =>
-              initialResponse.cookies.set(name, value, options),
-            );
           },
         },
-      },
+      }
     );
 
-    // Refresh session if expired - required for Server Components
-    const { data: user, error } = await supabase.auth.getUser();
-    
-    // Check user status and redirect if disabled
-    if (user?.user?.user_metadata?.status === "disabled" && 
-        !request.nextUrl.pathname.startsWith("/verification-waiting") &&
-        !request.nextUrl.pathname.startsWith("/sign-in")) {
+    // Fetch user session
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    // Redirect disabled users
+    if (
+      user?.user_metadata?.status === "disabled" &&
+      !request.nextUrl.pathname.startsWith("/verification-waiting") &&
+      !request.nextUrl.pathname.startsWith("/sign-in")
+    ) {
       return NextResponse.redirect(new URL("/verification-waiting", request.url));
     }
 
-    const url = request.nextUrl;
-    const pathname = url.pathname;
-  
-    // Get hostname (e.g., 'mike.com', 'test.mike.com')
-    const hostname = request.headers.get("host");
-  
-    let currentHost;
-    if (process.env.NODE_ENV === "production") {
-      // In production, use the custom base domain from environment variables
-      const baseDomain = process.env.BASE_DOMAIN;
-      currentHost = hostname?.replace(`.${baseDomain}`, "").toLowerCase();
-    } else {
-      // In development, handle localhost case
-      currentHost = hostname?.replace(`.localhost:3000`, "").toLowerCase();
-    }
+    // Define public routes (accessible without authentication)
+    const publicRoutes = ["/profile/", "/sign-in", "/sign-up", "/verification-waiting"];
 
-  
-    // If there's no currentHost, likely accessing the root domain, handle accordingly
-    if (!currentHost) {
-      // Continue to the next middleware or serve the root content
-      return NextResponse.next();
-    }
+    // Check if the route is public
+    const isPublicRoute = publicRoutes.some((route) =>
+      request.nextUrl.pathname.startsWith(route)
+    );
 
-    // Fetch site_id and id from the schools table
-    const school = await readDomainId(currentHost);
-
-    // Handle the case where no domain data is found
-    if (!school) {
-      // Continue to the next middleware or serve the root content
-      return NextResponse.next();
-    }
-
-    const site_id = school.id;
-
-    if (site_id) {
-      return NextResponse.rewrite(
-        new URL(`/${site_id}${pathname}`, request.url)
-      );
-    }
-
-    // Define protected routes
-    const isProtectedRoute = (pathname: string) =>
-      pathname.startsWith("/tools") ||
-      pathname.startsWith("/dashboard") ||
-      pathname.startsWith("/chatbot") ||
-      pathname.startsWith("/protected") ||
-      pathname.startsWith("/history") ||
-      pathname.startsWith("/rooms");
-
-    // Redirect to /sign-in if accessing protected routes without authentication
-    if (isProtectedRoute(request.nextUrl.pathname) && error) {
+    // Redirect all non-public routes if user is not authenticated
+    if (!isPublicRoute && !user) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    // Redirect / to /tools if the user is authenticated
-    if (request.nextUrl.pathname === "/" && !error) {
+    // Redirect "/" to "/tools" if authenticated
+    if (request.nextUrl.pathname === "/" && user) {
       return NextResponse.redirect(new URL("/tools", request.url));
     }
 
-    // Allow the request to proceed for other cases
-    return initialResponse;
+    // Handle multi-tenant domains
+    const hostname = request.headers.get("host");
+    let currentHost;
+    if (process.env.NODE_ENV === "production") {
+      currentHost = hostname?.replace(`.${process.env.BASE_DOMAIN}`, "").toLowerCase();
+    } else {
+      currentHost = hostname?.replace(`.localhost:3000`, "").toLowerCase();
+    }
+
+    if (!currentHost) return response;
+
+    // Fetch site_id based on domain
+    const school = await readDomainId(currentHost);
+    if (!school) return response;
+
+    // Rewrite URL to include site_id
+    return NextResponse.rewrite(new URL(`/${school.id}${request.nextUrl.pathname}`, request.url));
+
   } catch (e) {
-    console.error("Middleware Error:", e); // Logging error
-    // Handle errors (e.g., missing environment variables)
-    return NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
+    console.error("Middleware Error:", e);
+    return NextResponse.next();
   }
 };
-

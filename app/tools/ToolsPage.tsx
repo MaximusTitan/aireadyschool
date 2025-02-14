@@ -1,9 +1,10 @@
 "use client";
 
 import type React from "react";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Search, MessageCircle, Send, Plug } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -29,6 +30,7 @@ interface ToolCardProps {
   route: string;
   isHot?: boolean;
   isComingSoon?: boolean;
+  icon: LucideIcon;
 }
 
 const ToolCard: React.FC<ToolCardProps> = ({
@@ -37,6 +39,7 @@ const ToolCard: React.FC<ToolCardProps> = ({
   route,
   isHot = false,
   isComingSoon = false,
+  icon: Icon,
 }) => {
   const router = useRouter();
 
@@ -45,23 +48,6 @@ const ToolCard: React.FC<ToolCardProps> = ({
       router.push(route);
     }
   };
-
-  const [userRole, setUserRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (user) {
-        setUserRole(user.user_metadata.role ?? null);
-      }
-    };
-
-    fetchUser();
-  }, []);
 
   return (
     <Card
@@ -73,26 +59,17 @@ const ToolCard: React.FC<ToolCardProps> = ({
     >
       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-rose-100/10 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
       <CardHeader className="space-y-2">
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between">
           <CardTitle className="text-lg font-semibold tracking-tight dark:text-neutral-100 group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
             {title}
           </CardTitle>
-          {isHot && (
-            <span className="px-2 py-1 text-xs font-semibold bg-rose-100 text-rose-600 rounded-full dark:bg-rose-900/50 dark:text-rose-300 animate-pulse">
-              HOT
-            </span>
-          )}
-          {isComingSoon && (
-            <span className="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full dark:bg-yellow-900/50 dark:text-yellow-300">
-              Coming Soon
-            </span>
-          )}
+          <Icon className="w-6 h-6 text-rose-500" />
         </div>
         <CardDescription className="text-sm text-neutral-600 dark:text-neutral-400 group-hover:text-neutral-800 dark:group-hover:text-neutral-300 transition-colors line-clamp-2">
           {description}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative pt-0">
         <div className="flex justify-end">
           {!isComingSoon && (
             <div className="transform translate-y-2 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-300">
@@ -107,6 +84,16 @@ const ToolCard: React.FC<ToolCardProps> = ({
             </div>
           )}
         </div>
+        {isHot && (
+          <span className="absolute bottom-0 left-0 px-2 py-1 ml-4 mb-4 text-xs font-semibold bg-rose-100 text-rose-600 rounded-full dark:bg-rose-900/50 dark:text-rose-300 animate-pulse">
+            HOT
+          </span>
+        )}
+        {isComingSoon && (
+          <span className="absolute bottom-0 right-0 px-2 py-1 mr-2 mb-2 text-xs font-semibold bg-yellow-100 text-yellow-600 rounded-full dark:bg-yellow-900/50 dark:text-yellow-300">
+            Coming Soon
+          </span>
+        )}
       </CardContent>
     </Card>
   );
@@ -117,6 +104,15 @@ interface ChatMessage {
   isUser: boolean;
   naturalLanguageResponse?: string;
   error?: string;
+}
+
+interface Tool {
+  title: string;
+  description: string;
+  route: string;
+  icon: LucideIcon;
+  isHot?: boolean;
+  isComingSoon?: boolean;
 }
 
 const ToolsPage = () => {
@@ -146,23 +142,77 @@ const ToolsPage = () => {
     fetchUser();
   }, []);
 
-  const tools =
-    userRole === "Admin"
-      ? Object.values(categories)
-          .flat()
-          .filter(
-            (tool, index, self) =>
-              index === self.findIndex((t) => t.route === tool.route)
-          )
-      : (userRole ? categories[userRole] : []) || [];
+  const getAllToolsWithCategories = useMemo(() => {
+    const allTools: { [key: string]: Tool[] } = {
+      Learning: [],
+      Research: [],
+      Creative: [],
+      Tech: [],
+    };
+
+    // For Admin, gather all tools from all roles and categories
+    Object.values(categories).forEach((roleCategories) => {
+      Object.entries(roleCategories).forEach(([category, categoryTools]) => {
+        // Add tools to their respective categories, avoiding duplicates
+        categoryTools.forEach((tool: Tool) => {
+          if (!allTools[category]?.some((t: Tool) => t.route === tool.route)) {
+            allTools[category].push(tool);
+          }
+        });
+      });
+    });
+
+    return allTools;
+  }, []);
+
+  const tools = useMemo(() => {
+    if (userRole === "Admin") {
+      // For Admin, return all tools from all categories
+      return Object.values(getAllToolsWithCategories).flat() as Tool[];
+    }
+    return userRole
+      ? (Object.values(categories[userRole] || {}).flat() as Tool[])
+      : [];
+  }, [userRole, getAllToolsWithCategories]);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const categoryOptions = ["All", "Learning", "Research", "Creative", "Tech"];
 
-  const filteredTools = tools.filter(
-    (tool) =>
-      tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredTools = useMemo(() => {
+    let filtered = tools;
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (tool: Tool) =>
+          tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          tool.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (activeCategory !== "All") {
+      if (userRole === "Admin") {
+        // For Admin, filter based on the getAllToolsWithCategories structure
+        filtered = getAllToolsWithCategories[activeCategory] || [];
+      } else if (userRole && categories[userRole]) {
+        filtered = filtered.filter((tool: Tool) => {
+          for (const [categoryName, toolsList] of Object.entries(
+            categories[userRole]
+          )) {
+            if (
+              toolsList.some((t: Tool) => t.route === tool.route) &&
+              categoryName === activeCategory
+            ) {
+              return true;
+            }
+          }
+          return false;
+        });
+      }
+    }
+
+    return filtered;
+  }, [tools, searchQuery, activeCategory, userRole, getAllToolsWithCategories]);
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -276,9 +326,9 @@ const ToolsPage = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[url('/background-opacity.png')] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
+    <div className="min-h-screen bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
       {" "}
-      <div className="container mx-auto px-4 py-4">
+      <div className="container w-[97%] mx-auto px-4 py-4 mr-4">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center p-4">
             <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
@@ -294,9 +344,19 @@ const ToolsPage = () => {
 
         <div className="flex items-center justify-between mb-8 p-4">
           <div className="flex space-x-4">
-            <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
-              All Apps
-            </button>
+            {categoryOptions.map((category) => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  activeCategory === category
+                    ? "bg-neutral-800 text-white dark:bg-neutral-500"
+                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -321,6 +381,7 @@ const ToolsPage = () => {
               route={tool.route}
               isHot={tool.isHot}
               isComingSoon={tool.isComingSoon}
+              icon={tool.icon}
             />
           ))}
         </div>
@@ -330,6 +391,7 @@ const ToolsPage = () => {
           <>
             <div className="fixed bottom-4 right-4 z-50">
               <button
+                title="Open Chat"
                 onClick={toggleChat}
                 className="bg-rose-300 hover:bg-rose-400 text-white rounded-full p-3 shadow-lg transition-colors duration-200"
               >
@@ -345,6 +407,7 @@ const ToolsPage = () => {
                   {/* Dropdown for Database Selection */}
                   <div className="flex items-center space-x-2">
                     <select
+                      title="Database Selection"
                       value={selectedDatabase || ""}
                       onChange={(e) => handleDatabaseSelection(e.target.value)}
                       className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
@@ -360,6 +423,8 @@ const ToolsPage = () => {
                     </select>
                     {/* Plugin Icon Button */}
                     <button
+                      title="Use plugin"
+                      aria-label="Use plugin"
                       onClick={() => {
                         console.log(
                           `Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`
@@ -369,6 +434,7 @@ const ToolsPage = () => {
                       className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
                     >
                       <Plug size={16} />
+                      <span className="sr-only">Use plugin</span>
                     </button>
                   </div>
                 </div>
@@ -408,6 +474,8 @@ const ToolsPage = () => {
                   />
                   <button
                     onClick={sendMessage}
+                    title="Send Message"
+                    aria-label="Send Message"
                     className="bg-rose-300 hover:bg-rose-400 text-white px-4 rounded-r-lg transition-colors duration-200"
                   >
                     <Send size={20} />

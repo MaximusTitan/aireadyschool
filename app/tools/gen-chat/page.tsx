@@ -2,11 +2,19 @@
 
 import { useChat } from "ai/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
+import { useSidebar } from "@/components/ui/sidebar";
 import { CommandInput } from "./components/command-input";
 import { ChatArea } from "./components/chat-area";
 
 export default function Page() {
+  const { setOpen } = useSidebar();
+
+  // Close sidebar on component mount
+  useEffect(() => {
+    setOpen(false);
+  }, [setOpen]);
+
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const { messages, input, setInput, handleSubmit, append, isLoading } =
@@ -33,6 +41,10 @@ export default function Page() {
     Record<string, { url: string; credits: number }>
   >({});
   const [pendingVisualizations] = useState(() => new Set<string>());
+  const [pendingQuizzes] = useState(() => new Set<string>());
+  const [generatedQuizzes, setGeneratedQuizzes] = useState<Record<string, any>>(
+    {}
+  );
 
   const handleAnswerSubmit = async (data: {
     studentAnswer: number;
@@ -55,6 +67,40 @@ export default function Page() {
     await append(userMessage);
   };
 
+  const handleQuizAnswer = useCallback(
+    async (data: {
+      selectedOption: { id: string; text: string; isCorrect: boolean };
+      question: string;
+      allOptions: Array<{ id: string; text: string; isCorrect: boolean }>;
+      subject: string;
+      difficulty: string;
+      explanation: string;
+    }) => {
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `I chose: "${data.selectedOption.text}" for the question: "${data.question}"`,
+        toolCalls: [
+          {
+            tool: "evaluateQuizAnswer",
+            parameters: {
+              selectedAnswer: data.selectedOption,
+              question: data.question,
+              allOptions: data.allOptions,
+              subject: data.subject,
+              difficulty: data.difficulty,
+              explanation: data.explanation,
+              isCorrect: data.selectedOption.isCorrect,
+            },
+          },
+        ],
+        isHidden: true, // Add this flag
+      };
+      await append(userMessage);
+    },
+    [append]
+  );
+
   const handleImageGeneration = async (
     toolCallId: string,
     params: {
@@ -74,7 +120,7 @@ export default function Page() {
     }
     pendingImageRequests.add(toolCallId);
     try {
-      const response = await fetch("/api/generate-recraft", {
+      const response = await fetch("/api/gen-chat-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(params),
@@ -101,6 +147,50 @@ export default function Page() {
       }));
     }
   };
+
+  const handleQuizGeneration = useCallback(
+    async (
+      toolCallId: string,
+      params: {
+        subject: string;
+        difficulty: string;
+      }
+    ) => {
+      if (pendingQuizzes.has(toolCallId)) {
+        return;
+      }
+
+      pendingQuizzes.add(toolCallId);
+      try {
+        const response = await fetch("/api/gen-quiz", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(params),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to generate quiz");
+        }
+
+        const data = await response.json();
+        setGeneratedQuizzes((prev) => ({
+          ...prev,
+          [toolCallId]: data,
+        }));
+      } catch (error) {
+        console.error("Quiz generation failed:", error);
+        setGeneratedQuizzes((prev) => ({
+          ...prev,
+          [toolCallId]: {
+            error: "Failed to generate quiz",
+          },
+        }));
+      } finally {
+        pendingQuizzes.delete(toolCallId);
+      }
+    },
+    [pendingQuizzes]
+  );
 
   const handleVisualization = async (subject: string, concept: string) => {
     try {
@@ -158,9 +248,10 @@ export default function Page() {
           {
             tool: "generateImage",
             parameters: {
+              pending: true,
               prompt,
               style,
-              imageSize: "landscape_4_3",
+              imageSize: "square_hd",
               numInferenceSteps: 1,
               numImages: 1,
               enableSafetyChecker: true,
@@ -209,53 +300,27 @@ export default function Page() {
 
   return (
     <TooltipProvider>
-      <div className="mx-auto flex flex-col min-h-[100vh] max-w-6xl">
-        {" "}
-        {/* increased width */}
-        <header className="sticky top-0 z-10 backdrop-blur-sm bg-white/80 border-b">
-          <div className="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div className="flex items-center gap-2">
-              <h1 className="text-lg font-semibold text-neutral-800">
-                Learning Buddy
-              </h1>
-              <span className="text-xs px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">
-                AI Powered
-              </span>
-            </div>
-            {remainingCredits !== null && (
-              <div className="flex items-center gap-2">
-                <div className="text-sm text-neutral-600">
-                  Credits:{" "}
-                  <span className="font-medium">{remainingCredits}</span>
-                </div>
-                <div className="h-4 w-px bg-neutral-200" />
-                <button className="text-sm text-neutral-600 hover:text-neutral-900">
-                  Help
-                </button>
-              </div>
-            )}
-          </div>
-        </header>
-        <main className="flex-1 overflow-hidden flex flex-col">
-          <ChatArea
-            messages={messages}
-            simulationCode={simulationCode}
-            simulationCodeRef={simulationCodeRef}
-            generatedImages={generatedImages}
-            pendingImageRequests={pendingImageRequests}
-            completedImages={completedImages}
-            pendingVisualizations={pendingVisualizations}
-            handleAnswerSubmit={handleAnswerSubmit}
-            handleImageGeneration={handleImageGeneration}
-            handleVisualization={handleVisualization}
-            onSimulationCode={(code: string) => setSimulationCode(code)}
-          />
-        </main>
-        <CommandInput
+      <div className="flex h-screen">
+        <ChatArea
+          messages={messages}
           input={input}
           isLoading={isLoading}
           onInputChange={handleInputChange}
           onSubmit={handleFormSubmit}
+          simulationCode={simulationCode}
+          simulationCodeRef={simulationCodeRef}
+          generatedImages={generatedImages}
+          generatedQuizzes={generatedQuizzes}
+          pendingQuizzes={pendingQuizzes}
+          pendingImageRequests={pendingImageRequests}
+          completedImages={completedImages}
+          pendingVisualizations={pendingVisualizations}
+          handleAnswerSubmit={handleAnswerSubmit}
+          handleImageGeneration={handleImageGeneration}
+          handleQuizGeneration={handleQuizGeneration}
+          handleVisualization={handleVisualization}
+          handleQuizAnswer={handleQuizAnswer}
+          onSimulationCode={(code: string) => setSimulationCode(code)}
         />
       </div>
     </TooltipProvider>

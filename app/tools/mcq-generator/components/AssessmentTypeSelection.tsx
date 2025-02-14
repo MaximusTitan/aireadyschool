@@ -19,6 +19,7 @@ export default function AssessmentTypeSelection({
     { value: "mcq", label: "Multiple Choice Questions" },
     { value: "truefalse", label: "True or False" },
     { value: "fillintheblank", label: "Fill in the Blanks" },
+    { value: "shortanswer", label: "Short Answer" } // new option
   ];
 
   return (

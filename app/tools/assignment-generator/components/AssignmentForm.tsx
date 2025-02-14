@@ -52,12 +52,19 @@ const InputField: React.FC<InputFieldProps> = ({
               type={type}
               placeholder={placeholder}
               {...field}
-              value={field.value ?? ""}
+              value={
+                type === "number"
+                  ? field.value !== undefined && field.value !== null
+                    ? String(field.value)
+                    : ""
+                  : field.value ?? ""
+              }
               onChange={(e) => {
+                const inputValue = e.target.value;
                 const value =
                   type === "number"
-                    ? Number.parseInt(e.target.value, 10)
-                    : e.target.value;
+                    ? inputValue === "" ? "" : Number(inputValue)
+                    : inputValue;
                 field.onChange(value);
               }}
             />

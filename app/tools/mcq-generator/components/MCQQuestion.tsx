@@ -8,8 +8,8 @@ interface MCQQuestionProps {
     correctAnswer: number;
   };
   index: number;
-  userAnswer: number | null;
-  onChange: (answer: number) => void;
+  userAnswer: number | null;  // Change back to number
+  onChange: (answer: number) => void;  // Change back to number
   showResults: boolean;
 }
 
@@ -39,25 +39,26 @@ export default function MCQQuestion({
             />
             <Label htmlFor={`q${index}-o${optionIndex}`}>{option}</Label>
             {showResults && (
-              <span
-                className={
-                  optionIndex === question.correctAnswer
-                    ? "text-green-600"
-                    : userAnswer === optionIndex
-                      ? "text-red-600"
-                      : ""
-                }
-              >
-                {optionIndex === question.correctAnswer
-                  ? "✓"
-                  : userAnswer === optionIndex
-                    ? "✗"
-                    : ""}
-              </span>
+              <div className="ml-2 flex space-x-1">
+                {userAnswer === optionIndex && (
+                  <span className={optionIndex === question.correctAnswer ? "text-green-600" : "text-red-600"}>
+                    {optionIndex === question.correctAnswer ? "✓" : "✗"}
+                  </span>
+                )}
+                {optionIndex === question.correctAnswer && userAnswer !== optionIndex && (
+                  <span className="text-green-600 ml-1">✓</span>
+                )}
+              </div>
             )}
           </div>
         ))}
       </RadioGroup>
+      {showResults && userAnswer !== question.correctAnswer && (
+        <div className="mt-2 p-2 border rounded bg-red-100 text-sm">
+          Your answer: {userAnswer !== null ? question.options[userAnswer] : "No answer"}<br/>
+          Correct answer: {question.options[question.correctAnswer]}
+        </div>
+      )}
     </div>
   );
 }

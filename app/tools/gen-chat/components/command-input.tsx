@@ -82,7 +82,7 @@ export const CommandInput = ({
       onSubmit={onSubmit}
       className="sticky bottom-0 p-4 bg-white/80 backdrop-blur-sm border-t"
     >
-      <div className="relative flex gap-2 max-w-3xl mx-auto">
+      <div className="relative flex gap-2">
         <input
           ref={inputRef}
           type="text"

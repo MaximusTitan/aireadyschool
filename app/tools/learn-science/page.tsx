@@ -7,13 +7,13 @@ import { formatTime } from "@/app/utils/dateFormat";
 interface Message {
   text: string;
   isBot: boolean;
-  timestamp: string; // Changed from Date to string
+  timestamp: string;
 }
 
 export default function ChatBot() {
   const [messages, setMessages] = useState<Message[]>([
     {
-      text: "Hello! I'm your Science teacher. I'm here to help you learn Science concepts in an interactive way. What would you like to learn about today?",
+      text: "Hello there! I'm an AI tutor. Ask me anything about any subject.",
       isBot: true,
       timestamp: formatTime(new Date()), // Format timestamp at creation
     },
@@ -46,7 +46,7 @@ export default function ChatBot() {
     setIsLoading(true);
 
     try {
-      const response = await fetch("/api/system-prompt", {
+      const response = await fetch("/api/learn-science", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -86,7 +86,7 @@ export default function ChatBot() {
     <div className="max-w-8xl mx-auto p-4 h-screen flex flex-col">
       <div className="bg-white rounded-lg shadow-lg flex-1 flex flex-col">
         <div className="bg-neutral-800 text-white p-4 rounded-t-lg">
-          <h1 className="text-2xl font-extrabold">Science Tutor</h1>
+          <h1 className="text-2xl font-extrabold">AI Tutor</h1>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-4">
@@ -189,7 +189,7 @@ export default function ChatBot() {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               className="flex-1 p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-neutral-400"
-              placeholder="Ask anything about Science..."
+              placeholder="Ask anything about any subject..."
               disabled={isLoading}
             />
             <button

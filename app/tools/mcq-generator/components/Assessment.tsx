@@ -3,8 +3,10 @@ import { Button } from "@/components/ui/button";
 import MCQQuestion from "./MCQQuestion";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
+import ShortQuestion from "./ShortQuestion"; // new import
 import { downloadAssessment } from "@/utils/exportAssessment";
 import { Download } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface AssessmentProps {
   assessment: any[];
@@ -32,6 +34,12 @@ export default function Assessment({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
+  // New state for summary explanation and chat
+  const [explanation, setExplanation] = useState("");
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState<string[]>([]);
+  const [chatContext, setChatContext] = useState<string>(""); // Add this new state
+  const [shortAnswerScores, setShortAnswerScores] = useState<number[]>([]);
 
   useEffect(() => {
     setAnswers(
@@ -41,9 +49,44 @@ export default function Assessment({
     );
   }, [userAnswers, assessment]);
 
+  // New effect to evaluate short answer questions when results are shown
+  useEffect(() => {
+    if (showResults && assessmentType === "shortanswer") {
+      const evaluateAnswers = async () => {
+        try {
+          const payload = {
+            questions: assessment.map((q, index) => ({
+              question: q.question,
+              correctAnswer: q.answer,
+              userAnswer: answers[index] || "",
+            })),
+          };
+          const res = await fetch("/api/evaluate-short-answer", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await res.json();
+          if (data.scores && Array.isArray(data.scores)) {
+            setShortAnswerScores(data.scores);
+          }
+        } catch (error) {
+          console.error("Error evaluating short answers:", error);
+        }
+      };
+      evaluateAnswers();
+    }
+  }, [showResults, assessment, answers, assessmentType]);
+
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     const newAnswers = [...answers];
-    newAnswers[questionIndex] = answer;
+    if (assessmentType === "mcq") {
+      // For MCQ, store the numeric index
+      newAnswers[questionIndex] = typeof answer === "number" ? answer : null;
+    } else {
+      // For other types, store the answer as is
+      newAnswers[questionIndex] = answer;
+    }
     setAnswers(newAnswers);
   };
 
@@ -59,19 +102,14 @@ export default function Assessment({
     return answers.reduce((score, answer, index) => {
       const question = assessment[index];
       if (!question) return score;
-
       if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
         return score + (answer === question.correctAnswer ? 1 : 0);
-      } else if (
-        assessmentType === "truefalse" &&
-        question.correctAnswer !== undefined
-      ) {
+      } else if (assessmentType === "truefalse" && question.correctAnswer !== undefined) {
         return score + (answer === question.correctAnswer ? 1 : 0);
       } else if (assessmentType === "fillintheblank" && question.answer) {
-        return (
-          score +
-          (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
-        );
+        return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
+      } else if (assessmentType === "shortanswer") {
+        return score + (shortAnswerScores[index] || 0);
       }
       return score;
     }, 0);
@@ -106,6 +144,42 @@ export default function Assessment({
       );
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // New function to fetch summary explanation
+  const fetchSummaryExplanation = async (followUpMessage?: string) => {
+    try {
+      const payload: any = { assessment, userAnswers: answers };
+      if (followUpMessage) {
+        payload.message = followUpMessage;
+      }
+      const response = await fetch("/api/assessment-summary", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (data.explanation) {
+        if (followUpMessage) {
+          // Only show follow-up messages in chat history
+          setChatHistory((prev) => [...prev, `You: ${followUpMessage}`, `Bot: ${data.explanation}`]);
+        } else {
+          // Store initial analysis separately
+          setExplanation(data.explanation);
+          setChatContext(data.explanation); // Save context but don't show in chat
+          setChatHistory([]); // Reset chat history when getting new explanation
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching summary:", error);
+    }
+  };
+
+  const handleChatSubmit = async () => {
+    if (chatInput.trim()) {
+      await fetchSummaryExplanation(chatInput.trim());
+      setChatInput("");
     }
   };
 
@@ -150,6 +224,16 @@ export default function Assessment({
               showResults={showResults}
             />
           )}
+          {assessmentType === "shortanswer" && (  // new branch for short answer questions
+            <ShortQuestion
+              question={question}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+              evaluatedScore={shortAnswerScores[index]} // pass evaluated score
+            />
+          )}
         </div>
       ))}
       {!showResults ? (
@@ -162,7 +246,7 @@ export default function Assessment({
       ) : (
         <div className="text-center">
           <h2 className="text-2xl font-bold">
-            Your Score: {calculateScore()} / {assessment.length}
+            Your Score: {calculateScore()} / {assessmentType === "shortanswer" ? assessment.length * 5 : assessment.length}
           </h2>
           <div className="flex justify-center gap-2 mt-4">
             <Button
@@ -187,6 +271,47 @@ export default function Assessment({
             </Button>
           </div>
           {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
+          {/* New section for summary explanation and chat */}
+          <div className="mt-8 border-t pt-4">
+            <Button
+              onClick={() => fetchSummaryExplanation()}
+              className="bg-blue-600 hover:bg-blue-500 text-white"
+            >
+              Get Summary Explanation
+            </Button>
+            {explanation && (
+              <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
+                <h3 className="font-semibold mb-2">Summary Explanation:</h3>
+                {/* Changed className to reduce extra spacing */}
+                <ReactMarkdown className="prose prose-sm leading-tight">{explanation}</ReactMarkdown>
+              </div>
+            )}
+            {chatHistory.length > 0 && (
+              <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
+                <h3 className="font-semibold mb-2">Chat:</h3>
+                <div className="space-y-2">
+                  {chatHistory.map((msg, idx) => (
+                    <div key={idx} className="p-2 rounded bg-white shadow-sm">
+                      {/* Changed className to reduce extra spacing */}
+                      <ReactMarkdown className="prose prose-sm leading-tight">{msg}</ReactMarkdown>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div className="mt-4 flex space-x-2">
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder="Ask a follow-up question..."
+                className="border rounded p-2 flex-grow"
+              />
+              <Button onClick={handleChatSubmit} className="bg-green-600 hover:bg-green-500 text-white">
+                Send
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>

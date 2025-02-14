@@ -39,6 +39,9 @@ export async function POST(req: Request) {
       case "fillintheblank":
         prompt += `Create fill-in-the-blank questions. Format the output as a JSON array of objects, where each object has 'question' (with a blank represented by '___'), 'answer' (the correct word or phrase to fill the blank), and 'options' (an array of 4 strings including the correct answer) fields.`
         break
+      case "shortanswer":  // new branch
+        prompt += `Create short answer questions. For each question, provide a brief question and its correct answer. Format the output as a JSON array of objects, where each object has 'question' and 'answer' fields.`
+        break
       default:
         throw new Error("Invalid assessment type")
     }
@@ -46,7 +49,7 @@ export async function POST(req: Request) {
     const { text, usage } = await generateText({
       model: openai("gpt-4o"),
       prompt: prompt,
-      temperature: 0.7,
+      temperature: 0.9,
       maxTokens: 2000,
     })
 
@@ -73,7 +76,7 @@ export async function POST(req: Request) {
       throw new Error("Invalid assessment format: Expected an array of questions")
     }
 
-    // Save the assessment to the database
+    // Save the assessment to the database, adding user_email
     const { data, error } = await supabase
       .from("assessments")
       .insert({
@@ -86,6 +89,7 @@ export async function POST(req: Request) {
         difficulty,
         questions: assessment,
         learning_outcomes: learningOutcomes,
+        user_email: user.email  // <-- new field for user-specific assessment
       })
       .select()
 

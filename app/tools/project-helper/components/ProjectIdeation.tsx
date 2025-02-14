@@ -81,8 +81,8 @@ export default function ProjectIdeation({
         projectDomain,
         subject,
         interests,
-        projectDomain === "technical" ? tools : tools, // tools now contains the selected project type for non-technical projects
-        skillLevel,
+        tools, // tools or project type selected
+        projectDomain === "technical" ? skillLevel : "", // conditionally pass skillLevel
         projectDuration,
         targetAudience,
         grade,
@@ -241,19 +241,21 @@ export default function ProjectIdeation({
             </Select>
           )}
         </div>
-        <div>
-          <Label htmlFor="skillLevel">Skill Level</Label>
-          <Select value={skillLevel} onValueChange={setSkillLevel}>
-            <SelectTrigger id="skillLevel">
-              <SelectValue placeholder="Select skill level" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="beginner">Beginner</SelectItem>
-              <SelectItem value="intermediate">Intermediate</SelectItem>
-              <SelectItem value="advanced">Advanced</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        {projectDomain === "technical" && (
+          <div>
+            <Label htmlFor="skillLevel">Skill Level</Label>
+            <Select value={skillLevel} onValueChange={setSkillLevel}>
+              <SelectTrigger id="skillLevel">
+                <SelectValue placeholder="Select skill level" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="beginner">Beginner</SelectItem>
+                <SelectItem value="intermediate">Intermediate</SelectItem>
+                <SelectItem value="advanced">Advanced</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
         <div>
           <Label htmlFor="projectDuration">Project Duration (days)</Label>
           <Select value={projectDuration} onValueChange={setProjectDuration}>

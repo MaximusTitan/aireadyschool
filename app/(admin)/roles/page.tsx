@@ -7,6 +7,7 @@ import { PaginatedUsers } from "./paginated-users";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ALLOWED_ROLES } from "./types";
 import { SearchProvider } from "./search-context";
+import { FilterBar } from "./filter-bar";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -33,6 +34,14 @@ export default async function RolesPage() {
     inactive: users.filter((u) => u.user_metadata?.status === "disabled")
       .length,
   };
+
+  // Get available roles and statuses from existing users
+  const availableRoles = Array.from(
+    new Set(users.map((user) => user.user_metadata?.role).filter(Boolean))
+  );
+  const availableStatuses = Array.from(
+    new Set(users.map((user) => user.user_metadata?.status).filter(Boolean))
+  );
 
   return (
     <SearchProvider>
@@ -87,22 +96,17 @@ export default async function RolesPage() {
           <CollapsibleSection />
         </Suspense>
 
-        <div className="bg-background rounded-lg shadow-sm border p-6">
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="bg-white rounded-lg shadow-sm border p-6">
+          <div className="flex flex-col gap-4 mb-6">
             <h2 className="text-xl font-semibold text-foreground">
               User Directory
             </h2>
-            <div className="flex flex-wrap gap-2">
-              {ALLOWED_ROLES.map((role) => (
-                <button
-                  key={role}
-                  className="px-3 py-1 rounded-full text-sm font-medium bg-secondary hover:bg-secondary/80"
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
+            <FilterBar
+              availableRoles={availableRoles}
+              availableStatuses={availableStatuses}
+            />
           </div>
+
           <Suspense fallback={<UsersTableSkeleton />}>
             <PaginatedUsers users={users} />
           </Suspense>

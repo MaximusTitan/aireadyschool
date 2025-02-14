@@ -53,7 +53,7 @@ export default function LearnWithAIPage() {
           href="/dashboard"
           className="inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 w-10"
         >
-          <ArrowLeft className="h-4 w-4" />
+       
           <span className="sr-only">Back to Dashboard</span>
         </Link>
         <h1 className="text-3xl font-bold pr-20">Learn AI</h1>
@@ -63,9 +63,11 @@ export default function LearnWithAIPage() {
         <h2 className="text-xl font-semibold mb-6">Foundation Courses</h2>
         <div className="grid gap-x-7 gap-y-12 sm:grid-cols-2 lg:grid-cols-3 max-w-[1200px]">
           {modules.map((module) => (
-            <Card key={module.number} className="overflow-hidden">
-              <CardContent className="p-2 pb-5">
-                <div className="relative w-full pt-[56.25%] bg-muted rounded-md overflow-hidden mb-4">
+            <Card key={module.number} className="overflow-hidden group border border-neutral-200 relative overflow-hidden hover:shadow-xl hover:scale-[1.02] hover:bg-gradient-to-br hover:from-white hover:to-rose-100/60 
+      transition-all duration-300 ease-in-out cursor-pointer 
+      dark:bg-neutral-900 dark:border-neutral-800 dark:hover:from-neutral-900 dark:hover:to-rose-900/20">
+              <CardContent className="p-2 pb-3">
+                <div className="relative w-full pt-[50%] bg-muted rounded-md overflow-hidden mb-3">
                   <iframe
                     src={module.presentationUrl}
                     className="absolute top-0 left-0 w-full h-full border-0"
@@ -73,7 +75,15 @@ export default function LearnWithAIPage() {
                   />
                 </div>
                 <h3 className="font-bold text-m mb-2 ml-2">Module - {module.number}</h3>
-                <p className="text-sm text-muted-foreground ml-2">{module.title}</p>
+                
+                <a 
+                  href={module.presentationUrl.replace("/embed", "/preview")} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-gray-500 hover:text-gray-700 ml-2 no-underline"
+                >
+                  {module.title}
+                </a>
               </CardContent>
             </Card>
           ))}

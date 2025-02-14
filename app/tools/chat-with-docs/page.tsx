@@ -274,6 +274,7 @@ export default function Home() {
                     accept=".pdf,.doc,.docx,.txt"
                     multiple // Added multiple attribute
                     onChange={handleFileUpload}
+                    aria-label="Upload documents"
                   />
                 </div>
                 <div className="flex gap-2">

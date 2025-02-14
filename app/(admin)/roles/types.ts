@@ -3,3 +3,13 @@ export type UserRole = typeof ALLOWED_ROLES[number];
 
 export const USER_STATUSES = ['disabled', 'active'] as const;
 export type UserStatus = typeof USER_STATUSES[number];
+
+export interface Filters {
+  roles: UserRole[];
+  status: UserStatus[];
+}
+
+export const DEFAULT_FILTERS: Filters = {
+  roles: [],
+  status: [],
+} as const;

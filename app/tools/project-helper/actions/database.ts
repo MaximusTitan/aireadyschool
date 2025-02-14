@@ -10,7 +10,16 @@ export async function saveText(content: string) {
     throw new Error("Content is required")
   }
 
-  const { data, error } = await supabase.from("saved_texts").insert({ content }).select()
+  // Retrieve the current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) {
+    throw new Error("User not authenticated")
+  }
+
+  const { data, error } = await supabase
+    .from("saved_texts")
+    .insert({ content, user_email: user.email })
+    .select()
 
   if (error) {
     console.error("Error saving text:", error)
@@ -27,7 +36,17 @@ export async function saveText(content: string) {
 export async function fetchSavedTexts() {
   const supabase = await createClient()
 
-  const { data, error } = await supabase.from("saved_texts").select("*").order("created_at", { ascending: false })
+  // Retrieve the current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) {
+    throw new Error("User not authenticated")
+  }
+
+  const { data, error } = await supabase
+    .from("saved_texts")
+    .select("*")
+    .eq("user_email", user.email)
+    .order("created_at", { ascending: false })
 
   if (error) {
     console.error("Error fetching saved texts:", error)
@@ -40,7 +59,17 @@ export async function fetchSavedTexts() {
 export async function deleteText(id: string) {
   const supabase = await createClient()
 
-  const { error } = await supabase.from("saved_texts").delete().eq("id", id)
+  // Retrieve the current user
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user || !user.email) {
+    throw new Error("User not authenticated")
+  }
+
+  const { error } = await supabase
+    .from("saved_texts")
+    .delete()
+    .eq("id", id)
+    .eq("user_email", user.email)
 
   if (error) {
     console.error("Error deleting text:", error)

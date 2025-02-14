@@ -180,7 +180,7 @@ export default function DocumentVaultContent() {
       ) : (
         <>
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-bold">
+            <h2 className="text-3xl font-bold mb-6 text-gray-800">
               {folderName
                 .replace(/-/g, " ")
                 .split(" ")

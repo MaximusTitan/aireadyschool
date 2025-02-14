@@ -71,9 +71,15 @@ export default function Home() {
 
   const fetchSavedAssessments = async () => {
     try {
+      // Get the currently authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("User not authenticated");
+      }
       const { data, error } = await supabase
         .from("assessments")
         .select("*")
+        .eq("user_email", user.email) // filter assessments by user email
         .order("created_at", { ascending: false });
 
       if (error) {

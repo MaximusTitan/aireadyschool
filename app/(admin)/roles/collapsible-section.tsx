@@ -17,7 +17,7 @@ export default function CollapsibleSection() {
     <Collapsible
       open={isOpen}
       onOpenChange={setIsOpen}
-      className="bg-background rounded-lg shadow-sm border"
+      className="bg-white rounded-lg shadow-sm border"
     >
       <CollapsibleTrigger asChild>
         <Button variant="ghost" className="w-full flex justify-between p-4">

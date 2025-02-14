@@ -11,6 +11,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Sidebar,
@@ -42,10 +44,10 @@ import {
   PlugIcon as Plugin,
   Folder,
   Gamepad2,
+  MessageSquareTextIcon,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { ThemeSwitcher } from "./theme-switcher";
 import { signOutAction } from "@/app/actions";
 import logo from "@/public/logo.png";
 import logo1 from "@/public/logo1.png";
@@ -76,7 +78,7 @@ export function AppSidebar() {
   // Define navigation data based on user role
   const navData = {
     navMain: [
-      { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
+      { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
       {
         title: "AI Apps",
         url: "/tools",
@@ -141,7 +143,7 @@ export function AppSidebar() {
           alt="AI Ready School"
           width={140}
           height={130}
-          className={state === "expanded" ? "ml-2" : ""}
+          className={state === "expanded" ? "ml-6" : ""}
         />
       </Link>
     );
@@ -169,17 +171,19 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             {navData.navMain.map((item) => (
-              <SidebarMenuItem key={item.title} className="mt-2">
+              <SidebarMenuItem key={item.title} className="mt-[-0.5rem] ">
                 <SidebarMenuButton tooltip={item.title} asChild>
                   <Link href={item.url}>
                     {item.icon && (
                       <item.icon
-                        className="font-bold text-primary"
+                        className="font-bold text-rose-500 mr-[0.5rem] "
                         size={36}
                         strokeWidth={2}
                       />
                     )}
-                    <span className="font-semibold text-lg">{item.title}</span>
+                    <span className="font-semibold text-[14px]">
+                      {item.title}
+                    </span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -188,7 +192,6 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      {/* User Avatar and Dropdown Menu in Sidebar Footer */}
       <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
@@ -244,6 +247,19 @@ export function AppSidebar() {
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
+                  <form className="w-full">
+                    <Link href={"/feedback"}>
+                      <button
+                        type="submit"
+                        className="flex w-full items-center"
+                      >
+                        <MessageSquareTextIcon className="mr-2 h-4 w-4" />
+                        <span>Feedback</span>
+                      </button>
+                    </Link>
+                  </form>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
                   <form
                     onSubmit={async (e) => {
                       e.preventDefault();
@@ -265,17 +281,5 @@ export function AppSidebar() {
 
       <SidebarRail />
     </Sidebar>
-  );
-}
-
-// Sidebar Header Component with Theme Switcher
-export function AppSidebarHeader() {
-  return (
-    <SidebarInset>
-      <header className="flex h-12 shrink-0 px-4 items-center justify-between gap-2 border-opacity-75">
-        <SidebarTrigger className="-ml-1" />
-        <ThemeSwitcher />
-      </header>
-    </SidebarInset>
   );
 }

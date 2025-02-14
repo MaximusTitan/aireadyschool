@@ -78,7 +78,7 @@ export function AppSidebar() {
   // Define navigation data based on user role
   const navData = {
     navMain: [
-      { title: "Agent Buddy", url: "/tools/audiobot", icon: Bot },
+      { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
       {
         title: "AI Apps",
         url: "/tools",

@@ -197,6 +197,19 @@ export const userDetailsTool = createTool({
   },
 });
 
+export const videoGeneratorTool = createTool({
+  description: 'Generate a video from an image',
+  parameters: z.object({
+    prompt: z.string().describe('Description of the desired animation'),
+  }),
+  execute: async function ({ prompt }) {
+    return {
+      prompt,
+      pending: true,
+    };
+  },
+});
+
 export const tools = {
   generateMathProblem: mathProblemTool,
   evaluateAnswer: evaluateAnswerTool,
@@ -206,4 +219,5 @@ export const tools = {
   generateMindMap: mindMapTool,
   evaluateQuizAnswer: quizAnswerEvaluationTool,
   collectUserDetails: userDetailsTool,
+  generateVideo: videoGeneratorTool,
 };

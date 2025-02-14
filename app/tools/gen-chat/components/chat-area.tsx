@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import { CommandInput } from "./command-input";
 import { useNowPlaying } from "@/app/hooks/useNowPlaying";
 import { useAudioSettings } from "@/app/hooks/useAudioSettings";
+import { VideoGenerator } from "./video-generator";
 
 // SimulationWrapper moved here
 const SimulationWrapper = ({ code }: { code: string }) => {
@@ -85,6 +86,8 @@ type ChatAreaProps = {
   isLoading: boolean;
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  generatedVideos: Record<string, string>;
+  setGeneratedVideos: (videos: Record<string, string>) => void;
 };
 
 export const ChatArea = ({
@@ -107,6 +110,8 @@ export const ChatArea = ({
   pendingQuizzes,
   handleQuizGeneration,
   handleQuizAnswer,
+  generatedVideos,
+  setGeneratedVideos,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
@@ -196,6 +201,10 @@ export const ChatArea = ({
       handleTTS(lastMessage.id, lastMessage.content);
     }
   }, [messages, isAudioEnabled, isLoading]);
+
+  const handleVideoComplete = (toolCallId: string, videoUrl: string) => {
+    setGeneratedVideos({ ...generatedVideos, [toolCallId]: videoUrl });
+  };
 
   const renderMessage = (message: any) => (
     <div
@@ -449,6 +458,29 @@ export const ChatArea = ({
                       <MindMapViewer data={result} />
                     </div>
                   );
+                case "generateVideo": {
+                  if (generatedVideos[toolCallId]) {
+                    return (
+                      <div key={toolCallId} className="mb-4">
+                        <video
+                          src={generatedVideos[toolCallId]}
+                          controls
+                          className="w-full rounded-lg"
+                        />
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div key={toolCallId} className="mb-4">
+                      <VideoGenerator
+                        toolCallId={toolCallId}
+                        onComplete={handleVideoComplete}
+                        prompt={result.prompt}
+                      />
+                    </div>
+                  );
+                }
                 default:
                   return null;
               }

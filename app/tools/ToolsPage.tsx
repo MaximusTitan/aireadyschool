@@ -345,41 +345,40 @@ const ToolsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
-      {" "}
-      <div className="container w-[97%] mx-auto px-4 py-4 mr-4">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center p-4">
+      <div className="container max-w-7xl mx-auto px-4">
+        <div className="flex mb-4 pt-4">
+          <div className="flex items-center">
             <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
               AI Apps
             </h1>
             {userRole && (
-              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
+              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300 self-end mb-1">
                 ({userRole})
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-8 p-4">
-          <div className="flex space-x-4">
-            {categoryOptions.map(
-              (category) =>
-                hasCategoryTools(category) && (
-                  <button
-                    key={category}
-                    onClick={() => setActiveCategory(category)}
-                    className={`px-4 py-2 rounded-lg transition-colors ${
-                      activeCategory === category
-                        ? "bg-neutral-800 text-white dark:bg-neutral-500"
-                        : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
-                    }`}
-                  >
-                    {category}
-                  </button>
-                )
-            )}
-          </div>
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col mb-8 space-y-4">
+          <div className="flex flex-wrap items-center justify-between">
+            <div className="flex flex-wrap gap-4">
+              {categoryOptions.map(
+                (category) =>
+                  hasCategoryTools(category) && (
+                    <button
+                      key={category}
+                      onClick={() => setActiveCategory(category)}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        activeCategory === category
+                          ? "bg-neutral-800 text-white dark:bg-neutral-500"
+                          : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  )
+              )}
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 dark:text-neutral-500 h-4 w-4" />
               <Input
@@ -393,7 +392,7 @@ const ToolsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {filteredTools.map((tool, index) => (
             <ToolCard
               key={index}

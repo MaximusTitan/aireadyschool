@@ -67,11 +67,17 @@ const StepIndicator: React.FC<{ steps: Step[]; currentStep: number }> = ({
     <div className="w-full max-w-5xl mx-auto">
       <div className="flex items-center justify-between relative">
         {/* Add connecting lines */}
+        
         <div className="absolute top-5 left-0 right-0 h-[2px] bg-gray-200">
-          <div
-            className={`h-full bg-primary transition-all duration-300 progress-bar-${currentStep}`}
-          />
-        </div>
+          <div className={`h-full bg-primary transition-all duration-300 progress-bar-${currentStep}`}
+    style={{
+      width: `${(currentStep / (steps.length - 1)) * 100}%`,
+    }}
+  />
+</div>
+
+      
+
 
         {steps.map((step, idx) => (
           <div

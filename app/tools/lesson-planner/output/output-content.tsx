@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-
+import jsPDF from "jspdf";
 const supabase = createClient();
 
 interface ScheduleItem {
@@ -144,6 +144,116 @@ export default function OutputContent() {
     setSelectedDay(null);
   };
 
+  const handleDownload = () => {
+    if (!lessonPlan) return;
+
+    const doc = new jsPDF();
+    let yOffset = 10;
+
+    const addText = (text: string, fontSize = 12, isBold = false, maxWidth = 190) => {
+      if (isBold) doc.setFont("helvetica", 'bold');
+      else doc.setFont("helvetica", 'normal');
+      doc.setFontSize(fontSize);
+      const lines = doc.splitTextToSize(text, maxWidth);
+      doc.text(lines, 10, yOffset);
+      yOffset += (fontSize / 2 + 2) * lines.length;
+    };
+
+    const checkNewPage = () => {
+      if (yOffset > 270) {
+        doc.addPage();
+        yOffset = 10;
+      }
+    };
+
+    addText(`Lesson Plan: ${lessonPlan.subject} - ${lessonPlan.chapter_topic}`, 18, true);
+    yOffset += 10;
+
+    // Lesson Details
+    addText('Lesson Details:', 16, true);
+    addText(`Grade: ${lessonPlan.grade}`);
+    addText(`Board: ${lessonPlan.board}`);
+    addText(`Class Duration: ${lessonPlan.class_duration} minutes`);
+    addText(`Number of Days: ${lessonPlan.number_of_days}`);
+    addText(`Learning Objectives: ${lessonPlan.learning_objectives || 'N/A'}`);
+    yOffset += 10;
+
+    addText('Daily Plans:', 16, true);
+    lessonPlan.plan_data.days.forEach((day, index) => {
+      checkNewPage();
+      addText(`Day ${day.day}: ${day.topicHeading}`, 14, true);
+      
+      // Learning Outcomes
+      addText('Learning Outcomes:', 12, true);
+      day.learningOutcomes.forEach(outcome => {
+        addText(`• ${outcome}`, 10);
+      });
+
+       // Detailed Schedule
+       addText('Detailed Schedule:', 12, true);
+       day.schedule.forEach(item => {
+         checkNewPage();
+         addText(`${item.type.charAt(0).toUpperCase() + item.type.slice(1)} (${item.timeAllocation} min):`, 10, true);
+         addText(item.content, 10);
+       });
+       
+       // Teaching Aids
+       checkNewPage();
+       addText('Teaching Aids:', 12, true);
+       day.teachingAids.forEach(aid => {
+         addText(`• ${aid}`, 10);
+       });
+
+       // Assignment
+      if (day.assignment) {
+        checkNewPage();
+        addText('Assignment:', 12, true);
+        addText(day.assignment.description, 10);
+        day.assignment.tasks.forEach(task => {
+          addText(`• ${task}`, 10);
+        });
+      }
+      
+      yOffset += 10;
+    });
+       
+      // Assessment Plan
+    checkNewPage();
+    addText('Assessment Plan:', 16, true);
+    ['formativeAssessments', 'summativeAssessments'].forEach(assessmentType => {
+      addText(assessmentType === 'formativeAssessments' ? 'Formative Assessments:' : 'Summative Assessments:', 14, true);
+      (lessonPlan.plan_data.assessmentPlan[assessmentType as keyof AssessmentPlan] as Assessment[]).forEach((assessment: Assessment) => {
+        checkNewPage();
+        addText(`${assessment.type}: ${assessment.topic}`, 12, true);
+        addText(assessment.description, 10);
+        addText('Evaluation Criteria:', 10, true);
+        assessment.evaluationCriteria.forEach(criteria => {
+          addText(`• ${criteria}`, 10);
+        });
+        yOffset += 5;
+      });
+    });
+      
+      // Progress Tracking Suggestions
+    checkNewPage();
+    addText('Progress Tracking Suggestions:', 14, true);
+    lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.forEach(suggestion => {
+      addText(`• ${suggestion}`, 10);
+    });
+
+    // Remedial Strategies
+    checkNewPage();
+    addText('Remedial Strategies:', 16, true);
+    lessonPlan.plan_data.remedialStrategies.forEach(strategy => {
+      checkNewPage();
+      addText(`${strategy.targetGroup}: ${strategy.strategy}`, 12, true);
+      addText(strategy.description, 10);
+      yOffset += 5;
+    });
+
+    doc.save(`lesson_plan_${lessonPlan.subject}_${lessonPlan.chapter_topic}.pdf`);
+  };
+       
   const renderSchedule = (schedule: ScheduleItem[]) => (
     <div className="space-y-4">
       <Card>
@@ -508,11 +618,15 @@ export default function OutputContent() {
           )}
         </CardContent>
       </Card>
+      
 
       <div className="flex space-x-4 mt-4">
         <Button onClick={() => router.push("/")}>Back to Page</Button>
         <Button onClick={() => router.push("/")} variant="outline">
           Create New Lesson Plan
+        </Button>
+        <Button onClick={handleDownload} variant="outline">
+          Download PDF
         </Button>
       </div>
     </div>

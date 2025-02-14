@@ -33,9 +33,69 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
     field: string
   } | null>(null)
   const [isRegeneratingImage, setIsRegeneratingImage] = useState(false)
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  const revealInstance = useRef<RevealType.Api | null>(null)
+  const [initializing, setInitializing] = useState(true)
+  const lastKnownSlideIndex = useRef(0)
 
   const SLIDE_WIDTH = 1280
   const SLIDE_HEIGHT = 720
+
+  const calculateDimensions = () => {
+    if (isFullscreen) {
+      const windowRatio = window.innerWidth / window.innerHeight;
+      const presentationRatio = SLIDE_WIDTH / SLIDE_HEIGHT;
+
+      if (windowRatio > presentationRatio) {
+        // Window is wider than needed
+        const height = window.innerHeight;
+        const width = height * presentationRatio;
+        return {
+          width,
+          height,
+          scale: height / SLIDE_HEIGHT,
+        };
+      } else {
+        // Window is taller than needed
+        const width = window.innerWidth;
+        const height = width / presentationRatio;
+        return {
+          width,
+          height,
+          scale: width / SLIDE_WIDTH,
+        };
+      }
+    } else {
+      // Preview mode
+      const containerWidth = containerRef.current?.offsetWidth || SLIDE_WIDTH;
+      const previewScale = containerWidth / SLIDE_WIDTH;
+      return {
+        width: SLIDE_WIDTH,
+        height: SLIDE_HEIGHT,
+        scale: previewScale,
+      };
+    }
+  };
+
+  // Handle resize for both modes
+  useEffect(() => {
+    const handleResize = () => {
+      const { scale } = calculateDimensions();
+      setScale(scale);
+      
+      if (revealInstance.current) {
+        revealInstance.current.configure({ 
+          width: SLIDE_WIDTH, 
+          height: SLIDE_HEIGHT 
+        });
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial calculation
+
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isFullscreen]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -60,19 +120,29 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
 
   useEffect(() => {
     let deck: RevealType.Api | null = null;
-    let cleanup = false;
 
     const initializeReveal = async () => {
-      if (!revealRef.current || !containerRef.current || cleanup) return;
+      if (!revealRef.current || !containerRef.current) return;
 
       try {
         const themeClasses = ["modern", "corporate", "creative", "minimal", "dark"]
           .map((t) => `theme-${t}`);
 
-        // Initialize Reveal with safeguards
+        // Safely destroy existing instance
+        if (revealInstance.current && typeof revealInstance.current.destroy === 'function') {
+          try {
+            revealInstance.current.destroy();
+          } catch (e) {
+            console.warn('Error destroying previous instance:', e);
+          }
+        }
+
+        const { width, height, scale } = calculateDimensions();
+        setScale(scale);
+
         const config = {
-          width: isFullscreen ? window.innerWidth : SLIDE_WIDTH,
-          height: isFullscreen ? window.innerHeight : SLIDE_HEIGHT,
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
           margin: 0,
           center: true,
           hash: false,
@@ -90,58 +160,81 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
           maxScale: 2.0,
           viewDistance: 4,
           display: "block",
-          // Add these to prevent event listener issues
-          dependencies: [],
-          plugins: []
+          fragmentInURL: false,
+          transitionSpeed: 'fast' as 'fast', // Fix: Type assertion for transitionSpeed
+          backgroundTransition: 'fade' as const,
+          deck: {
+            width,
+            height,
+          },
         };
 
+        // Create new instance
         deck = new Reveal(revealRef.current, config);
+        revealInstance.current = deck;
 
-        // Initialize and handle classes after successful initialization
+        // Add event listener before initialization
+        deck.addEventListener('slidechanged', (event: any) => {
+          const slideIndex = event.indexh;
+          lastKnownSlideIndex.current = slideIndex;
+          setCurrentSlideIndex(slideIndex);
+        });
+
+        // Initialize and sync theme
         await deck.initialize();
-
-        if (!cleanup && revealRef.current && containerRef.current) {
+        
+        // Apply theme after initialization
+        if (revealRef.current && containerRef.current) {
           revealRef.current.classList.remove(...themeClasses);
           revealRef.current.classList.add(`theme-${theme}`);
           containerRef.current.classList.remove(...themeClasses);
           containerRef.current.classList.add(`theme-${theme}`);
         }
+
+        // Restore slide position
+        if (!initializing && lastKnownSlideIndex.current > 0) {
+          deck.slide(lastKnownSlideIndex.current, 0, 0);
+        }
+        
+        setInitializing(false);
       } catch (error) {
         console.error('Error initializing Reveal:', error);
       }
     };
 
+    // Initialize
     initializeReveal();
 
-    // Cleanup function
+    // Cleanup
     return () => {
-      cleanup = true;
-      if (deck) {
+      if (deck && typeof deck.destroy === 'function') {
         try {
-          // Remove event listeners manually before destroying
-          const container = revealRef.current;
-          if (container) {
-            const events = ['touchstart', 'touchmove', 'touchend', 'click', 'keydown'];
-            events.forEach(event => {
-              container.removeEventListener(event, () => {});
-            });
-          }
-          
           deck.destroy();
-        } catch (error) {
-          // Ignore cleanup errors
-          console.warn('Non-critical error during Reveal cleanup:', error);
+        } catch (e) {
+          console.warn('Error during cleanup:', e);
         }
       }
+      revealInstance.current = null;
     };
   }, [isFullscreen, theme, transition, editedSlides]);
 
   const handleSlideChange = (index: number, field: keyof Slide, value: string | string[]) => {
-    const updatedSlides = [...editedSlides]
-    updatedSlides[index] = { ...updatedSlides[index], [field]: value }
-    setEditedSlides(updatedSlides)
-    onSave({ ...presentation, slides: updatedSlides })
-  }
+    const updatedSlides = [...editedSlides];
+    updatedSlides[index] = { ...updatedSlides[index], [field]: value };
+    setEditedSlides(updatedSlides);
+    
+    // Store current position before save
+    const currentIndex = lastKnownSlideIndex.current;
+    
+    onSave({ ...presentation, slides: updatedSlides });
+    
+    // Restore position after save
+    if (revealInstance.current) {
+      setTimeout(() => {
+        revealInstance.current?.slide(currentIndex, 0, 0);
+      }, 0);
+    }
+  };
 
   const handleRegenerateImage = async (index: number) => {
     setIsRegeneratingImage(true)
@@ -377,23 +470,34 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
   return (
     <div
       ref={containerRef}
-      className={`${isFullscreen ? "fixed inset-0 z-50 bg-black" : "w-full h-full p-2"}`}
+      className={`${isFullscreen ? "fixed inset-0 z-50 bg-black flex items-center justify-center" : "w-full h-full p-2"}`}
       style={{
         minHeight: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
         aspectRatio: isFullscreen ? "auto" : "16/9",
       }}
     >
       <div
-        className={`w-full h-full flex items-center justify-center ${isFullscreen ? "min-h-screen" : ""}`}
+        className={`${isFullscreen ? "w-full h-full flex items-center justify-center" : ""}`}
         style={{
-          width: isFullscreen ? "100vw" : `${SLIDE_WIDTH}px`,
-          height: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
-          transform: isFullscreen ? "none" : `scale(${scale})`,
-          transformOrigin: "center",
-          margin: "0 auto",
+          ...(isFullscreen && {
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '100%',
+            height: '100%',
+          })
         }}
       >
-        <div ref={revealRef} className={`reveal w-full h-full theme-${theme}`}>
+        <div 
+          ref={revealRef} 
+          className={`reveal theme-${theme}`}
+          style={{
+            width: isFullscreen ? '100%' : `${SLIDE_WIDTH}px`,
+            height: isFullscreen ? '100%' : `${SLIDE_HEIGHT}px`,
+            transform: isFullscreen ? 'none' : `scale(${scale})`,
+            transformOrigin: 'center',
+          }}
+        >
           <div className="slides">
             {editedSlides.map((slide, index) => (
               <section

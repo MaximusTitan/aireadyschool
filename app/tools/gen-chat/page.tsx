@@ -45,6 +45,9 @@ export default function Page() {
   const [generatedQuizzes, setGeneratedQuizzes] = useState<Record<string, any>>(
     {}
   );
+  const [generatedVideos, setGeneratedVideos] = useState<
+    Record<string, string>
+  >({});
 
   const handleAnswerSubmit = async (data: {
     studentAnswer: number;
@@ -321,6 +324,8 @@ export default function Page() {
           handleVisualization={handleVisualization}
           handleQuizAnswer={handleQuizAnswer}
           onSimulationCode={(code: string) => setSimulationCode(code)}
+          generatedVideos={generatedVideos}
+          setGeneratedVideos={setGeneratedVideos}
         />
       </div>
     </TooltipProvider>

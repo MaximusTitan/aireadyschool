@@ -1,24 +1,36 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect, useRef } from "react"
-import { useRouter } from "next/navigation"
-import { Search, MessageCircle, Send, Plug } from "lucide-react"
-import type { LucideIcon } from "lucide-react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Input } from "@/components/ui/input"
-import { createClient } from "@/utils/supabase/client"
-import { initSupabase } from "@/utils/supabase"
-import { categories } from "../config/toolCategories"
+import type React from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { Search, MessageCircle, Send, Plug } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { createClient } from "@/utils/supabase/client";
+import { initSupabase } from "@/utils/supabase";
+import { categories } from "../config/toolCategories";
 
 interface ToolCardProps {
-  title: string
-  description: string
-  route: string
-  isHot?: boolean
-  isComingSoon?: boolean
-  icon: LucideIcon
+  title: string;
+  description: string;
+  route: string;
+  isHot?: boolean;
+  isComingSoon?: boolean;
+  icon: LucideIcon;
 }
 
 const ToolCard: React.FC<ToolCardProps> = ({
@@ -29,13 +41,13 @@ const ToolCard: React.FC<ToolCardProps> = ({
   isComingSoon = false,
   icon: Icon,
 }) => {
-  const router = useRouter()
+  const router = useRouter();
 
   const handleClick = () => {
     if (!isComingSoon) {
-      router.push(route)
+      router.push(route);
     }
-  }
+  };
 
   return (
     <Card
@@ -84,100 +96,174 @@ const ToolCard: React.FC<ToolCardProps> = ({
         )}
       </CardContent>
     </Card>
-  )
-}
+  );
+};
 
 interface ChatMessage {
-  text: string
-  isUser: boolean
-  naturalLanguageResponse?: string
-  error?: string
+  text: string;
+  isUser: boolean;
+  naturalLanguageResponse?: string;
+  error?: string;
+}
+
+interface Tool {
+  title: string;
+  description: string;
+  route: string;
+  icon: LucideIcon;
+  isHot?: boolean;
+  isComingSoon?: boolean;
 }
 
 const ToolsPage = () => {
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [defaultMessage, setDefaultMessage] = useState(
-    "Hi, ask me anything about your company's data using natural language.",
-  )
-  const [databases, setDatabases] = useState<string[]>([])
-  const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null)
-  const [supabaseUrl, setSupabaseUrl] = useState<string | null>(null)
-  const [supabaseKey, setSupabaseKey] = useState<string | null>(null)
-  const [isPluginClicked, setIsPluginClicked] = useState(false)
-  const inputRef = useRef<HTMLInputElement>(null)
+    "Hi, ask me anything about your company's data using natural language."
+  );
+  const [databases, setDatabases] = useState<string[]>([]);
+  const [selectedDatabase, setSelectedDatabase] = useState<string | null>(null);
+  const [supabaseUrl, setSupabaseUrl] = useState<string | null>(null);
+  const [supabaseKey, setSupabaseKey] = useState<string | null>(null);
+  const [isPluginClicked, setIsPluginClicked] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const fetchUser = async () => {
-      const supabase = createClient()
+      const supabase = createClient();
       const {
         data: { user },
-      } = await supabase.auth.getUser()
+      } = await supabase.auth.getUser();
 
       if (user) {
-        setUserRole(user.user_metadata.role ?? null)
+        setUserRole(user.user_metadata.role ?? null);
+      }
+    };
+
+    fetchUser();
+  }, []);
+
+  const getAllToolsWithCategories = useMemo(() => {
+    const allTools: { [key: string]: Tool[] } = {
+      Learning: [],
+      Research: [],
+      Creative: [],
+      Tech: [],
+    };
+
+    // For Admin, gather all tools from all roles and categories
+    Object.values(categories).forEach((roleCategories) => {
+      Object.entries(roleCategories).forEach(([category, categoryTools]) => {
+        // Add tools to their respective categories, avoiding duplicates
+        categoryTools.forEach((tool: Tool) => {
+          if (!allTools[category]?.some((t: Tool) => t.route === tool.route)) {
+            allTools[category].push(tool);
+          }
+        });
+      });
+    });
+
+    return allTools;
+  }, []);
+
+  const tools = useMemo(() => {
+    if (userRole === "Admin") {
+      // For Admin, return all tools from all categories
+      return Object.values(getAllToolsWithCategories).flat() as Tool[];
+    }
+    return userRole
+      ? (Object.values(categories[userRole] || {}).flat() as Tool[])
+      : [];
+  }, [userRole, getAllToolsWithCategories]);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string>("All");
+  const categoryOptions = ["All", "Learning", "Research", "Creative", "Tech"];
+
+  const filteredTools = useMemo(() => {
+    let filtered = tools;
+
+    if (searchQuery) {
+      filtered = filtered.filter(
+        (tool: Tool) =>
+          tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          tool.description.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+
+    if (activeCategory !== "All") {
+      if (userRole === "Admin") {
+        // For Admin, filter based on the getAllToolsWithCategories structure
+        filtered = getAllToolsWithCategories[activeCategory] || [];
+      } else if (userRole && categories[userRole]) {
+        filtered = filtered.filter((tool: Tool) => {
+          for (const [categoryName, toolsList] of Object.entries(
+            categories[userRole]
+          )) {
+            if (
+              toolsList.some((t: Tool) => t.route === tool.route) &&
+              categoryName === activeCategory
+            ) {
+              return true;
+            }
+          }
+          return false;
+        });
       }
     }
 
-    fetchUser()
-  }, [])
+    return filtered;
+  }, [tools, searchQuery, activeCategory, userRole, getAllToolsWithCategories]);
 
-  const tools =
-    userRole === "Admin"
-      ? Object.values(categories)
-          .flat()
-          .filter((tool, index, self) => index === self.findIndex((t) => t.route === tool.route))
-      : (userRole ? categories[userRole] : []) || []
-
-  const [searchQuery, setSearchQuery] = useState("")
-
-  const filteredTools = tools.filter(
-    (tool) =>
-      tool.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      tool.description.toLowerCase().includes(searchQuery.toLowerCase()),
-  )
-
-  const [isChatOpen, setIsChatOpen] = useState(false)
-  const [message, setMessage] = useState("")
-  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [message, setMessage] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
 
   const toggleChat = () => {
-    setIsChatOpen(!isChatOpen)
+    setIsChatOpen(!isChatOpen);
     if (!isChatOpen && messages.length === 0) {
-      setMessages([{ text: defaultMessage, isUser: false }])
+      setMessages([{ text: defaultMessage, isUser: false }]);
     }
-  }
+  };
 
   const sendMessage = async () => {
     if (message.trim()) {
-      setMessages((prev) => [...prev, { text: message, isUser: true }])
-      setMessage("")
+      setMessages((prev) => [...prev, { text: message, isUser: true }]);
+      setMessage("");
 
       try {
-        const response = await fetch(isPluginClicked ? "/api/query-database" : "/api/processSqlQuery", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            query: message,
-            supabaseUrl: supabaseUrl,
-            supabaseKey: supabaseKey,
-          }),
-        })
-        const processedResult = await response.json()
+        const response = await fetch(
+          isPluginClicked ? "/api/query-database" : "/api/processSqlQuery",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              query: message,
+              supabaseUrl: supabaseUrl,
+              supabaseKey: supabaseKey,
+            }),
+          }
+        );
+        const processedResult = await response.json();
 
         if (processedResult.success) {
           setMessages((prev) => [
             ...prev,
             {
-              text: processedResult.naturalLanguageResponse || "No response generated.",
+              text:
+                processedResult.naturalLanguageResponse ||
+                "No response generated.",
               isUser: false,
               naturalLanguageResponse: processedResult.naturalLanguageResponse,
             },
-          ])
+          ]);
         } else {
-          throw new Error(processedResult.error || "Unknown error occurred while processing the query.")
+          throw new Error(
+            processedResult.error ||
+              "Unknown error occurred while processing the query."
+          );
         }
       } catch (error) {
-        console.error("Error processing query:", error)
+        console.error("Error processing query:", error);
         setMessages((prev) => [
           ...prev,
           {
@@ -185,57 +271,59 @@ const ToolsPage = () => {
             isUser: false,
             error: error instanceof Error ? error.message : "Unknown error",
           },
-        ])
+        ]);
       }
     }
-  }
+  };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") {
-      sendMessage()
+      sendMessage();
     }
-  }
+  };
 
   useEffect(() => {
     if (isChatOpen && inputRef.current) {
-      inputRef.current.focus()
+      inputRef.current.focus();
     }
-  }, [isChatOpen])
+  }, [isChatOpen]);
 
   const handleDatabaseSelection = async (database: string) => {
-    setSelectedDatabase(database)
+    setSelectedDatabase(database);
 
     // Fetch the corresponding supabase_url and anon_key for the selected database
-    const supabase = createClient()
+    const supabase = createClient();
     const { data, error } = await supabase
       .from("connected_db")
       .select("supabase_url, anon_key")
       .eq("database_name", database)
-      .single()
+      .single();
 
     if (error) {
-      console.error("Error fetching database details:", error)
+      console.error("Error fetching database details:", error);
     } else if (data) {
-      setSupabaseUrl(data.supabase_url)
-      setSupabaseKey(data.anon_key)
+      setSupabaseUrl(data.supabase_url);
+      setSupabaseKey(data.anon_key);
       // Initialize Supabase with the fetched URL and key
-      initSupabase(data.supabase_url, data.anon_key)
+      initSupabase(data.supabase_url, data.anon_key);
     }
-  }
+  };
 
   useEffect(() => {
     const fetchDatabases = async () => {
-      const supabase = createClient()
-      const { data, error } = await supabase.from("connected_db").select("database_name")
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("connected_db")
+        .select("database_name");
       if (error) {
-        console.error("Error fetching databases:", error)
+        console.error("Error fetching databases:", error);
       } else {
-        setDatabases(data.map((db) => db.database_name))
+        setDatabases(data.map((db) => db.database_name));
       }
-    }
+    };
 
-    fetchDatabases()
-  }, [])
+    fetchDatabases();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
@@ -243,16 +331,32 @@ const ToolsPage = () => {
       <div className="container w-[97%] mx-auto px-4 py-4 mr-4">
         <div className="flex justify-between items-center mb-8">
           <div className="flex items-center p-4">
-            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">AI Apps</h1>
-            {userRole && <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">({userRole})</span>}
+            <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
+              AI Apps
+            </h1>
+            {userRole && (
+              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
+                ({userRole})
+              </span>
+            )}
           </div>
         </div>
 
         <div className="flex items-center justify-between mb-8 p-4">
           <div className="flex space-x-4">
-            <button className="px-4 py-2 bg-neutral-800 text-white rounded-lg hover:bg-neutral-500 transition-colors dark:bg-neutral-500 dark:hover:bg-neutral-600">
-              All Apps
-            </button>
+            {categoryOptions.map((category) => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`px-4 py-2 rounded-lg transition-colors ${
+                  activeCategory === category
+                    ? "bg-neutral-800 text-white dark:bg-neutral-500"
+                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
@@ -322,8 +426,10 @@ const ToolsPage = () => {
                       title="Use plugin"
                       aria-label="Use plugin"
                       onClick={() => {
-                        console.log(`Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`)
-                        setIsPluginClicked(true)
+                        console.log(
+                          `Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`
+                        );
+                        setIsPluginClicked(true);
                       }}
                       className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
                     >
@@ -348,7 +454,9 @@ const ToolsPage = () => {
                       {msg.error && (
                         <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 rounded-lg">
                           <p className="text-xs font-semibold mb-1">Error:</p>
-                          <pre className="text-xs overflow-x-auto">{msg.error}</pre>
+                          <pre className="text-xs overflow-x-auto">
+                            {msg.error}
+                          </pre>
                         </div>
                       )}
                     </div>
@@ -379,8 +487,7 @@ const ToolsPage = () => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default ToolsPage
-
+export default ToolsPage;

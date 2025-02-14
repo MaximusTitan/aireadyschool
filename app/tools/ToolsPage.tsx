@@ -12,13 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { initSupabase } from "@/utils/supabase";
@@ -115,6 +108,8 @@ interface Tool {
   isComingSoon?: boolean;
 }
 
+type CategoryName = "Learning" | "Research" | "Creative" | "Tech" | "Marketing";
+
 const ToolsPage = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [defaultMessage, setDefaultMessage] = useState(
@@ -143,22 +138,29 @@ const ToolsPage = () => {
   }, []);
 
   const getAllToolsWithCategories = useMemo(() => {
-    const allTools: { [key: string]: Tool[] } = {
+    const allTools: Record<CategoryName, Tool[]> = {
       Learning: [],
       Research: [],
       Creative: [],
       Tech: [],
+      Marketing: [],
     };
 
     // For Admin, gather all tools from all roles and categories
     Object.values(categories).forEach((roleCategories) => {
       Object.entries(roleCategories).forEach(([category, categoryTools]) => {
         // Add tools to their respective categories, avoiding duplicates
-        categoryTools.forEach((tool: Tool) => {
-          if (!allTools[category]?.some((t: Tool) => t.route === tool.route)) {
-            allTools[category].push(tool);
-          }
-        });
+        if (category in allTools) {
+          // Type guard
+          const categoryName = category as CategoryName;
+          categoryTools.forEach((tool: Tool) => {
+            if (
+              !allTools[categoryName]?.some((t: Tool) => t.route === tool.route)
+            ) {
+              allTools[categoryName].push(tool);
+            }
+          });
+        }
       });
     });
 
@@ -176,8 +178,17 @@ const ToolsPage = () => {
   }, [userRole, getAllToolsWithCategories]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
-  const categoryOptions = ["All", "Learning", "Research", "Creative", "Tech"];
+  const [activeCategory, setActiveCategory] = useState<CategoryName | "All">(
+    "All"
+  );
+  const categoryOptions: (CategoryName | "All")[] = [
+    "All",
+    "Learning",
+    "Research",
+    "Creative",
+    "Tech",
+    "Marketing",
+  ];
 
   const filteredTools = useMemo(() => {
     let filtered = tools;
@@ -193,26 +204,33 @@ const ToolsPage = () => {
     if (activeCategory !== "All") {
       if (userRole === "Admin") {
         // For Admin, filter based on the getAllToolsWithCategories structure
-        filtered = getAllToolsWithCategories[activeCategory] || [];
+        filtered =
+          getAllToolsWithCategories[activeCategory as CategoryName] || [];
       } else if (userRole && categories[userRole]) {
         filtered = filtered.filter((tool: Tool) => {
-          for (const [categoryName, toolsList] of Object.entries(
-            categories[userRole]
-          )) {
-            if (
-              toolsList.some((t: Tool) => t.route === tool.route) &&
-              categoryName === activeCategory
-            ) {
-              return true;
-            }
-          }
-          return false;
+          return categories[userRole][activeCategory as CategoryName]?.some(
+            (t: Tool) => t.route === tool.route
+          );
         });
       }
     }
 
     return filtered;
   }, [tools, searchQuery, activeCategory, userRole, getAllToolsWithCategories]);
+
+  const hasCategoryTools = (category: CategoryName | "All") => {
+    if (category === "All") return true;
+
+    if (userRole === "Admin") {
+      return getAllToolsWithCategories[category]?.length > 0;
+    }
+
+    if (userRole && categories[userRole]) {
+      return categories[userRole][category]?.length > 0;
+    }
+
+    return false;
+  };
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -344,25 +362,28 @@ const ToolsPage = () => {
 
         <div className="flex items-center justify-between mb-8 p-4">
           <div className="flex space-x-4">
-            {categoryOptions.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  activeCategory === category
-                    ? "bg-neutral-800 text-white dark:bg-neutral-500"
-                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
+            {categoryOptions.map(
+              (category) =>
+                hasCategoryTools(category) && (
+                  <button
+                    key={category}
+                    onClick={() => setActiveCategory(category)}
+                    className={`px-4 py-2 rounded-lg transition-colors ${
+                      activeCategory === category
+                        ? "bg-neutral-800 text-white dark:bg-neutral-500"
+                        : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
+                    }`}
+                  >
+                    {category}
+                  </button>
+                )
+            )}
           </div>
           <div className="flex items-center space-x-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 dark:text-neutral-500 h-4 w-4" />
               <Input
-                className="pl-10 w-64 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
+                className="pl-10 w-64 bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
                 placeholder="Search tools..."
                 type="search"
                 value={searchQuery}

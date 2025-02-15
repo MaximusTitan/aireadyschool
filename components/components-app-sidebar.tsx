@@ -50,6 +50,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { signOutAction } from "@/app/actions";
 import newLogo from "@/public/newLogo.png";
+import airsStar from "@/public/airsStar.png";
 import { stat } from "fs";
 import { title } from "process";
 import { usePathname } from "next/navigation";
@@ -125,11 +126,11 @@ export function AppSidebar() {
     return (
       <Link href="/">
         <Image
-          src={newLogo}
+          src={state === "expanded" ? newLogo : airsStar}
           alt="AI Ready School"
-          width={140}
-          height={130}
-          className={state === "expanded" ? "ml-6" : ""}
+          width={state === "expanded" ? 140 : 40}
+          height={state === "expanded" ? 130 : 40}
+          className={state === "expanded" ? "ml-8" : ""}
         />
       </Link>
     );

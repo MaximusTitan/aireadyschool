@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import newLogo from "@/public/newLogo.png";
 
 const Header: React.FC = () => {
   return (
@@ -8,10 +9,10 @@ const Header: React.FC = () => {
         <div className="flex items-center gap-2">
           <Link href="/">
             <Image
-              src="https://wdfrtqeljulkoqnllxad.supabase.co/storage/v1/object/public/generated-images/images/logo.png"
+              src={newLogo}
               alt="AI Ready School Logo"
-              width={150}
-              height={150}
+              width={200}
+              height={200}
               className="mb-4"
             />
           </Link>

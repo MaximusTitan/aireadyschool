@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import Image from "next/image";
-import logo from "@/public/logo.webp";
+import newLogo from "@/public/newLogo.png";
 
 interface ForgotPasswordProps {
   searchParams: Promise<Message>;
@@ -35,10 +35,10 @@ export default function ForgotPassword({ searchParams }: ForgotPasswordProps) {
       >
         <div className="flex justify-center w-full mb-4">
           <Image
-            src={logo}
+            src={newLogo}
             alt="AI Ready School"
-            width={150}
-            height={150}
+            width={200}
+            height={200}
             className="mx-auto relative"
             priority
           />

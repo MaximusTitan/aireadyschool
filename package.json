@@ -17,6 +17,7 @@
     "@google/generative-ai": "^0.21.0",
     "@hookform/resolvers": "^3.10.0",
     "@humeai/voice-react": "^0.1.19",
+    "@intercom/messenger-js-sdk": "^0.0.14",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.1",
     "@radix-ui/react-collapsible": "^1.1.1",

@@ -12,17 +12,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { initSupabase } from "@/utils/supabase";
 import { categories } from "../config/toolCategories";
+import Intercom from "@intercom/messenger-js-sdk";
 
 interface ToolCardProps {
   title: string;
@@ -115,6 +109,8 @@ interface Tool {
   isComingSoon?: boolean;
 }
 
+type CategoryName = "Learning" | "Research" | "Creative" | "Tech" | "Marketing";
+
 const ToolsPage = () => {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [defaultMessage, setDefaultMessage] = useState(
@@ -136,6 +132,20 @@ const ToolsPage = () => {
 
       if (user) {
         setUserRole(user.user_metadata.role ?? null);
+
+        // Get the Intercom HMAC
+        const response = await fetch("/api/intercom");
+        const { userHash, userId } = await response.json();
+
+        // Initialize Intercom with user hash and consistent user ID
+        Intercom({
+          app_id: "aildhnel",
+          user_id: userId, // Use the same user ID that was used for HMAC generation
+          name: user.user_metadata.full_name || user.email,
+          email: user.email,
+          created_at: Math.floor(new Date(user.created_at).getTime() / 1000),
+          user_hash: userHash,
+        });
       }
     };
 
@@ -143,22 +153,29 @@ const ToolsPage = () => {
   }, []);
 
   const getAllToolsWithCategories = useMemo(() => {
-    const allTools: { [key: string]: Tool[] } = {
+    const allTools: Record<CategoryName, Tool[]> = {
       Learning: [],
       Research: [],
       Creative: [],
       Tech: [],
+      Marketing: [],
     };
 
     // For Admin, gather all tools from all roles and categories
     Object.values(categories).forEach((roleCategories) => {
       Object.entries(roleCategories).forEach(([category, categoryTools]) => {
         // Add tools to their respective categories, avoiding duplicates
-        categoryTools.forEach((tool: Tool) => {
-          if (!allTools[category]?.some((t: Tool) => t.route === tool.route)) {
-            allTools[category].push(tool);
-          }
-        });
+        if (category in allTools) {
+          // Type guard
+          const categoryName = category as CategoryName;
+          categoryTools.forEach((tool: Tool) => {
+            if (
+              !allTools[categoryName]?.some((t: Tool) => t.route === tool.route)
+            ) {
+              allTools[categoryName].push(tool);
+            }
+          });
+        }
       });
     });
 
@@ -176,8 +193,17 @@ const ToolsPage = () => {
   }, [userRole, getAllToolsWithCategories]);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string>("All");
-  const categoryOptions = ["All", "Learning", "Research", "Creative", "Tech"];
+  const [activeCategory, setActiveCategory] = useState<CategoryName | "All">(
+    "All"
+  );
+  const categoryOptions: (CategoryName | "All")[] = [
+    "All",
+    "Learning",
+    "Research",
+    "Creative",
+    "Tech",
+    "Marketing",
+  ];
 
   const filteredTools = useMemo(() => {
     let filtered = tools;
@@ -193,26 +219,33 @@ const ToolsPage = () => {
     if (activeCategory !== "All") {
       if (userRole === "Admin") {
         // For Admin, filter based on the getAllToolsWithCategories structure
-        filtered = getAllToolsWithCategories[activeCategory] || [];
+        filtered =
+          getAllToolsWithCategories[activeCategory as CategoryName] || [];
       } else if (userRole && categories[userRole]) {
         filtered = filtered.filter((tool: Tool) => {
-          for (const [categoryName, toolsList] of Object.entries(
-            categories[userRole]
-          )) {
-            if (
-              toolsList.some((t: Tool) => t.route === tool.route) &&
-              categoryName === activeCategory
-            ) {
-              return true;
-            }
-          }
-          return false;
+          return categories[userRole][activeCategory as CategoryName]?.some(
+            (t: Tool) => t.route === tool.route
+          );
         });
       }
     }
 
     return filtered;
   }, [tools, searchQuery, activeCategory, userRole, getAllToolsWithCategories]);
+
+  const hasCategoryTools = (category: CategoryName | "All") => {
+    if (category === "All") return true;
+
+    if (userRole === "Admin") {
+      return getAllToolsWithCategories[category]?.length > 0;
+    }
+
+    if (userRole && categories[userRole]) {
+      return categories[userRole][category]?.length > 0;
+    }
+
+    return false;
+  };
 
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -327,42 +360,44 @@ const ToolsPage = () => {
 
   return (
     <div className="min-h-screen bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
-      {" "}
-      <div className="container w-[97%] mx-auto px-4 py-4 mr-4">
-        <div className="flex justify-between items-center mb-8">
-          <div className="flex items-center p-4">
+      <div className="container max-w-7xl mx-auto px-4">
+        <div className="flex mb-4 pt-4">
+          <div className="flex items-center">
             <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
               AI Apps
             </h1>
             {userRole && (
-              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300">
+              <span className="ml-4 text-sm text-neutral-600 dark:text-neutral-300 self-end mb-1">
                 ({userRole})
               </span>
             )}
           </div>
         </div>
 
-        <div className="flex items-center justify-between mb-8 p-4">
-          <div className="flex space-x-4">
-            {categoryOptions.map((category) => (
-              <button
-                key={category}
-                onClick={() => setActiveCategory(category)}
-                className={`px-4 py-2 rounded-lg transition-colors ${
-                  activeCategory === category
-                    ? "bg-neutral-800 text-white dark:bg-neutral-500"
-                    : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
-                }`}
-              >
-                {category}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center space-x-4">
+        <div className="flex flex-col mb-8 space-y-4">
+          <div className="flex flex-wrap items-center justify-between">
+            <div className="flex flex-wrap gap-4">
+              {categoryOptions.map(
+                (category) =>
+                  hasCategoryTools(category) && (
+                    <button
+                      key={category}
+                      onClick={() => setActiveCategory(category)}
+                      className={`px-4 py-2 rounded-lg transition-colors ${
+                        activeCategory === category
+                          ? "bg-neutral-800 text-white dark:bg-neutral-500"
+                          : "bg-neutral-200 text-neutral-600 hover:bg-neutral-300 dark:bg-neutral-700 dark:text-neutral-300"
+                      }`}
+                    >
+                      {category}
+                    </button>
+                  )
+              )}
+            </div>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 dark:text-neutral-500 h-4 w-4" />
               <Input
-                className="pl-10 w-64 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
+                className="pl-10 w-64 bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
                 placeholder="Search tools..."
                 type="search"
                 value={searchQuery}
@@ -372,7 +407,7 @@ const ToolsPage = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 p-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mb-8 mx-auto">
           {filteredTools.map((tool, index) => (
             <ToolCard
               key={index}
@@ -385,106 +420,6 @@ const ToolsPage = () => {
             />
           ))}
         </div>
-
-        {/* Chat Bubble - Only show for admin */}
-        {userRole === "Admin" && (
-          <>
-            <div className="fixed bottom-4 right-4 z-50">
-              <button
-                title="Open Chat"
-                onClick={toggleChat}
-                className="bg-rose-300 hover:bg-rose-400 text-white rounded-full p-3 shadow-lg transition-colors duration-200"
-              >
-                <MessageCircle size={24} />
-              </button>
-            </div>
-
-            {/* Chat Dialog */}
-            {isChatOpen && (
-              <div className="fixed bottom-20 right-4 w-96 bg-white dark:bg-neutral-800 rounded-lg shadow-xl z-50 flex flex-col max-h-[70vh]">
-                <div className="p-4 border-b dark:border-neutral-700 flex justify-between items-center">
-                  <div className="font-semibold">Chat</div>
-                  {/* Dropdown for Database Selection */}
-                  <div className="flex items-center space-x-2">
-                    <select
-                      title="Database Selection"
-                      value={selectedDatabase || ""}
-                      onChange={(e) => handleDatabaseSelection(e.target.value)}
-                      className="bg-neutral-100 dark:bg-neutral-700 px-2 py-1 rounded text-sm"
-                    >
-                      <option value="" disabled>
-                        Select Database
-                      </option>
-                      {databases.map((db, idx) => (
-                        <option key={idx} value={db}>
-                          {db}
-                        </option>
-                      ))}
-                    </select>
-                    {/* Plugin Icon Button */}
-                    <button
-                      title="Use plugin"
-                      aria-label="Use plugin"
-                      onClick={() => {
-                        console.log(
-                          `Using Supabase URL: ${supabaseUrl}, Key: ${supabaseKey}`
-                        );
-                        setIsPluginClicked(true);
-                      }}
-                      className="p-2 bg-rose-300 rounded-full text-white hover:bg-rose-400"
-                    >
-                      <Plug size={16} />
-                      <span className="sr-only">Use plugin</span>
-                    </button>
-                  </div>
-                </div>
-                <div className="flex-grow overflow-y-auto p-4 space-y-4">
-                  {messages.map((msg, index) => (
-                    <div
-                      key={index}
-                      className={`p-2 rounded-lg ${
-                        msg.isUser
-                          ? "bg-neutral-100 dark:bg-neutral-700"
-                          : msg.error
-                            ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200"
-                            : "bg-rose-100 dark:bg-rose-900 text-rose-800 dark:text-rose-200"
-                      }`}
-                    >
-                      {msg.text}
-                      {msg.error && (
-                        <div className="mt-2 p-2 bg-red-100 dark:bg-red-900 rounded-lg">
-                          <p className="text-xs font-semibold mb-1">Error:</p>
-                          <pre className="text-xs overflow-x-auto">
-                            {msg.error}
-                          </pre>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <div className="p-4 border-t dark:border-neutral-700 flex">
-                  <input
-                    ref={inputRef}
-                    type="text"
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Type your query..."
-                    className="flex-grow px-3 py-2 bg-neutral-100 dark:bg-neutral-700 rounded-l-lg focus:outline-none"
-                  />
-                  <button
-                    onClick={sendMessage}
-                    title="Send Message"
-                    aria-label="Send Message"
-                    className="bg-rose-300 hover:bg-rose-400 text-white px-4 rounded-r-lg transition-colors duration-200"
-                  >
-                    <Send size={20} />
-                  </button>
-                </div>
-              </div>
-            )}
-          </>
-        )}
       </div>
     </div>
   );

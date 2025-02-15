@@ -104,16 +104,22 @@ export const MindMapViewer = ({ data }: MindMapViewerProps) => {
         const levels: { [key: string]: number } = {};
         const childCount: { [key: string]: number } = {};
         const parentNode = mindMapData.nodes[0]?.id;
+        const visited = new Set<string>();
 
-        // Calculate levels for each node
+        // Calculate levels for each node with cycle detection
         const calculateLevels = (nodeId: string, level: number) => {
+          if (visited.has(nodeId)) return; // Prevent cycles
+          visited.add(nodeId);
           levels[nodeId] = level;
+
           const children = mindMapData.links
             .filter((link) => link.source === nodeId)
             .map((link) => link.target);
 
           children.forEach((childId) => {
-            calculateLevels(childId, level + 1);
+            if (!visited.has(childId)) {
+              calculateLevels(childId, level + 1);
+            }
           });
         };
 
@@ -126,35 +132,45 @@ export const MindMapViewer = ({ data }: MindMapViewerProps) => {
           childCount[link.source] = (childCount[link.source] || 0) + 1;
         });
 
-        // Create nodes with tree layout positions
+        // Create nodes with modified tree layout positions
         const newNodes = mindMapData.nodes.map((node) => {
           const level = levels[node.id] || 0;
-          const siblings = mindMapData.links.filter(
-            (link) =>
-              link.source ===
-              mindMapData.links.find((l) => l.target === node.id)?.source
-          ).length;
-          const index = mindMapData.links
-            .filter(
-              (link) =>
-                link.source ===
-                mindMapData.links.find((l) => l.target === node.id)?.source
-            )
-            .findIndex((link) => link.target === node.id);
+          const parentLink = mindMapData.links.find(
+            (l) => l.target === node.id
+          );
+          const siblings = parentLink
+            ? mindMapData.links.filter(
+                (link) => link.source === parentLink.source
+              ).length
+            : 1;
+          const index = parentLink
+            ? mindMapData.links
+                .filter((link) => link.source === parentLink.source)
+                .findIndex((link) => link.target === node.id)
+            : 0;
+
+          // Calculate vertical offset based on the total height needed for all siblings
+          const verticalSpacing = 150; // Increased vertical spacing between nodes
+          const verticalOffset =
+            index * verticalSpacing - ((siblings - 1) * verticalSpacing) / 2;
+
+          // Add slight horizontal offset for alternating levels to prevent straight lines
+          const horizontalOffset = level % 2 === 0 ? 0 : 50;
 
           return {
             id: node.id,
             data: { label: node.label },
             position: {
-              x: level * 200,
-              y: level === 0 ? 150 : (index - (siblings - 1) / 2) * 100 + 150,
+              x: level * 300 + horizontalOffset, // Increased horizontal spacing
+              y: verticalOffset,
             },
             style: {
               background: level === 0 ? "#f1f5f9" : "#fff",
               border: "1px solid #94a3b8",
               borderRadius: "8px",
               padding: "10px",
-              minWidth: "100px",
+              minWidth: "150px", // Increased minimum width
+              maxWidth: "200px", // Added maximum width
               textAlign: "center" as const,
             },
           };
@@ -182,7 +198,7 @@ export const MindMapViewer = ({ data }: MindMapViewerProps) => {
 
   if (error) {
     return (
-      <div className="h-[300px] border rounded-lg flex items-center justify-center text-red-500">
+      <div className="h-[400px] border rounded-lg flex items-center justify-center text-red-500">
         Error: {error}
       </div>
     );
@@ -190,14 +206,14 @@ export const MindMapViewer = ({ data }: MindMapViewerProps) => {
 
   if (loading) {
     return (
-      <div className="h-[300px] border rounded-lg flex items-center justify-center">
+      <div className="h-[400px] border rounded-lg flex items-center justify-center">
         <div className="animate-pulse">Generating mind map...</div>
       </div>
     );
   }
 
   return (
-    <div className="h-[300px] border rounded-lg overflow-hidden">
+    <div className="h-[400px] border rounded-lg overflow-hidden">
       <ReactFlow
         nodes={nodes}
         edges={edges}

@@ -96,39 +96,44 @@ Always provide clear explanations and encourage active learning.`;
 }
 
 export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-  const { messages } = await request.json();
-
-  const result = streamText({
-    model: anthropic('claude-3-5-sonnet-20240620'),
-    system: getSystemPrompt(messages),
-    messages,
-    maxSteps: 5,
-    tools,
-    temperature: 0.5,
-    maxTokens: 500,
-    experimental_transform: smoothStream({
-      delayInMs: 5,
-      chunking: 'word',
-    }),
-    onFinish: async ({ usage }) => {
-      if (usage) {
-        await logTokenUsage(
-          'Learning Buddy',
-          'GPT-4o',
-          usage.promptTokens,
-          usage.completionTokens,
-          user?.email
-        );
-      }
+    if (error) {
+      return Response.json({ error: `Unauthorized: ${error.message}` }, { status: 401 });
     }
-  });
 
-  return result.toDataStreamResponse();
+    const { messages } = await request.json();
+
+    const result = streamText({
+      model: anthropic('claude-3-5-sonnet-20240620'),
+      system: getSystemPrompt(messages),
+      messages,
+      maxSteps: 5,
+      tools,
+      temperature: 0.5,
+      maxTokens: 500,
+      experimental_transform: smoothStream({
+        delayInMs: 5,
+        chunking: 'word',
+      }),
+      onFinish: async ({ usage }) => {
+        if (usage) {
+          await logTokenUsage(
+            'Learning Buddy',
+            'GPT-4o',
+            usage.promptTokens,
+            usage.completionTokens,
+            user?.email
+          );
+        }
+      }
+    });
+
+    return result.toDataStreamResponse();
+  } catch (err: any) {
+    console.error('Error in POST /api/gen-chat:', err);
+    return Response.json({ error: err.message || 'An unknown error occurred.' }, { status: 500 });
+  }
 }

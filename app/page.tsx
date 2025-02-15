@@ -21,9 +21,8 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import Link from "next/link";
-import logo from "@/public/logo.webp";
 import { createClient } from "@/utils/supabase/client";
+import newLogo from "@/public/newLogo.png";
 
 const LandingPage = () => {
   const router = useRouter();
@@ -136,7 +135,7 @@ const LandingPage = () => {
         <div className="mb-12 relative">
           <div className="absolute -inset-1 bg-gradient-to-r from-rose-500 to-orange-500 rounded-full blur-2xl opacity-10 dark:opacity-20" />
           <Image
-            src={logo}
+            src={newLogo}
             alt="AI Ready School"
             width={240}
             height={96}

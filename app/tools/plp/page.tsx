@@ -704,30 +704,32 @@ const StudentAssessmentForm = () => {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Update print styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
+      <style type="text/css" media="print">
+        {`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .print-content,
+            .print-content * {
+              visibility: visible;
+            }
+            .print-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+            .no-print {
+              display: none;
+            }
+            @page {
+              size: auto;
+              margin: 20mm;
+            }
           }
-          .print-content,
-          .print-content * {
-            visibility: visible;
-          }
-          .print-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .no-print {
-            display: none;
-          }
-          @page {
-            size: auto;
-            margin: 20mm;
-          }
-        }
-      `}</style>
+        `}
+      </style>
 
       {/* Existing header */}
       <div className="flex items-center gap-4 mb-6 no-print">

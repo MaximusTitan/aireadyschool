@@ -107,6 +107,7 @@ type ChatAreaProps = {
   onSubmit: (e: React.FormEvent) => void;
   generatedVideos: Record<string, string>;
   setGeneratedVideos: (videos: Record<string, string>) => void;
+  lastGeneratedImage: string | null;
 };
 
 export const ChatArea = ({
@@ -131,6 +132,7 @@ export const ChatArea = ({
   handleQuizAnswer,
   generatedVideos,
   setGeneratedVideos,
+  lastGeneratedImage,
 }: ChatAreaProps) => {
   usePreloadImages(Object.values(GIF_URLS));
 
@@ -498,6 +500,9 @@ export const ChatArea = ({
                     </div>
                   );
                 case "generateVideo": {
+                  // Use lastGeneratedImage if available and not explicitly provided
+                  const imageSource = result.imageUrl || lastGeneratedImage;
+
                   if (generatedVideos[toolCallId]) {
                     return (
                       <div key={toolCallId} className="mb-4">
@@ -516,6 +521,7 @@ export const ChatArea = ({
                         toolCallId={toolCallId}
                         onComplete={handleVideoComplete}
                         prompt={result.prompt}
+                        initialImage={imageSource}
                       />
                     </div>
                   );

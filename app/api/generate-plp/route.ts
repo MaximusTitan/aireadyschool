@@ -1,4 +1,3 @@
-// app/api/generate-plan/route.ts
 import { OpenAI } from 'openai';
 import { NextResponse } from 'next/server';
 
@@ -6,43 +5,70 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-export async function POST(req: Request) {
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      { error: "OpenAI API key not configured" },
-      { status: 500 }
-    );
+interface LearningPlanData {
+  name: string;
+  age: string;
+  gender: string;
+  nationality: string;
+  grade: string;
+  board: string;
+  cognitiveParams: Record<string, string>;
+  selectedSubject: string;
+  knowledgeParams: Record<string, string>;
+  goals: string;
+  timeline: string;
+  topic: string;
+  otherInfo: string;
+}
+
+function validateData(data: any): data is LearningPlanData {
+  const requiredFields = [
+    "name",
+    "age",
+    "gender",
+    "nationality",
+    "grade",
+    "board",
+    "cognitiveParams",
+    "selectedSubject",
+    "knowledgeParams",
+    "goals",
+    "timeline",
+    "topic",
+    "otherInfo",
+  ];
+
+  for (const field of requiredFields) {
+    if (!data[field]) {
+      throw new Error(`Missing required field: ${field}`);
+    }
   }
 
+  if (Object.keys(data.cognitiveParams).length === 0) {
+    throw new Error('At least one cognitive parameter must be selected');
+  }
+
+  if (Object.keys(data.knowledgeParams).length === 0) {
+    throw new Error('At least one knowledge parameter must be selected');
+  }
+
+  return true;
+}
+
+export async function POST(req: Request) {
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not configured");
+    }
+
     const data = await req.json();
     
-    // Validate required fields
-    const requiredFields = [
-      "name",
-      "age",
-      "gender",
-      "nationality",
-      "grade",
-      "board",
-      "cognitiveParams",
-      "selectedSubject",
-      "knowledgeParams",
-      "goals",
-      "timeline",
-      "topic",
-      "otherInfo",
-    ];
-    for (const field of requiredFields) {
-      if (!data[field]) {
-        return NextResponse.json(
-          { error: `Missing required field: ${field}` },
-          { status: 400 }
-        );
-      }
+    if (!validateData(data)) {
+      throw new Error("Invalid data format");
     }
 
     const prompt = `
+    You must respond ONLY with a valid JSON object, no other text.
     Create a detailed, progressive learning plan for a student with the following details:
 
     Student Information:
@@ -69,15 +95,7 @@ export async function POST(req: Request) {
     Topic: ${data.topic}
     Other Info: ${data.otherInfo}
 
-    Generate a structured learning plan that includes:
-    1. An executive summary of the current situation and expected outcomes
-    2. Weekly plans with progressive improvement targets (show progress in percentages)
-    3. Detailed step-by-step instructions for each activity
-    4. Clear metrics for measuring progress
-    5. Specific resources and materials needed
-    6. Parent/teacher involvement guidelines
-
-    Return the response in the following JSON format:
+    Generate a structured learning plan and return it as a JSON object with this exact structure:
     {
       "summary": {
         "currentStatus": string,
@@ -99,38 +117,62 @@ export async function POST(req: Request) {
       "recommendations": string[],
       "assessmentStrategy": string[]
     }
+
+    Remember to respond ONLY with the JSON object, no additional text or explanations.
     `;
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",
       messages: [
         {
           role: "system",
-          content: "You are an expert educational consultant who creates personalized learning plans."
+          content: "You are an expert educational consultant who creates personalized learning plans. You must respond only with valid JSON."
         },
         {
           role: "user",
           content: prompt
         }
       ],
-      response_format: { type: "json_object" },
-      max_tokens: 2000,
       temperature: 0.7,
+      max_tokens: 2000,
+    }).catch((error) => {
+      console.error('OpenAI API error:', error);
+      throw new Error('Failed to generate learning plan: OpenAI API error');
     });
 
     const content = response.choices[0].message.content;
     if (!content) {
       throw new Error('No content received from OpenAI');
     }
-    return NextResponse.json(JSON.parse(content));
+
+    let parsedContent;
+    try {
+      // Remove any potential non-JSON text from the beginning and end of the content
+      const jsonString = content.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
+      parsedContent = JSON.parse(jsonString);
+    } catch (error) {
+      console.error('JSON parsing error:', error, 'Content:', content);
+      throw new Error('Failed to parse OpenAI response');
+    }
+
+    // Validate response structure
+    const requiredKeys = ['summary', 'weeklyPlans', 'recommendations', 'assessmentStrategy'];
+    for (const key of requiredKeys) {
+      if (!parsedContent[key]) {
+        throw new Error(`Invalid response format: missing ${key}`);
+      }
+    }
+
+    return NextResponse.json(parsedContent);
   } catch (error: any) {
-    console.error('Error generating learning plan:', error);
+    console.error('Error in generate-plp:', error);
     return NextResponse.json(
       { 
-        error: "Failed to generate learning plan",
-        details: error.message 
+        error: error.message || "Failed to generate learning plan",
+        timestamp: new Date().toISOString(),
+        requestId: crypto.randomUUID()
       },
-      { status: 500 }
+      { status: error.status || 500 }
     );
   }
 }

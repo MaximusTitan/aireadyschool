@@ -1,8 +1,11 @@
-import { OpenAI } from 'openai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject } from 'ai';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  compatibility: 'strict',
 });
 
 interface LearningPlanData {
@@ -55,6 +58,26 @@ function validateData(data: any): data is LearningPlanData {
   return true;
 }
 
+const LearningPlanSchema = z.object({
+  summary: z.object({
+    currentStatus: z.string(),
+    expectedOutcome: z.string(),
+    keyStrengths: z.array(z.string()),
+    focusAreas: z.array(z.string())
+  }),
+  weeklyPlans: z.array(z.object({
+    week: z.number(),
+    focus: z.string(),
+    expectedProgress: z.string(),
+    activities: z.array(z.string()),
+    targets: z.array(z.string()),
+    resources: z.array(z.string()),
+    parentInvolvement: z.string()
+  })),
+  recommendations: z.array(z.string()),
+  assessmentStrategy: z.array(z.string())
+});
+
 export async function POST(req: Request) {
   try {
     if (!process.env.OPENAI_API_KEY) {
@@ -67,103 +90,48 @@ export async function POST(req: Request) {
       throw new Error("Invalid data format");
     }
 
-    const prompt = `
-    You must respond ONLY with a valid JSON object, no other text.
-    Create a detailed, progressive learning plan for a student with the following details:
-
-    Student Information:
-    Name: ${data.name}
-    Age: ${data.age}
-    Gender: ${data.gender}
-    Nationality: ${data.nationality}
-    Grade: ${data.grade}
-    Board: ${data.board}
-
-    Cognitive Assessment:
-    ${Object.entries(data.cognitiveParams)
-      .map(([param, rating]) => `${param}: ${rating}/5`)
-      .join('\n')}
-
-    Subject Area: ${data.selectedSubject}
-    Parameters Assessment:
-    ${Object.entries(data.knowledgeParams)
-      .map(([param, rating]) => `${param}: ${rating}/5`)
-      .join('\n')}
-
-    Goals: ${data.goals}
-    Timeline: ${data.timeline}
-    Topic: ${data.topic}
-    Other Info: ${data.otherInfo}
-
-    Generate a structured learning plan and return it as a JSON object with this exact structure:
-    {
-      "summary": {
-        "currentStatus": string,
-        "expectedOutcome": string,
-        "keyStrengths": string[],
-        "focusAreas": string[]
-      },
-      "weeklyPlans": [
-        {
-          "week": number,
-          "focus": string,
-          "expectedProgress": string,
-          "activities": string[],
-          "targets": string[],
-          "resources": string[],
-          "parentInvolvement": string
-        }
-      ],
-      "recommendations": string[],
-      "assessmentStrategy": string[]
-    }
-
-    Remember to respond ONLY with the JSON object, no additional text or explanations.
-    `;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",
+    const { object: plan } = await generateObject({
+      model: openai('gpt-4'),
+      schema: LearningPlanSchema,
+      schemaName: 'LearningPlan',
+      schemaDescription: 'A personalized learning plan for a student',
       messages: [
         {
-          role: "system",
-          content: "You are an expert educational consultant who creates personalized learning plans. You must respond only with valid JSON."
+          role: 'system',
+          content: 'You are an expert educational consultant who creates personalized learning plans.'
         },
         {
-          role: "user",
-          content: prompt
+          role: 'user',
+          content: `Create a detailed, progressive learning plan for a student with the following details:
+
+          Student Information:
+          Name: ${data.name}
+          Age: ${data.age}
+          Gender: ${data.gender}
+          Nationality: ${data.nationality}
+          Grade: ${data.grade}
+          Board: ${data.board}
+
+          Cognitive Assessment:
+          ${Object.entries(data.cognitiveParams)
+            .map(([param, rating]) => `${param}: ${rating}/5`)
+            .join('\n')}
+
+          Subject Area: ${data.selectedSubject}
+          Parameters Assessment:
+          ${Object.entries(data.knowledgeParams)
+            .map(([param, rating]) => `${param}: ${rating}/5`)
+            .join('\n')}
+
+          Goals: ${data.goals}
+          Timeline: ${data.timeline}
+          Topic: ${data.topic}
+          Other Info: ${data.otherInfo}`
         }
-      ],
-      temperature: 0.7,
-      max_tokens: 2000,
-    }).catch((error) => {
-      console.error('OpenAI API error:', error);
-      throw new Error('Failed to generate learning plan: OpenAI API error');
+      ]
     });
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error('No content received from OpenAI');
-    }
-
-    let parsedContent;
-    try {
-      // Remove any potential non-JSON text from the beginning and end of the content
-      const jsonString = content.trim().replace(/^[^{]*/, '').replace(/[^}]*$/, '');
-      parsedContent = JSON.parse(jsonString);
-    } catch (error) {
-      console.error('JSON parsing error:', error, 'Content:', content);
-      throw new Error('Failed to parse OpenAI response');
-    }
-
-    // Validate response structure
-    const requiredKeys = ['summary', 'weeklyPlans', 'recommendations', 'assessmentStrategy'];
-    for (const key of requiredKeys) {
-      if (!parsedContent[key]) {
-        throw new Error(`Invalid response format: missing ${key}`);
-      }
-    }
-
-    return NextResponse.json(parsedContent);
+    return NextResponse.json(plan);
   } catch (error: any) {
     console.error('Error in generate-plp:', error);
     return NextResponse.json(

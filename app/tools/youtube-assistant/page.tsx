@@ -185,7 +185,7 @@ const YoutubeAssistantPage = () => {
           url,
           email: userEmail,
           title: fetchedMetadata.title,
-          description: fetchedMetadata.description
+          description: fetchedMetadata.description,
         }),
       });
 
@@ -295,7 +295,10 @@ const YoutubeAssistantPage = () => {
       <main className="container py-8">
         <div className="max-w-5xl mx-auto">
           {/* Analysis form always at top */}
-          <form onSubmit={handleVideoSubmit} className="flex flex-col gap-4 mb-6">
+          <form
+            onSubmit={handleVideoSubmit}
+            className="flex flex-col gap-4 mb-6"
+          >
             <div className="flex gap-4">
               <Input
                 type="url"
@@ -328,7 +331,9 @@ const YoutubeAssistantPage = () => {
           {!videoData && (
             <Card className="mb-8 dark:bg-neutral-800">
               <CardHeader>
-                <CardTitle className="text-neutral-700">Video Analysis History</CardTitle>
+                <CardTitle className="text-neutral-700">
+                  Video Analysis History
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 {videoHistory.length > 0 ? (
@@ -340,12 +345,14 @@ const YoutubeAssistantPage = () => {
                           <div key={item.id} className="border-b pb-2">
                             <a
                               href="#"
-                              onClick={(e) => { 
-                                e.preventDefault(); 
-                                handleHistoryClick(item); 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleHistoryClick(item);
                               }}
                             >
-                              <h4 className="text-lg font-semibold">{item.title}</h4>
+                              <h4 className="text-lg font-semibold">
+                                {item.title}
+                              </h4>
                             </a>
                             {/* Increased characters from 100 to 200 */}
                             <p className="text-sm text-gray-600">
@@ -366,7 +373,9 @@ const YoutubeAssistantPage = () => {
                     <div className="mt-2 flex justify-end space-x-2">
                       <Button
                         size="sm"
-                        onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                        onClick={() =>
+                          setCurrentPage((prev) => Math.max(prev - 1, 0))
+                        }
                         disabled={currentPage === 0}
                       >
                         Prev
@@ -375,10 +384,15 @@ const YoutubeAssistantPage = () => {
                         size="sm"
                         onClick={() =>
                           setCurrentPage((prev) =>
-                            (prev + 1) * itemsPerPage >= videoHistory.length ? prev : prev + 1
+                            (prev + 1) * itemsPerPage >= videoHistory.length
+                              ? prev
+                              : prev + 1
                           )
                         }
-                        disabled={(currentPage + 1) * itemsPerPage >= videoHistory.length}
+                        disabled={
+                          (currentPage + 1) * itemsPerPage >=
+                          videoHistory.length
+                        }
                       >
                         Next
                       </Button>
@@ -406,20 +420,22 @@ const YoutubeAssistantPage = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="pneutral dark:pneutral-invert max-w-none">
-                        <p className="whitespace-pre-wrap">{videoData.summary}</p>
+                        <p className="whitespace-pre-wrap">
+                          {videoData.summary}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
                   <div className="md:col-span-1">
                     <div
-                      className="relative w-full video-embed"
+                      className="relative w-full pt-[56.25%]" // 16:9 aspect ratio
+                      style={{ height: "0" }}
                     >
                       <iframe
                         className="absolute top-0 left-0 w-full h-full rounded-lg"
-                        width="100%"
-                        height="575"
                         src={getYouTubeEmbedUrl(url)}
                         title="YouTube Video Player"
+                        frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowFullScreen
                       ></iframe>
@@ -435,17 +451,23 @@ const YoutubeAssistantPage = () => {
                         {videoMetadata.description && (
                           <div className="relative">
                             <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                              {isDescriptionExpanded 
+                              {isDescriptionExpanded
                                 ? videoMetadata.description
                                 : videoMetadata.description.slice(0, 200)}
                               {videoMetadata.description.length > 200 && (
                                 <>
                                   {!isDescriptionExpanded && "..."}
                                   <button
-                                    onClick={() => setIsDescriptionExpanded(!isDescriptionExpanded)}
+                                    onClick={() =>
+                                      setIsDescriptionExpanded(
+                                        !isDescriptionExpanded
+                                      )
+                                    }
                                     className="ml-2 text-blue-600 hover:underline"
                                   >
-                                    {isDescriptionExpanded ? "Show less" : "Show more"}
+                                    {isDescriptionExpanded
+                                      ? "Show less"
+                                      : "Show more"}
                                   </button>
                                 </>
                               )}
@@ -521,7 +543,9 @@ const YoutubeAssistantPage = () => {
               {/* Show history below main content when video is loaded */}
               <Card className="mt-8 dark:bg-neutral-800">
                 <CardHeader>
-                  <CardTitle className="text-neutral-700">Video Analysis History</CardTitle>
+                  <CardTitle className="text-neutral-700">
+                    Video Analysis History
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {videoHistory.length > 0 ? (
@@ -533,12 +557,14 @@ const YoutubeAssistantPage = () => {
                             <div key={item.id} className="border-b pb-2">
                               <a
                                 href="#"
-                                onClick={(e) => { 
-                                  e.preventDefault(); 
-                                  handleHistoryClick(item); 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  handleHistoryClick(item);
                                 }}
                               >
-                                <h4 className="text-lg font-semibold">{item.title}</h4>
+                                <h4 className="text-lg font-semibold">
+                                  {item.title}
+                                </h4>
                               </a>
                               {/* Increased characters from 100 to 200 */}
                               <p className="text-sm text-gray-600">
@@ -559,7 +585,9 @@ const YoutubeAssistantPage = () => {
                       <div className="mt-2 flex justify-end space-x-2">
                         <Button
                           size="sm"
-                          onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+                          onClick={() =>
+                            setCurrentPage((prev) => Math.max(prev - 1, 0))
+                          }
                           disabled={currentPage === 0}
                         >
                           Prev
@@ -568,10 +596,15 @@ const YoutubeAssistantPage = () => {
                           size="sm"
                           onClick={() =>
                             setCurrentPage((prev) =>
-                              (prev + 1) * itemsPerPage >= videoHistory.length ? prev : prev + 1
+                              (prev + 1) * itemsPerPage >= videoHistory.length
+                                ? prev
+                                : prev + 1
                             )
                           }
-                          disabled={(currentPage + 1) * itemsPerPage >= videoHistory.length}
+                          disabled={
+                            (currentPage + 1) * itemsPerPage >=
+                            videoHistory.length
+                          }
                         >
                           Next
                         </Button>

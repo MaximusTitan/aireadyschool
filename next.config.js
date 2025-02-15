@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    
     remotePatterns: [
       {
         protocol: "https",
@@ -39,7 +38,6 @@ const nextConfig = {
         port: "",
         pathname: "/storage/v1/object/**",
       },
-      
     ],
   },
   async headers() {

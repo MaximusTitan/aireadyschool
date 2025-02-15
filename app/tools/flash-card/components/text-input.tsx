@@ -83,7 +83,7 @@ export function TextInput({ onFlashcardsGenerated }: TextInputProps) {
             max={10}
             value={cardCount}
             onChange={(e) => setCardCount(Number(e.target.value))}
-            className="w-20 bg-white border-gray-300 focus:border-black focus:ring-black text-gray-900"
+            className="w-20 bg-white border-gray-300 focus:border-black focus:ring-black text-gray-900 [&::-webkit-inner-spin-button]:opacity-100 [&::-webkit-outer-spin-button]:opacity-100"
           />
         </div>
         <Button
@@ -101,12 +101,6 @@ export function TextInput({ onFlashcardsGenerated }: TextInputProps) {
           )}
         </Button>
       </Card>
-      <style jsx global>{`
-        input[type="number"]::-webkit-inner-spin-button,
-        input[type="number"]::-webkit-outer-spin-button {
-          opacity: 1;
-        }
-      `}</style>
     </div>
   );
 }

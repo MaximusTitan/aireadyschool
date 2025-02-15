@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from "@/utils/supabase/client";
 import { initSupabase } from "@/utils/supabase";
 import { categories } from "../config/toolCategories";
+import Intercom from "@intercom/messenger-js-sdk";
 
 interface ToolCardProps {
   title: string;
@@ -131,6 +132,20 @@ const ToolsPage = () => {
 
       if (user) {
         setUserRole(user.user_metadata.role ?? null);
+
+        // Get the Intercom HMAC
+        const response = await fetch("/api/intercom");
+        const { userHash, userId } = await response.json();
+
+        // Initialize Intercom with user hash and consistent user ID
+        Intercom({
+          app_id: "aildhnel",
+          user_id: userId, // Use the same user ID that was used for HMAC generation
+          name: user.user_metadata.full_name || user.email,
+          email: user.email,
+          created_at: Math.floor(new Date(user.created_at).getTime() / 1000),
+          user_hash: userHash,
+        });
       }
     };
 

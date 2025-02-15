@@ -1,11 +1,25 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import { createClient } from "@/utils/supabase/client";
 
 interface DatabaseConnectionFormProps {
   sqlDetails: {
@@ -16,7 +30,7 @@ interface DatabaseConnectionFormProps {
     password: string;
   };
   setSqlDetails: React.Dispatch<React.SetStateAction<any>>;
-  handleSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
+  handleSubmit: (formData: any) => Promise<void>;
   isLoading: boolean;
 }
 
@@ -28,16 +42,43 @@ const DatabaseConnectionForm = ({
 }: DatabaseConnectionFormProps) => {
   const [dbType, setDbType] = useState("postgres");
   const [databaseName, setDatabaseName] = useState("");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        setUserEmail(user.email ?? "guest@example.com");
+      }
+    };
+    fetchUser();
+  }, []);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSqlDetails((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
+    setSqlDetails((prev: any) => ({
+      ...prev,
+      [e.target.name]: e.target.value,
+    }));
+  };
+  const onSubmit: React.FormEventHandler<HTMLFormElement> = (e) => {
+    e.preventDefault();
+    if (userEmail) {
+      handleSubmit({ ...sqlDetails, databaseName, dbType, email: userEmail });
+    } else {
+      console.error("User email not available");
+    }
   };
 
   return (
     <Card className="max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Connect to SQL Database</CardTitle>
-        <CardDescription>Enter your database credentials to connect.</CardDescription>
+        <CardDescription>
+          Enter your database credentials to connect.
+        </CardDescription>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
@@ -65,21 +106,27 @@ const DatabaseConnectionForm = ({
               </SelectContent>
             </Select>
           </div>
-          {(["host", "port", "database", "user_name", "password"] as const).map((field) => (
-            <div key={field} className="space-y-2">
-              <Label htmlFor={field} className="capitalize">
-                {field.replace("_", " ")}
-              </Label>
-              <Input
-                id={field}
-                name={field}
-                type={field === "password" ? "password" : "text"}
-                value={sqlDetails ? sqlDetails[field] || "" : ""}
-                onChange={handleChange}
-                placeholder={field === "port" ? "5432" : `Enter ${field.replace("_", " ")}`}
-              />
-            </div>
-          ))}
+          {(["host", "port", "database", "user_name", "password"] as const).map(
+            (field) => (
+              <div key={field} className="space-y-2">
+                <Label htmlFor={field} className="capitalize">
+                  {field.replace("_", " ")}
+                </Label>
+                <Input
+                  id={field}
+                  name={field}
+                  type={field === "password" ? "password" : "text"}
+                  value={sqlDetails ? sqlDetails[field] || "" : ""}
+                  onChange={handleChange}
+                  placeholder={
+                    field === "port"
+                      ? "5432"
+                      : `Enter ${field.replace("_", " ")}`
+                  }
+                />
+              </div>
+            ),
+          )}
         </CardContent>
         <CardFooter>
           <Button type="submit" className="w-full" disabled={isLoading}>

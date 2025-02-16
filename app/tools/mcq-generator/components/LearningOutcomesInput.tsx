@@ -31,7 +31,7 @@ export default function LearningOutcomesInput({
         htmlFor="learningOutcomes"
         className="block text-sm font-medium text-gray-700 mb-1"
       >
-        Learning Outcomes
+        Learning Objectives
       </label>
       <div className="space-y-2">
         {value.map((outcome, index) => (
@@ -53,7 +53,7 @@ export default function LearningOutcomesInput({
             id="learningOutcomes"
             value={newOutcome}
             onChange={(e) => setNewOutcome(e.target.value)}
-            placeholder="Enter a learning outcome"
+            placeholder="Enter a learning objective"
             className="flex-grow"
           />
           <Button type="button" onClick={addOutcome}>

@@ -9,7 +9,9 @@ export default function Home() {
         <Link href="/tools" className="hover:opacity-75">
           <ChevronLeft className="h-6 w-6" />
         </Link>
-        <h1 className="text-3xl text-neutral-800 font-bold mb-1">Assignment Evaluator</h1>
+        <h1 className="text-3xl text-neutral-800 font-bold mb-1">
+          Assignment Evaluator
+        </h1>
       </div>
       <AssignmentEvaluator />
     </main>

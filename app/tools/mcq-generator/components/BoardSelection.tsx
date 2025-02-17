@@ -55,7 +55,7 @@ export default function BoardSelection({
         Select Educational Board
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full" id="board">
+        <SelectTrigger className="w-full bg-white" id="board">
           <SelectValue placeholder="Select an educational board" />
         </SelectTrigger>
         <SelectContent>

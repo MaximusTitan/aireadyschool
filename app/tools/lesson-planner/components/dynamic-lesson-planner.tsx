@@ -157,7 +157,8 @@ export default function DynamicLessonPlanner() {
           Lesson Plan Generator
         </h1>
         <p className="text-muted-foreground text-lg">
-          Generate comprehensive lesson plans tailored to your curriculum needs.
+          Creates structured and optimized lesson plans for educators based on
+          the subject, topic, grade, lesson objectives and duration provided.
         </p>
       </div>
 

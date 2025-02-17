@@ -26,7 +26,7 @@ export default function SubjectSelection({
         Select the Subject
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full bg-white">
           <SelectValue placeholder="Select a subject" />
         </SelectTrigger>
         <SelectContent>

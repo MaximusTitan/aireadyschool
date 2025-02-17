@@ -25,7 +25,7 @@ export default function CountrySelection({
         Select Country
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full" id="country">
+        <SelectTrigger className="w-full bg-white" id="country">
           <SelectValue placeholder="Select a country" />
         </SelectTrigger>
         <SelectContent>

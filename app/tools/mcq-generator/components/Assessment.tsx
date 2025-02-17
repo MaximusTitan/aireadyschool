@@ -331,7 +331,7 @@ export default function Assessment({
               setEditMode(true);
             }
           }}
-          className="bg-blue-600 hover:bg-blue-500"
+          className="bg-black hover:bg-blue-500"
         >
           {editMode ? <Save className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
           {editMode ? "Save Changes" : "Edit Questions"}

@@ -23,6 +23,11 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import Markdown from "react-markdown";
+import {
+  countries,
+  boardsByCountry,
+  subjects,
+} from "@/app/constants/education-data";
 
 interface Evaluation {
   contentUnderstanding: { score: number; comment: string };
@@ -65,6 +70,8 @@ export function AssignmentEvaluator() {
   const [rubricInputMethod, setRubricInputMethod] = useState<
     "file" | "text" | null
   >(null);
+  const [country, setCountry] = useState("");
+  const [board, setBoard] = useState("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -132,9 +139,15 @@ export function AssignmentEvaluator() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if ((!file && !assignmentText) || !gradeLevel || !subject) {
+    if (
+      (!file && !assignmentText) ||
+      !gradeLevel ||
+      !subject ||
+      !country ||
+      !board
+    ) {
       setError(
-        "Please provide an assignment (file or text), fill in all fields."
+        "Please provide an assignment (file or text), fill in all required fields."
       );
       return;
     }
@@ -160,6 +173,8 @@ export function AssignmentEvaluator() {
       formData.append("rubric", rubricFile);
     }
     formData.append("rubricText", rubricText);
+    formData.append("country", country);
+    formData.append("board", board);
 
     try {
       const response = await fetch("/api/evaluate", {
@@ -199,304 +214,297 @@ export function AssignmentEvaluator() {
   };
 
   return (
-    <div className="container mx-auto max-w-4xl space-y-6 p-4">
-      <Card>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-            <div className="space-y-6">
-              {/* Grade Level and Subject - Moved to top */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="gradeLevel">Grade Level</Label>
-                  <Select onValueChange={setGradeLevel} value={gradeLevel}>
-                    <SelectTrigger id="gradeLevel">
-                      <SelectValue placeholder="Select Grade Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "K",
-                        "1",
-                        "2",
-                        "3",
-                        "4",
-                        "5",
-                        "6",
-                        "7",
-                        "8",
-                        "9",
-                        "10",
-                        "11",
-                        "12",
-                      ].map((grade) => (
-                        <SelectItem key={grade} value={grade}>
-                          Grade {grade}
+    <div className="space-y-6">
+      <Card className="shadow-lg border-2">
+        <CardContent className="p-6 space-y-8">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Country and Board Selection */}
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="countrySelect"
+                  className="text-base font-semibold"
+                >
+                  Country
+                </Label>
+                <Select
+                  value={country}
+                  onValueChange={(value) => {
+                    setCountry(value);
+                    setBoard(""); // Reset board when country changes
+                  }}
+                >
+                  <SelectTrigger className="w-full h-11 bg-white">
+                    <SelectValue placeholder="Select country..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country.value} value={country.value}>
+                        {country.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="boardSelect"
+                  className="text-base font-semibold"
+                >
+                  Educational Board
+                </Label>
+                <Select value={board} onValueChange={setBoard}>
+                  <SelectTrigger className="w-full h-11 bg-white">
+                    <SelectValue placeholder="Select board..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {country &&
+                      boardsByCountry[country]?.map((board) => (
+                        <SelectItem key={board.value} value={board.value}>
+                          {board.label}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Grade Level and Subject */}
+            <div className="grid md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <Label htmlFor="gradeLevel" className="text-base font-semibold">
+                  Grade Level
+                </Label>
+                <Select onValueChange={setGradeLevel} value={gradeLevel}>
+                  <SelectTrigger
+                    id="gradeLevel"
+                    className="w-full h-11 bg-white"
+                  >
+                    <SelectValue placeholder="Select Grade Level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[...Array(12)].map((_, i) => (
+                      <SelectItem key={i + 1} value={(i + 1).toString()}>
+                        Grade {i + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="subject" className="text-base font-semibold">
+                  Subject
+                </Label>
+                <Select onValueChange={setSubject} value={subject}>
+                  <SelectTrigger id="subject" className="w-full h-11 bg-white">
+                    <SelectValue placeholder="Select Subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.value} value={subject.value}>
+                        {subject.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Title and Description */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-base font-semibold">
+                  Assignment Title
+                </Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Enter assignment title"
+                  className="h-11 bg-white"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="description"
+                  className="text-base font-semibold"
+                >
+                  Assignment Description
+                </Label>
+                <textarea
+                  id="description"
+                  className="min-h-[100px] w-full p-4 border rounded-md resize-y bg-white"
+                  placeholder="Enter assignment description..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            {/* Assignment Input Section */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="file" className="text-base font-semibold">
+                  Assignment Submission
+                </Label>
+                <Input
+                  id="file"
+                  type="file"
+                  accept="application/pdf,text/plain"
+                  onChange={handleFileChange}
+                  disabled={isLoading || inputMethod === "text"}
+                  className={`h-11 bg-white cursor-${inputMethod === "text" ? "not-allowed" : "pointer"}`}
+                />
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator className="w-full" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Select onValueChange={setSubject} value={subject}>
-                    <SelectTrigger id="subject">
-                      <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "Math",
-                        "Science",
-                        "English",
-                        "History",
-                        "Art",
-                        "Music",
-                        "Physical Education",
-                      ].map((subj) => (
-                        <SelectItem key={subj} value={subj}>
-                          {subj}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">
+                    Or paste text
+                  </span>
                 </div>
               </div>
 
-              {/* Title and Description */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Assignment Title</Label>
+              <textarea
+                className="w-full min-h-[150px] p-4 border rounded-md bg-white resize-y"
+                placeholder="Enter assignment text here..."
+                value={assignmentText}
+                onChange={handleAssignmentTextChange}
+                disabled={isLoading || inputMethod === "file"}
+              />
+            </div>
+
+            {/* Rubric Section */}
+            <div className="space-y-4">
+              <Label htmlFor="rubric" className="text-base font-semibold">
+                Rubric (Optional)
+              </Label>
+              <div className="flex gap-2 items-start">
+                <div className="relative flex-1">
                   <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter assignment title"
-                    required
+                    id="rubric"
+                    type="file"
+                    accept="application/pdf,text/plain"
+                    onChange={handleRubricChange}
+                    disabled={isLoading || rubricInputMethod === "text"}
+                    className={`cursor-${rubricInputMethod === "text" ? "not-allowed" : "pointer"}`}
                   />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description">Assignment Description</Label>
-                  <textarea
-                    id="description"
-                    className="min-h-[100px] w-full p-2 border rounded resize-y"
-                    placeholder="Enter assignment description..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Assignment Submission Section */}
-              <div className="space-y-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="space-y-2">
-                      <Label htmlFor="file">Assignment Submission</Label>
-                      <div className="flex gap-2 items-start">
-                        <div className="relative flex-1">
-                          <Input
-                            id="file"
-                            type="file"
-                            accept="application/pdf,text/plain"
-                            onChange={handleFileChange}
-                            disabled={isLoading || inputMethod === "text"}
-                            className={`cursor-${inputMethod === "text" ? "not-allowed" : "pointer"}`}
-                          />
-                          {inputMethod === "text" && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                                  <Info className="h-4 w-4 text-muted-foreground" />
-                                </div>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                {getDisabledMessage("assignment", "file")}
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
+                  {rubricInputMethod === "text" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                          <Info className="h-4 w-4 text-muted-foreground" />
                         </div>
-                        {file && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={clearFile}
-                          >
-                            Clear
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Upload PDF or text file</TooltipContent>
-                </Tooltip>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-background px-2 text-muted-foreground text-sm">
-                      OR
-                    </span>
-                  </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {getDisabledMessage("rubric", "file")}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
+                {rubricFile && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={clearRubricFile}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="assignmentText">Assignment Text</Label>
-                  <div className="flex gap-2 items-start">
-                    <div className="relative flex-1">
-                      <textarea
-                        id="assignmentText"
-                        className={`min-h-[150px] w-full p-2 border rounded resize-y cursor-${
-                          inputMethod === "file" ? "not-allowed" : "text"
-                        }`}
-                        placeholder="Enter assignment text here..."
-                        value={assignmentText}
-                        onChange={handleAssignmentTextChange}
-                        disabled={isLoading || inputMethod === "file"}
-                      />
-                      {inputMethod === "file" && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="absolute right-2 top-2">
-                              <Info className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {getDisabledMessage("assignment", "text")}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                    {assignmentText && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={clearText}
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </div>
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <Separator />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-background px-2 text-muted-foreground text-sm">
+                    OR
+                  </span>
                 </div>
               </div>
 
-              {/* Rubric Section */}
-              <div className="space-y-4">
-                <Label htmlFor="rubric">Rubric (Optional)</Label>
+              <div className="space-y-2">
+                <Label htmlFor="rubricText" className="text-base font-semibold">
+                  Rubric Text
+                </Label>
                 <div className="flex gap-2 items-start">
                   <div className="relative flex-1">
-                    <Input
-                      id="rubric"
-                      type="file"
-                      accept="application/pdf,text/plain"
-                      onChange={handleRubricChange}
-                      disabled={isLoading || rubricInputMethod === "text"}
-                      className={`cursor-${rubricInputMethod === "text" ? "not-allowed" : "pointer"}`}
+                    <textarea
+                      id="rubricText"
+                      className={`w-full p-2 border rounded cursor-${
+                        rubricInputMethod === "file" ? "not-allowed" : "text"
+                      }`}
+                      placeholder="Enter rubric text here..."
+                      value={rubricText}
+                      onChange={handleRubricTextChange}
+                      disabled={isLoading || rubricInputMethod === "file"}
                     />
-                    {rubricInputMethod === "text" && (
+                    {rubricInputMethod === "file" && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                          <div className="absolute right-2 top-2">
                             <Info className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent>
-                          {getDisabledMessage("rubric", "file")}
+                          {getDisabledMessage("rubric", "text")}
                         </TooltipContent>
                       </Tooltip>
                     )}
                   </div>
-                  {rubricFile && (
+                  {rubricText && (
                     <Button
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={clearRubricFile}
+                      onClick={clearRubricText}
                     >
                       Clear
                     </Button>
                   )}
                 </div>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-background px-2 text-muted-foreground text-sm">
-                      OR
-                    </span>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="rubricText">Rubric Text</Label>
-                  <div className="flex gap-2 items-start">
-                    <div className="relative flex-1">
-                      <textarea
-                        id="rubricText"
-                        className={`w-full p-2 border rounded cursor-${
-                          rubricInputMethod === "file" ? "not-allowed" : "text"
-                        }`}
-                        placeholder="Enter rubric text here..."
-                        value={rubricText}
-                        onChange={handleRubricTextChange}
-                        disabled={isLoading || rubricInputMethod === "file"}
-                      />
-                      {rubricInputMethod === "file" && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="absolute right-2 top-2">
-                              <Info className="h-4 w-4 text-muted-foreground" />
-                            </div>
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            {getDisabledMessage("rubric", "text")}
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                    {rubricText && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={clearRubricText}
-                      >
-                        Clear
-                      </Button>
-                    )}
-                  </div>
-                </div>
               </div>
-
-              {isLoading && (
-                <div className="space-y-2">
-                  <Progress value={uploadProgress} className="w-full" />
-                  <p className="text-sm text-center text-muted-foreground">
-                    {uploadProgress < 100
-                      ? "Processing assignment..."
-                      : "Finalizing evaluation..."}
-                  </p>
-                </div>
-              )}
-
-              <Button
-                type="submit"
-                disabled={
-                  (!file && !assignmentText) ||
-                  !gradeLevel ||
-                  !subject ||
-                  isLoading
-                }
-                className="w-full md:w-auto"
-              >
-                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {isLoading ? "Evaluating..." : "Upload and Evaluate"}
-              </Button>
             </div>
+
+            {isLoading && (
+              <div className="space-y-2">
+                <Progress value={uploadProgress} className="w-full" />
+                <p className="text-sm text-center text-muted-foreground">
+                  {uploadProgress < 100
+                    ? "Processing assignment..."
+                    : "Finalizing evaluation..."}
+                </p>
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              disabled={
+                (!file && !assignmentText) ||
+                !gradeLevel ||
+                !subject ||
+                !country ||
+                !board ||
+                isLoading
+              }
+              className="w-fit h-10 text-base font-semibold bg-rose-500 hover:bg-rose-600"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                  Evaluating...
+                </>
+              ) : (
+                "Evaluate Assignment"
+              )}
+            </Button>
           </form>
         </CardContent>
       </Card>
@@ -510,9 +518,9 @@ export function AssignmentEvaluator() {
       )}
 
       {evaluation && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+        <Card className="shadow-lg border-2">
+          <CardHeader className="bg-muted/50 border-b">
+            <CardTitle className="flex items-center justify-between text-2xl font-bold">
               Evaluation Results
               {typeof evaluation !== "string" && (
                 <span className="text-lg font-normal">
@@ -521,7 +529,7 @@ export function AssignmentEvaluator() {
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-6">
             {typeof evaluation === "string" ? (
               <div className="prose max-w-none">
                 <div className=" p-4 bg-muted rounded-lg">

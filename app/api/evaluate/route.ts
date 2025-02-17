@@ -58,8 +58,10 @@ export async function POST(request: Request) {
     const subject = formData.get("subject") as string
     const rubric = formData.get("rubric") as File | null
     const rubricTextInput = formData.get("rubricText") as string
+    const country = formData.get("country") as string
+    const board = formData.get("board") as string
 
-    if ((!file && !assignmentText) || !gradeLevel || !subject || !title || !description) {
+    if ((!file && !assignmentText) || !gradeLevel || !subject || !title || !description || !country || !board) {
       return NextResponse.json(
         { error: "Please fill in all required fields and provide an assignment (file or text)." },
         { status: 400 }
@@ -148,6 +150,8 @@ export async function POST(request: Request) {
 Assignment Description: ${description}
 Grade Level: ${gradeLevel}
 Subject: ${subject}
+Country: ${country}
+Educational Board: ${board}
 
 Student Assignment:
 ${assignmentContent}

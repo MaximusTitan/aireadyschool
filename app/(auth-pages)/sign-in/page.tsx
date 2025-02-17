@@ -10,6 +10,8 @@ import Link from "next/link";
 import { PasswordInput } from "@/components/PasswordInput"; // Added import
 import Image from "next/image"; // Added import
 import newLogo from "@/public/newLogo.png";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 interface LoginProps {
   searchParams: Promise<Message>;
@@ -17,6 +19,21 @@ interface LoginProps {
 
 export default function Login({ searchParams }: LoginProps) {
   const [message, setMessage] = useState<Message | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        router.replace("/tools");
+      }
+    };
+
+    checkSession();
+  }, [router, supabase]);
 
   // Use useEffect to resolve the searchParams Promise
   useEffect(() => {

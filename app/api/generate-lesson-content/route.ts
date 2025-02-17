@@ -276,9 +276,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { topic, subject, grade, board, contentType } = await req.json();
+    const { topic, subject, grade, board, contentType, country } = await req.json();
 
-    if (!topic || !subject || !grade || !board || !contentType) {
+    if (!topic || !subject || !grade || !board || !contentType || !country) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 },
@@ -290,7 +290,7 @@ export async function POST(req: Request) {
       topic,
       subject,
       grade,
-      board,
+      `${country} ${board}`, // Include country in board description
     );
 
     const response = streamText({

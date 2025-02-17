@@ -124,7 +124,7 @@ export function AppSidebar() {
   const Logo = () => {
     const { state } = useSidebar();
     return (
-      <Link href="/">
+      <Link href="/tools">
         <Image
           src={state === "expanded" ? newLogo : airsStar}
           alt="AI Ready School"

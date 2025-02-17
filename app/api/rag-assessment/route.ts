@@ -4,6 +4,8 @@ import { openai } from "@ai-sdk/openai"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/utils/supabase/server"
 import { logTokenUsage } from "@/utils/logTokenUsage"
+import fs from "fs/promises";
+import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
 
 const supabase = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 
@@ -27,7 +29,26 @@ export async function POST(req: Request) {
       outcome: string
     }
 
-    let prompt = `Generate a ${difficulty} difficulty ${subject} assessment for ${classLevel} students in ${country} following the ${board} curriculum, on the topic of "${topic}" with ${questionCount} questions. The assessment should address the following learning outcomes:\n${(learningOutcomes as string[]).map((outcome: string, index: number) => `${index + 1}. ${outcome}`).join("\n")}\n\n`
+    // Fetch the file from the URL
+    const response = await fetch(topic);
+    if (!response.ok) {
+    throw new Error(`Failed to fetch the PDF file from ${topic}`);
+    }
+
+    // Read the file as a buffer
+    const buffer = await response.arrayBuffer();
+
+    // Create a Blob from the buffer
+    const topicBlob = new Blob([buffer], { type: "application/pdf" });
+
+    // PDF Loader
+    const loader = new WebPDFLoader(topicBlob);
+
+    //load
+    const docs = await loader.load();
+    console.log("Loaded Document", docs[0]);
+
+    let prompt = `Generate a ${difficulty} difficulty ${subject} assessment for ${classLevel} students in ${country} following the ${board} curriculum, with ${questionCount} questions. The assessment should address the following learning outcomes:\n${(learningOutcomes as string[]).map((outcome: string, index: number) => `${index + 1}. ${outcome}`).join("\n")}\n\n`
 
     switch (assessmentType) {
       case "mcq":
@@ -49,7 +70,10 @@ export async function POST(req: Request) {
     try {
       const { text, usage } = await generateText({
         model: openai("gpt-4o"),
-        prompt: prompt,
+        messages: [
+        { role: "system", content: JSON.stringify(docs) },
+        { role: "user", content: prompt }
+      ],
         temperature: 0.9,
         maxTokens: 2000,
       })

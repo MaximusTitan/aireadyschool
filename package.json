@@ -18,6 +18,8 @@
     "@hookform/resolvers": "^3.10.0",
     "@humeai/voice-react": "^0.1.19",
     "@intercom/messenger-js-sdk": "^0.0.14",
+    "@langchain/community": "^0.3.30",
+    "@langchain/core": "^0.3.40",
     "@radix-ui/react-avatar": "^1.1.1",
     "@radix-ui/react-checkbox": "^1.1.1",
     "@radix-ui/react-collapsible": "^1.1.1",

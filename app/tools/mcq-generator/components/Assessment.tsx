@@ -203,7 +203,6 @@ export default function Assessment({
         body: JSON.stringify({
           id: assessmentId,
           questions: editedAssessment,
-          answers: answers,
         }),
       })
 
@@ -212,10 +211,15 @@ export default function Assessment({
       }
 
       const data = await response.json()
-      setEditMode(false)
-      // Update the assessment state with the edited version
-      setEditedAssessment(data.data[0].questions)
-      setSaveError("")
+      if (data.success) {
+        setEditMode(false)
+        // Update the assessment state with the edited version
+        setEditedAssessment(data.data[0].questions)
+        setSaveError("")
+        console.log("Assessment updated successfully:", data.data[0].questions)
+      } else {
+        throw new Error("Failed to update assessment")
+      }
     } catch (error) {
       console.error("Error updating assessment:", error)
       setSaveError("Failed to update assessment. Please try again.")
@@ -319,7 +323,16 @@ export default function Assessment({
           <Download className="mr-2 h-4 w-4" />
           Download {showResults ? "PDF with Answers" : "Questions PDF"}
         </Button>
-        <Button onClick={() => setEditMode(!editMode)} className="bg-black hover:bg-blue-500">
+        <Button
+          onClick={() => {
+            if (editMode) {
+              saveEdits();
+            } else {
+              setEditMode(true);
+            }
+          }}
+          className="bg-blue-600 hover:bg-blue-500"
+        >
           {editMode ? <Save className="mr-2 h-4 w-4" /> : <Edit className="mr-2 h-4 w-4" />}
           {editMode ? "Save Changes" : "Edit Questions"}
         </Button>

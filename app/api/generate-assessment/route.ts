@@ -136,6 +136,10 @@ export async function PUT(req: Request) {
       throw error
     }
 
+    if (!data || data.length === 0) {
+      throw new Error("No data returned after update")
+    }
+
     return NextResponse.json({ success: true, data })
   } catch (error) {
     console.error("Error updating assessment:", error)

@@ -19,7 +19,7 @@ export default function AssessmentTypeSelection({
     { value: "mcq", label: "Multiple Choice Questions" },
     { value: "truefalse", label: "True or False" },
     { value: "fillintheblank", label: "Fill in the Blanks" },
-    { value: "shortanswer", label: "Short Answer" } // new option
+    { value: "shortanswer", label: "Short Answer" }, // new option
   ];
 
   return (
@@ -31,7 +31,7 @@ export default function AssessmentTypeSelection({
         Select Assessment Type
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full bg-white">
           <SelectValue placeholder="Select an assessment type" />
         </SelectTrigger>
         <SelectContent>

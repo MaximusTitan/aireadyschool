@@ -24,7 +24,7 @@ export default function GradeSelection({
         Choose the Grade
       </label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="w-full" id="grade">
+        <SelectTrigger className="w-full bg-white" id="grade">
           <SelectValue placeholder="Select a grade" />
         </SelectTrigger>
         <SelectContent>

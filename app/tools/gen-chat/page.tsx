@@ -48,6 +48,9 @@ export default function Page() {
   const [generatedVideos, setGeneratedVideos] = useState<
     Record<string, string>
   >({});
+  const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(
+    null
+  );
 
   const handleAnswerSubmit = async (data: {
     studentAnswer: number;
@@ -132,10 +135,12 @@ export default function Page() {
       pendingImageRequests.delete(toolCallId);
       completedImages.add(toolCallId);
       if (data.images?.[0]) {
+        const imageUrl = data.images[0].url;
+        setLastGeneratedImage(imageUrl); // Store the last generated image URL
         setGeneratedImages((prev) => ({
           ...prev,
           [toolCallId]: {
-            url: data.images[0].url,
+            url: imageUrl,
             credits: data.remainingCredits,
           },
         }));
@@ -284,18 +289,55 @@ export default function Page() {
         toolCalls: [{ tool: "generateMindMap", parameters: { topic } }],
       };
       await append(userMessage);
+    } else if (toolName === "video") {
+      const prompt = parts.slice(1).join(" ");
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: `Generate a video with this description: ${prompt}`,
+        toolCalls: [
+          {
+            tool: "generateVideo",
+            parameters: {
+              prompt,
+              imageUrl: lastGeneratedImage, // Pass the last generated image URL
+            },
+          },
+        ],
+      };
+      await append(userMessage);
     }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.startsWith("/")) {
+    if (input.toLowerCase().includes("video") && lastGeneratedImage) {
+      // If the message mentions "video" and we have a last generated image
+      const userMessage = {
+        id: String(Date.now()),
+        role: "user" as const,
+        content: input,
+        toolCalls: [
+          {
+            tool: "generateVideo",
+            parameters: {
+              prompt: input,
+              imageUrl: lastGeneratedImage,
+            },
+          },
+        ],
+      };
+      await append(userMessage);
+      setInput("");
+    } else if (input.startsWith("/")) {
       await handleDirectCommand(input);
       setInput("");
     } else {
       handleSubmit(e);
     }
   };
+
+  const handleFormSubmit = handleMessageSubmit;
 
   const handleInputChange = (value: string) => {
     setInput(value);
@@ -326,6 +368,7 @@ export default function Page() {
           onSimulationCode={(code: string) => setSimulationCode(code)}
           generatedVideos={generatedVideos}
           setGeneratedVideos={setGeneratedVideos}
+          lastGeneratedImage={lastGeneratedImage}
         />
       </div>
     </TooltipProvider>

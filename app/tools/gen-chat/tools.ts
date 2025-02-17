@@ -198,13 +198,15 @@ export const userDetailsTool = createTool({
 });
 
 export const videoGeneratorTool = createTool({
-  description: 'Generate a video from an image',
+  description: 'Generate a video from text or image',
   parameters: z.object({
     prompt: z.string().describe('Description of the desired animation'),
+    imageUrl: z.string().optional().describe('Optional base image URL to animate'),
   }),
-  execute: async function ({ prompt }) {
+  execute: async function ({ prompt, imageUrl }) {
     return {
       prompt,
+      imageUrl,
       pending: true,
     };
   },

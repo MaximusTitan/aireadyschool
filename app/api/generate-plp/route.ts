@@ -1,136 +1,146 @@
-// app/api/generate-plan/route.ts
-import { OpenAI } from 'openai';
+import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject } from 'ai';
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+  compatibility: 'strict',
+});
+
+interface LearningPlanData {
+  name: string;
+  age: string;
+  gender: string;
+  nationality: string;
+  grade: string;
+  board: string;
+  cognitiveParams: Record<string, string>;
+  selectedSubject: string;
+  knowledgeParams: Record<string, string>;
+  goals: string;
+  timeline: string;
+  topic: string;
+  otherInfo: string;
+}
+
+function validateData(data: any): data is LearningPlanData {
+  const requiredFields = [
+    "name",
+    "age",
+    "gender",
+    "nationality",
+    "grade",
+    "board",
+    "cognitiveParams",
+    "selectedSubject",
+    "knowledgeParams",
+    "goals",
+    "timeline",
+    "topic",
+    "otherInfo",
+  ];
+
+  for (const field of requiredFields) {
+    if (!data[field]) {
+      throw new Error(`Missing required field: ${field}`);
+    }
+  }
+
+  if (Object.keys(data.cognitiveParams).length === 0) {
+    throw new Error('At least one cognitive parameter must be selected');
+  }
+
+  if (Object.keys(data.knowledgeParams).length === 0) {
+    throw new Error('At least one knowledge parameter must be selected');
+  }
+
+  return true;
+}
+
+const LearningPlanSchema = z.object({
+  summary: z.object({
+    currentStatus: z.string(),
+    expectedOutcome: z.string(),
+    keyStrengths: z.array(z.string()),
+    focusAreas: z.array(z.string())
+  }),
+  weeklyPlans: z.array(z.object({
+    week: z.number(),
+    focus: z.string(),
+    expectedProgress: z.string(),
+    activities: z.array(z.string()),
+    targets: z.array(z.string()),
+    resources: z.array(z.string()),
+    parentInvolvement: z.string()
+  })),
+  recommendations: z.array(z.string()),
+  assessmentStrategy: z.array(z.string())
 });
 
 export async function POST(req: Request) {
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json(
-      { error: "OpenAI API key not configured" },
-      { status: 500 }
-    );
-  }
-
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error("OpenAI API key not configured");
+    }
+
     const data = await req.json();
     
-    // Validate required fields
-    const requiredFields = [
-      "name",
-      "age",
-      "gender",
-      "nationality",
-      "grade",
-      "board",
-      "cognitiveParams",
-      "selectedSubject",
-      "knowledgeParams",
-      "goals",
-      "timeline",
-      "topic",
-      "otherInfo",
-    ];
-    for (const field of requiredFields) {
-      if (!data[field]) {
-        return NextResponse.json(
-          { error: `Missing required field: ${field}` },
-          { status: 400 }
-        );
-      }
+    if (!validateData(data)) {
+      throw new Error("Invalid data format");
     }
 
-    const prompt = `
-    Create a detailed, progressive learning plan for a student with the following details:
-
-    Student Information:
-    Name: ${data.name}
-    Age: ${data.age}
-    Gender: ${data.gender}
-    Nationality: ${data.nationality}
-    Grade: ${data.grade}
-    Board: ${data.board}
-
-    Cognitive Assessment:
-    ${Object.entries(data.cognitiveParams)
-      .map(([param, rating]) => `${param}: ${rating}/5`)
-      .join('\n')}
-
-    Subject Area: ${data.selectedSubject}
-    Parameters Assessment:
-    ${Object.entries(data.knowledgeParams)
-      .map(([param, rating]) => `${param}: ${rating}/5`)
-      .join('\n')}
-
-    Goals: ${data.goals}
-    Timeline: ${data.timeline}
-    Topic: ${data.topic}
-    Other Info: ${data.otherInfo}
-
-    Generate a structured learning plan that includes:
-    1. An executive summary of the current situation and expected outcomes
-    2. Weekly plans with progressive improvement targets (show progress in percentages)
-    3. Detailed step-by-step instructions for each activity
-    4. Clear metrics for measuring progress
-    5. Specific resources and materials needed
-    6. Parent/teacher involvement guidelines
-
-    Return the response in the following JSON format:
-    {
-      "summary": {
-        "currentStatus": string,
-        "expectedOutcome": string,
-        "keyStrengths": string[],
-        "focusAreas": string[]
-      },
-      "weeklyPlans": [
-        {
-          "week": number,
-          "focus": string,
-          "expectedProgress": string,
-          "activities": string[],
-          "targets": string[],
-          "resources": string[],
-          "parentInvolvement": string
-        }
-      ],
-      "recommendations": string[],
-      "assessmentStrategy": string[]
-    }
-    `;
-
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+    const { object: plan } = await generateObject({
+      model: openai('gpt-4'),
+      schema: LearningPlanSchema,
+      schemaName: 'LearningPlan',
+      schemaDescription: 'A personalized learning plan for a student',
       messages: [
         {
-          role: "system",
-          content: "You are an expert educational consultant who creates personalized learning plans."
+          role: 'system',
+          content: 'You are an expert educational consultant who creates personalized learning plans.'
         },
         {
-          role: "user",
-          content: prompt
+          role: 'user',
+          content: `Create a detailed, progressive learning plan for a student with the following details:
+
+          Student Information:
+          Name: ${data.name}
+          Age: ${data.age}
+          Gender: ${data.gender}
+          Nationality: ${data.nationality}
+          Grade: ${data.grade}
+          Board: ${data.board}
+
+          Cognitive Assessment:
+          ${Object.entries(data.cognitiveParams)
+            .map(([param, rating]) => `${param}: ${rating}/5`)
+            .join('\n')}
+
+          Subject Area: ${data.selectedSubject}
+          Parameters Assessment:
+          ${Object.entries(data.knowledgeParams)
+            .map(([param, rating]) => `${param}: ${rating}/5`)
+            .join('\n')}
+
+          Goals: ${data.goals}
+          Timeline: ${data.timeline}
+          Topic: ${data.topic}
+          Other Info: ${data.otherInfo}`
         }
-      ],
-      response_format: { type: "json_object" },
-      max_tokens: 2000,
-      temperature: 0.7,
+      ]
     });
 
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error('No content received from OpenAI');
-    }
-    return NextResponse.json(JSON.parse(content));
+    return NextResponse.json(plan);
   } catch (error: any) {
-    console.error('Error generating learning plan:', error);
+    console.error('Error in generate-plp:', error);
     return NextResponse.json(
       { 
-        error: "Failed to generate learning plan",
-        details: error.message 
+        error: error.message || "Failed to generate learning plan",
+        timestamp: new Date().toISOString(),
+        requestId: crypto.randomUUID()
       },
-      { status: 500 }
+      { status: error.status || 500 }
     );
   }
 }

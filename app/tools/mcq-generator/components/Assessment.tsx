@@ -40,6 +40,7 @@ export default function Assessment({
   const [chatHistory, setChatHistory] = useState<string[]>([]);
   const [chatContext, setChatContext] = useState<string>(""); // Add this new state
   const [shortAnswerScores, setShortAnswerScores] = useState<number[]>([]);
+  const [isAnalysisLoading, setIsAnalysisLoading] = useState(false);
 
   useEffect(() => {
     setAnswers(
@@ -104,10 +105,16 @@ export default function Assessment({
       if (!question) return score;
       if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
         return score + (answer === question.correctAnswer ? 1 : 0);
-      } else if (assessmentType === "truefalse" && question.correctAnswer !== undefined) {
+      } else if (
+        assessmentType === "truefalse" &&
+        question.correctAnswer !== undefined
+      ) {
         return score + (answer === question.correctAnswer ? 1 : 0);
       } else if (assessmentType === "fillintheblank" && question.answer) {
-        return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
+        return (
+          score +
+          (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
+        );
       } else if (assessmentType === "shortanswer") {
         return score + (shortAnswerScores[index] || 0);
       }
@@ -149,6 +156,7 @@ export default function Assessment({
 
   // New function to fetch summary explanation
   const fetchSummaryExplanation = async (followUpMessage?: string) => {
+    setIsAnalysisLoading(true);
     try {
       const payload: any = { assessment, userAnswers: answers };
       if (followUpMessage) {
@@ -163,7 +171,11 @@ export default function Assessment({
       if (data.explanation) {
         if (followUpMessage) {
           // Only show follow-up messages in chat history
-          setChatHistory((prev) => [...prev, `You: ${followUpMessage}`, `Bot: ${data.explanation}`]);
+          setChatHistory((prev) => [
+            ...prev,
+            `You: ${followUpMessage}`,
+            `Bot: ${data.explanation}`,
+          ]);
         } else {
           // Store initial analysis separately
           setExplanation(data.explanation);
@@ -173,6 +185,8 @@ export default function Assessment({
       }
     } catch (error) {
       console.error("Error fetching summary:", error);
+    } finally {
+      setIsAnalysisLoading(false);
     }
   };
 
@@ -186,8 +200,16 @@ export default function Assessment({
   return (
     <div className="space-y-8">
       <div className="flex justify-end mb-4">
-        <Button 
-          onClick={() => downloadAssessment(assessment, assessmentType, topic, 'pdf', showResults)}
+        <Button
+          onClick={() =>
+            downloadAssessment(
+              assessment,
+              assessmentType,
+              topic,
+              "pdf",
+              showResults
+            )
+          }
           className="bg-neutral-900 hover:bg-neutral-700"
         >
           <Download className="mr-2 h-4 w-4" />
@@ -224,7 +246,7 @@ export default function Assessment({
               showResults={showResults}
             />
           )}
-          {assessmentType === "shortanswer" && (  // new branch for short answer questions
+          {assessmentType === "shortanswer" && ( // new branch for short answer questions
             <ShortQuestion
               question={question}
               index={index}
@@ -246,7 +268,10 @@ export default function Assessment({
       ) : (
         <div className="text-center">
           <h2 className="text-2xl font-bold">
-            Your Score: {calculateScore()} / {assessmentType === "shortanswer" ? assessment.length * 5 : assessment.length}
+            Your Score: {calculateScore()} /{" "}
+            {assessmentType === "shortanswer"
+              ? assessment.length * 5
+              : assessment.length}
           </h2>
           <div className="flex justify-center gap-2 mt-4">
             <Button
@@ -256,8 +281,16 @@ export default function Assessment({
             >
               {isSaving ? "Saving..." : "Save Results"}
             </Button>
-            <Button 
-              onClick={() => downloadAssessment(assessment, assessmentType, topic, 'pdf', true)}
+            <Button
+              onClick={() =>
+                downloadAssessment(
+                  assessment,
+                  assessmentType,
+                  topic,
+                  "pdf",
+                  true
+                )
+              }
               className="bg-neutral-900 hover:bg-neutral-700"
             >
               <Download className="mr-2 h-4 w-4" />
@@ -275,15 +308,44 @@ export default function Assessment({
           <div className="mt-8 border-t pt-4">
             <Button
               onClick={() => fetchSummaryExplanation()}
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              className="bg-rose-500 hover:bg-rose-500 text-white"
+              disabled={isAnalysisLoading}
             >
-              Get Summary Explanation
+              {isAnalysisLoading ? (
+                <span className="flex items-center">
+                  <svg
+                    className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                  >
+                    <circle
+                      className="opacity-25"
+                      cx="12"
+                      cy="12"
+                      r="10"
+                      stroke="currentColor"
+                      strokeWidth="4"
+                    ></circle>
+                    <path
+                      className="opacity-75"
+                      fill="currentColor"
+                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                    ></path>
+                  </svg>
+                  Analyzing...
+                </span>
+              ) : (
+                "Get Analysis"
+              )}
             </Button>
             {explanation && (
               <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
                 <h3 className="font-semibold mb-2">Summary Explanation:</h3>
                 {/* Changed className to reduce extra spacing */}
-                <ReactMarkdown className="prose prose-sm leading-tight">{explanation}</ReactMarkdown>
+                <ReactMarkdown className="prose prose-sm leading-tight">
+                  {explanation}
+                </ReactMarkdown>
               </div>
             )}
             {chatHistory.length > 0 && (
@@ -293,7 +355,9 @@ export default function Assessment({
                   {chatHistory.map((msg, idx) => (
                     <div key={idx} className="p-2 rounded bg-white shadow-sm">
                       {/* Changed className to reduce extra spacing */}
-                      <ReactMarkdown className="prose prose-sm leading-tight">{msg}</ReactMarkdown>
+                      <ReactMarkdown className="prose prose-sm leading-tight">
+                        {msg}
+                      </ReactMarkdown>
                     </div>
                   ))}
                 </div>
@@ -307,7 +371,10 @@ export default function Assessment({
                 placeholder="Ask a follow-up question..."
                 className="border rounded p-2 flex-grow"
               />
-              <Button onClick={handleChatSubmit} className="bg-green-600 hover:bg-green-500 text-white">
+              <Button
+                onClick={handleChatSubmit}
+                className="bg-green-600 hover:bg-green-500 text-white"
+              >
                 Send
               </Button>
             </div>

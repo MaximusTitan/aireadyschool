@@ -9,14 +9,18 @@ interface VideoGeneratorProps {
   toolCallId: string;
   onComplete: (toolCallId: string, videoUrl: string) => void;
   prompt: string;
+  initialImage?: string | null;
 }
 
 export const VideoGenerator = ({
   toolCallId,
   onComplete,
   prompt,
+  initialImage,
 }: VideoGeneratorProps) => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(
+    initialImage || null
+  );
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
 
@@ -66,6 +70,22 @@ export const VideoGenerator = ({
     if (file) await processFile(file);
   };
 
+  const convertUrlToBase64 = async (url: string): Promise<string> => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+      });
+    } catch (error) {
+      console.error("Error converting image URL to base64:", error);
+      throw new Error("Failed to process image");
+    }
+  };
+
   const handleImageToVideo = async (imageUrl: string) => {
     if (!imageUrl || !prompt) {
       setError("Both image and prompt are required");
@@ -76,12 +96,17 @@ export const VideoGenerator = ({
     setError("");
 
     try {
+      // Convert URL to base64 if it's not already in base64 format
+      const base64Image = imageUrl.startsWith("data:image/")
+        ? imageUrl
+        : await convertUrlToBase64(imageUrl);
+
       const response = await fetch("/api/image-to-video", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           prompt,
-          imageUrl,
+          imageUrl: base64Image,
         }),
       });
 
@@ -104,6 +129,13 @@ export const VideoGenerator = ({
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // Automatically start video generation if initial image is provided
+    if (initialImage) {
+      handleImageToVideo(initialImage);
+    }
+  }, [initialImage]);
 
   return (
     <div className="space-y-4 p-4 border rounded-lg">

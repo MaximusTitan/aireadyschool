@@ -141,6 +141,18 @@
   @apply border-l-4 border-gray-200 pl-4 italic my-4;
 }
 
+input {
+  background-color: white !important;
+}
+
+textarea {
+  background-color: white !important;
+}
+
+select {
+  background-color: white !important;
+}
+
 @media print {
   /* Hide non-essential elements when printing */
   form,

@@ -60,10 +60,19 @@ export async function POST(request: Request) {
     const subject = formData.get("subject") as string;
     const chapterTopic = formData.get("chapterTopic") as string;
     const grade = formData.get("grade") as string;
+    const country = formData.get("country") as string;
     const board = formData.get("board") as string;
     const classDuration = formData.get("classDuration") as string;
     const numberOfDays = Number.parseInt(formData.get("numberOfDays") as string, 10);
     const learningObjectives = formData.get("learningObjectives") as string;
+
+    // Validate required fields
+    if (!subject || !chapterTopic || !grade || !country || !board || !classDuration || !numberOfDays) {
+      return NextResponse.json(
+        { error: "Missing required fields" },
+        { status: 400 }
+      );
+    }
 
     // ...existing logging code...
 
@@ -117,7 +126,7 @@ export async function POST(request: Request) {
   ]
 }`;
 
-    const userPrompt = `Create a complete ${numberOfDays}-day lesson plan for teaching ${subject} - ${chapterTopic} for grade ${grade} (${board} board). Each class is ${classDuration} minutes long.
+    const userPrompt = `Create a complete ${numberOfDays}-day lesson plan for teaching ${subject} - ${chapterTopic} for grade ${grade} in ${country} following the ${board} board curriculum. Each class is ${classDuration} minutes long.
 
 Learning objectives: ${learningObjectives || "To be determined based on the topic"}
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Header from "./components/Header";
 import ClassSelection from "./components/ClassSelection";
 import SubjectSelection from "./components/SubjectSelection";
 import TopicInput from "./components/TopicInput";
@@ -10,12 +9,16 @@ import DifficultySelection from "./components/DifficultySelection";
 import QuestionCount from "./components/QuestionCount";
 import GenerateButton from "./components/GenerateButton";
 import Assessment from "./components/Assessment";
-import Footer from "./components/Footer";
 import CountrySelection from "./components/CountrySelection";
 import BoardSelection from "./components/BoardSelection";
 import LearningOutcomesInput from "./components/LearningOutcomesInput";
 import { createClient } from "@/utils/supabase/client";
 import { CountryKey } from "@/types/assessment";
+import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 const supabase = createClient();
 
@@ -72,7 +75,9 @@ export default function Home() {
   const fetchSavedAssessments = async () => {
     try {
       // Get the currently authenticated user
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("User not authenticated");
       }
@@ -257,14 +262,38 @@ export default function Home() {
     }
   };
 
+  const handleReset = () => {
+    setAssessment(null);
+    setAssessmentId(null);
+    setShowResults(false);
+    setUserAnswers([]);
+    setError("");
+  };
+
   return (
-    <div className="min-h-screen bg-white flex flex-col justify-between">
-      <Header />
-      <main className="container mx-auto px-4 py-8 flex-grow bg-white">
-        <div className="bg-white rounded-lg border p-6 md:p-8 max-w-5xl mx-auto">
+    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+      <Link href="/tools">
+        <Button variant="outline" className="mb-2 border-neutral-500">
+          ← Back
+        </Button>
+      </Link>
+
+      <div className="mb-8 space-y-2">
+        <h1 className="text-3xl font-bold text-rose-500">
+          Assessment Generator
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Create interactive multiple-choice, descriptive, fill in the blanks
+          questions for students to assess their understanding.
+        </p>
+      </div>
+
+      <Card className="shadow-lg border-2">
+        <CardContent className="p-6 space-y-8">
           {!assessment ? (
-            <>
-              <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              {/* First Row - Country and Board */}
+              <div className="grid md:grid-cols-2 gap-8">
                 <CountrySelection
                   value={formData.country}
                   onChange={(value: CountryKey) =>
@@ -278,6 +307,10 @@ export default function Home() {
                   }
                   country={formData.country}
                 />
+              </div>
+
+              {/* Second Row - Class, Subject and Assessment Type */}
+              <div className="grid md:grid-cols-3 gap-8">
                 <ClassSelection
                   value={formData.classLevel}
                   onChange={(value) =>
@@ -290,24 +323,30 @@ export default function Home() {
                     setFormData({ ...formData, subject: value })
                   }
                 />
-                <TopicInput
-                  value={formData.topic}
-                  onChange={(value) =>
-                    setFormData({ ...formData, topic: value })
-                  }
-                />
-                <LearningOutcomesInput
-                  value={formData.learningOutcomes}
-                  onChange={(value) =>
-                    setFormData({ ...formData, learningOutcomes: value })
-                  }
-                />
                 <AssessmentTypeSelection
                   value={formData.assessmentType}
                   onChange={(value) =>
                     setFormData({ ...formData, assessmentType: value })
                   }
                 />
+              </div>
+
+              {/* Topic Input */}
+              <TopicInput
+                value={formData.topic}
+                onChange={(value) => setFormData({ ...formData, topic: value })}
+              />
+
+              {/* Learning Outcomes */}
+              <LearningOutcomesInput
+                value={formData.learningOutcomes}
+                onChange={(value) =>
+                  setFormData({ ...formData, learningOutcomes: value })
+                }
+              />
+
+              {/* Third Row - Difficulty and Question Count */}
+              <div className="grid md:grid-cols-2 gap-8">
                 <DifficultySelection
                   value={formData.difficulty}
                   onChange={(value) =>
@@ -320,62 +359,46 @@ export default function Home() {
                     setFormData({ ...formData, questionCount: value })
                   }
                 />
-                <GenerateButton
-                  isLoading={isLoading}
-                  className="bg-neutral-800 hover:bg-neutral-600 text-white"
-                />
-              </form>
-              <div className="mt-8">
-                <h2 className="text-xl font-semibold mb-4">
-                  Saved Assessments
-                </h2>
-                {savedAssessments.length > 0 ? (
-                  <ul className="space-y-2">
-                    {savedAssessments.map((savedAssessment) => (
-                      <li
-                        key={savedAssessment.id}
-                        className="flex justify-between items-center bg-gray-100 p-2 rounded"
-                      >
-                        <span>
-                          {savedAssessment.subject} - {savedAssessment.topic}
-                        </span>
-                        <div>
-                          <button
-                            onClick={() =>
-                              handleLoadAssessment(savedAssessment.id)
-                            }
-                            className="bg-neutral-500 hover:bg-neutral-600 text-white px-2 py-1 rounded mr-2"
-                          >
-                            Load
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleViewAnswers(savedAssessment.id)
-                            }
-                            className="bg-purple-400 hover:bg-purple-300 text-white px-2 py-1 rounded"
-                          >
-                            View Answers
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p>No saved assessments found.</p>
-                )}
               </div>
-            </>
+
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-fit h-10 text-base font-semibold bg-rose-500 hover:bg-rose-600"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Generating...
+                  </>
+                ) : (
+                  "Generate Assessment"
+                )}
+              </Button>
+            </form>
           ) : (
-            <Assessment
-              assessment={assessment}
-              assessmentType={formData.assessmentType}
-              onSubmit={handleAnswerSubmit}
-              showResults={showResults}
-              userAnswers={userAnswers}
-              assessmentId={assessmentId || ""} // Provide a default empty string
-              topic={formData.topic} // Add this prop
-            />
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <Button
+                  variant="outline"
+                  onClick={handleReset}
+                  className="border-neutral-500"
+                >
+                  ← Back to Generator
+                </Button>
+              </div>
+              <Assessment
+                assessment={assessment}
+                assessmentType={formData.assessmentType}
+                onSubmit={handleAnswerSubmit}
+                showResults={showResults}
+                userAnswers={userAnswers}
+                assessmentId={assessmentId || ""}
+                topic={formData.topic}
+              />
+            </>
           )}
+
           {error && (
             <div className="mt-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
               <p>{error}</p>
@@ -384,9 +407,61 @@ export default function Home() {
               </p>
             </div>
           )}
-        </div>
-      </main>
-      <Footer />
+        </CardContent>
+      </Card>
+
+      {/* Saved Assessments Card */}
+      {savedAssessments.length > 0 && (
+        <Card className="shadow-lg border-2">
+          <CardHeader className="bg-muted/50 border-b">
+            <CardTitle className="text-2xl font-bold">
+              Saved Assessments
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {savedAssessments.map((savedAssessment) => (
+                <div
+                  key={savedAssessment.id}
+                  className="p-4 rounded-lg border-2 hover:border-neutral-400 hover:bg-muted/50 transition-all"
+                >
+                  <div className="space-y-2">
+                    <h3 className="text-lg font-semibold line-clamp-1">
+                      {savedAssessment.topic}
+                    </h3>
+                    <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                      <span>{savedAssessment.subject}</span>
+                      <span>•</span>
+                      <span>{savedAssessment.class_level}</span>
+                      <span>•</span>
+                      <span className="capitalize">
+                        {savedAssessment.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex gap-2 mt-4">
+                    <Button
+                      onClick={() => handleLoadAssessment(savedAssessment.id)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      Load
+                    </Button>
+                    <Button
+                      onClick={() => handleViewAnswers(savedAssessment.id)}
+                      variant="outline"
+                      size="sm"
+                      className="bg-rose-500 text-white hover:bg-rose-600"
+                    >
+                      Answers
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, AlertCircle, ChevronLeft } from "lucide-react";
+import { Loader2, AlertCircle, ChevronLeft, Info } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -59,17 +59,18 @@ export function AssignmentEvaluator() {
   const [assignmentText, setAssignmentText] = useState("");
   const [rubricText, setRubricText] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [inputMethod, setInputMethod] = useState<"file" | "text" | null>(null);
+  const [rubricInputMethod, setRubricInputMethod] = useState<
+    "file" | "text" | null
+  >(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
-      setError("");
-    }
-  };
-
-  const handleRubricChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      setRubricFile(e.target.files[0]);
+      setInputMethod("file");
+      setAssignmentText("");
       setError("");
     }
   };
@@ -78,14 +79,55 @@ export function AssignmentEvaluator() {
     e: React.ChangeEvent<HTMLTextAreaElement>
   ) => {
     setAssignmentText(e.target.value);
+    if (e.target.value) {
+      setInputMethod("text");
+      setFile(null);
+    } else {
+      setInputMethod(null);
+    }
     setError("");
+  };
+
+  const clearFile = () => {
+    setFile(null);
+    setInputMethod(null);
+  };
+
+  const clearText = () => {
+    setAssignmentText("");
+    setInputMethod(null);
+  };
+
+  const handleRubricChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setRubricFile(e.target.files[0]);
+      setRubricInputMethod("file");
+      setRubricText("");
+      setError("");
+    }
   };
 
   const handleRubricTextChange = (
     e: React.ChangeEvent<HTMLTextAreaElement>
   ) => {
     setRubricText(e.target.value);
+    if (e.target.value) {
+      setRubricInputMethod("text");
+      setRubricFile(null);
+    } else {
+      setRubricInputMethod(null);
+    }
     setError("");
+  };
+
+  const clearRubricFile = () => {
+    setRubricFile(null);
+    setRubricInputMethod(null);
+  };
+
+  const clearRubricText = () => {
+    setRubricText("");
+    setRubricInputMethod(null);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -109,6 +151,8 @@ export function AssignmentEvaluator() {
     if (file) {
       formData.append("file", file);
     }
+    formData.append("title", title);
+    formData.append("description", description);
     formData.append("assignmentText", assignmentText);
     formData.append("gradeLevel", gradeLevel);
     formData.append("subject", subject);
@@ -146,52 +190,22 @@ export function AssignmentEvaluator() {
     }
   };
 
+  const getDisabledMessage = (
+    type: "assignment" | "rubric",
+    method: "file" | "text"
+  ) => {
+    const otherMethod = method === "file" ? "text" : "file";
+    return `This ${type} ${method} input is disabled because you are using ${otherMethod} input. Clear the ${otherMethod} to use this instead.`;
+  };
+
   return (
     <div className="container mx-auto max-w-4xl space-y-6 p-4">
       <Card>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6 mt-4">
-            <div className="grid md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="space-y-2">
-                      <Label htmlFor="file">Assignment Submission</Label>
-                      <Input
-                        id="file"
-                        type="file"
-                        accept="application/pdf,text/plain"
-                        onChange={handleFileChange}
-                        disabled={isLoading}
-                        className="cursor-pointer"
-                      />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent>Upload PDF or text file</TooltipContent>
-                </Tooltip>
-
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator />
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-background px-2 text-muted-foreground text-sm">
-                      OR
-                    </span>
-                  </div>
-                </div>
-
-                <textarea
-                  id="assignmentText"
-                  className="min-h-[150px] w-full p-2 border rounded resize-y"
-                  placeholder="Enter assignment text here..."
-                  value={assignmentText}
-                  onChange={handleAssignmentTextChange}
-                  disabled={isLoading}
-                />
-              </div>
-
-              <div className="space-y-4">
+            <div className="space-y-6">
+              {/* Grade Level and Subject - Moved to top */}
+              <div className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="gradeLevel">Grade Level</Label>
                   <Select onValueChange={setGradeLevel} value={gradeLevel}>
@@ -245,52 +259,244 @@ export function AssignmentEvaluator() {
                   </Select>
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <Label htmlFor="rubric">Rubric (Optional)</Label>
-              <Input
-                id="rubric"
-                type="file"
-                accept="application/pdf,text/plain"
-                onChange={handleRubricChange}
-                disabled={isLoading}
-              />
-              <p className="text-center my-2">OR</p>
-              <textarea
-                id="rubricText"
-                className="w-full p-2 border rounded"
-                placeholder="Enter rubric text here..."
-                value={rubricText}
-                onChange={handleRubricTextChange}
-                disabled={isLoading}
-              />
-            </div>
-
-            {isLoading && (
-              <div className="space-y-2">
-                <Progress value={uploadProgress} className="w-full" />
-                <p className="text-sm text-center text-muted-foreground">
-                  {uploadProgress < 100
-                    ? "Processing assignment..."
-                    : "Finalizing evaluation..."}
-                </p>
+              {/* Title and Description */}
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="title">Assignment Title</Label>
+                  <Input
+                    id="title"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Enter assignment title"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Assignment Description</Label>
+                  <textarea
+                    id="description"
+                    className="min-h-[100px] w-full p-2 border rounded resize-y"
+                    placeholder="Enter assignment description..."
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
-            )}
 
-            <Button
-              type="submit"
-              disabled={
-                (!file && !assignmentText) ||
-                !gradeLevel ||
-                !subject ||
-                isLoading
-              }
-              className="w-full md:w-auto"
-            >
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? "Evaluating..." : "Upload and Evaluate"}
-            </Button>
+              {/* Assignment Submission Section */}
+              <div className="space-y-4">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="space-y-2">
+                      <Label htmlFor="file">Assignment Submission</Label>
+                      <div className="flex gap-2 items-start">
+                        <div className="relative flex-1">
+                          <Input
+                            id="file"
+                            type="file"
+                            accept="application/pdf,text/plain"
+                            onChange={handleFileChange}
+                            disabled={isLoading || inputMethod === "text"}
+                            className={`cursor-${inputMethod === "text" ? "not-allowed" : "pointer"}`}
+                          />
+                          {inputMethod === "text" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                  <Info className="h-4 w-4 text-muted-foreground" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                {getDisabledMessage("assignment", "file")}
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                        {file && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={clearFile}
+                          >
+                            Clear
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>Upload PDF or text file</TooltipContent>
+                </Tooltip>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-background px-2 text-muted-foreground text-sm">
+                      OR
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="assignmentText">Assignment Text</Label>
+                  <div className="flex gap-2 items-start">
+                    <div className="relative flex-1">
+                      <textarea
+                        id="assignmentText"
+                        className={`min-h-[150px] w-full p-2 border rounded resize-y cursor-${
+                          inputMethod === "file" ? "not-allowed" : "text"
+                        }`}
+                        placeholder="Enter assignment text here..."
+                        value={assignmentText}
+                        onChange={handleAssignmentTextChange}
+                        disabled={isLoading || inputMethod === "file"}
+                      />
+                      {inputMethod === "file" && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="absolute right-2 top-2">
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {getDisabledMessage("assignment", "text")}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {assignmentText && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={clearText}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Rubric Section */}
+              <div className="space-y-4">
+                <Label htmlFor="rubric">Rubric (Optional)</Label>
+                <div className="flex gap-2 items-start">
+                  <div className="relative flex-1">
+                    <Input
+                      id="rubric"
+                      type="file"
+                      accept="application/pdf,text/plain"
+                      onChange={handleRubricChange}
+                      disabled={isLoading || rubricInputMethod === "text"}
+                      className={`cursor-${rubricInputMethod === "text" ? "not-allowed" : "pointer"}`}
+                    />
+                    {rubricInputMethod === "text" && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                            <Info className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {getDisabledMessage("rubric", "file")}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
+                  {rubricFile && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={clearRubricFile}
+                    >
+                      Clear
+                    </Button>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <Separator />
+                  </div>
+                  <div className="relative flex justify-center">
+                    <span className="bg-background px-2 text-muted-foreground text-sm">
+                      OR
+                    </span>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="rubricText">Rubric Text</Label>
+                  <div className="flex gap-2 items-start">
+                    <div className="relative flex-1">
+                      <textarea
+                        id="rubricText"
+                        className={`w-full p-2 border rounded cursor-${
+                          rubricInputMethod === "file" ? "not-allowed" : "text"
+                        }`}
+                        placeholder="Enter rubric text here..."
+                        value={rubricText}
+                        onChange={handleRubricTextChange}
+                        disabled={isLoading || rubricInputMethod === "file"}
+                      />
+                      {rubricInputMethod === "file" && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="absolute right-2 top-2">
+                              <Info className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {getDisabledMessage("rubric", "text")}
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                    {rubricText && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={clearRubricText}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {isLoading && (
+                <div className="space-y-2">
+                  <Progress value={uploadProgress} className="w-full" />
+                  <p className="text-sm text-center text-muted-foreground">
+                    {uploadProgress < 100
+                      ? "Processing assignment..."
+                      : "Finalizing evaluation..."}
+                  </p>
+                </div>
+              )}
+
+              <Button
+                type="submit"
+                disabled={
+                  (!file && !assignmentText) ||
+                  !gradeLevel ||
+                  !subject ||
+                  isLoading
+                }
+                className="w-full md:w-auto"
+              >
+                {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isLoading ? "Evaluating..." : "Upload and Evaluate"}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>

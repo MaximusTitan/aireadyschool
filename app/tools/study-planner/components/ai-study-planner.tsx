@@ -71,7 +71,9 @@ export function AIStudyPlanner() {
   useEffect(() => {
     if (studyPlan) {
       setTimeout(() => {
-        document.getElementById("generatedPlan")?.scrollIntoView({ behavior: "smooth" });
+        document
+          .getElementById("generatedPlan")
+          ?.scrollIntoView({ behavior: "smooth" });
       }, 100);
     }
   }, [studyPlan]);
@@ -114,7 +116,9 @@ export function AIStudyPlanner() {
 
           // Get the current user email from Supabase
           const supabase = createClient();
-          const { data: { user } } = await supabase.auth.getUser();
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
           const userEmail = user?.email || "";
 
           // Save study plan to Supabase with user_email
@@ -135,7 +139,7 @@ export function AIStudyPlanner() {
                 input.availableStudyTimePerDay
               ),
               studyPlan: data.studyPlan,
-              user_email: userEmail  // include the user email
+              user_email: userEmail, // include the user email
             }),
           });
 
@@ -243,7 +247,7 @@ export function AIStudyPlanner() {
                   />
                 </div>
                 <div>
-                  <Label htmlFor="learningGoal">Learning Goal</Label>
+                  <Label htmlFor="learningGoal">Learning Objective</Label>
                   <Textarea
                     id="learningGoal"
                     name="learningGoal"

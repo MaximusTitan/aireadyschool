@@ -3,7 +3,7 @@
 import type React from "react";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { Search, MessageCircle, Send, Plug } from "lucide-react";
+import { Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
   Card,

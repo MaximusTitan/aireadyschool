@@ -11,15 +11,14 @@ import { createClient } from "@/utils/supabase/client"; // Import supersbase cli
 import { AssignmentHistory } from "./components/AssignmentHistory";
 
 const formSchema = z.object({
+  country: z.string().min(1, "Country is required"),
+  board: z.string().min(1, "Educational board is required"),
+  subject: z.string().min(1, "Subject is required"),
   gradeLevel: z.string().min(1, "Grade level is required"),
   assignmentType: z.string().min(1, "Assignment type is required"),
   textInput: z.string().min(1, "Topic is required"),
   learningObjective: z.string().min(1, "Learning objective is required"),
-  collaboration: z
-    .enum(["Yes", "No"])
-    .refine((val) => ["Yes", "No"].includes(val), {
-      message: "Collaboration must be either 'Yes' or 'No'",
-    }),
+  collaboration: z.enum(["Yes", "No"]),
   dueDate: z
     .number()
     .min(1, "Number of days is required")
@@ -75,18 +74,23 @@ async function generateAssignment(
   data: FormData,
   userEmail: string
 ): Promise<Assignment> {
+  // Create the prompt with all available data
   const timeLeftStr = `${data.dueDate} day${data.dueDate > 1 ? "s" : ""}`;
-  const prompt = `Generate an assignment topic for a ${data.gradeLevel} grade 
+  const prompt = `Generate an assignment for ${data.country}'s ${data.board} board, 
+  subject ${data.subject}, ${data.gradeLevel} grade level, 
   with an assignment type of ${data.assignmentType} focusing on ${data.textInput}. 
   The learning objective is to ${data.learningObjective}. Collaboration is ${
     data.collaboration === "Yes" ? "allowed" : "not allowed"
   }. 
-  This assignment would be due in ${timeLeftStr}. 
-  Please decide the complexity of the assignment based on the time left until the due date.`;
+  This assignment would be due in ${timeLeftStr}.`;
 
+  // Send all data to API but only relevant fields will be saved to database
   return await sendAssignmentRequest({
     prompt,
     email: userEmail,
+    country: data.country,
+    board: data.board,
+    subject: data.subject,
     gradeLevel: data.gradeLevel,
     assignmentType: data.assignmentType,
     textInput: data.textInput,
@@ -124,6 +128,9 @@ const AssignmentGenerator: React.FC = () => {
   const formMethods = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      country: "",
+      board: "",
+      subject: "",
       gradeLevel: "",
       assignmentType: "",
       textInput: "",
@@ -171,7 +178,7 @@ const AssignmentGenerator: React.FC = () => {
               userEmail={userEmail}
               onSelectAssignment={(selected) => {
                 setAssignment(selected);
-                scrollToOutput();  // Scroll to the content textarea after selection
+                scrollToOutput(); // Scroll to the content textarea after selection
               }}
             />
           )}

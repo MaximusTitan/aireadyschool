@@ -4,35 +4,122 @@ import { useChat } from "ai/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { CommandInput } from "./components/command-input";
 import { ChatArea } from "./components/chat-area";
+import { useChatThread } from "@/app/hooks/useChatThread";
+import { ThreadList } from "./components/thread-list";
+import { useRouter } from "next/navigation";
+import { Message, CreateMessage } from "ai";
+import { ChatMessage, ToolCall, ToolState } from "@/types/chat";
+
+interface UserMessage extends ChatMessage {
+  role: "user";
+  content: string;
+  toolCalls?: ToolCall[];
+}
+
+// Add TypeScript interface for thread data
+interface ThreadData {
+  thread: {
+    id: string;
+    title: string;
+    // ... add other thread properties as needed
+  };
+  messages: Array<{
+    id: string;
+    role: string;
+    content: string;
+    created_at: string;
+    toolCalls?: Array<{
+      id: string;
+      tool: string;
+      parameters: any;
+      result?: any;
+      state?: string;
+    }>;
+  }>;
+}
 
 export default function Page() {
+  const router = useRouter();
   const { setOpen } = useSidebar();
+  const {
+    threadId,
+    threads,
+    createThread,
+    saveMessage,
+    loadThread,
+    deleteThread,
+    startNewThread,
+    currentMessages,
+    setCurrentMessages, // Add this line
+  } = useChatThread();
 
-  // Close sidebar on component mount
+  // Load thread when URL changes or threadId changes
   useEffect(() => {
     setOpen(false);
-  }, [setOpen]);
+    const searchParams = new URLSearchParams(window.location.search);
+    const threadParam = searchParams.get("thread");
 
-  const [simulationCode, setSimulationCode] = useState<string | null>(null);
-  const simulationCodeRef = useRef<string | null>(null);
-  const { messages, input, setInput, handleSubmit, append, isLoading } =
-    useChat({
-      api: "/api/gen-chat",
-      onFinish: useCallback((message: any) => {
-        const toolInvocation = message.toolInvocations?.find(
-          (t: any) => t.toolName === "conceptVisualizer"
-        );
-        if (toolInvocation && toolInvocation.state === "result") {
-          const code = (toolInvocation.result as any).code;
-          if (code !== simulationCodeRef.current) {
-            simulationCodeRef.current = code;
-            setSimulationCode(code.trim());
-          }
-        }
-      }, []),
-    });
+    if (threadParam) {
+      handleThreadSelect(threadParam);
+    }
+  }, [setOpen]); // Remove threadId dependency to prevent loops
+
+  // Create a ref to store the chat instance
+  const chatRef = useRef<any>(null);
+
+  // Initialize chat
+  const chat = useChat({
+    api: "/api/gen-chat",
+    id: threadId,
+    initialMessages: currentMessages.map((msg) => ({
+      id: msg.id || String(Date.now()), // Ensure id is always present
+      role: msg.role,
+      content: msg.content,
+      createdAt: msg.createdAt,
+    })),
+    body: { id: threadId },
+    onFinish: useCallback(
+      async (message: Message) => {
+        const messageToSave: ChatMessage = {
+          id: String(Date.now()),
+          role: message.role as ChatMessage["role"],
+          content: message.content,
+          createdAt: new Date(),
+          toolCalls: (message as any).toolCalls?.map((call: any) => ({
+            id: call.id || String(Date.now()),
+            tool: call.tool || call.function?.name,
+            parameters: call.parameters || call.function?.arguments,
+            result: call.result,
+            state: (call.state || "result") as ToolState,
+          })),
+        };
+        await saveMessage(messageToSave);
+      },
+      [saveMessage]
+    ),
+  });
+
+  // Store chat instance in ref
+  chatRef.current = chat;
+
+  // Destructure chat properties
+  const { messages, input, setInput, append, isLoading, setMessages } = chat;
+
+  // Update chat messages when thread messages change
+  useEffect(() => {
+    if (currentMessages) {
+      setMessages(
+        currentMessages.map((msg) => ({
+          id: msg.id || String(Date.now()), // Ensure id is always present
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.createdAt,
+        }))
+      );
+    }
+  }, [currentMessages, setMessages]);
+
   const [showCommands, setShowCommands] = useState(false);
   const [pendingImageRequests] = useState(() => new Set<string>());
   const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
@@ -218,122 +305,223 @@ export default function Page() {
     }
   };
 
+  // Update tool calls to include required id
+  const createToolCall = (
+    tool: string,
+    parameters: Record<string, any>
+  ): ToolCall => ({
+    id: String(Date.now()),
+    tool,
+    parameters,
+    state: "pending",
+  });
+
   const handleDirectCommand = async (command: string) => {
+    // Ensure thread exists before handling command
+    if (!threadId) {
+      const newThreadId = await createThread();
+      // Wait for thread ID to be set in state
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await router.push(`/tools/gen-chat?thread=${newThreadId}`);
+    }
+
     const parts = command.slice(1).split(" ");
     const toolName = parts[0].toLowerCase();
+    let userMessage: UserMessage | undefined;
+
+    const baseMessage = {
+      id: String(Date.now()),
+      createdAt: new Date(),
+    };
+
     if (toolName === "math") {
       const level = parts[1] || "easy";
       const topic = parts[2] || "addition";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
+      userMessage = {
+        ...baseMessage,
+        role: "user",
         content: `Generate a ${level} ${topic} math problem`,
-        toolCalls: [
-          { tool: "generateMathProblem", parameters: { level, topic } },
-        ],
+        toolCalls: [createToolCall("generateMathProblem", { level, topic })],
       };
-      await append(userMessage);
     } else if (toolName === "quiz") {
       const subject = parts[1] || "general";
       const difficulty = parts[2] || "easy";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
+      userMessage = {
+        ...baseMessage,
+        role: "user",
         content: `Generate a ${difficulty} quiz about ${subject}`,
-        toolCalls: [
-          { tool: "generateQuiz", parameters: { subject, difficulty } },
-        ],
+        toolCalls: [createToolCall("generateQuiz", { subject, difficulty })],
       };
-      await append(userMessage);
     } else if (toolName === "image") {
       const prompt = parts.slice(1, -1).join(" ");
       const style = parts[parts.length - 1] || "realistic_image";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
+      userMessage = {
+        ...baseMessage,
+        role: "user",
         content: `Generate an educational image about: ${prompt}`,
         toolCalls: [
-          {
-            tool: "generateImage",
-            parameters: {
-              pending: true,
-              prompt,
-              style,
-              imageSize: "square_hd",
-              numInferenceSteps: 1,
-              numImages: 1,
-              enableSafetyChecker: true,
-            },
-          },
+          createToolCall("generateImage", {
+            prompt,
+            style,
+            imageSize: "square_hd",
+            numInferenceSteps: 1,
+            numImages: 1,
+            enableSafetyChecker: true,
+          }),
         ],
       };
-      await append(userMessage);
     } else if (toolName === "visualize") {
       const subject = parts[1] || "physics";
       const concept = parts.slice(2).join(" ") || "";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
+      userMessage = {
+        ...baseMessage,
+        role: "user",
         content: `Generate a visualization of ${concept} ${subject}`,
         toolCalls: [
-          { tool: "generateVisualization", parameters: { subject, concept } },
+          createToolCall("generateVisualization", { subject, concept }),
         ],
       };
-      await append(userMessage);
     } else if (toolName === "mindmap") {
       const topic = parts.slice(1).join(" ");
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
+      userMessage = {
+        ...baseMessage,
+        role: "user",
         content: `Generate a mind map about ${topic}`,
-        toolCalls: [{ tool: "generateMindMap", parameters: { topic } }],
+        toolCalls: [createToolCall("generateMindMap", { topic })],
       };
-      await append(userMessage);
     } else if (toolName === "video") {
       const prompt = parts.slice(1).join(" ");
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
+      userMessage = {
+        ...baseMessage,
+        role: "user",
         content: `Generate a video with this description: ${prompt}`,
         toolCalls: [
-          {
-            tool: "generateVideo",
-            parameters: {
-              prompt,
-              imageUrl: lastGeneratedImage, // Pass the last generated image URL
-            },
-          },
+          createToolCall("generateVideo", {
+            prompt,
+            imageUrl: lastGeneratedImage, // Pass the last generated image URL
+          }),
         ],
       };
-      await append(userMessage);
+    }
+
+    if (!userMessage) {
+      userMessage = {
+        ...baseMessage,
+        role: "user",
+        content: `Unknown command: ${command}`,
+      };
+    }
+
+    try {
+      await saveMessage(userMessage);
+      await append({ ...userMessage });
+    } catch (error) {
+      console.error("Failed to save command message:", error);
     }
   };
 
+  // Load thread messages when switching threads
+  const handleThreadSelect = async (selectedThreadId: string) => {
+    try {
+      const messages = await loadThread(selectedThreadId);
+      if (messages) {
+        setMessages(messages);
+      }
+      router.push(`/tools/gen-chat?thread=${selectedThreadId}`);
+    } catch (error) {
+      console.error("Failed to load thread:", error);
+    }
+  };
+
+  const handleDeleteThread = async (threadId: string) => {
+    if (confirm("Are you sure you want to delete this chat?")) {
+      try {
+        await deleteThread(threadId);
+        setMessages([]); // Clear messages in useChat state
+        setCurrentMessages([]); // Clear messages in thread context
+        setInput(""); // Clear input
+        // Reset chat instance
+        chatRef.current = null;
+        // Remove thread from URL and reset threadId
+        router.replace("/tools/gen-chat", { scroll: false });
+      } catch (error) {
+        console.error("Failed to delete thread:", error);
+      }
+    }
+  };
+
+  const handleNewThread = async () => {
+    try {
+      const newThreadId = await startNewThread();
+      setMessages([]); // Clear messages in useChat state
+      router.push(`/tools/gen-chat?thread=${newThreadId}`);
+    } catch (error) {
+      console.error("Failed to create new thread:", error);
+    }
+  };
+
+  const [simulationCode, setSimulationCode] = useState<string | null>(null);
+  const simulationCodeRef = useRef<string | null>(null);
+
+  // Ensure thread exists before sending message
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.toLowerCase().includes("video") && lastGeneratedImage) {
-      // If the message mentions "video" and we have a last generated image
-      const userMessage = {
+
+    if (!input.trim()) return; // Don't process empty messages
+
+    try {
+      let activeThreadId = threadId;
+      // Create new thread if none exists
+      if (!activeThreadId) {
+        activeThreadId = await createThread();
+        await router.push(`/tools/gen-chat?thread=${activeThreadId}`);
+        // Wait for thread creation to complete
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      // Verify thread exists before proceeding
+      if (!activeThreadId) {
+        console.warn("No active thread available");
+        return;
+      }
+
+      const userMessage: ChatMessage = {
         id: String(Date.now()),
-        role: "user" as const,
+        role: "user",
         content: input,
-        toolCalls: [
-          {
-            tool: "generateVideo",
-            parameters: {
-              prompt: input,
-              imageUrl: lastGeneratedImage,
-            },
-          },
-        ],
+        createdAt: new Date(),
       };
-      await append(userMessage);
-      setInput("");
-    } else if (input.startsWith("/")) {
-      await handleDirectCommand(input);
-      setInput("");
-    } else {
-      handleSubmit(e);
+
+      try {
+        // Attempt to save message first
+        await saveMessage(userMessage, activeThreadId);
+
+        // Only proceed with chat if message save was successful
+        if (input.toLowerCase().includes("video") && lastGeneratedImage) {
+          const messageWithTool: ChatMessage = {
+            ...userMessage,
+            toolCalls: [
+              createToolCall("generateVideo", {
+                prompt: input,
+                imageUrl: lastGeneratedImage,
+              }),
+            ],
+          };
+          await append(messageWithTool);
+        } else if (input.startsWith("/")) {
+          await handleDirectCommand(input);
+        } else {
+          await chatRef.current?.append(userMessage);
+        }
+
+        setInput("");
+      } catch (error) {
+        console.error("Message processing failed:", error);
+        // Consider showing a user-friendly error message here
+      }
+    } catch (error) {
+      console.error("Thread creation failed:", error);
+      // Consider showing a user-friendly error message here
     }
   };
 
@@ -346,6 +534,15 @@ export default function Page() {
   return (
     <TooltipProvider>
       <div className="flex h-screen">
+        <ThreadList
+          threads={threads}
+          currentThreadId={threadId}
+          onThreadSelect={handleThreadSelect}
+          onDeleteThread={handleDeleteThread}
+          onNewThread={handleNewThread}
+          messages={messages}
+          isLoading={isLoading}
+        />
         <ChatArea
           messages={messages}
           input={input}

@@ -9,25 +9,7 @@ import { CommandInput } from "./command-input";
 import { useNowPlaying } from "@/app/hooks/useNowPlaying";
 import { useAudioSettings } from "@/app/hooks/useAudioSettings";
 import { VideoGenerator } from "./video-generator";
-
-const GIF_URLS = {
-  constant:
-    "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/store//o-constant.gif",
-  talking:
-    "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/store//o-talking-small.gif",
-  thinking:
-    "https://xndjwmkypyilvkyczvbj.supabase.co/storage/v1/object/public/store//O-Thinking.gif",
-};
-
-// Add this hook before SimulationWrapper
-const usePreloadImages = (urls: string[]) => {
-  useEffect(() => {
-    urls.forEach((url) => {
-      const img = new Image();
-      img.src = url;
-    });
-  }, []);
-};
+import { ChatAreaProps } from "@/types/chat";
 
 // SimulationWrapper moved here
 const SimulationWrapper = ({ code }: { code: string }) => {
@@ -46,68 +28,6 @@ const SimulationWrapper = ({ code }: { code: string }) => {
       style={{ width: "100%", height: "800px", border: "none" }} // increased height
     />
   );
-};
-
-type ChatAreaProps = {
-  messages: any[];
-  simulationCode: string | null;
-  simulationCodeRef: React.MutableRefObject<string | null>;
-  generatedImages: Record<string, { url: string; credits: number }>;
-  pendingImageRequests: Set<string>;
-  completedImages: Set<string>;
-  pendingVisualizations: Set<string>;
-  handleAnswerSubmit: (data: {
-    studentAnswer: number;
-    correctAnswer: number;
-    question: string;
-    topic: string;
-    level: string;
-  }) => Promise<void>;
-  handleImageGeneration: (
-    toolCallId: string,
-    params: {
-      prompt: string;
-      style: string;
-      imageSize: string;
-      numInferenceSteps: number;
-      numImages: number;
-      enableSafetyChecker: boolean;
-    }
-  ) => Promise<void>;
-  handleVisualization: (
-    subject: string,
-    concept: string
-  ) => Promise<{ code?: string }>;
-  onSimulationCode: (code: string) => void;
-  generatedQuizzes: Record<string, any>;
-  pendingQuizzes: Set<string>;
-  handleQuizGeneration: (
-    toolCallId: string,
-    params: { subject: string; difficulty: string }
-  ) => Promise<void>;
-  handleQuizAnswer: (data: {
-    selectedOption: {
-      id: string;
-      text: string;
-      isCorrect: boolean;
-    };
-    question: string;
-    allOptions: Array<{
-      id: string;
-      text: string;
-      isCorrect: boolean;
-    }>;
-    subject: string;
-    difficulty: string;
-    explanation: string; // Added this field
-  }) => Promise<void>;
-  input: string;
-  isLoading: boolean;
-  onInputChange: (value: string) => void;
-  onSubmit: (e: React.FormEvent) => void;
-  generatedVideos: Record<string, string>;
-  setGeneratedVideos: (videos: Record<string, string>) => void;
-  lastGeneratedImage: string | null;
 };
 
 export const ChatArea = ({
@@ -134,8 +54,6 @@ export const ChatArea = ({
   setGeneratedVideos,
   lastGeneratedImage,
 }: ChatAreaProps) => {
-  usePreloadImages(Object.values(GIF_URLS));
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
   const [isTalking, setIsTalking] = useState(false);
@@ -168,22 +86,6 @@ export const ChatArea = ({
       return () => clearTimeout(timer);
     }
   }, [messages]);
-
-  const getGifSource = () => {
-    if (!lastMessageTime || messages.length === 0) {
-      return GIF_URLS.constant;
-    }
-
-    if (isLoading) {
-      return GIF_URLS.thinking;
-    }
-
-    if (isTalking) {
-      return GIF_URLS.talking;
-    }
-
-    return GIF_URLS.constant;
-  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -253,7 +155,7 @@ export const ChatArea = ({
     <div
       key={message.id}
       className={cn(
-        "flex gap-2 mb-2", // Added mb-4 for gap between messages
+        "flex gap-2 mb-2",
         message.role === "user" ? "justify-end" : "justify-start"
       )}
     >
@@ -270,17 +172,20 @@ export const ChatArea = ({
             : "bg-white border border-neutral-200"
         )}
       >
-        {message.role === "user" ? (
-          <div className="text-sm leading-relaxed text-white">
+        <div
+          className={cn(
+            "text-sm leading-relaxed",
+            message.role === "user" ? "text-white" : "prose prose-sm max-w-none"
+          )}
+        >
+          {message.role === "user" ? (
             <span>{message.content}</span>
-          </div>
-        ) : (
-          <div className="text-sm leading-relaxed prose prose-sm max-w-none">
+          ) : (
             <ReactMarkdown className="prose prose-sm [&>p]:last:mb-0">
               {message.content}
             </ReactMarkdown>
-          </div>
-        )}
+          )}
+        </div>
       </div>
       {message.role === "user" && (
         <div className="w-6 h-6 rounded-full bg-black flex items-center justify-center">
@@ -294,42 +199,12 @@ export const ChatArea = ({
 
   return (
     <div className="flex w-full h-screen">
-      {/* Buddy GIF Column - Fixed */}
-      <div className="w-[10%] h-full flex-shrink-0 relative flex items-center justify-center overflow-hidden">
-        <div className="w-full px-2">
-          <img
-            src={getGifSource()}
-            alt="AI Assistant"
-            className="w-full object-contain"
-          />
-          <div className="absolute top-2 right-6 flex flex-col items-center gap-2">
-            <button
-              onClick={toggleAudio}
-              className="flex items-center gap-2 px-3 py-2 rounded-full bg-white hover:bg-gray-50 transition-colors border border-gray-200"
-              title={isAudioEnabled ? "Disable audio" : "Enable audio"}
-            >
-              {isAudioEnabled ? (
-                <>
-                  <Volume2 className="h-4 w-4" />
-                  <span className="text-sm">Audio On</span>
-                </>
-              ) : (
-                <>
-                  <VolumeX className="h-4 w-4" />
-                  <span className="text-sm">Audio Off</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
       {/* Chat Panel - Fixed */}
-      <div className="w-[45%] flex-shrink-0 flex flex-col h-full border-x">
+      <div className="w-[50%] flex-shrink-0 flex flex-col h-full border-x">
         <div className="flex-1 p-4 overflow-hidden">
           <div className="h-full overflow-y-auto">
             {messages
-              .filter((message: any) => !message.isHidden)
+              ?.filter((message: any) => !message.isHidden)
               .map(renderMessage)}
             <div ref={messagesEndRef} />
           </div>
@@ -345,7 +220,7 @@ export const ChatArea = ({
       </div>
 
       {/* Tools Panel - Scrollable */}
-      <div className="w-[45%] h-full flex-shrink-0 border-l bg-white overflow-hidden">
+      <div className="w-[50%] h-full flex-shrink-0 border-l bg-white overflow-hidden">
         <div className="h-full flex flex-col">
           <h2 className="flex-shrink-0 text-lg font-semibold p-4 border-b bg-white sticky top-0 z-10">
             Tools

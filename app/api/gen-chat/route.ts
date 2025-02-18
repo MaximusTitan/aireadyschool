@@ -1,5 +1,6 @@
 import { anthropic } from '@ai-sdk/anthropic';
-import { streamText, smoothStream } from 'ai';
+// import { openai } from '@ai-sdk/openai';
+import { streamText, smoothStream, Message, CreateMessage } from 'ai';
 import { tools } from '@/app/tools/gen-chat/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
@@ -48,6 +49,16 @@ interface UserDetails {
   age?: number;
   grade?: number;
   subjects?: string[];
+}
+
+interface ThreadMessage extends Message {
+  toolCalls?: Array<{
+    id: string;
+    tool: string;
+    parameters: Record<string, any>;
+    result?: any;
+    state?: string;
+  }>;
 }
 
 function getSystemPrompt(messages: any[]): string {
@@ -100,16 +111,47 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
-    if (error) {
-      return Response.json({ error: `Unauthorized: ${error.message}` }, { status: 401 });
+    if (error || !user) {
+      return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
     }
 
-    const { messages } = await request.json();
+    const { messages, id: threadId } = await request.json();
+
+    // Add logging to debug thread access
+    console.log('Thread ID:', threadId);
+    console.log('User ID:', user.id);
+
+    // Verify thread belongs to user
+    if (threadId) {
+      const { data: thread, error: threadError } = await supabase
+        .from('chat_threads')
+        .select('user_id')
+        .eq('id', threadId)
+        .single();
+
+      console.log('Thread data:', thread);
+      console.log('Thread error:', threadError);
+
+      if (threadError) {
+        return Response.json({ error: 'Thread not found' }, { status: 404 });
+      }
+
+      if (thread?.user_id !== user.id) {
+        return Response.json({ 
+          error: 'Unauthorized thread access',
+          details: {
+            threadUserId: thread?.user_id,
+            currentUserId: user.id
+          }
+        }, { status: 403 });
+      }
+    }
 
     const result = streamText({
+      // model: openai('gpt-4o'),
       model: anthropic('claude-3-5-sonnet-20240620'),
       system: getSystemPrompt(messages),
-      messages,
+      messages: messages as CreateMessage[],
       maxSteps: 5,
       tools,
       temperature: 0.5,
@@ -125,7 +167,7 @@ export async function POST(request: Request) {
             'GPT-4o',
             usage.promptTokens,
             usage.completionTokens,
-            user?.email
+            user.email || undefined
           );
         }
       }

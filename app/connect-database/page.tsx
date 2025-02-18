@@ -76,9 +76,13 @@ export default function ConnectDatabasePage() {
   // Fetch available databases from all tables
   useEffect(() => {
     const fetchDatabases = async () => {
-      const { data: supabaseData } = await supabase.from("connected_db").select("database_name")
-      const { data: crmData } = await supabase.from("connected_crm").select("crm_name")
-      const { data: sqlData } = await supabase.from("connect_sql_database").select("database_name")
+      const {data: { user },} = await supabase.auth.getUser();
+      if (!user || !user.email) {
+        throw new Error("User not authenticated");
+      }
+      const { data: supabaseData } = await supabase.from("connected_db").select("database_name").eq("email", user.email);
+      const { data: crmData } = await supabase.from("connected_crm").select("crm_name").eq("email", user.email);
+      const { data: sqlData } = await supabase.from("connect_sql_database").select("database_name").eq("email", user.email);
 
       console.log("Fetched data:", { supabaseData, crmData, sqlData })
 

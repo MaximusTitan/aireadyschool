@@ -6,6 +6,15 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -17,6 +26,7 @@ import { createClient } from "@/utils/supabase/client";
 import { initSupabase } from "@/utils/supabase";
 import { categories } from "../config/toolCategories";
 import Intercom from "@intercom/messenger-js-sdk";
+import { DialogTitle } from "@radix-ui/react-dialog";
 
 interface ToolCardProps {
   title: string;
@@ -112,6 +122,7 @@ interface Tool {
 type CategoryName = "Learning" | "Research" | "Creative" | "Tech" | "Marketing";
 
 const ToolsPage = () => {
+  const router = useRouter();
   const [userRole, setUserRole] = useState<string | null>(null);
   const [defaultMessage, setDefaultMessage] = useState(
     "Hi, ask me anything about your company's data using natural language."
@@ -122,6 +133,7 @@ const ToolsPage = () => {
   const [supabaseKey, setSupabaseKey] = useState<string | null>(null);
   const [isPluginClicked, setIsPluginClicked] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -358,9 +370,28 @@ const ToolsPage = () => {
     fetchDatabases();
   }, []);
 
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
+  const handleSelect = (route: string) => {
+    const tool = filteredTools.find((t) => t.route === route);
+    if (tool && !tool.isComingSoon) {
+      router.push(route);
+    }
+    setOpen(false);
+  };
+
   return (
-    <div className="min-h-screen bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
-      <div className="container max-w-7xl mx-auto px-4">
+    <div className="bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
+      <div className="container max-w-7xl mx-auto px-4 pb-8">
         <div className="flex mb-4 pt-4">
           <div className="flex items-center">
             <h1 className="text-3xl font-bold text-neutral-950 dark:text-neutral-100">
@@ -395,19 +426,51 @@ const ToolsPage = () => {
               )}
             </div>
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-neutral-400 dark:text-neutral-500 h-4 w-4" />
-              <Input
-                className="pl-10 w-64 bg-neutral-50 dark:bg-neutral-900 dark:border-neutral-800 dark:placeholder-neutral-400"
-                placeholder="Search tools..."
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+              <button
+                onClick={() => setOpen(true)}
+                className="flex items-center px-4 py-2 rounded-lg bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              >
+                <Search className="w-4 h-4 mr-2" />
+                Search tools...
+                <kbd className="ml-4 text-xs bg-neutral-200 dark:bg-neutral-700 px-2 py-0.5 rounded">
+                  CTRL K
+                </kbd>
+              </button>
+
+              <CommandDialog open={open} onOpenChange={setOpen}>
+                <DialogTitle></DialogTitle>
+                <CommandInput placeholder="Search tools..." />
+                <CommandList>
+                  <CommandEmpty>No tools found.</CommandEmpty>
+                  {Object.entries(getAllToolsWithCategories).map(
+                    ([category, tools]) =>
+                      tools.length > 0 && (
+                        <CommandGroup key={category} heading={category}>
+                          {tools.map((tool) => (
+                            <CommandItem
+                              key={tool.route}
+                              onSelect={() => handleSelect(tool.route)}
+                              disabled={tool.isComingSoon}
+                            >
+                              <tool.icon className="mr-2" />
+                              {tool.title}
+                              {tool.isComingSoon && (
+                                <span className="ml-2 text-xs text-yellow-600 dark:text-yellow-400">
+                                  (Coming Soon)
+                                </span>
+                              )}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      )
+                  )}
+                </CommandList>
+              </CommandDialog>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mb-8 mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
           {filteredTools.map((tool, index) => (
             <ToolCard
               key={index}

@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { createUserAction } from "./actions";
 import { ALLOWED_ROLES, UserRole, USER_STATUSES, UserStatus } from "./types";
+import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -22,6 +23,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export default function CreateUserForm() {
   const { toast } = useToast();
+  const router = useRouter();
   const {
     register,
     handleSubmit,
@@ -53,6 +55,7 @@ export default function CreateUserForm() {
           description: "User created successfully",
         });
         reset();
+        router.refresh(); // Add this line to trigger a client-side refresh
       } else {
         toast({
           title: "Error",

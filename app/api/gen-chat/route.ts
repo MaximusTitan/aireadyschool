@@ -106,6 +106,36 @@ You can use various tools to enhance the learning experience:
 Always provide clear explanations and encourage active learning.`;
 }
 
+async function saveToolOutputs(
+  supabase: any,
+  messageId: string,
+  toolCalls: Array<{
+    id: string;
+    tool: string;
+    parameters: Record<string, any>;
+    result?: any;
+    state?: string;
+  }>
+) {
+  const outputs = toolCalls.map(call => ({
+    message_id: messageId,
+    tool_name: call.tool,
+    tool_call_id: call.id,
+    parameters: call.parameters,
+    result: call.result,
+    state: call.state || 'pending'
+  }));
+
+  const { error } = await supabase
+    .from('tool_outputs')
+    .insert(outputs);
+
+  if (error) {
+    console.error('Error saving tool outputs:', error);
+    throw error;
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
@@ -160,6 +190,42 @@ export async function POST(request: Request) {
         delayInMs: 5,
         chunking: 'word',
       }),
+      onStepFinish: async ({ text, toolCalls, toolResults }) => {
+        if (!toolCalls?.length) return;
+
+        // Generate a message ID for this step
+        const messageId = crypto.randomUUID();
+
+        // Save the message first
+        const { error: messageError } = await supabase
+          .from('chat_messages')
+          .insert({
+            id: messageId,
+            thread_id: threadId,
+            role: 'assistant',
+            content: text
+          });
+
+        if (messageError) {
+          console.error('Error saving message:', messageError);
+          return;
+        }
+
+        // Map tool results to their corresponding calls
+        const toolCallsWithResults = toolCalls.map(call => {
+          const result = toolResults?.find(r => r.toolCallId === call.toolCallId);
+          return {
+            id: call.toolCallId,
+            tool: call.toolName,
+            parameters: call.args,
+            result: result?.result || undefined,
+            state: result ? 'result' : 'pending'
+          };
+        });
+
+        // Save tool outputs
+        await saveToolOutputs(supabase, messageId, toolCallsWithResults);
+      },
       onFinish: async ({ usage }) => {
         if (usage) {
           await logTokenUsage(

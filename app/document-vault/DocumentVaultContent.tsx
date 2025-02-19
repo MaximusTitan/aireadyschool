@@ -24,6 +24,7 @@ export default function DocumentVaultContent() {
   const [isFolderDialogOpen, setIsFolderDialogOpen] = useState(false)
   const [viewType, setViewType] = useState<"list" | "grid">("list")
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const pathname = usePathname()
 
   const folderName = pathname.split("/").pop() || "document-vault"
@@ -84,6 +85,7 @@ export default function DocumentVaultContent() {
           setItems((prevItems) => [...prevItems, { file_name: file.name, file_path: data.url, type: "file" }])
         } catch (error) {
           console.error("Error uploading file:", error)
+          setUploadError("Failed to upload file. Please try again.")
         }
       }
     }
@@ -175,6 +177,7 @@ export default function DocumentVaultContent() {
 
   return (
     <div className="relative min-h-[calc(100vh-2rem)] p-4">
+      {uploadError && <p className="text-red-500">{uploadError}</p>}
       {userEmail === null ? (
         <p>Please sign in to view your documents.</p>
       ) : (
@@ -247,7 +250,7 @@ export default function DocumentVaultContent() {
             </div>
           )}
 
-          <div className="fixed bottom-6 right-6">
+          <div className="fixed bottom-6 left-84">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button

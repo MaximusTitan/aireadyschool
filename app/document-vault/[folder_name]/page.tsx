@@ -22,6 +22,7 @@ export default function FolderView() {
   const [items, setItems] = useState<VaultItem[]>([])
   const [viewType, setViewType] = useState<"list" | "grid">("list")
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
 
   const fetchUserEmail = useCallback(async () => {
     const supabase = createClient()
@@ -79,9 +80,11 @@ export default function FolderView() {
 
       const data = await response.json()
       console.log("File uploaded successfully!", data)
+      setUploadError(null)
       await fetchItems()
     } catch (error) {
       console.error("Error uploading file:", error)
+      setUploadError("Failed to upload file. Please try again.")
     }
   }
 
@@ -239,7 +242,9 @@ export default function FolderView() {
         </div>
       )}
 
-      <div className="fixed bottom-6 right-6">
+      {uploadError && <p className="text-red-500">{uploadError}</p>}
+
+      <div className="fixed bottom-6 left-84">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button

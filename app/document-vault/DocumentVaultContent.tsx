@@ -14,6 +14,7 @@ import { createClient } from "@/utils/supabase/client"
 type VaultItem = {
   file_name: string
   file_path: string
+  public_url?: string  // New property to store the public URL
   type: "file" | "folder"
 }
 
@@ -82,7 +83,16 @@ export default function DocumentVaultContent() {
 
           const data = await response.json()
           setFileData(data)
-          setItems((prevItems) => [...prevItems, { file_name: file.name, file_path: data.url, type: "file" }])
+          // Save both file_path and public_url; public_url will be used for the link
+          setItems((prevItems) => [
+            ...prevItems, 
+            { 
+              file_name: file.name, 
+              file_path: data.url, 
+              public_url: data.url, 
+              type: "file" 
+            }
+          ])
         } catch (error) {
           console.error("Error uploading file:", error)
           setUploadError("Failed to upload file. Please try again.")
@@ -109,7 +119,10 @@ export default function DocumentVaultContent() {
 
       const data = await response.json()
       setIsFolderDialogOpen(false)
-      setItems((prevItems) => [...prevItems, { file_name: newFolderName, file_path: data.path, type: "folder" }])
+      setItems((prevItems) => [
+        ...prevItems, 
+        { file_name: newFolderName, file_path: data.path, type: "folder" }
+      ])
       setNewFolderName("")
     } catch (error) {
       console.error("Error creating folder:", error)
@@ -145,17 +158,21 @@ export default function DocumentVaultContent() {
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
+            <p className="text-center text-sm font-medium truncate w-full">
+              {item.file_name.replace(/_/g, " ")}
+            </p>
           </a>
         ) : (
           <a
-            href={item.file_path}
+            href={item.public_url} // Use the public URL here
             target="_blank"
             rel="noopener noreferrer"
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Upload className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
+            <p className="text-center text-sm font-medium truncate w-full">
+              {item.file_name.replace(/_/g, " ")}
+            </p>
           </a>
         )}
       </CardContent>
@@ -212,14 +229,22 @@ export default function DocumentVaultContent() {
                       {item.type === "folder" ? (
                         <>
                           <Folder className="h-4 w-4 mr-2 stroke-current" />
-                          <a href={`/document-vault/${item.file_name}`} className="text-blue-500 font-semibold">
+                          <a
+                            href={`/document-vault/${item.file_name}`}
+                            className="text-blue-500 font-semibold"
+                          >
                             {item.file_name.replace(/_/g, " ")}
                           </a>
                         </>
                       ) : (
                         <>
                           <Upload className="h-4 w-4 mr-2 stroke-current" />
-                          <a href={item.file_path} target="_blank" rel="noopener noreferrer" className="text-blue-500">
+                          <a
+                            href={item.public_url} // Using public URL for file items
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500"
+                          >
                             {item.file_name.replace(/_/g, " ")}
                           </a>
                         </>
@@ -279,7 +304,11 @@ export default function DocumentVaultContent() {
               <DialogHeader>
                 <DialogTitle>Create New Folder</DialogTitle>
               </DialogHeader>
-              <Input value={newFolderName} onChange={(e) => setNewFolderName(e.target.value)} placeholder="Folder Name" />
+              <Input
+                value={newFolderName}
+                onChange={(e) => setNewFolderName(e.target.value)}
+                placeholder="Folder Name"
+              />
               <DialogFooter>
                 <Button onClick={handleNewFolder}>Create</Button>
               </DialogFooter>
@@ -290,4 +319,3 @@ export default function DocumentVaultContent() {
     </div>
   )
 }
-

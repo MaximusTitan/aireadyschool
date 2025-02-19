@@ -9,9 +9,11 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Card, CardContent } from "@/components/ui/card"
 import { createClient } from "@/utils/supabase/client"
 
+// Updated type includes a public_url field
 type VaultItem = {
   file_name: string
   file_path: string
+  public_url?: string
   type: "file" | "folder"
 }
 
@@ -44,6 +46,7 @@ export default function FolderView() {
       if (!response.ok) throw new Error("Failed to fetch files")
 
       const data = await response.json()
+      // We assume your backend returns each file's public_url as well as file_path
       setItems(
         data.files.map((item: VaultItem) => ({
           ...item,
@@ -93,7 +96,6 @@ export default function FolderView() {
     if (!folderName || folderName.includes("_")) return
 
     const fullPath = decodedFolderName !== "document-vault" ? `${decodedFolderName}/${folderName}` : folderName
-
     const sanitizedFolderName = folderName.replace(/ /g, "_")
 
     const response = await fetch(`/api/document-vault`, {
@@ -105,7 +107,10 @@ export default function FolderView() {
     if (response.ok) {
       const data = await response.json()
       console.log("Folder created successfully!", data)
-      setItems((prevItems) => [...prevItems, { file_name: folderName, file_path: data.path, type: "folder" }])
+      setItems((prevItems) => [
+        ...prevItems, 
+        { file_name: folderName, file_path: data.path, type: "folder" }
+      ])
     } else {
       console.error("Folder creation failed")
     }
@@ -123,7 +128,6 @@ export default function FolderView() {
         if (!response.ok) throw new Error("Failed to delete item")
 
         setItems((prevItems) => prevItems.filter((item) => item.file_name !== fileName))
-
         console.log(`${fileName} deleted successfully`)
       } catch (error) {
         console.error("Error deleting item:", error)
@@ -140,15 +144,22 @@ export default function FolderView() {
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Folder className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
+            <p className="text-center text-sm font-medium truncate w-full">
+              {item.file_name.replace(/_/g, " ")}
+            </p>
           </button>
         ) : (
           <a
-            href={`/document-vault/${item.file_path}`}
+            // Use public_url instead of file_path for files
+            href={item.public_url}
+            target="_blank"
+            rel="noopener noreferrer"
             className="flex flex-col items-center text-current hover:text-gray-700 dark:hover:text-gray-300"
           >
             <Upload className="h-12 w-12 mb-2 stroke-current" />
-            <p className="text-center text-sm font-medium truncate w-full">{item.file_name.replace(/_/g, " ")}</p>
+            <p className="text-center text-sm font-medium truncate w-full">
+              {item.file_name.replace(/_/g, " ")}
+            </p>
           </a>
         )}
       </CardContent>
@@ -207,7 +218,8 @@ export default function FolderView() {
                     <>
                       <Upload className="h-4 w-4 mr-2 stroke-current" />
                       <a
-                        href={`/document-vault/${item.file_path}`}
+                        // Again, using public_url for file items
+                        href={item.public_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="text-blue-500"
@@ -276,4 +288,3 @@ export default function FolderView() {
     </div>
   )
 }
-

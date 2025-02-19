@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ALLOWED_ROLES, UserRole, USER_STATUSES } from "./types";
 import { updateUserAction } from "./actions";
+import { useRouter } from "next/navigation";
 import {
   Tooltip,
   TooltipContent,
@@ -26,6 +27,7 @@ export default function UserListItem({ user }: { user: any }) {
   });
 
   const { toast } = useToast();
+  const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -47,6 +49,7 @@ export default function UserListItem({ user }: { user: any }) {
         });
         setStatus("success");
         setIsEditing(false);
+        router.refresh(); // Add this line to trigger a client-side refresh
       } else {
         toast({
           title: "Error",

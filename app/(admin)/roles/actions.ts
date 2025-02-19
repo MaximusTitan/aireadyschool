@@ -2,6 +2,9 @@
 
 import { createClient } from "@supabase/supabase-js";
 import { UserRole, UserStatus } from "./types";
+import { revalidatePath } from "next/cache";
+
+const ROLES_PAGE_PATH = "/roles";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -37,6 +40,7 @@ export async function createUserAction(data: {
     });
 
     if (result.error) throw result.error;
+    revalidatePath(ROLES_PAGE_PATH);
     return { success: true, data: result.data };
   } catch (error: any) {
     return { success: false, error: error.message };
@@ -64,6 +68,7 @@ export async function updateUserAction(userId: string, data: {
     });
 
     if (result.error) throw result.error;
+    revalidatePath(ROLES_PAGE_PATH);
     return { success: true, data: result.data };
   } catch (error: any) {
     return { success: false, error: error.message };

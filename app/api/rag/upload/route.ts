@@ -25,41 +25,27 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData();
-    const files = formData.getAll('files') as File[]; // Changed from single file to multiple
+    const files = formData.getAll('files') as File[];
 
-    for (const file of files) { // Loop through each file
-      // Read file content
-      const fileBuffer = Buffer.from(await file.arrayBuffer());
-      let text = '';
-
-      if (file.type === 'application/pdf') {
-        const parser = new createParser();
-        text = await new Promise((resolve, reject) => {
-          parser.on('pdfParser_dataReady', (pdfData) => {
-            resolve(pdfData.Pages.map(page => 
-              page.Texts.map(text => text.R.map(r => r.T).join(' ')).join(' ')
-            ).join('\n'));
-          });
-          parser.parseBuffer(fileBuffer);
-        });
-      } else {
-        text = fileBuffer.toString('utf-8');
-      }
-
-      // Create embeddings
-      const chunks = text.match(/[\s\S]{1,1000}/g) || [];
+    for (const file of files) {
+      const filePath = `resources/${user.email}/${Date.now()}_${file.name}`;
       
-      for (const chunk of chunks) {
-        const embedding = await openai.embeddings.create({
-          input: chunk,
-          model: "text-embedding-ada-002"
-        });
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('resources')
+        .upload(filePath, file);
 
-        await supabase.from('resources').insert({
-          file_name: file.name, // Add file_name
-          user_email: user.email  // Use authenticated user email
-        });
+      if (uploadError) {
+        console.error('Storage upload error:', uploadError);
+        continue;
       }
+
+      const { data: { publicUrl } } = supabase.storage.from('resources').getPublicUrl(filePath);
+      
+      await supabase.from('resources').insert({
+        file_name: file.name,
+        user_email: user.email,
+        url: publicUrl // Store file URL in the table
+      });
     }
 
     return NextResponse.json({ success: true });

@@ -26,7 +26,8 @@ import {
   Hash,
   Mail,
   TrendingUp,
-  Search as SearchIcon
+  Search as SearchIcon,
+  Hammer
 } from "lucide-react";
 
 interface Tool {
@@ -56,6 +57,12 @@ export const categories: CategoryTools = {
         description: "Learn with AI tutor",
         route: "/tools/gen-chat",
         icon: Atom
+      },
+      {
+        title: "App Builder",
+        description: "Build apps without coding",
+        route: "/tools/builder",
+        icon: Hammer
       },
       {
         title: "Assessment Generator",

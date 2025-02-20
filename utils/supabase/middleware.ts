@@ -34,7 +34,7 @@ export const updateSession = async (request: NextRequest) => {
     }
 
     // Define public routes (accessible without authentication)
-    const publicRoutes = ["/profile/", "/sign-in", "/sign-up", "/verification-waiting"];
+    const publicRoutes = ["/profile/", "/sign-in", "/sign-up", "/verification-waiting", "/apps/"];
 
     // Check if the route is public
     const isPublicRoute = publicRoutes.some((route) =>

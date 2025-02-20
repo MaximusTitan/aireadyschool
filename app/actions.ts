@@ -131,19 +131,19 @@ export const signInAction = async (formData: FormData) => {
   // Get user role from metadata
   const role = authData.user?.user_metadata?.role;
 
-  if (role === 'Student') {
-    // Check if student exists in students table
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('student_email')
-      .eq('student_email', email)
-      .single();
+  // if (role === 'Student') {
+  //   // Check if student exists in students table
+  //   const { data: studentData, error: studentError } = await supabase
+  //     .from('students')
+  //     .select('student_email')
+  //     .eq('student_email', email)
+  //     .single();
 
-    if (studentError || !studentData) {
-      // Student not found in students table, redirect to profile
-      return redirect("/profile");
-    }
-  }
+  //   if (studentError || !studentData) {
+  //     // Student not found in students table, redirect to profile
+  //     return redirect("/portfolio");
+  //   }
+  // }
 
   // Default redirect or if student exists in table
   return redirect("/tools");

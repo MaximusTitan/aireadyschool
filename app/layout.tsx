@@ -1,4 +1,4 @@
-import { GeistSans } from "geist/font/sans";
+import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Metadata } from "next";
 import ClientLayout from "./client-layout";
@@ -12,6 +12,12 @@ export const metadata: Metadata = {
   title: "AI Ready School",
   description: "The Power of AI to Empower Everyone at the School",
 };
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600"],
+  variable: "--font-poppins",
+});
 
 export default function RootLayout({
   children,
@@ -27,7 +33,7 @@ export default function RootLayout({
         />
       </head>
       <body
-        className={`min-h-screen bg-background font-sans antialiased ${GeistSans.className}`}
+        className={`min-h-screen bg-background font-sans antialiased ${poppins.variable}`}
         suppressHydrationWarning
       >
         <ClientLayout>{children}</ClientLayout>

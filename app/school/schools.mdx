@@ -1,0 +1,150 @@
+# School Management System Database Documentation
+
+## Core Tables
+
+### schools
+
+The root table representing educational institutions.
+
+- `id` (uuid, PK): Unique identifier
+- `site_id` (text, UK): Unique site identifier used for references
+- `name` (text): School name
+- `address` (text): Physical address
+- `contact_info` (jsonb): Contact details in JSON format
+- `created_at` (timestamp): Record creation timestamp
+- `updated_at` (timestamp): Last update timestamp
+
+### boards
+
+Represents different educational boards (e.g., CBSE, ICSE) within a school.
+
+- `id` (uuid, PK): Unique identifier
+- `school_id` (text, FK): References schools.site_id
+- `name` (text): Board name
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (school_id, name)
+
+### grades
+
+Grade levels within each board.
+
+- `id` (uuid, PK): Unique identifier
+- `board_id` (uuid, FK): References boards.id
+- `name` (text): Grade name/number
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (board_id, name)
+
+### sections
+
+Divisions within grades (e.g., A, B, C).
+
+- `id` (uuid, PK): Unique identifier
+- `grade_id` (uuid, FK): References grades.id
+- `name` (text): Section name
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (grade_id, name)
+
+### subjects
+
+Academic subjects taught within each board.
+
+- `id` (uuid, PK): Unique identifier
+- `board_id` (uuid, FK): References boards.id
+- `name` (text): Subject name
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (board_id, name)
+
+## User Management Tables
+
+### users (existing)
+
+Core user table with role management.
+
+- `id` (uuid, PK): Unique identifier
+- `user_id` (uuid, FK): References auth.users.id
+- `site_id` (text, FK): References schools.site_id
+- `role_type` (text): User role
+- `created_at` (timestamp): Record creation timestamp
+
+### teachers
+
+Teachers working in schools.
+
+- `id` (uuid, PK): Unique identifier
+- `user_id` (uuid, FK): References auth.users.id
+- `school_id` (text, FK): References schools.site_id
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (user_id, school_id)
+
+### school_students
+
+Students enrolled in schools.
+
+- `id` (uuid, PK): Unique identifier
+- `user_id` (uuid, FK): References auth.users.id
+- `school_id` (text, FK): References schools.site_id
+- `section_id` (uuid, FK): References sections.id
+- `roll_number` (text): Student roll number
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (user_id, school_id)
+
+### teacher_assignments
+
+Maps teachers to sections and subjects.
+
+- `id` (uuid, PK): Unique identifier
+- `teacher_id` (uuid, FK): References teachers.id
+- `section_id` (uuid, FK): References sections.id
+- `subject_id` (uuid, FK): References subjects.id
+- `created_at` (timestamp): Record creation timestamp
+- Unique constraint on (teacher_id, section_id, subject_id)
+
+## Key Relationships
+
+1. **School Hierarchy**
+
+   - School → Boards → Grades → Sections
+   - Each level has a one-to-many relationship with the next
+
+2. **User Management**
+
+   - Auth.users is the source of truth for user identities
+   - Users table manages roles and school associations
+   - Teachers and Students tables extend user information
+
+3. **Teaching Assignments**
+   - Teachers can be assigned to multiple section-subject combinations
+   - Each assignment creates a unique teacher-section-subject relationship
+
+## Indexes
+
+1. **Primary Indexes**
+
+   - All tables have UUID primary keys
+   - Schools has a unique site_id
+
+2. **Foreign Key Indexes**
+   - boards_school_idx on boards(school_id)
+   - grades_board_idx on grades(board_id)
+   - sections_grade_idx on sections(grade_id)
+   - subjects_board_idx on subjects(board_id)
+   - teachers_school_idx on teachers(school_id)
+   - students_school_idx on students(school_id)
+   - students_section_idx on students(section_id)
+
+## Data Integrity
+
+1. **Unique Constraints**
+
+   - School site_id
+   - Board names within a school
+   - Grade names within a board
+   - Section names within a grade
+   - Subject names within a board
+   - Teacher-school combinations
+   - Student-school combinations
+   - Teacher-section-subject assignments
+
+2. **Timestamps**
+   - All tables include created_at
+   - Schools table includes updated_at with trigger

@@ -11,7 +11,7 @@ export const readDomainId = async (domain?: string): Promise<{ id: number; site_
     return null;
   }
   const { data, error } = await supabase
-    .from('schools')
+    .from('old_schools')
     .select('id, site_id')
     .eq('site_id', domain.toLowerCase())
     .maybeSingle(); // Changed from .single() to .maybeSingle()

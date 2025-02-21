@@ -64,6 +64,7 @@ export default function ClientLayout({
     pathname.startsWith("/chatbot") ||
     pathname.startsWith("/protected") ||
     pathname.startsWith("/schools") ||
+    pathname.startsWith("/school") ||
     pathname.startsWith("/livebot") ||
     pathname.startsWith("/audiobot") ||
     pathname.startsWith("/learn-ai") ||

@@ -59,12 +59,6 @@ export const categories: CategoryTools = {
         icon: Atom
       },
       {
-        title: "App Builder",
-        description: "Build apps without coding",
-        route: "/tools/builder",
-        icon: Hammer
-      },
-      {
         title: "Assessment Generator",
         description: "Create and share interactive multiple choice questions",
         route: "/tools/mcq-generator",
@@ -169,6 +163,12 @@ export const categories: CategoryTools = {
       },
     ],
     Tech: [
+      {
+        title: "App Builder",
+        description: "Build apps without coding",
+        route: "/tools/builder",
+        icon: Hammer
+      },
       {
         title: "Creative Coding Playground",
         description: "Code in P5.js",

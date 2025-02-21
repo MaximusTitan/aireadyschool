@@ -249,6 +249,22 @@ export function AppSidebar() {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
+                {userRole === "Admin" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/logs" className="flex items-center">
+                        <PieChart className="mr-2 h-4 w-4" />
+                        <span>Logs</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/roles" className="flex items-center">
+                        <BadgeCheck className="mr-2 h-4 w-4" />
+                        <span>Roles</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuItem>
                   <form className="w-full">
                     <Link href={"/feedback"}>

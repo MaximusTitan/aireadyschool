@@ -1,29 +1,30 @@
 "use client";
-import { useState, useEffect } from "react"; // Add useEffect import
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Send, Upload, ChevronLeft, FileText } from "lucide-react"; // Add FileText import
+import { Loader2, Send, Upload, ChevronLeft, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { Checkbox } from "@/components/ui/checkbox"; // Add this import
+import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
 
 export default function Home() {
-  const [files, setFiles] = useState<File[]>([]); // Changed from single file to array
+  const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState<{ role: string; content: string }[]>([]);
-  const [fetchedFiles, setFetchedFiles] = useState<string[]>([]); // Add state for fetched files
+  const [fetchedFiles, setFetchedFiles] = useState<string[]>([]);
   const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [embeddings, setEmbeddings] = useState<any[]>([]);
+  const [resource_id, setResource_id] = useState<string>('');
+  const [chunk_text, setChunk_text] = useState<string>('');
 
   useEffect(() => {
     const checkAuth = async () => {
       const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
+      const { data: { session } } = await supabase.auth.getSession();
       setIsAuthenticated(!!session);
     };
     checkAuth();
@@ -32,36 +33,23 @@ export default function Home() {
   const fetchFiles = async () => {
     try {
       const supabase = createClient();
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
+      const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setChat((prev) => [
           ...prev,
-          {
-            role: "system",
-            content: "Please sign in to access your documents.",
-          },
+          { role: "system", content: "Please sign in to access your documents." }
         ]);
         return;
       }
-
       const response = await fetch("/api/rag/documents", {
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { Authorization: `Bearer ${session.access_token}` }
       });
       const data = await response.json();
-
       if (response.ok) {
-        const fileNames = data.files.map(
-          (doc: { file_name: string }) => doc.file_name
-        );
+        const fileNames = data.files.map((doc: { file_name: string }) => doc.file_name);
         const uniqueFileNames = Array.from(new Set(fileNames));
         setFetchedFiles(uniqueFileNames as string[]);
-        // Set all documents as selected by default
-        setSelectedDocs(uniqueFileNames as string[]);
+        setSelectedDocs(uniqueFileNames as string[]); // Set all documents as selected by default
       } else {
         throw new Error(data.error);
       }
@@ -70,55 +58,43 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    fetchFiles();
-  }, [isAuthenticated]);
+  useEffect(() => { fetchFiles(); }, [isAuthenticated]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-
     const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       setChat((prev) => [
         ...prev,
-        {
-          role: "system",
-          content: "Please sign in to upload documents.",
-        },
+        { role: "system", content: "Please sign in to upload documents." }
       ]);
       return;
     }
-
     setLoading(true);
     const uploadedFiles = Array.from(e.target.files);
     setFiles(uploadedFiles);
-
     const formData = new FormData();
     uploadedFiles.forEach((file) => formData.append("files", file));
-
     try {
       const response = await fetch("/api/rag/upload", {
         method: "POST",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
+        headers: { Authorization: `Bearer ${session.access_token}` },
         body: formData,
       });
-
       if (!response.ok) throw new Error("Upload failed");
-
       const result = await response.json();
+      console.log("Resource_ID:", result.data[0]?.resource_id);
+      console.log("Embeddings:", result.data[0]?.embedding);
+      console.log("Chunk Text:", result.data[0]?.chunk_text);
+      // Assuming we want to use the first record from the upload response for chatting
+      setEmbeddings(result.data[0]?.embedding || []);
+      setResource_id(result.data[0]?.resource_id || '');
+      setChunk_text(result.data[0]?.chunk_text || '');
       uploadedFiles.forEach((file) => {
         setChat((prev) => [
           ...prev,
-          {
-            role: "system",
-            content: `File "${file.name}" uploaded successfully!`,
-          },
+          { role: "system", content: `File "${file.name}" uploaded successfully!` },
         ]);
       });
     } catch (error) {
@@ -134,30 +110,21 @@ export default function Home() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim()) return;
-
     const supabase = createClient();
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
+    const { data: { session } } = await supabase.auth.getSession();
     if (!session) {
       setChat((prev) => [
         ...prev,
-        {
-          role: "system",
-          content: "Please sign in to chat with documents.",
-        },
+        { role: "system", content: "Please sign in to chat with documents." },
       ]);
       return;
     }
-
     const userMessage = message;
     setMessage("");
     setChat((prev) => [...prev, { role: "user", content: userMessage }]);
     setLoading(true);
-
     try {
-      const response = await fetch("/api/chat-with-docs", {
+      const response = await fetch("/api/rag/chat-with-docs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -165,49 +132,36 @@ export default function Home() {
         },
         body: JSON.stringify({
           message: userMessage,
-          selectedDocs: selectedDocs, // Add selected documents
+          selectedDocs: selectedDocs, // Selected documents (if used later)
+          resource_id: resource_id,
+          chunk_text: chunk_text,
+          embeddings: embeddings, // Send embeddings from uploaded files
         }),
       });
-
       const result = await response.json();
-
       if (!response.ok) {
         throw new Error(result.error || "Failed to get response");
       }
-
       if (!result.hasContext) {
         setChat((prev) => [
           ...prev,
-          {
-            role: "system",
-            content:
-              "No relevant documents found. Please try uploading a document first or rephrase your question.",
-          },
+          { role: "system", content: "No relevant documents found. Please try uploading a document first or rephrase your question." },
         ]);
       }
-
       setChat((prev) => [
         ...prev,
-        {
-          role: "assistant",
-          content: result.response,
-        },
+        { role: "assistant", content: result.response },
       ]);
     } catch (error) {
       setChat((prev) => [
         ...prev,
-        {
-          role: "system",
-          content:
-            error instanceof Error ? error.message : "Error getting response.",
-        },
+        { role: "system", content: error instanceof Error ? error.message : "Error getting response." },
       ]);
     } finally {
       setLoading(false);
     }
   };
 
-  // Add toggle function for document selection
   const toggleDocumentSelection = (fileName: string) => {
     setSelectedDocs((prev) =>
       prev.includes(fileName)
@@ -222,11 +176,8 @@ export default function Home() {
         <Link href="/tools" className="text-neutral-500 hover:text-neutral-700">
           <ChevronLeft className="h-6 w-6 text-neutral-800" />
         </Link>
-        <CardTitle className="text-neutral-800 text-3xl">
-          RAG
-        </CardTitle>
+        <CardTitle className="text-neutral-800 text-3xl">RAG</CardTitle>
       </div>
-
       <div className="flex gap-4 mx-8 h-[calc(100vh-6rem)]">
         <Card className="bg-white dark:bg-neutral-950 flex-grow">
           <CardContent className="p-0 h-full flex flex-col">
@@ -259,20 +210,17 @@ export default function Home() {
                     type="button"
                     variant="outline"
                     className="dark:border-neutral-800 dark:hover:bg-neutral-800"
-                    onClick={() =>
-                      document.getElementById("file-upload")?.click()
-                    }
+                    onClick={() => document.getElementById("file-upload")?.click()}
                     disabled={loading}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Doc
+                    <Upload className="w-4 h-4 mr-2" /> Upload Doc
                   </Button>
                   <input
                     id="file-upload"
                     type="file"
                     className="hidden"
                     accept=".pdf,.doc,.docx,.txt"
-                    multiple // Added multiple attribute
+                    multiple
                     onChange={handleFileUpload}
                     aria-label="Upload documents"
                   />
@@ -297,14 +245,11 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
-
         <div className="w-80 space-y-4">
           {fetchedFiles.length > 0 && (
             <Card className="sticky top-4">
               <CardHeader>
-                <CardTitle className="text-lg font-medium">
-                  Available Documents
-                </CardTitle>
+                <CardTitle className="text-lg font-medium">Available Documents</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-2">
@@ -315,28 +260,21 @@ export default function Home() {
                     >
                       <Checkbox
                         checked={selectedDocs.includes(fileName)}
-                        onCheckedChange={() =>
-                          toggleDocumentSelection(fileName)
-                        }
+                        onCheckedChange={() => toggleDocumentSelection(fileName)}
                         className="mr-2"
                       />
                       <FileText className="h-4 w-4 mr-2 text-neutral-500" />
-                      <span className="text-sm truncate" title={fileName}>
-                        {fileName}
-                      </span>
+                      <span className="text-sm truncate" title={fileName}>{fileName}</span>
                     </div>
                   ))}
                 </div>
               </CardContent>
             </Card>
           )}
-
           {files.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle className="text-lg font-medium">
-                  Recently Uploaded
-                </CardTitle>
+                <CardTitle className="text-lg font-medium">Recently Uploaded</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-col gap-2">
@@ -346,9 +284,7 @@ export default function Home() {
                       className="flex items-center p-2 rounded-lg border dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
                     >
                       <FileText className="h-4 w-4 mr-2 text-neutral-500" />
-                      <span className="text-sm truncate" title={file.name}>
-                        {file.name}
-                      </span>
+                      <span className="text-sm truncate" title={file.name}>{file.name}</span>
                     </div>
                   ))}
                 </div>

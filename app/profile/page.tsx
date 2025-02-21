@@ -1,5 +1,333 @@
-import { StudentPortfolio } from "./components/StudentPortfolio";
+"use client";
 
-export default function StudentProfilePage() {
-  return <StudentPortfolio />;
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Loader2, Eye, EyeOff } from "lucide-react";
+import { toast } from "sonner";
+import { createClient } from "@/utils/supabase/client";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
+export default function Profile() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [userData, setUserData] = useState({
+    email: "",
+    fullName: "",
+    role: "",
+  });
+  const [passwords, setPasswords] = useState({
+    password: "",
+    confirmPassword: "",
+  });
+  const [showProfileDialog, setShowProfileDialog] = useState(false);
+  const [showPasswordDialog, setShowPasswordDialog] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    getProfile();
+  }, []);
+
+  const getProfile = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        router.push("/login");
+        return;
+      }
+
+      setUserData({
+        email: user.email || "",
+        fullName: user.user_metadata?.name || "",
+        role: user.user_metadata?.role || "User",
+      });
+    } catch (error) {
+      toast.error("Error loading user data");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProfileSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    setShowProfileDialog(true);
+  };
+
+  const updateProfile = async () => {
+    setShowProfileDialog(false);
+    setUpdating(true);
+
+    try {
+      const { data, error } = await supabase.auth.updateUser({
+        data: { name: userData.fullName },
+      });
+
+      if (error) throw error;
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      toast.error("Error updating profile");
+      console.error(error);
+    } finally {
+      setUpdating(false);
+    }
+  };
+
+  const handlePasswordSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (passwords.password !== passwords.confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    setShowPasswordDialog(true);
+  };
+
+  const handlePasswordReset = async () => {
+    setShowPasswordDialog(false);
+    setChangingPassword(true);
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwords.password,
+      });
+
+      if (error) throw error;
+
+      setPasswords({ password: "", confirmPassword: "" });
+      toast.success("Password updated successfully");
+    } catch (error) {
+      toast.error("Error updating password");
+      console.error(error);
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="container mx-auto py-8 px-4 max-w-3xl space-y-8">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">Profile Settings</h1>
+          <p className="text-muted-foreground text-lg">
+            Manage your account details and preferences
+          </p>
+        </div>
+
+        <div className="space-y-8">
+          <Card className="shadow-lg border-2">
+            <CardHeader className="border-b">
+              <CardTitle>Personal Information</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleProfileSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={userData.email}
+                    disabled
+                    className="bg-neutral-100"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="fullName">Full Name</Label>
+                  <Input
+                    id="fullName"
+                    value={userData.fullName}
+                    onChange={(e) =>
+                      setUserData({ ...userData, fullName: e.target.value })
+                    }
+                    className="bg-white"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Input
+                    id="role"
+                    value={userData.role}
+                    disabled
+                    className="bg-neutral-100"
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={updating}
+                  className="w-full h-11 text-base font-semibold bg-rose-500 hover:bg-rose-600"
+                >
+                  {updating ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg border-2">
+            <CardHeader className="border-b">
+              <CardTitle>Change Password</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handlePasswordSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="password">New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      value={passwords.password}
+                      onChange={(e) =>
+                        setPasswords({
+                          ...passwords,
+                          password: e.target.value,
+                        })
+                      }
+                      className="bg-white pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={passwords.confirmPassword}
+                      onChange={(e) =>
+                        setPasswords({
+                          ...passwords,
+                          confirmPassword: e.target.value,
+                        })
+                      }
+                      className="bg-white pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-5 w-5" />
+                      ) : (
+                        <Eye className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  disabled={changingPassword}
+                  className="w-full h-11 text-base font-semibold bg-rose-500 hover:bg-rose-600"
+                >
+                  {changingPassword ? (
+                    <>
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                      Updating Password...
+                    </>
+                  ) : (
+                    "Change Password"
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      <AlertDialog open={showProfileDialog} onOpenChange={setShowProfileDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save Changes?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to update your profile information?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={updateProfile}
+              className="bg-rose-500 hover:bg-rose-600"
+            >
+              Save Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={showPasswordDialog}
+        onOpenChange={setShowPasswordDialog}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Change Password?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to update your password? You'll need to use
+              the new password next time you log in.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handlePasswordReset}
+              className="bg-rose-500 hover:bg-rose-600"
+            >
+              Update Password
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
 }

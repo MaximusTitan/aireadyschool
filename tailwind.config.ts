@@ -71,6 +71,7 @@ const config = {
   			}
   		},
   		fontFamily: {
+  			sans: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
   			comic: [
   				'var(--font-comic)',
   				'system-ui',

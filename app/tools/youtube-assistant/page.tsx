@@ -278,27 +278,25 @@ const YoutubeAssistantPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      <header className="top-0 z-50 w-full dark:bg-neutral-800 dark:border-neutral-700">
-        <div className="ml-4 flex h-16 items-center space-x-2">
-          <Link
-            href="/tools"
-            className="text-neutral-500 hover:text-neutral-700"
-          >
-            <ChevronLeft className="h-6 w-6 text-neutral-800" />
-          </Link>
-          <h1 className="text-3xl font-bold text-neutral-800">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
             YouTube Assistant
           </h1>
+          <p className="text-muted-foreground text-lg">
+            Analyze YouTube videos, get summaries, and chat with AI about video content to enhance your learning experience.
+          </p>
         </div>
-      </header>
 
-      <main className="container py-8">
-        <div className="max-w-5xl mx-auto">
-          {/* Analysis form always at top */}
-          <form
-            onSubmit={handleVideoSubmit}
-            className="flex flex-col gap-4 mb-6"
-          >
+        <div className="max-w-5xl">
+          {/* Rest of the existing content */}
+          <form onSubmit={handleVideoSubmit} className="flex flex-col gap-4 mb-6">
             <div className="flex gap-4">
               <Input
                 type="url"
@@ -620,7 +618,7 @@ const YoutubeAssistantPage = () => {
             </>
           )}
         </div>
-      </main>
+      </div>
     </div>
   );
 };

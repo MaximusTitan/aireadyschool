@@ -7,6 +7,7 @@ import { FiMusic, FiLoader, FiPlay, FiPause } from "react-icons/fi";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@/components/ui/button";
 
 const REFERENCE_SONGS = [
   {
@@ -268,19 +269,23 @@ const SongGenerator = () => {
   if (!isMounted) return <LoadingSkeleton />;
 
   return (
-    <div className="min-h-screen bg-white">
-      <div className="flex items-center gap-3 ml-8 mx-auto">
-        <Link
-          href="/tools"
-          className="hover:bg-gray-100 p-2 rounded-full transition-all"
-        >
-          <ChevronLeft className="text-gray-900" />
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <h1 className="text-3xl font-bold text-gray-900">Song Generator</h1>
-      </div>
-      <div className="sticky top-0 bg-white/80 backdrop-blur-sm z-10 py-4 px-8 border-b"></div>
 
-      <div className="container mx-auto p-6 max-w-6xl">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Song Generator
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Create custom AI-generated songs with your own lyrics or let AI compose the perfect melody for your educational content.
+          </p>
+        </div>
+
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
             <label className="block text-gray-700 font-bold mb-3">

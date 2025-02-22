@@ -1,4 +1,3 @@
-// app/page.tsx
 "use client";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -94,18 +93,22 @@ export default function TextTools() {
 
   return (
     <div className="min-h-screen dark:bg-neutral-900">
-      <div className="container mx-auto px-4 py-6 flex items-center space-x-4">
-        <Link
-          href="/tools"
-          className="p-2 rounded-full hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
-        >
-          <ChevronLeft className="h-5 w-5" />
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <h1 className="text-3xl font-bold text-neutral-800 dark:text-neutral-100">
-          Write Right
-        </h1>
-      </div>
-      <div className="max-w-6xl mx-auto space-y-8 px-4 py-6">
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Write Right
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Transform your text with AI-powered tools for rewriting, proofreading, translation, and more.
+          </p>
+        </div>
+
         <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-6 md:p-8 bg-white dark:bg-neutral-800 shadow-sm">
           <div className="flex flex-col md:flex-row gap-4 items-start md:items-center mb-6">
             <div className="space-y-2 flex-1">

@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
 import localFont from "next/font/local";
+import Link from "next/link";
 
 // Initialize your custom font
 const comicNeue = localFont({
@@ -246,22 +247,25 @@ export default function ComicGenerator() {
 
   return (
     <div
-      className={`flex flex-col min-h-screen bg-background text-foreground ${comicNeue.variable}`}
+      className={`min-h-screen bg-background text-foreground ${comicNeue.variable}`}
     >
-      <div className="p-4 border-b border-border">
-        <div className="flex items-center ml-4 gap-2 mb-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/tools")}
-            className="p-0 hover:bg-transparent"
-          >
-            <ChevronLeft className="h-6 w-6" />
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
           </Button>
-          <h1 className="text-3xl font-bold text-neutral-800">
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
             Comic Generator
           </h1>
+          <p className="text-muted-foreground text-lg">
+            Transform your ideas into engaging comic strips with AI-powered image generation and storytelling.
+          </p>
         </div>
-        <div className="max-w-5xl mx-auto space-y-4">
+
+        <div className="max-w-5xl space-y-4">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="relative">
               <Textarea
@@ -286,128 +290,128 @@ export default function ComicGenerator() {
             </div>
           </form>
         </div>
-      </div>
 
-      {loading && <Loader />}
+        {loading && <Loader />}
 
-      {imageData.urls.length > 0 && (
-        <div ref={containerRef} className="flex-1 flex flex-col">
-          <div className="bg-muted p-2">
-            <div className="max-w-5xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={handleFullscreen}
-                  className="flex items-center gap-2"
-                >
-                  <Maximize2 className="h-5 w-5" />
-                  <span>Fullscreen</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={downloadJSON}
-                  className="flex items-center gap-2"
-                >
-                  <FileJson className="h-5 w-5" />
-                  <span>Download JSON</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={downloadPDF}
-                  className="flex items-center gap-2"
-                >
-                  <FileText className="h-5 w-5" />
-                  <span>Download PDF</span>
-                </Button>
-                <Button
-                  variant="ghost"
-                  onClick={downloadPPT}
-                  className="flex items-center gap-2"
-                >
-                  <FilePresentation className="h-5 w-5" />
-                  <span>Download PPT</span>
-                </Button>
-              </div>
-              <div className="text-foreground">
-                {imageData.urls.length} panels generated
+        {imageData.urls.length > 0 && (
+          <div ref={containerRef} className="flex-1 flex flex-col">
+            <div className="bg-muted p-2">
+              <div className="max-w-5xl mx-auto flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    onClick={handleFullscreen}
+                    className="flex items-center gap-2"
+                  >
+                    <Maximize2 className="h-5 w-5" />
+                    <span>Fullscreen</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={downloadJSON}
+                    className="flex items-center gap-2"
+                  >
+                    <FileJson className="h-5 w-5" />
+                    <span>Download JSON</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={downloadPDF}
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-5 w-5" />
+                    <span>Download PDF</span>
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={downloadPPT}
+                    className="flex items-center gap-2"
+                  >
+                    <FilePresentation className="h-5 w-5" />
+                    <span>Download PPT</span>
+                  </Button>
+                </div>
+                <div className="text-foreground">
+                  {imageData.urls.length} panels generated
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="max-w-5xl mx-auto space-y-8">
-              {imageData.urls.map((url, index) => (
-                <div
-                  key={index}
-                  className="flex flex-col md:flex-row gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
-                >
-                  <div className="w-full md:w-1/2 relative">
-                    <div className="aspect-[16/9] relative">
-                      {!loadedImages[index] && (
-                        <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                          <Loader />
-                        </div>
-                      )}
-                      <Image
-                        src={url}
-                        alt={`Comic panel ${index + 1}`}
-                        fill
-                        className={cn(
-                          "object-contain",
-                          !loadedImages[index] && "opacity-0"
+            <div className="flex-1 overflow-y-auto p-8">
+              <div className="max-w-5xl mx-auto space-y-8">
+                {imageData.urls.map((url, index) => (
+                  <div
+                    key={index}
+                    className="flex flex-col md:flex-row gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
+                  >
+                    <div className="w-full md:w-1/2 relative">
+                      <div className="aspect-[16/9] relative">
+                        {!loadedImages[index] && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
+                            <Loader />
+                          </div>
                         )}
-                        sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
-                        priority={index < 2}
-                        onLoad={() => {
-                          const newLoadedImages = [...loadedImages];
-                          newLoadedImages[index] = true;
-                          setLoadedImages(newLoadedImages);
-                        }}
-                      />
+                        <Image
+                          src={url}
+                          alt={`Comic panel ${index + 1}`}
+                          fill
+                          className={cn(
+                            "object-contain",
+                            !loadedImages[index] && "opacity-0"
+                          )}
+                          sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
+                          priority={index < 2}
+                          onLoad={() => {
+                            const newLoadedImages = [...loadedImages];
+                            newLoadedImages[index] = true;
+                            setLoadedImages(newLoadedImages);
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div className="w-full md:w-1/2 p-8 flex items-center">
+                      {index === 0 ? (
+                        <h1 className="text-4xl leading-relaxed text-foreground font-comic">
+                          {imageData.descriptions[index]}
+                        </h1>
+                      ) : (
+                        <p className="text-2xl leading-relaxed text-foreground font-comic">
+                          {imageData.descriptions[index]}
+                        </p>
+                      )}
                     </div>
                   </div>
-                  <div className="w-full md:w-1/2 p-8 flex items-center">
-                    {index === 0 ? (
-                      <h1 className="text-4xl leading-relaxed text-foreground font-comic">
-                        {imageData.descriptions[index]}
-                      </h1>
-                    ) : (
-                      <p className="text-2xl leading-relaxed text-foreground font-comic">
-                        {imageData.descriptions[index]}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
-          <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">
-            <button
-              onClick={() => setShowModal(false)}
-              className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
-              aria-label="Close modal"
-              title="Close modal"
-            >
-              <X className="h-6 w-6" />
-            </button>
-            <h2 className="text-lg mb-4">
-              You do not have enough credits to generate a comic. <br />
-              Please recharge your credits.
-            </h2>
-            <Button
-              onClick={() => router.push("/credits")}
-              className="bg-primary text-primary-foreground"
-            >
-              Buy Credits
-            </Button>
+        {showModal && (
+          <div className="fixed inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-50">
+            <div className="bg-background p-6 rounded-lg shadow-lg text-center relative border border-border">
+              <button
+                onClick={() => setShowModal(false)}
+                className="absolute top-2 right-2 text-muted-foreground hover:text-foreground"
+                aria-label="Close modal"
+                title="Close modal"
+              >
+                <X className="h-6 w-6" />
+              </button>
+              <h2 className="text-lg mb-4">
+                You do not have enough credits to generate a comic. <br />
+                Please recharge your credits.
+              </h2>
+              <Button
+                onClick={() => router.push("/credits")}
+                className="bg-primary text-primary-foreground"
+              >
+                Buy Credits
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

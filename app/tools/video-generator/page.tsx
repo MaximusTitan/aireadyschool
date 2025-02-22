@@ -112,7 +112,7 @@ export default function VideoGenerator() {
   };
 
   return (
-    <div className="mx-auto relative">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
       {loading && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
           <div className="bg-white p-4 rounded-lg flex items-center gap-2">
@@ -121,111 +121,121 @@ export default function VideoGenerator() {
           </div>
         </div>
       )}
-      <div className="flex h-16 items-center space-x-2 ml-8">
-        <Link href="/tools" className="text-neutral-500 hover:text-neutral-700">
-          <ChevronLeft className="h-6 w-6 text-neutral-800" />
-        </Link>
-        <h1 className="text-3xl font-bold text-neutral-800">
-          Image to Video Generator
-        </h1>
-      </div>
-      <Card className="container max-w-8xl mx-auto mt-8">
-        <CardContent className="pt-6 space-y-4">
-          {videoUrl && (
-            <div id="generated-video" className="mb-6">
-              <h2 className="text-lg font-bold text-neutral-500 mb-2">
-                Your Generated Video
-              </h2>
-              <video
-                src={videoUrl}
-                controls
-                className="w-full rounded-lg shadow-lg"
-                autoPlay
-                loop
-              />
-              <p className="text-sm text-gray-500 mt-2">
-                Tip: Download the video by clicking the three dots on the video
-                player.
-              </p>
-            </div>
-          )}
 
-          <div
-            onDragOver={handleDragOver}
-            onDrop={handleDrop}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
-              ${selectedImage ? "border-neutral-500" : "border-gray-300 hover:border-neutral-500"}`}
-          >
-            {selectedImage ? (
-              <img
-                src={selectedImage}
-                alt="Selected"
-                className="w-full max-w-md mx-auto rounded-lg shadow-lg"
-              />
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <Upload className="h-8 w-8 text-gray-400" />
-                <p className="text-sm text-gray-500">
-                  Drag and drop your image here, or click to select
-                </p>
-                <Input
-                  id="picture"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleFileChange}
-                  className="hidden"
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Image to Video Generator
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Transform your static images into dynamic videos with AI-powered motion and animations.
+          </p>
+        </div>
+
+        <Card className="border-neutral-200 dark:border-neutral-800">
+          <CardContent className="pt-6 space-y-4">
+            {videoUrl && (
+              <div id="generated-video" className="mb-6">
+                <h2 className="text-lg font-bold text-neutral-500 mb-2">
+                  Your Generated Video
+                </h2>
+                <video
+                  src={videoUrl}
+                  controls
+                  className="w-full rounded-lg shadow-lg"
+                  autoPlay
+                  loop
                 />
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById("picture")?.click()}
-                >
-                  Select Image
-                </Button>
+                <p className="text-sm text-gray-500 mt-2">
+                  Tip: Download the video by clicking the three dots on the video
+                  player.
+                </p>
               </div>
             )}
-          </div>
 
-          <div className="grid w-full items-center gap-1.5">
-            <Label htmlFor="prompt">Describe Your Animation</Label>
-            <Textarea
-              id="prompt"
-              placeholder="Be specific about the movement you want to see. For example: 'Make the flower slowly bloom and sway in the wind' or 'Zoom into the center of the image while adding a subtle rotation'"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              className="border-neutral-500 focus:ring-neutral-500 min-h-[120px]"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              className="w-full bg-neutral-500 hover:bg-neutral-600 transition-colors"
-              onClick={handleImageToVideo}
-              disabled={loading || !selectedImage || !prompt}
+            <div
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors
+              ${selectedImage ? "border-neutral-500" : "border-gray-300 hover:border-neutral-500"}`}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="animate-spin mr-2 h-4 w-4" />
-                  Generating Video...
-                </>
+              {selectedImage ? (
+                <img
+                  src={selectedImage}
+                  alt="Selected"
+                  className="w-full max-w-md mx-auto rounded-lg shadow-lg"
+                />
               ) : (
-                "Generate Video"
+                <div className="flex flex-col items-center gap-2">
+                  <Upload className="h-8 w-8 text-gray-400" />
+                  <p className="text-sm text-gray-500">
+                    Drag and drop your image here, or click to select
+                  </p>
+                  <Input
+                    id="picture"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleFileChange}
+                    className="hidden"
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById("picture")?.click()}
+                  >
+                    Select Image
+                  </Button>
+                </div>
               )}
-            </Button>
-            {(selectedImage || videoUrl) && (
-              <Button
-                variant="outline"
-                className="w-32"
-                onClick={handleStartOver}
-                disabled={loading}
-              >
-                Start Over
-              </Button>
-            )}
-          </div>
+            </div>
 
-          {error && <p className="text-red-500 text-sm text-center">{error}</p>}
-        </CardContent>
-      </Card>
+            <div className="grid w-full items-center gap-1.5">
+              <Label htmlFor="prompt">Describe Your Animation</Label>
+              <Textarea
+                id="prompt"
+                placeholder="Be specific about the movement you want to see. For example: 'Make the flower slowly bloom and sway in the wind' or 'Zoom into the center of the image while adding a subtle rotation'"
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                className="border-neutral-500 focus:ring-neutral-500 min-h-[120px]"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                className="w-full bg-neutral-500 hover:bg-neutral-600 transition-colors"
+                onClick={handleImageToVideo}
+                disabled={loading || !selectedImage || !prompt}
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="animate-spin mr-2 h-4 w-4" />
+                    Generating Video...
+                  </>
+                ) : (
+                  "Generate Video"
+                )}
+              </Button>
+              {(selectedImage || videoUrl) && (
+                <Button
+                  variant="outline"
+                  className="w-32"
+                  onClick={handleStartOver}
+                  disabled={loading}
+                >
+                  Start Over
+                </Button>
+              )}
+            </div>
+
+            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

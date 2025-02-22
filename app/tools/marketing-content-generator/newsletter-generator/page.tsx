@@ -15,6 +15,7 @@ import {
 import { generateNewsletter } from "../actions";
 import { Loader2, Mail, Users, FileText, ChevronLeft } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Header } from "../common/Header";
 
 export default function Page() {
   const [loading, setLoading] = useState(false);
@@ -51,27 +52,14 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6 min-h-screen pb-8">
-      <div className="px-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="/tools/" className="flex items-center">
-              <ChevronLeft className="h-4 w-4" />
-            </a>
-          </Button>
-          <h1 className="text-xl font-semibold">School Newsletter Generator</h1>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <Header 
+        title="Newsletter Generator"
+        description="Create engaging newsletters to keep your school community informed and connected with automated content generation."
+      />
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
 
-        <Alert className="mb-6">
-          <AlertDescription>
-            Create informative newsletters to keep parents, students, and staff
-            updated on school activities. This tool helps you generate
-            comprehensive newsletter content tailored to your audience and
-            purpose.
-          </AlertDescription>
-        </Alert>
-
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="newsletterType">Newsletter Type</Label>

@@ -1,60 +1,70 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CardContent, CardFooter } from "@/components/ui/card";
+
+import { FormCard, FormInput, FormButton } from "./FormElements";
+
+interface SqlDetails {
+  databaseName: string; // from "Name your database"
+  host: string;
+  port: string;
+  database: string; //sql database name
+  user_name: string;
+  password: string;
+}
 
 interface DatabaseConnectionFormProps {
-  sqlDetails: {
-    host: string;
-    port: string;
-    database: string;
-    user_name: string;
-    password: string;
-  };
-  setSqlDetails: React.Dispatch<React.SetStateAction<any>>;
+  connectionDetails: SqlDetails;
+  setConnectionDetails: (details: SqlDetails) => void;
   handleSubmit: (e: React.FormEvent<HTMLFormElement>) => Promise<void>;
   isLoading: boolean;
 }
 
 const DatabaseConnectionForm = ({
-  sqlDetails,
-  setSqlDetails,
+  connectionDetails,
+  setConnectionDetails,
   handleSubmit,
   isLoading,
 }: DatabaseConnectionFormProps) => {
   const [dbType, setDbType] = useState("postgres");
-  const [databaseName, setDatabaseName] = useState("");
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSqlDetails((prev: any) => ({ ...prev, [e.target.name]: e.target.value }));
+    setConnectionDetails({
+      ...connectionDetails,
+      [e.target.name]: e.target.value,
+    });
   };
 
   return (
-    <Card className="max-w-md mx-auto">
-      <CardHeader>
-        <CardTitle>Connect to SQL Database</CardTitle>
-        <CardDescription>Enter your database credentials to connect.</CardDescription>
-      </CardHeader>
+    <FormCard
+      title="Connect to SQL Database"
+      description="Enter your database credentials to connect."
+    >
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="databaseName">Name your database</Label>
-            <Input
-              id="databaseName"
-              name="databaseName"
-              type="text"
-              value={databaseName}
-              onChange={(e) => setDatabaseName(e.target.value)}
-              placeholder="Enter a name for your database connection"
-            />
-          </div>
+          <FormInput
+            key="database_name"
+            label="Name your database"
+            id="databaseName"
+            name="databaseName"
+            type="text"
+            value={connectionDetails.databaseName}
+            onChange={handleChange}
+            placeholder="Enter a name for your database connection"
+            required
+          />
           <div className="space-y-2">
             <Label htmlFor="dbType">Database Type</Label>
-            <Select value={dbType} onValueChange={(value) => setDbType(value)}>
+            <Select value={dbType} onValueChange={setDbType}>
               <SelectTrigger>
                 <SelectValue placeholder="Select database type" />
               </SelectTrigger>
@@ -65,29 +75,31 @@ const DatabaseConnectionForm = ({
               </SelectContent>
             </Select>
           </div>
-          {(["host", "port", "database", "user_name", "password"] as const).map((field) => (
-            <div key={field} className="space-y-2">
-              <Label htmlFor={field} className="capitalize">
-                {field.replace("_", " ")}
-              </Label>
-              <Input
+          {(["host", "port", "database", "user_name", "password"] as const).map(
+            (field) => (
+              <FormInput
+                key={field}
+                label={field.replace("_", " ")}
                 id={field}
                 name={field}
                 type={field === "password" ? "password" : "text"}
-                value={sqlDetails ? sqlDetails[field] || "" : ""}
+                value={connectionDetails[field]}
                 onChange={handleChange}
-                placeholder={field === "port" ? "5432" : `Enter ${field.replace("_", " ")}`}
+                placeholder={
+                  field === "port" ? "5432" : `Enter ${field.replace("_", " ")}`
+                }
+                required
               />
-            </div>
-          ))}
+            ),
+          )}
         </CardContent>
         <CardFooter>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Connecting..." : "Connect"}
-          </Button>
+          <FormButton type="submit" isLoading={isLoading}>
+            Connect
+          </FormButton>
         </CardFooter>
       </form>
-    </Card>
+    </FormCard>
   );
 };
 

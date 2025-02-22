@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 import {
   Select,
   SelectContent,
@@ -21,41 +22,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { createClient } from "@/utils/supabase/client";
 
-const studentFormSchema = z.object({
+const teacherFormSchema = z.object({
   email: z.string().email(),
-  roll_number: z.string().min(1),
   board_id: z.string().uuid(),
   grade_id: z.string().uuid(),
   section_id: z.string().uuid(),
+  subject_id: z.string().uuid(),
 });
 
-type StudentFormValues = z.infer<typeof studentFormSchema>;
+type TeacherFormValues = z.infer<typeof teacherFormSchema>;
 
-interface SchoolStudentFormProps {
+interface SchoolTeacherFormProps {
   schoolId: string;
   onSuccess?: () => void;
 }
 
-export default function SchoolStudentForm({
+export default function SchoolTeacherForm({
   schoolId,
   onSuccess,
-}: SchoolStudentFormProps) {
+}: SchoolTeacherFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [boards, setBoards] = useState<{ id: string; name: string }[]>([]);
   const [grades, setGrades] = useState<{ id: string; name: string }[]>([]);
   const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
+  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
   const supabase = createClient();
 
-  const form = useForm<StudentFormValues>({
-    resolver: zodResolver(studentFormSchema),
+  const form = useForm<TeacherFormValues>({
+    resolver: zodResolver(teacherFormSchema),
     defaultValues: {
       email: "",
-      roll_number: "",
       board_id: "",
       grade_id: "",
       section_id: "",
+      subject_id: "",
     },
   });
 
@@ -71,10 +72,15 @@ export default function SchoolStudentForm({
     fetchBoards();
   }, [schoolId, supabase]);
 
-  // When board changes, fetch grades for that board
+  // When board changes, fetch grades and subjects for that board
   const boardChanged = async (board_id: string) => {
     const { data: gradesData } = await supabase
       .from("grades")
+      .select("id, name")
+      .eq("board_id", board_id);
+
+    const { data: subjectsData } = await supabase
+      .from("subjects")
       .select("id, name")
       .eq("board_id", board_id);
 
@@ -86,9 +92,11 @@ export default function SchoolStudentForm({
     });
 
     setGrades(sortedGrades);
+    setSubjects(subjectsData || []);
     form.setValue("board_id", board_id);
     form.setValue("grade_id", "");
     form.setValue("section_id", "");
+    form.setValue("subject_id", "");
   };
 
   // When grade changes, fetch sections for that grade
@@ -105,7 +113,7 @@ export default function SchoolStudentForm({
     form.setValue("section_id", "");
   };
 
-  const onSubmit = async (data: StudentFormValues) => {
+  const onSubmit = async (data: TeacherFormValues) => {
     setIsSubmitting(true);
     try {
       // Create auth user
@@ -114,7 +122,7 @@ export default function SchoolStudentForm({
         password: Math.random().toString(36).slice(-8), // Generate random password
         options: {
           data: {
-            role: "Student",
+            role: "Teacher",
           },
         },
       });
@@ -126,29 +134,41 @@ export default function SchoolStudentForm({
       const { error: userError } = await supabase.from("users").insert({
         user_id: authData.user.id,
         site_id: schoolId,
-        role_type: "Student",
+        role_type: "Teacher",
       });
 
       if (userError) throw userError;
 
-      // Create student record
-      const { error: studentError } = await supabase
-        .from("school_students")
+      // Create teacher record and get the generated id
+      const { data: teacherData, error: teacherError } = await supabase
+        .from("teachers")
         .insert({
           user_id: authData.user.id,
           school_id: schoolId,
+        })
+        .select()
+        .single();
+
+      if (teacherError) throw teacherError;
+
+      // Create teacher assignment record using the teacher.id
+      const { error: assignError } = await supabase
+        .from("teacher_assignments")
+        .insert({
+          teacher_id: teacherData.id, // Use the teacher.id instead of user_id
+          board_id: data.board_id,
           grade_id: data.grade_id,
           section_id: data.section_id,
-          roll_number: data.roll_number,
+          subject_id: data.subject_id,
         });
 
-      if (studentError) throw studentError;
+      if (assignError) throw assignError;
 
       onSuccess?.();
       form.reset();
     } catch (error) {
       console.error("Error:", error);
-      alert("Failed to register student. Please try again.");
+      alert("Failed to register teacher. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -166,7 +186,7 @@ export default function SchoolStudentForm({
               <FormControl>
                 <Input
                   type="email"
-                  placeholder="student@example.com"
+                  placeholder="teacher@example.com"
                   {...field}
                 />
               </FormControl>
@@ -174,21 +194,7 @@ export default function SchoolStudentForm({
             </FormItem>
           )}
         />
-
-        <FormField
-          control={form.control}
-          name="roll_number"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Roll Number</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter roll number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
+        {/* Board selector */}
         <FormField
           control={form.control}
           name="board_id"
@@ -213,7 +219,7 @@ export default function SchoolStudentForm({
             </FormItem>
           )}
         />
-
+        {/* Grade selector */}
         <FormField
           control={form.control}
           name="grade_id"
@@ -242,7 +248,7 @@ export default function SchoolStudentForm({
             </FormItem>
           )}
         />
-
+        {/* Section selector */}
         <FormField
           control={form.control}
           name="section_id"
@@ -250,11 +256,7 @@ export default function SchoolStudentForm({
             <FormItem>
               <FormLabel>Section</FormLabel>
               <FormControl>
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value || ""}
-                  disabled={!form.getValues("grade_id")}
-                >
+                <Select onValueChange={field.onChange} value={field.value}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select section" />
                   </SelectTrigger>
@@ -271,9 +273,33 @@ export default function SchoolStudentForm({
             </FormItem>
           )}
         />
-
+        {/* Subject selector */}
+        <FormField
+          control={form.control}
+          name="subject_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Subject</FormLabel>
+              <FormControl>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select subject" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Registering..." : "Register Student"}
+          {isSubmitting ? "Registering..." : "Register Teacher"}
         </Button>
       </form>
     </Form>

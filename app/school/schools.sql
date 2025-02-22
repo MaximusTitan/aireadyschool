@@ -1,7 +1,4 @@
--- Enable necessary extensions
-create extension if not exists "uuid-ossp";
-
--- Schools table (modified to match your existing structure)
+-- Schools table
 create table schools (
     id uuid primary key default uuid_generate_v4(),
     site_id text unique not null,
@@ -12,7 +9,21 @@ create table schools (
     updated_at timestamp with time zone default now()
 );
 
--- Boards table (CBSE, ICSE, etc.)
+-- Create updated_at trigger for schools
+create or replace function update_updated_at_column()
+returns trigger as $$
+begin
+    new.updated_at = now();
+    return new;
+end;
+$$ language plpgsql;
+
+create trigger update_schools_updated_at
+    before update on schools
+    for each row
+    execute function update_updated_at_column();
+
+-- Boards table
 create table boards (
     id uuid primary key default uuid_generate_v4(),
     school_id text not null references schools(site_id),
@@ -48,7 +59,7 @@ create table subjects (
     unique(board_id, name)
 );
 
--- Teachers table (connects to your existing users table)
+-- Teachers table
 create table teachers (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references auth.users(id),
@@ -57,46 +68,71 @@ create table teachers (
     unique(user_id, school_id)
 );
 
--- School Students table (renamed from students)
+-- School Students table
 create table school_students (
     id uuid primary key default uuid_generate_v4(),
     user_id uuid not null references auth.users(id),
     school_id text not null references schools(site_id),
+    grade_id uuid not null references grades(id),
     section_id uuid not null references sections(id),
     roll_number text,
     created_at timestamp with time zone default now(),
-    unique(user_id, school_id)
+    unique(user_id, school_id),
+    unique(school_id, grade_id, section_id, roll_number)
 );
 
--- Teacher Assignments table (connects teachers to sections and subjects)
+-- Teacher Assignments table
 create table teacher_assignments (
     id uuid primary key default uuid_generate_v4(),
     teacher_id uuid not null references teachers(id),
+    board_id uuid not null references boards(id),
+    grade_id uuid not null references grades(id),
     section_id uuid not null references sections(id),
     subject_id uuid not null references subjects(id),
     created_at timestamp with time zone default now(),
-    unique(teacher_id, section_id, subject_id)
+    unique(teacher_id, board_id, grade_id, section_id, subject_id)
 );
 
--- Triggers for updated_at
-create or replace function update_updated_at_column()
-returns trigger as $$
-begin
-    new.updated_at = now();
-    return new;
-end;
-$$ language plpgsql;
+-- Create indexes for better performance
 
-create trigger update_schools_updated_at
-    before update on schools
-    for each row
-    execute function update_updated_at_column();
+-- Schools indexes
+create index idx_schools_site_id on schools(site_id);
 
--- Indexes for better performance
+-- Boards indexes
 create index idx_boards_school on boards(school_id);
+
+-- Grades indexes
 create index idx_grades_board on grades(board_id);
+
+-- Sections indexes
 create index idx_sections_grade on sections(grade_id);
+
+-- Subjects indexes
 create index idx_subjects_board on subjects(board_id);
+
+-- Teachers indexes
 create index idx_teachers_school on teachers(school_id);
+create index idx_teachers_user on teachers(user_id);
+
+-- School Students indexes
 create index idx_school_students_school on school_students(school_id);
+create index idx_school_students_grade on school_students(grade_id);
 create index idx_school_students_section on school_students(section_id);
+create index idx_school_students_user on school_students(user_id);
+
+-- Teacher Assignments indexes
+create index idx_teacher_assignments_teacher on teacher_assignments(teacher_id);
+create index idx_teacher_assignments_board on teacher_assignments(board_id);
+create index idx_teacher_assignments_grade on teacher_assignments(grade_id);
+create index idx_teacher_assignments_section on teacher_assignments(section_id);
+create index idx_teacher_assignments_subject on teacher_assignments(subject_id);
+
+-- Add comments to tables
+comment on table schools is 'Schools registered in the system';
+comment on table boards is 'Educational boards (like CBSE, ICSE) within schools';
+comment on table grades is 'Grade levels within each board';
+comment on table sections is 'Sections within each grade';
+comment on table subjects is 'Subjects taught within each board';
+comment on table teachers is 'Teachers registered in schools';
+comment on table school_students is 'Students enrolled in schools';
+comment on table teacher_assignments is 'Teacher assignments to board-grade-section-subject combinations';

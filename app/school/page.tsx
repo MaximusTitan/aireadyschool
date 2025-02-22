@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import SchoolOnboarding from "@/app/school/components/SchoolOnboarding";
 import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 
 interface Subject {
   id: string;
@@ -75,7 +77,6 @@ export default function SchoolsPage() {
     const fetchSchools = async () => {
       try {
         if (userRole === "School" && userSiteId) {
-          // If user is a school, only fetch their school
           const { data, error } = await supabase
             .from("schools")
             .select(
@@ -107,9 +108,28 @@ export default function SchoolsPage() {
             .single();
 
           if (error) throw error;
+
+          // Sort grades and sections before setting the state
+          if (data && data.boards) {
+            data.boards = data.boards.map((board) => ({
+              ...board,
+              grades: board.grades
+                .sort(
+                  (a: Grade, b: Grade) =>
+                    parseInt(a.name.replace("Grade ", "")) -
+                    parseInt(b.name.replace("Grade ", ""))
+                )
+                .map((grade) => ({
+                  ...grade,
+                  sections: grade.sections.sort((a: Section, b: Section) =>
+                    a.name.localeCompare(b.name)
+                  ),
+                })),
+            }));
+          }
+
           setSchools(data ? [data] : []);
         } else {
-          // For other roles, fetch all schools
           const { data, error } = await supabase.from("schools").select(`
               id,
               site_id,
@@ -142,7 +162,14 @@ export default function SchoolsPage() {
         {schools.map((school) => (
           <Card key={school.id} className="overflow-hidden">
             <CardHeader>
-              <h3 className="text-xl font-semibold">{school.name}</h3>
+              <div className="flex justify-between items-start">
+                <h3 className="text-xl font-semibold">{school.name}</h3>
+                {userRole === "School" && (
+                  <Button asChild variant="outline" size="sm">
+                    <Link href="/school/members">Manage Members</Link>
+                  </Button>
+                )}
+              </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

@@ -2,6 +2,7 @@
 
 import { generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
+import { groq } from '@ai-sdk/groq'
 import { generateImage } from '../utils/flux'
 import { Presentation, Slide, SlideLayout } from '../types/presentation'
 import { nanoid } from 'nanoid'
@@ -47,15 +48,42 @@ async function generateImagesForSlide(slide: any, theme: string, generateImages:
   }
 }
 
-export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean, generateImages: boolean = true): Promise<Presentation> {
+async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
+  try {
+    if (model === "gpt4") {
+      return await generateText({
+        model: openai('gpt-4'),
+        prompt: prompt
+      })
+    } else {
+      return await generateText({
+        model: groq('mixtral-8x7b-32768'), // Changed to use Groq's free model
+        prompt: prompt,
+        temperature: 0.7,
+        maxTokens: 4000
+      })
+    }
+  } catch (error) {
+    if (model === "gpt4") {
+      console.warn("GPT-4 failed, falling back to Groq")
+      return await generateText({
+        model: groq('mixtral-8x7b-32768'), // Changed here too
+        prompt: prompt,
+        temperature: 0.7,
+        maxTokens: 4000
+      })
+    }
+    throw error
+  }
+}
+
+export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean, generateImages: boolean = true, model: "gpt4" | "groq" = "gpt4"): Promise<Presentation> {
 
   // Ensure slideCount is within the allowed range
   const validSlideCount = Math.max(2, Math.min(8, slideCount))
 
   try {
-    const { text } = await generateText({
-      model: openai('gpt-4o'),
-      prompt: `Create an engaging and educational presentation about ${prompt} for students. Format the response as JSON with the following structure:
+    const { text } = await generateWithModel(`Create an engaging and educational presentation about ${prompt} for students. Format the response as JSON with the following structure:
       {
         "slides": [
           {
@@ -77,8 +105,7 @@ export async function generatePresentation(prompt: string, theme: string, slideC
           }
         ]
       }
-      Generate exactly ${validSlideCount} slides with diverse layouts and engaging, educational content suitable for students. Make sure to use different layouts for visual variety. The first slide should always be a titleSlide layout with a catchy title and brief introduction. Ensure each slide has substantial content, including the main content and relevant bullet points or other layout-specific information. Strictly adhere to the JSON format without any additional text or explanations outside the JSON structure.`,
-    })
+      Generate exactly ${validSlideCount} slides with diverse layouts and engaging, educational content suitable for students. Make sure to use different layouts for visual variety. The first slide should always be a titleSlide layout with a catchy title and brief introduction. Ensure each slide has substantial content, including the main content and relevant bullet points or other layout-specific information. Strictly adhere to the JSON format without any additional text or explanations outside the JSON structure.`, model)
 
     let content;
     try {

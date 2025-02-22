@@ -13,6 +13,8 @@ import type RevealType from "reveal.js";
 // Add to the top of your RevealPresentation.tsx file or your global styles
 import "reveal.js/dist/reveal.css";
 import "reveal.js/dist/theme/white.css"; // or any other theme you prefer
+import { Spinner } from "./ui/spinner";
+import { YouTubeSlide } from "./YouTubeSlide";
 
 interface RevealPresentationProps {
   presentation: Presentation;
@@ -55,32 +57,29 @@ export function RevealPresentation({
       const presentationRatio = SLIDE_WIDTH / SLIDE_HEIGHT;
 
       if (windowRatio > presentationRatio) {
-        // Window is wider than needed
         const height = window.innerHeight;
-        const width = height * presentationRatio;
+        const scale = height / SLIDE_HEIGHT;
         return {
-          width,
-          height,
-          scale: height / SLIDE_HEIGHT,
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+          scale: scale,
         };
       } else {
-        // Window is taller than needed
         const width = window.innerWidth;
-        const height = width / presentationRatio;
+        const scale = width / SLIDE_WIDTH;
         return {
-          width,
-          height,
-          scale: width / SLIDE_WIDTH,
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+          scale: scale,
         };
       }
     } else {
-      // Preview mode
-      const containerWidth = containerRef.current?.offsetWidth || SLIDE_WIDTH;
-      const previewScale = containerWidth / SLIDE_WIDTH;
+      const containerWidth = containerRef.current?.parentElement?.offsetWidth || SLIDE_WIDTH;
+      const scale = Math.min(0.875, containerWidth / SLIDE_WIDTH);
       return {
         width: SLIDE_WIDTH,
         height: SLIDE_HEIGHT,
-        scale: previewScale,
+        scale: scale,
       };
     }
   };
@@ -429,7 +428,69 @@ export function RevealPresentation({
     );
   };
 
+  const renderMedia = (slide: Slide, isEditing: boolean, index: number) => {
+    if (slide.videoUrl) {
+      return (
+        <div className="video-container" style={{ position: 'relative', paddingBottom: '56.25%', height: 0 }}>
+          <iframe
+            style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%' }}
+            src={slide.videoUrl}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      )
+    }
+    return slide.image && (
+      <div className="relative group">
+        <img src={slide.image} alt={slide.title} className="w-full rounded-lg" />
+        {isEditing && (
+          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleRegenerateImage(index)}
+                disabled={isRegeneratingImage}
+              >
+                {isRegeneratingImage ? <Spinner className="mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+                Regenerate
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleUploadImage(index)}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Upload
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
+
   const renderSlideContent = (slide: Slide, index: number) => {
+    // Debug logging
+    console.log("Rendering slide:", {
+      slideType: slide.type,
+      slideLayout: slide.layout,
+      hasVideoUrl: Boolean(slide.videoUrl),
+      slideIndex: index
+    });
+
+    if ((slide.type === "youtube" || slide.layout === "videoSlide") && slide.videoUrl) {
+      return (
+        <YouTubeSlide
+          slide={slide}
+          theme={theme}
+          isEditing={isEditing}
+          presentationTopic={presentation.topic} // Pass the presentation topic
+        />
+      );
+    }
+
     const isTextLeft = slide.layout === "textLeft";
 
     return (
@@ -476,34 +537,7 @@ export function RevealPresentation({
           className={`w-1/2 flex flex-col items-center justify-center ${isTextLeft ? "pl-8" : "pr-8"} p-12`}
         >
           <div className="relative w-full">
-            {slide.image && (
-              <img
-                src={slide.image || "/placeholder.svg"}
-                alt={slide.title}
-                className="reveal-img w-full h-auto object-contain mb-4"
-              />
-            )}
-            {isEditing && (
-              <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleRegenerateImage(index)}
-                  disabled={isRegeneratingImage}
-                >
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                  Regenerate Image
-                </Button>
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => handleUploadImage(index)}
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload Image
-                </Button>
-              </div>
-            )}
+            {renderMedia(slide, isEditing, index)}
           </div>
         </div>
       </div>
@@ -513,32 +547,37 @@ export function RevealPresentation({
   return (
     <div
       ref={containerRef}
-      className={`${isFullscreen ? "fixed inset-0 z-50 bg-black flex items-center justify-center" : "w-full h-full p-2"}`}
+      className={`${
+        isFullscreen ? "fixed inset-0 z-50 bg-black" : ""
+      } flex items-center justify-center w-full overflow-hidden`}
       style={{
         minHeight: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
-        aspectRatio: isFullscreen ? "auto" : "16/9",
+        aspectRatio: "16/9",
+        marginInline: "auto",
+        paddingBottom: "1rem", // Add padding at the bottom
       }}
     >
       <div
-        className={`${isFullscreen ? "w-full h-full flex items-center justify-center" : ""}`}
+        className="relative"
         style={{
-          ...(isFullscreen && {
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: "100%",
-            height: "100%",
-          }),
+          width: `${SLIDE_WIDTH}px`,
+          margin: "0 auto",
         }}
       >
         <div
           ref={revealRef}
-          className={`reveal theme-${theme}`}
+          className={`reveal reveal-viewport theme-${theme}`}
           style={{
-            width: isFullscreen ? "100%" : `${SLIDE_WIDTH}px`,
-            height: isFullscreen ? "100%" : `${SLIDE_HEIGHT}px`,
-            transform: isFullscreen ? "none" : `scale(${scale})`,
-            transformOrigin: "center",
+            width: `${SLIDE_WIDTH}px`,
+            height: `${SLIDE_HEIGHT}px`,
+            transform: `scale(${scale})`,
+            transformOrigin: "center center", // Changed from "top center" to "center center"
+            //margin: "2rem auto", // Added margin to adjust vertical position
+            ["--slide-scale" as any]: "1",
+            ["--viewport-width" as any]: `${SLIDE_WIDTH}px`,
+            ["--viewport-height" as any]: `${SLIDE_HEIGHT}px`,
+            ["--slide-width" as any]: `${SLIDE_WIDTH}px`,
+            ["--slide-height" as any]: `${SLIDE_HEIGHT}px`,
           }}
         >
           <div className="slides">

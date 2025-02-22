@@ -44,7 +44,7 @@ export const signUpAction = async (formData: FormData) => {
       user_id: signUpData.user!.id,
       role_type: role,
       image_credits: 25,
-      video_credits: 25
+      video_credits: 5
     });
 
   if (insertError) {

@@ -12,7 +12,13 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
-export default function UserListItem({ user }: { user: any }) {
+export default function UserListItem({
+  user,
+  credits,
+}: {
+  user: any;
+  credits?: { image_credits: number | null; video_credits: number | null };
+}) {
   const [isEditing, setIsEditing] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [status, setStatus] = useState<
@@ -24,6 +30,8 @@ export default function UserListItem({ user }: { user: any }) {
     role: user.user_metadata?.role || "Student",
     status: user.user_metadata?.status || "disabled",
     password: "",
+    image_credits: credits?.image_credits ?? 0,
+    video_credits: credits?.video_credits ?? 0,
   });
 
   const { toast } = useToast();
@@ -40,6 +48,8 @@ export default function UserListItem({ user }: { user: any }) {
         role: formData.role as UserRole,
         status: formData.status,
         password: formData.password || undefined,
+        image_credits: formData.image_credits,
+        video_credits: formData.video_credits,
       });
 
       if (result.success) {
@@ -156,6 +166,42 @@ export default function UserListItem({ user }: { user: any }) {
                 className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
               />
             </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground">
+                Image Credits
+              </label>
+              <input
+                type="number"
+                value={formData.image_credits}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    image_credits: parseInt(e.target.value) || 0,
+                  }))
+                }
+                min="0"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground">
+                Video Credits
+              </label>
+              <input
+                type="number"
+                value={formData.video_credits}
+                onChange={(e) =>
+                  setFormData((prev) => ({
+                    ...prev,
+                    video_credits: parseInt(e.target.value) || 0,
+                  }))
+                }
+                min="0"
+                className="mt-1 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              />
+            </div>
           </div>
 
           <div className="flex items-center justify-end gap-2 pt-4 border-t">
@@ -202,6 +248,14 @@ export default function UserListItem({ user }: { user: any }) {
                   <StatusBadge
                     status={user.user_metadata?.status || "disabled"}
                   />
+                </div>
+                <div className="flex gap-4 mt-2 text-sm text-muted-foreground">
+                  <span>
+                    Image Credits: {credits?.image_credits ?? "Not set"}
+                  </span>
+                  <span>
+                    Video Credits: {credits?.video_credits ?? "Not set"}
+                  </span>
                 </div>
               </div>
             </div>

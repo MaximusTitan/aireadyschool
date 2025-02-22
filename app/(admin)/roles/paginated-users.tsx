@@ -70,7 +70,7 @@ export function PaginatedUsers({ users }: { users: any[] }) {
     <div className="space-y-6">
       <div className="space-y-4">
         {paginatedUsers.map((user) => (
-          <UserListItem key={user.id} user={user} />
+          <UserListItem key={user.id} user={user} credits={user.credits} />
         ))}
       </div>
 

@@ -1,11 +1,8 @@
 "use client"
 
 import { useState } from "react"
-import Link from "next/link"
-import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent } from "@/components/ui/card"
 
 const videos = [
@@ -159,7 +156,7 @@ const videos = [
     url: "https://youtu.be/7WgEAwD46dg",
     description: `Image AI models have revolutionized computer vision and image processing. This video explains the inner workings of AI systems that process and generate images.
 
-    We'll explore convolutional neural networks (CNNs), image recognition techniques, and generative models for images. The video covers concepts like feature extraction, object detection, and image synthesis.
+    We'll explore convolutional neural networks (CNNs), image recognition techniques, and generative models for images. The video covers concepts like feature extraction, object detection, and image segmentation.
 
     Image AI has numerous applications, from medical imaging to autonomous vehicles, security systems, and creative tools.
 
@@ -180,8 +177,7 @@ const videos = [
 ]
 
 export default function AIFundamentalsPage() {
-  const [currentVideo, setCurrentVideo] = useState(0)
-  const [activeTab, setActiveTab] = useState("single")
+  const [currentVideo, setCurrentVideo] = useState<number | null>(null)
 
   const getYouTubeEmbedUrl = (url: string) => {
     const videoId = url.split("/").pop()
@@ -189,108 +185,102 @@ export default function AIFundamentalsPage() {
   }
 
   const handlePrevious = () => {
-    setCurrentVideo((prev) => (prev > 0 ? prev - 1 : videos.length - 1))
+    if (currentVideo !== null) {
+      setCurrentVideo((prev) => (prev ?? 0) > 0 ? (prev ?? 0) - 1 : videos.length - 1)
+    }
   }
 
   const handleNext = () => {
-    setCurrentVideo((prev) => (prev < videos.length - 1 ? prev + 1 : 0))
+    if (currentVideo !== null) {
+      setCurrentVideo((prev) => ((prev ?? 0) < videos.length - 1 ? (prev ?? 0) + 1 : 0))
+    }
   }
 
   const handleVideoSelect = (index: number) => {
     setCurrentVideo(index)
-    setActiveTab("single")
+  }
+
+  const handleBackToAllVideos = () => {
+    setCurrentVideo(null)
   }
 
   return (
     <div className="min-h-screen bg-[#f7f3f2]">
       <div className="max-w-[1400px] mx-auto p-8">
-        <div className="flex flex-col gap-4 mb-8">
-          <Button asChild variant="outline" className="w-fit bg-white hover:bg-gray-100">
-            <Link href="/dashboard">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-4">AI Fundamentals</h1>
+          {currentVideo !== null && (
+            <Button variant="outline" className="bg-white hover:bg-gray-100" onClick={handleBackToAllVideos}>
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Dashboard
-            </Link>
-          </Button>
-          <div className="flex items-center justify-between">
-            <h1 className="text-4xl font-bold">AI Fundamentals</h1>
-          </div>
+              Back to All Videos
+            </Button>
+          )}
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-          <TabsList className="bg-white">
-            <TabsTrigger value="single">Single Video View</TabsTrigger>
-            <TabsTrigger value="all">All Videos</TabsTrigger>
-          </TabsList>
-          <TabsContent value="single">
-            <div className="grid grid-cols-1 md:grid-cols-[1.2fr,0.8fr] gap-8">
-              <div className="space-y-4">
-                <div className="relative aspect-video bg-muted rounded-lg overflow-hidden">
+        {currentVideo === null ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {videos.map((video, index) => (
+              <Card
+                key={video.id}
+                className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
+                onClick={() => handleVideoSelect(index)}
+              >
+                <CardContent className="p-4">
+                  <div className="aspect-video mb-4">
+                    <iframe
+                      src={getYouTubeEmbedUrl(video.url)}
+                      className="w-full h-full"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    />
+                  </div>
+                  <h3 className="text-lg font-semibold mb-2">{video.title}</h3>
+                  <p className="text-sm text-muted-foreground line-clamp-3">{video.description.split("\n")[0]}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="max-w-5xl mx-auto">
+            <div className="space-y-8">
+              <h2 className="text-2xl font-semibold text-center">{videos[currentVideo].title}</h2>
+              <div className="relative flex items-center justify-center">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handlePrevious}
+                  className="absolute -left-16 rounded-full bg-white hover:bg-gray-100 w-12 h-12"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                  <span className="sr-only">Previous video</span>
+                </Button>
+                <div className="w-full aspect-video bg-muted rounded-lg overflow-hidden">
                   <iframe
                     src={getYouTubeEmbedUrl(videos[currentVideo].url)}
-                    className="absolute top-0 left-0 w-full h-full"
+                    className="w-full h-full"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   />
                 </div>
-                <div className="flex items-center justify-between px-4">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handlePrevious}
-                    className="rounded-full bg-white hover:bg-gray-100"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                    <span className="sr-only">Previous video</span>
-                  </Button>
-                  <h2 className="text-xl font-semibold text-center">{videos[currentVideo].title}</h2>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={handleNext}
-                    className="rounded-full bg-white hover:bg-gray-100"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                    <span className="sr-only">Next video</span>
-                  </Button>
-                </div>
-              </div>
-
-              <div className="space-y-4 relative md:space-y-0">
-                <Separator orientation="vertical" className="hidden md:block absolute -left-4 h-full" />
-                <div className="p-6 rounded-lg bg-white h-full overflow-y-auto">
-                  <h3 className="text-2xl font-semibold mb-4">Description</h3>
-                  <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
-                    {videos[currentVideo].description}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          <TabsContent value="all">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {videos.map((video, index) => (
-                <Card
-                  key={video.id}
-                  className="overflow-hidden cursor-pointer hover:shadow-lg transition-shadow duration-300"
-                  onClick={() => handleVideoSelect(index)}
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={handleNext}
+                  className="absolute -right-16 rounded-full bg-white hover:bg-gray-100 w-12 h-12"
                 >
-                  <CardContent className="p-4">
-                    <div className="aspect-video mb-4">
-                      <iframe
-                        src={getYouTubeEmbedUrl(video.url)}
-                        className="w-full h-full"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                    <h3 className="text-lg font-semibold mb-2">{video.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-3">{video.description.split("\n")[0]}</p>
-                  </CardContent>
-                </Card>
-              ))}
+                  <ChevronRight className="h-6 w-6" />
+                  <span className="sr-only">Next video</span>
+                </Button>
+              </div>
+              <div className="p-6 rounded-lg bg-white mt-12">
+                <h3 className="text-xl font-semibold mb-4">Description</h3>
+                <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                  {videos[currentVideo].description}
+                </div>
+              </div>
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
       </div>
     </div>
   )

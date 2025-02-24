@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
+import { anthropic } from "@ai-sdk/anthropic"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/utils/supabase/server"
 import { logTokenUsage } from "@/utils/logTokenUsage"
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
     try {
       const { text, usage } = await generateText({
-        model: openai("gpt-4o"),
+        model: anthropic('claude-3-5-sonnet-20240620'),
         prompt: prompt,
         temperature: 0.9,
         maxTokens: 2000,

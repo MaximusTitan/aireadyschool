@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card } from "@/components/ui/card";
 import { createClient } from "@/utils/supabase/client";
@@ -40,6 +42,11 @@ export default function MembersPage() {
 
   return (
     <div className="container py-10">
+      <div className="mb-6">
+        <Button variant="ghost" className="border" asChild>
+          <Link href="/school">← Back</Link>
+        </Button>
+      </div>
       <h1 className="text-3xl font-bold mb-8">Manage School Members</h1>
       <Tabs defaultValue="teachers">
         <TabsList className="mb-6">

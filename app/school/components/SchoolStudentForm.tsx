@@ -24,6 +24,7 @@ import {
 import { createClient } from "@/utils/supabase/client";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { createStudent } from "@/app/actions/auth";
 
 const studentFormSchema = z.object({
   email: z.string().email(),
@@ -114,44 +115,17 @@ export default function SchoolStudentForm({
   const onSubmit = async (data: StudentFormValues) => {
     setIsSubmitting(true);
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const result = await createStudent({
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            role: "Student",
-          },
-        },
+        schoolId,
+        boardId: data.board_id,
+        gradeId: data.grade_id,
+        sectionId: data.section_id,
+        rollNumber: data.roll_number,
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("No user created");
-
-      // Create user record
-      const { error: userError } = await supabase.from("users").insert({
-        user_id: authData.user.id,
-        site_id: schoolId,
-        role_type: "Student",
-        email: data.email,
-        image_credits: 25,
-        video_credits: 5,
-      });
-
-      if (userError) throw userError;
-
-      // Create student record
-      const { error: studentError } = await supabase
-        .from("school_students")
-        .insert({
-          user_id: authData.user.id,
-          school_id: schoolId,
-          grade_id: data.grade_id,
-          section_id: data.section_id,
-          roll_number: data.roll_number,
-        });
-
-      if (studentError) throw studentError;
+      if (!result.success) throw result.error;
 
       toast({
         title: "Success",

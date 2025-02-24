@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Eye, EyeOff } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
+import { createTeacher } from "@/app/actions/auth";
 
 const teacherFormSchema = z.object({
   email: z.string().email(),
@@ -122,56 +123,17 @@ export default function SchoolTeacherForm({
   const onSubmit = async (data: TeacherFormValues) => {
     setIsSubmitting(true);
     try {
-      // Create auth user
-      const { data: authData, error: authError } = await supabase.auth.signUp({
+      const result = await createTeacher({
         email: data.email,
         password: data.password,
-        options: {
-          data: {
-            role: "Teacher",
-          },
-        },
+        schoolId,
+        boardId: data.board_id,
+        gradeId: data.grade_id,
+        sectionId: data.section_id,
+        subjectId: data.subject_id,
       });
 
-      if (authError) throw authError;
-      if (!authData.user) throw new Error("No user created");
-
-      // Create user record
-      const { error: userError } = await supabase.from("users").insert({
-        user_id: authData.user.id,
-        site_id: schoolId,
-        role_type: "Teacher",
-        email: data.email,
-        image_credits: 25,
-        video_credits: 5,
-      });
-
-      if (userError) throw userError;
-
-      // Create teacher record and get the generated id
-      const { data: teacherData, error: teacherError } = await supabase
-        .from("teachers")
-        .insert({
-          user_id: authData.user.id,
-          school_id: schoolId,
-        })
-        .select()
-        .single();
-
-      if (teacherError) throw teacherError;
-
-      // Create teacher assignment record using the teacher.id
-      const { error: assignError } = await supabase
-        .from("teacher_assignments")
-        .insert({
-          teacher_id: teacherData.id, // Use the teacher.id instead of user_id
-          board_id: data.board_id,
-          grade_id: data.grade_id,
-          section_id: data.section_id,
-          subject_id: data.subject_id,
-        });
-
-      if (assignError) throw assignError;
+      if (!result.success) throw result.error;
 
       toast({
         title: "Success",

@@ -46,27 +46,30 @@ export default function SchoolsPage() {
   const [schools, setSchools] = useState<School[]>([]);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [userSiteId, setUserSiteId] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const supabase = createClient();
 
   useEffect(() => {
     const getUserData = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) {
-        // Get role from metadata
-        setUserRole(user.user_metadata.role);
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (user) {
+          setUserRole(user.user_metadata.role);
 
-        // Only fetch site_id from users table
-        const { data: userData } = await supabase
-          .from("users")
-          .select("site_id")
-          .eq("user_id", user.id)
-          .single();
+          const { data: userData } = await supabase
+            .from("users")
+            .select("site_id")
+            .eq("user_id", user.id)
+            .single();
 
-        if (userData) {
-          setUserSiteId(userData.site_id);
+          if (userData) {
+            setUserSiteId(userData.site_id);
+          }
         }
+      } finally {
+        setIsLoading(false);
       }
     };
 
@@ -109,7 +112,6 @@ export default function SchoolsPage() {
 
           if (error) throw error;
 
-          // Sort grades and sections before setting the state
           if (data && data.boards) {
             data.boards = data.boards.map((board) => ({
               ...board,
@@ -150,6 +152,16 @@ export default function SchoolsPage() {
       fetchSchools();
     }
   }, [supabase, userRole, userSiteId]);
+
+  if (isLoading) {
+    return (
+      <div className="container py-10">
+        <div className="flex items-center justify-center min-h-[200px]">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    );
+  }
 
   if (userRole === "School" && !userSiteId) {
     return <SchoolOnboarding />;

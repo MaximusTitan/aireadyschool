@@ -161,7 +161,7 @@ export default function Assessment({
     }
   };
 
-  const fetchSummaryExplanation = async (followUpMessage?: string) => {
+  const fetchSummaryExplanation = async (followUpMessage?: string): Promise<void> => {
     try {
       if (followUpMessage) {
         setIsLoadingChat(true);

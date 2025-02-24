@@ -6,6 +6,7 @@ import { createClient } from "@/utils/supabase/server"
 import { logTokenUsage } from "@/utils/logTokenUsage"
 import fs from "fs/promises";
 import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
+import { anthropic } from "@ai-sdk/anthropic"
 
 const supabase = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 
@@ -22,8 +23,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { country, board, classLevel, subject, topic, assessmentType, difficulty, questionCount, learningOutcomes } =
+    const { country, board, classLevel, subject, topic, assessmentType, difficulty, questionCount, learningOutcomes, model } =
       await req.json()
+
+    // Log the received model to the console
+    console.log("Received model:", model);
 
     interface LearningOutcome {
       outcome: string
@@ -69,11 +73,11 @@ export async function POST(req: Request) {
 
     try {
       const { text, usage } = await generateText({
-        model: openai("gpt-4o"),
+        model: model,
         messages: [
-        { role: "system", content: JSON.stringify(docs) },
-        { role: "user", content: prompt }
-      ],
+          { role: "system", content: JSON.stringify(docs) },
+          { role: "user", content: prompt }
+        ],
         temperature: 0.9,
         maxTokens: 2000,
       })

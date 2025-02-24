@@ -1,9 +1,9 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 interface GradeSelectionProps {
-  value: string;
-  onChange: (value: string) => void;
-  disabled?: boolean;
+  value: string
+  onChange: (value: string) => void
+  disabled?: boolean
 }
 
 export default function GradeSelection({ value, onChange, disabled = false }: GradeSelectionProps) {
@@ -25,5 +25,6 @@ export default function GradeSelection({ value, onChange, disabled = false }: Gr
         </SelectContent>
       </Select>
     </div>
-  );
+  )
 }
+

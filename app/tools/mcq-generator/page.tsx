@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useEffect } from "react"
 import ClassSelection from "./components/ClassSelection"
 import SubjectSelection from "./components/SubjectSelection"
@@ -10,11 +9,9 @@ import AssessmentTypeSelection from "./components/AssessmentTypeSelection"
 import DifficultySelection from "./components/DifficultySelection"
 import QuestionCount from "./components/QuestionCount"
 import Assessment from "./components/Assessment"
-import CountrySelection from "./components/CountrySelection"
 import BoardSelection from "./components/BoardSelection"
 import LearningOutcomesInput from "./components/LearningOutcomesInput"
 import { createClient } from "@/utils/supabase/client"
-import type { CountryKey } from "@/types/assessment"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -24,7 +21,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 const supabase = createClient()
 
 interface FormData {
-  country: CountryKey | ""
   board: string
   classLevel: string
   subject: string
@@ -36,15 +32,17 @@ interface FormData {
   selectedDocument?: string | null
 }
 
-// Updated DocumentFile interface to include public_url
+// Updated DocumentFile interface: removed country property.
 interface DocumentFile {
-  file_name: string
-  public_url: string
+  id: string
+  grade: string
+  education_board: string
+  subject: string
+  topic: string
 }
 
 export default function Home() {
   const [formData, setFormData] = useState<FormData>({
-    country: "",
     board: "",
     classLevel: "Grade 9",
     subject: "Math",
@@ -68,17 +66,45 @@ export default function Home() {
       topic: string
       questions: any[]
       answers?: any[]
-      country?: string
       board?: string
       class_level: string
       assessment_type: string
-      difficulty: string
       learning_outcomes?: string[]
       created_at: string
     }>
   >([])
   const [documentFiles, setDocumentFiles] = useState<DocumentFile[]>([])
   const [isDocumentSelected, setIsDocumentSelected] = useState(false)
+
+  // --- Handlers for updating form fields ---
+  const handleBoardChange = (value: string) =>
+    setFormData((prev) => ({ ...prev, board: value }))
+  const handleGradeChange = (value: string) =>
+    setFormData((prev) => ({ ...prev, classLevel: value }))
+  const handleSubjectChange = (value: string) =>
+    setFormData((prev) => ({ ...prev, subject: value }))
+
+  // When the user selects a document, update formData accordingly.
+  const handleDocumentSelect = (docId: string) => {
+    setIsDocumentSelected(true)
+    const selectedDoc = documentFiles.find((doc) => doc.id === docId)
+    if (selectedDoc) {
+      setFormData((prevFormData) => ({
+        ...prevFormData,
+        board: selectedDoc.education_board,
+        classLevel: selectedDoc.grade,
+        subject: selectedDoc.subject,
+        topic: selectedDoc.topic,
+        selectedDocument: docId,
+      }))
+      console.log("Updated form data:", {
+        board: selectedDoc.education_board,
+        classLevel: selectedDoc.grade,
+        subject: selectedDoc.subject,
+        topic: selectedDoc.topic,
+      })
+    }
+  }
 
   useEffect(() => {
     fetchUserAndData()
@@ -93,7 +119,10 @@ export default function Home() {
       if (userError) throw userError
       if (!user) throw new Error("User not authenticated")
 
-      await Promise.all([fetchSavedAssessments(user.email || ""), fetchDocumentFiles(user.email || "")])
+      await Promise.all([
+        fetchSavedAssessments(user.email || ""),
+        fetchKnowledgeBaseDocs(user.email || ""),
+      ])
     } catch (error) {
       console.error("Error fetching user data:", error)
       setError("Failed to fetch user data. Please try again or log in.")
@@ -117,24 +146,18 @@ export default function Home() {
     }
   }
 
-  // Modified to fetch both file_name and public_url from document-vault
-  const fetchDocumentFiles = async (email: string) => {
+  const fetchKnowledgeBaseDocs = async (email: string) => {
     try {
-      const { data, error } = await supabase
-        .from("document-vault")
-        .select("file_name, public_url")
-        .eq("type", "file")
-        .eq("user_email", email)
-
+      const { data, error } = await supabase.from("knowledge_base").select("*")
       if (error) throw error
-
       setDocumentFiles(data || [])
     } catch (error) {
-      console.error("Error fetching document files:", error)
-      setError("Failed to fetch document files. Please try again.")
+      console.error("Error fetching knowledge_base docs:", error)
+      setError("Failed to fetch documents. Please try again.")
     }
   }
 
+  // Submission handler: if a document is selected, override the payload with its values.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
@@ -144,48 +167,53 @@ export default function Home() {
     setUserAnswers([])
 
     try {
-      const submissionData: any = { ...formData }
-      let apiRoute = "/api/generate-assessment"
-
-      // If a document is selected, use its public_url as the topic for the rag-assessment API
+      let submissionData: any = { ...formData }
+      
+      // Add model to submissionData
+      submissionData.model = formData.board === "CAIE" ? "claude-3-5-sonnet-20240620" : "gpt-4o"
+      console.log("Selected model:", submissionData.model);
+      
       if (isDocumentSelected && formData.selectedDocument) {
-        apiRoute = "/api/rag-assessment"
-        const selectedDoc = documentFiles.find((doc) => doc.file_name === formData.selectedDocument)
-        if (selectedDoc && selectedDoc.public_url) {
-          submissionData.topic = selectedDoc.public_url
+        const selectedDoc = documentFiles.find(
+          (doc) => doc.id === formData.selectedDocument
+        )
+        if (selectedDoc && selectedDoc.topic) {
+          submissionData.topic = selectedDoc.topic
+          submissionData.board = selectedDoc.education_board
+          submissionData.subject = selectedDoc.subject
         } else {
-          setError("Selected document not found or missing public URL")
+          setError("Selected document not found or missing topic.")
           setIsLoading(false)
           return
         }
       }
 
       console.log("Submitting form data:", submissionData)
+      let apiRoute = "/api/generate-assessment"
+      if (isDocumentSelected && formData.selectedDocument) {
+        apiRoute = "/api/rag-assessment"
+      }
 
       const response = await fetch(apiRoute, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submissionData),
       })
-
       console.log("Response status:", response.status)
-
       const data = await response.json()
-
       console.log("Response data:", data)
 
       if (!response.ok) {
         throw new Error(data.error || `HTTP error! status: ${response.status}`)
       }
-
       if (!data.assessment || !Array.isArray(data.assessment)) {
         throw new Error("Invalid assessment data received")
       }
 
       setAssessment(data.assessment)
       setAssessmentId(data.id)
+
+      // Refresh saved assessments
       const user = await supabase.auth.getUser()
       if (user.data.user?.email) {
         fetchSavedAssessments(user.data.user.email)
@@ -193,7 +221,9 @@ export default function Home() {
     } catch (error) {
       console.error("Error in handleSubmit:", error)
       setError(
-        `An error occurred: ${error instanceof Error ? error.message : "Unknown error"}. Please check the console for more details and try again.`,
+        `An error occurred: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }. Please check the console for more details and try again.`
       )
     } finally {
       setIsLoading(false)
@@ -212,7 +242,6 @@ export default function Home() {
 
   interface Assessment {
     id: string
-    country?: string
     board?: string
     class_level: string
     subject: string
@@ -230,7 +259,11 @@ export default function Home() {
 
   const handleLoadAssessment = async (id: string): Promise<void> => {
     try {
-      const { data, error } = await supabase.from("assessments").select("*").eq("id", id).single<Assessment>()
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", id)
+        .single<Assessment>()
 
       if (error) {
         throw error
@@ -239,8 +272,6 @@ export default function Home() {
       setAssessment(data.questions)
       setAssessmentId(data.id)
       setFormData({
-        ...formData,
-        country: (data.country as CountryKey) || "",
         board: data.board || "",
         classLevel: data.class_level,
         subject: data.subject,
@@ -264,7 +295,11 @@ export default function Home() {
 
   const handleViewAnswers = async (id: string): Promise<void> => {
     try {
-      const { data, error } = await supabase.from("assessments").select("*").eq("id", id).single<Assessment>()
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", id)
+        .single<Assessment>()
 
       if (error) {
         throw error
@@ -273,7 +308,6 @@ export default function Home() {
       setAssessment(data.questions)
       setAssessmentId(data.id)
       setFormData({
-        country: (data.country as CountryKey) || "",
         board: data.board || "",
         classLevel: data.class_level,
         subject: data.subject,
@@ -299,13 +333,17 @@ export default function Home() {
     setUserAnswers([])
     setError("")
     setIsDocumentSelected(false)
-    setFormData((prevData) => ({ ...prevData, selectedDocument: null }))
-  }
-
-  const handleDocumentSelect = (fileName: string) => {
-    setIsDocumentSelected(true)
-    setFormData((prevData) => ({ ...prevData, selectedDocument: fileName }))
-    console.log("Selected document:", fileName)
+    setFormData({
+      board: "",
+      classLevel: "",
+      subject: "",
+      topic: "",
+      assessmentType: formData.assessmentType,
+      difficulty: formData.difficulty,
+      questionCount: formData.questionCount,
+      learningOutcomes: formData.learningOutcomes,
+      selectedDocument: null,
+    })
   }
 
   return (
@@ -330,48 +368,80 @@ export default function Home() {
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Document Selection */}
               <div className="mb-4">
-                <Select onValueChange={handleDocumentSelect}>
+                <Select onValueChange={(value) => handleDocumentSelect(value)}>
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a document" />
                   </SelectTrigger>
                   <SelectContent>
                     {documentFiles.map((doc) => (
-                      <SelectItem key={doc.file_name} value={doc.file_name}>
-                        {doc.file_name}
+                      <SelectItem key={doc.id} value={doc.id}>
+                        {doc.subject} - Grade {doc.grade}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
 
-              {/* First Row - Country and Board */}
-              <div className="grid md:grid-cols-2 gap-8">
-                <CountrySelection
-                  value={formData.country}
-                  onChange={(value: CountryKey) => setFormData({ ...formData, country: value, board: "" })}
-                />
-                <BoardSelection
-                  value={formData.board}
-                  onChange={(value) => setFormData({ ...formData, board: value })}
-                  country={formData.country}
-                />
-              </div>
-
-              {/* Second Row - Class, Subject and Assessment Type */}
-              <div className="grid md:grid-cols-3 gap-8">
-                <ClassSelection
-                  value={formData.classLevel}
-                  onChange={(value) => setFormData({ ...formData, classLevel: value })}
-                />
-                <SubjectSelection
-                  value={formData.subject}
-                  onChange={(value) => setFormData({ ...formData, subject: value })}
-                />
-                <AssessmentTypeSelection
-                  value={formData.assessmentType}
-                  onChange={(value) => setFormData({ ...formData, assessmentType: value })}
-                />
-              </div>
+              {/* If a document is selected, auto-fill board, grade, and subject and disable manual changes.
+                  Additionally, display the selected values as text for clarity. */}
+              {isDocumentSelected ? (
+                <>
+                  <div className="grid md:grid-cols-1 gap-8">
+                    <BoardSelection
+                      value={formData.board}
+                      onChange={handleBoardChange}
+                      disabled
+                    />
+                    <p className="mt-1 text-sm text-gray-500">Selected Board: {formData.board}</p>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <ClassSelection
+                      value={formData.classLevel}
+                      onChange={handleGradeChange}
+                      disabled
+                    />
+                    <p className="mt-1 text-sm text-gray-500">Selected Grade: {formData.classLevel}</p>
+                    <SubjectSelection
+                      value={formData.subject}
+                      onChange={handleSubjectChange}
+                      disabled
+                    />
+                    <p className="mt-1 text-sm text-gray-500">Selected Subject: {formData.subject}</p>
+                  </div>
+                  <div>
+                    <AssessmentTypeSelection
+                      value={formData.assessmentType}
+                      onChange={(value) =>
+                        setFormData((prev) => ({ ...prev, assessmentType: value }))
+                      }
+                    />
+                  </div>
+                </>
+              ) : (
+                // Otherwise, allow manual selection.
+                <>
+                  <div className="grid md:grid-cols-1 gap-8">
+                    <BoardSelection
+                      value={formData.board}
+                      onChange={(value) => setFormData({ ...formData, board: value })}
+                    />
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-8">
+                    <ClassSelection
+                      value={formData.classLevel}
+                      onChange={(value) => setFormData({ ...formData, classLevel: value })}
+                    />
+                    <SubjectSelection
+                      value={formData.subject}
+                      onChange={(value) => setFormData({ ...formData, subject: value })}
+                    />
+                    <AssessmentTypeSelection
+                      value={formData.assessmentType}
+                      onChange={(value) => setFormData({ ...formData, assessmentType: value })}
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Topic Input */}
               <TopicInput
@@ -553,4 +623,3 @@ export default function Home() {
     </div>
   )
 }
-

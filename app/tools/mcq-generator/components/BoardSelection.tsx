@@ -1,26 +1,19 @@
-import type { CountryKey } from "@/types/assessment"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface BoardSelectionProps {
-  value: string
-  onChange: (value: string) => void
-  country: CountryKey | ""
-  disabled?: boolean
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-export default function BoardSelection({ value, onChange, country, disabled = false }: BoardSelectionProps) {
-  const boardsByCountry: Record<CountryKey, string[]> = {
-    India: ["CBSE", "CISCE", "State Board", "IB", "IGCSE", "NIOS"],
-    Nigeria: ["WAEC", "NECO", "UBEC", "State Education Board", "Cambridge International", "IB"],
-    "United States": ["State Board", "Common Core", "AP", "IB"],
-    "United Kingdom": ["National Curriculum", "GCSE", "A-Levels", "Scottish Qualifications", "IB"],
-    Canada: ["Provincial Curriculum", "IB"],
-    Australia: ["Australian Curriculum", "State Curriculum", "IB"],
-    Other: ["National Curriculum", "International Curriculum", "Other"],
-  }
+const boards = [
+  "CBSE", "CISCE", "State Board", "IB", "CAIE", "NIOS",
+  "WAEC", "NECO", "UBEC", "State Education Board", "Cambridge International",
+  "Common Core", "AP", "National Curriculum", "GCSE", "A-Levels", "Scottish Qualifications",
+  "Provincial Curriculum", "Australian Curriculum", "Other"
+];
 
-  const boards = country && country in boardsByCountry ? boardsByCountry[country as CountryKey] : []
-
+export default function BoardSelection({ value, onChange, disabled = false }: BoardSelectionProps) {
   return (
     <div>
       <label htmlFor="board" className="block text-sm font-medium text-gray-700 mb-1">
@@ -39,6 +32,5 @@ export default function BoardSelection({ value, onChange, country, disabled = fa
         </SelectContent>
       </Select>
     </div>
-  )
+  );
 }
-

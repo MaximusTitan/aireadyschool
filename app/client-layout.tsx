@@ -77,6 +77,7 @@ export default function ClientLayout({
     pathname.startsWith("/connect-database") ||
     pathname.startsWith("/feedback") ||
     pathname.startsWith("/profile") ||
+    pathname.startsWith("/knowledge-base") ||
     (pathname.startsWith("/portfolio") &&
       userRole === "Student" &&
       hasCognitiveAssessment);

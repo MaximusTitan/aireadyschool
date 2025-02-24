@@ -719,10 +719,26 @@ const StudentAssessmentForm = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Update print styles */}
-      <style type="text/css" media="print">
-        {`
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Personalized Learning Planner
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Create comprehensive learning plans tailored to individual student needs, goals, and progress tracking.
+          </p>
+        </div>
+
+        {/* Add print styles */}
+        <style type="text/css" media="print">
+          {`
           @media print {
             body * {
               visibility: hidden;
@@ -746,26 +762,18 @@ const StudentAssessmentForm = () => {
             }
           }
         `}
-      </style>
+        </style>
 
-      {/* Existing header */}
-      <div className="flex items-center gap-4 mb-6 no-print">
-        <Link href="/tools" className="hover:opacity-75">
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-        <h1 className="text-2xl font-bold">Personalized Learning Planner</h1>
-      </div>
+        {/* Step indicator */}
+        <div className="no-print">
+          <StepIndicator steps={steps} currentStep={currentStep} />
+        </div>
 
-      {/* Step indicator */}
-      <div className="no-print">
-        <StepIndicator steps={steps} currentStep={currentStep} />
-      </div>
-
-      {/* Loading skeleton */}
-      {isLoading && <LoadingSkeleton />}
-
-      {!isLoading && (
-        <>
+        {/* Rest of the existing content */}
+        {isLoading && <LoadingSkeleton />}
+        
+        {!isLoading && (
+          <>
           {/* Steps 0-2 with no-print class */}
           <div className="no-print">
             {currentStep === 0 && (
@@ -1296,33 +1304,6 @@ const StudentAssessmentForm = () => {
             </Card>
           )}
         </>
-      )}
-
-      {/* Navigation buttons with no-print class */}
-      <div className="flex justify-end gap-4 mt-6 mr-14 no-print">
-        {currentStep > 0 && (
-          <Button variant="outline" onClick={prevStep}>
-            Previous
-          </Button>
-        )}
-        {currentStep < 2 && <Button onClick={nextStep}>Next</Button>}
-        {currentStep === 2 && (
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Generating Plan..." : "Generate Learning Plan"}
-          </Button>
-        )}
-        {currentStep === 3 && learningPlan && (
-          <div className="flex justify-end gap-4 no-print">
-            <Button
-              variant="outline"
-              onClick={() => exportToPDF(learningPlan, name)}
-            >
-              Download PDF
-            </Button>
-            <Button variant="outline" onClick={handlePrint}>
-              Print Plan
-            </Button>
-          </div>
         )}
       </div>
     </div>

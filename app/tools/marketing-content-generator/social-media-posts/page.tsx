@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -66,26 +67,24 @@ export default function Page() {
   };
 
   return (
-    <div className="space-y-6 min-h-screen pb-8">
-      <div className="px-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="/tools/" className="flex items-center">
-              <ChevronLeft className="h-4 w-4" />
-            </a>
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
           </Button>
-          <h1 className="text-xl font-semibold">Social Media Post Generator</h1>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Social Media Post Generator
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Create engaging social media content to connect with your school community and share important updates effectively.
+          </p>
         </div>
 
-        <Alert className="mb-6">
-          <AlertDescription>
-            Create engaging social media content to connect with students and
-            parents. This tool helps you generate platform-specific posts for
-            various school-related topics and events.
-          </AlertDescription>
-        </Alert>
-
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="platform">Social Media Platform</Label>

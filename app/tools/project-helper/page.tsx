@@ -8,7 +8,8 @@ import ProblemSolver from "./components/ProblemSolver";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ProjectData, ResourceData, AssistantData } from "./types";
-import { NavBar } from "./components/NavBar";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   const [activeTab, setActiveTab] = useState("ideation");
@@ -85,10 +86,24 @@ export default function Home() {
   };
 
   return (
-    <>
-      <NavBar />
-      <div className="space-y-6 mt-4">
-        <Card className="w-full max-w-4xl mx-auto">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Project Helper
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Generate project ideas, plan your workflow, and get AI-powered assistance for your educational projects.
+          </p>
+        </div>
+
+        <Card className="w-full mx-auto">
           <CardContent className="p-6">
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-4 mb-6">
@@ -106,6 +121,6 @@ export default function Home() {
           </CardContent>
         </Card>
       </div>
-    </>
+    </div>
   );
 }

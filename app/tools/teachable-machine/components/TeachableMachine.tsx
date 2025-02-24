@@ -300,14 +300,23 @@ export default function TeachableMachine() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex items-center mb-6">
-        <Link href="/tools" className="mr-4">
-          <ChevronLeft className="w-6 h-6" />
-        </Link>
-        <h1 className="text-3xl font-bold">Teachable Machine</h1>
+    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+      <Link href="/tools">
+        <Button variant="outline" className="mb-2 border-neutral-500">
+          ← Back
+        </Button>
+      </Link>
+
+      <div className="mb-8 space-y-2">
+        <h1 className="text-3xl font-bold text-rose-500">
+          Teachable Machine
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Train your own machine learning models by teaching them to recognize different types of images.
+        </p>
       </div>
-      <Card className="w-full max-w-6xl mx-auto">
+
+      <Card className="w-full mx-auto">
         <CardContent className="p-6 space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {["A", "B"].map((classLabel) => (

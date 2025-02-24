@@ -13,3 +13,18 @@ export const DEFAULT_FILTERS: Filters = {
   roles: [],
   status: [],
 } as const;
+
+export interface UserCredits {
+  image_credits: number | null;
+  video_credits: number | null;
+}
+
+export interface UserWithCredits extends UserCredits {
+  id: string;
+  email: string;
+  user_metadata?: {
+    name?: string;
+    role?: UserRole;
+    status?: UserStatus;
+  };
+}

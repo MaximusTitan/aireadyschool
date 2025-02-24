@@ -95,7 +95,7 @@ export default function Builder() {
       </Link>
 
       <div className="mb-8 space-y-2">
-        <h1 className="text-4xl font-bold text-rose-500">AI App Builder</h1>
+        <h1 className="text-3xl font-bold text-rose-500">AI App Builder</h1>
         <p className="text-muted-foreground text-lg leading-relaxed">
           Create custom AI applications with natural language prompts. Your apps
           can process user input and generate AI-powered responses.

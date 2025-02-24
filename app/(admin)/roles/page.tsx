@@ -30,6 +30,25 @@ export default async function RolesPage() {
 
   if (error) throw new Error(`Error fetching users: ${error.message}`);
 
+  // Updated query to fetch user credits
+  const { data: userCredits, error: creditsError } = await supabase
+    .from("users")
+    .select("user_id, image_credits, video_credits");
+
+  if (creditsError) {
+    console.error("Error fetching credits:", creditsError);
+  }
+
+  const creditsMap = new Map(
+    userCredits?.map((credit) => [
+      credit.user_id,
+      {
+        image_credits: credit.image_credits,
+        video_credits: credit.video_credits,
+      },
+    ]) || []
+  );
+
   const stats = {
     total: users.length,
     active: users.filter((u) => u.user_metadata?.status === "active").length,
@@ -110,7 +129,15 @@ export default async function RolesPage() {
           </div>
 
           <Suspense fallback={<UsersTableSkeleton />}>
-            <PaginatedUsers users={users} />
+            <PaginatedUsers
+              users={users.map((user) => ({
+                ...user,
+                credits: creditsMap.get(user.id) || {
+                  image_credits: null,
+                  video_credits: null,
+                },
+              }))}
+            />
           </Suspense>
         </div>
       </div>

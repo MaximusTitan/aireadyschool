@@ -7,7 +7,7 @@ const supabase = createClient(
 
 export const readSiteById = async (id: number): Promise<{ id: number; site_id: string } | null> => {
   const { data, error } = await supabase
-    .from('schools')
+    .from('old_schools')
     .select('id, site_id')
     .eq('id', id)
     .maybeSingle(); // Use maybeSingle to handle zero or one result

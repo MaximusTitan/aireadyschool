@@ -8,7 +8,8 @@ import {
   SCIENCE_TEACHER_PROMPT,
   MATH_TEACHER_PROMPT,
   ENGLISH_TEACHER_PROMPT,
-  GENERIC_TEACHER_PROMPT
+  GENERIC_TEACHER_PROMPT,
+  TEACHER_BUDDY_PROMPT
 } from '@/app/utils/systemPrompt';
 
 export const runtime = 'edge';
@@ -61,23 +62,35 @@ interface ThreadMessage extends Message {
   }>;
 }
 
-function getSystemPrompt(messages: any[]): string {
+function getSystemPrompt(messages: any[], userRole?: string): string {
+  // For teachers, only use teacher buddy prompt
+  if (userRole === 'Teacher') {
+    return TEACHER_BUDDY_PROMPT;
+  }
+
+  // For students, use existing subject-specific logic
   const subject = detectSubject(messages);
   const basePrompt = prompts[subject];
   
-  // Get user details from messages if available
   const userDetailsMessage = messages.find(m => 
     m.toolCalls?.some((t: any) => t.tool === 'collectUserDetails' && t.state === 'result')
   );
   
-  let userDetails: UserDetails = {};
+  // Only process user details for students
+  let userDetailsPrompt = `
+I haven't collected the student's details yet. Start by asking about:
+- Name of the student
+- Age and grade level
+- Subjects they're interested in
+Use the collectUserDetails tool to store this information.
+`;
+
   if (userDetailsMessage) {
     const toolCall = userDetailsMessage.toolCalls.find((t: any) => t.tool === 'collectUserDetails');
-    userDetails = toolCall.result;
-  }
-
-  // Add user details to prompt if available
-  const userDetailsPrompt = userDetails.age ? `
+    const userDetails: UserDetails = toolCall.result;
+    
+    if (userDetails.age) {
+      userDetailsPrompt = `
 Student Profile:
 - Name: ${userDetails.name}
 - Age: ${userDetails.age}
@@ -85,13 +98,9 @@ Student Profile:
 - Interests: ${userDetails.subjects?.join(', ')}
 
 Adapt your teaching style according to this student's profile.
-` : `
-I haven't collected the student's details yet. Start by asking about:
-- Name of the student
-- Age and grade level
-- Subjects they're interested in
-Use the collectUserDetails tool to store this information.
 `;
+    }
+  }
 
   return `${basePrompt}
 ${userDetailsPrompt}
@@ -145,6 +154,9 @@ export async function POST(request: Request) {
       return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
     }
 
+    // Get user role from metadata
+    const userRole = user.user_metadata?.role;
+
     const { messages, id: threadId } = await request.json();
 
     // Add logging to debug thread access
@@ -180,7 +192,7 @@ export async function POST(request: Request) {
     const result = streamText({
       // model: openai('gpt-4o'),
       model: anthropic('claude-3-5-sonnet-20240620'),
-      system: getSystemPrompt(messages),
+      system: getSystemPrompt(messages, userRole),
       messages: messages as CreateMessage[],
       maxSteps: 5,
       tools,

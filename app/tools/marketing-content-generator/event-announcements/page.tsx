@@ -1,7 +1,9 @@
 "use client";
 
+import { Header } from "../common/Header";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -72,28 +74,13 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6 min-h-screen pb-8">
-      <div className="px-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="/tools/" className="flex items-center">
-              <ChevronLeft className="h-4 w-4" />
-            </a>
-          </Button>
-          <h1 className="text-xl font-semibold">
-            Event Announcement Generator
-          </h1>
-        </div>
-
-        <Alert className="mb-6">
-          <AlertDescription>
-            Generate engaging announcements for school events, activities, and
-            important dates. This tool helps you create professional and
-            informative event announcements for your school community.
-          </AlertDescription>
-        </Alert>
-
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border">
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <Header 
+        title="Event Announcements"
+        description="Create professional and engaging announcements for school events, activities, and important dates for your educational community."
+      />
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="eventType">Event Type</Label>

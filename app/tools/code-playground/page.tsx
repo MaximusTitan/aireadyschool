@@ -1,19 +1,26 @@
 import Link from "next/link";
 import LearnToCode from "./components/LearnToCode";
-import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-gray-100 to-gray-200 dark:from-gray-900 dark:to-gray-800">
-      <div className="container mx-auto p-4">
-        <div className="flex items-center gap-2 py-8">
-          <Link href="/tools">
-            <ChevronLeft className="h-6 w-6 text-gray-600 dark:text-gray-400 cursor-pointer" />
-          </Link>
-          <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-            Learn to Code
+    <main className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Code Playground
           </h1>
+          <p className="text-muted-foreground text-lg">
+            Learn coding concepts with an interactive playground and AI-powered guidance for better understanding.
+          </p>
         </div>
+
         <LearnToCode />
       </div>
     </main>

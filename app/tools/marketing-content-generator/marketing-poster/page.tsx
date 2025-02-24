@@ -25,6 +25,7 @@ import {
   ChevronLeft,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Header } from "../common/Header";
 
 export default function Page() {
   const [loading, setLoading] = useState(false);
@@ -78,27 +79,14 @@ export default function Page() {
   }
 
   return (
-    <div className="space-y-6 min-h-screen pb-8">
-      <div className="px-4">
-        <div className="flex items-center gap-2 mb-4">
-          <Button variant="ghost" size="icon" asChild>
-            <a href="/tools/" className="flex items-center">
-              <ChevronLeft className="h-4 w-4" />
-            </a>
-          </Button>
-          <h1 className="text-xl font-semibold">Marketing Poster Generator</h1>
-        </div>
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <Header 
+        title="Marketing Poster Generator"
+        description="Design eye-catching posters for school events, announcements, and promotions with AI-powered visual generation."
+      />
+      <div className="container mx-auto px-4 max-w-6xl">
 
-        <Alert className="mb-6">
-          <AlertDescription>
-            Create professional posters for school marketing, including events,
-            admissions, and announcements. This tool uses AI to generate digital
-            illustrations based on your input, helping you create eye-catching
-            visual content.
-          </AlertDescription>
-        </Alert>
-
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border">
+        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
           {error && (
             <Alert variant="destructive">
               <AlertCircle className="h-4 w-4" />

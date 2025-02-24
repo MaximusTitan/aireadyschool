@@ -31,7 +31,7 @@ import {
 } from "@/components/ui/sidebar";
 import {
   BadgeCheck,
-  BookOpen,
+  LibraryBig,
   Bot,
   ChevronsUpDown,
   Frame,
@@ -43,8 +43,10 @@ import {
   SquareTerminal,
   PlugIcon as Plugin,
   Folder,
+  School,
   Gamepad2,
   MessageSquareTextIcon,
+  Book,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -106,9 +108,13 @@ export function AppSidebar() {
               icon: Folder,
             },
             {
+              title: "Knowledge Base",
+              url: "/knowledge-base",
+              icon: LibraryBig,
+            },{
               title: "Schools",
               url: "/schools",
-              icon: BookOpen,
+              icon: School,
             },
             {
               title: "Connect Database",

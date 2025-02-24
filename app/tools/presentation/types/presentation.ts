@@ -20,7 +20,10 @@ export type SlideLayout =
   | 'timelineSlide'
   | 'comparisonSlide'
   | 'statisticSlide'
-  | 'textLeft' | 'textRight';
+  | 'textLeft' 
+  | 'textRight'
+  | 'videoSlide' // Added videoSlide layout type
+  | 'fullVideo';  // Add this new layout type
 
 export interface Slide {
   id: string
@@ -66,22 +69,21 @@ export interface Slide {
     avatar?: string
     lastEdited?: string
   }
+  videoUrl?: string; // Added videoUrl property
+  videoId?: string;  // Add this new property
+  type?: 'youtube';  // Add this new property
   layout: SlideLayout
   order: number
 }
 
-
-
 export interface Presentation {
-  transition: string;
-
   id: string;
-
-  topic: string;
-
+  topic?: string;  // Make topic optional
+  title?: string;  // Add title field
   slides: Slide[];
-
   theme: string;
-
+  transition: string;
+  created_at?: string;
+  email?: string;
 }
 

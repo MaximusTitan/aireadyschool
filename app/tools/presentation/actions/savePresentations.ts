@@ -1,35 +1,36 @@
-import { supabase } from "../lib/supabase";
+import { createClient } from "@/utils/supabase/client"
 import type { Presentation } from "../types/presentation"
+import { supabase } from "../lib/supabase"
 
-export async function savePresentation(presentation: Presentation): Promise<{ id: string; error: string | null }> {
+export async function savePresentation(presentation: Presentation) {
   try {
+    const supabase = createClient()
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    
+    if (userError || !user?.email) {
+      throw new Error("User not authenticated")
+    }
+
     const { data, error } = await supabase
       .from("shared_presentations")
-      .insert({
-        title: presentation.topic,
-        slides: presentation.slides,
-        theme: presentation.theme || "modern",
-        transition: presentation.transition || "slide",
-      })
-      .select("id")
+      .insert([
+        {
+          title: presentation.topic,
+          slides: presentation.slides,
+          theme: presentation.theme,
+          transition: presentation.transition,
+          email: user.email
+        }
+      ])
+      .select()
       .single()
 
-    if (error) {
-      console.error("Supabase error:", error)
-      throw new Error(`Failed to save presentation: ${error.message}`)
-    }
+    if (error) throw error
 
-    if (!data || !data.id) {
-      throw new Error("Failed to retrieve the saved presentation ID")
-    }
-
-    return { id: data.id, error: null }
+    return { id: data.id }
   } catch (error) {
     console.error("Error saving presentation:", error)
-    return {
-      id: "",
-      error: error instanceof Error ? error.message : "An unexpected error occurred while saving the presentation",
-    }
+    return { error: "Failed to save presentation" }
   }
 }
 

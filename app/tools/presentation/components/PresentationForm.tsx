@@ -10,7 +10,7 @@ import { Slider } from "@/components/ui/slider"
 import { generatePresentation } from "../actions/generatePresentation"
 import { extractFromText, generateUsingAI } from "../actions/aiActions"
 import { savePresentation } from "../actions/savePresentations"
-import type { Presentation } from "../types/presentation"
+import type { Presentation, SlideLayout, Slide } from "../types/presentation"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { ChevronDown, Download, Edit, Play, Wand2 } from "lucide-react"
@@ -19,6 +19,50 @@ import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
 import { Spinner } from "@/components/ui/spinner"
 import { ShareButton } from "./ShareButton"
+import { YouTubeVideoInput } from "./YouTubeVideoInput"
+import { PresentationHistory } from "./PresentationHistory"
+import { PlaceholderImage } from "@/app/components/ui/placeholder-image"
+import { useAuth } from "@/hooks/use-auth" // Create this hook if you haven't already
+import { createClient } from "@/utils/supabase/client"
+
+// Add this helper function after the imports
+const extractVideoId = (url: string) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/
+  const match = url.match(regExp)
+  return match && match[2].length === 11 ? match[2] : null
+}
+
+// Add this helper function after your imports
+const getYouTubeEmbedUrl = (url: string) => {
+  try {
+    const parsedUrl = new URL(url);
+    let videoId = "";
+    if (parsedUrl.hostname === "youtu.be") {
+      videoId = parsedUrl.pathname.slice(1);
+    } else {
+      videoId = parsedUrl.searchParams.get("v") || "";
+    }
+    return videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+  } catch {
+    return "";
+  }
+};
+
+// Add this helper function after your imports
+const extractYoutubeId = (url: string) => {
+  const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+  const match = url.match(regExp);
+  return match && match[2].length === 11 ? match[2] : null;
+};
+
+// Add this debug helper function
+const debugVideoData = (videoId: string | null, embedUrl: string) => {
+  console.log({
+    extractedVideoId: videoId,
+    generatedEmbedUrl: embedUrl,
+    timestamp: new Date().toISOString()
+  });
+};
 
 interface PresentationFormProps {
   onGenerated: (presentation: Presentation) => void
@@ -47,6 +91,14 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
   const [showAdditionalInputs, setShowAdditionalInputs] = useState(false)
   const [isSmartExtractDisabled, setIsSmartExtractDisabled] = useState(false)
   const [isGenerateUsingAIDisabled, setIsGenerateUsingAIDisabled] = useState(false)
+  const [selectedModel, setSelectedModel] = useState<"gpt4" | "groq">("gpt4")
+  const [videoUrls, setVideoUrls] = useState<string[]>([])
+  const [videoInput, setVideoInput] = useState("")
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [presentations, setPresentations] = useState<Presentation[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   const themes = [
     { value: "modern", label: "Modern" },
@@ -65,59 +117,85 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     { value: "zoom", label: "Zoom" },
   ]
 
+  const models = [
+    { value: "gpt4", label: "GPT-4" },
+    { value: "groq", label: "Groq" },
+  ]
+
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsGenerating(true)
-    setFormChanged(false)
+    e.preventDefault();
+    if (!userEmail) {
+      toast({
+        title: "Error",
+        description: "Please sign in to create presentations",
+        variant: "destructive",
+      })
+      return
+    }
+    setIsGenerating(true);
+    setFormChanged(false);
     try {
+      // Generate the initial presentation
       const presentation = await generatePresentation(
         prompt,
         theme,
         slideCount,
         learningObjective,
-        "general", // gradeLevel
-        detailedContent, // relevantTopic
-        false, // includeQuiz
-        false, // includeQuestions
-        true, // includeFeedback
-        generateImages // Pass the generateImages flag
-      )
+        "general",
+        detailedContent,
+        false,
+        false,
+        true,
+        generateImages,
+        selectedModel
+      );
 
       if (presentation && presentation.slides && presentation.slides.length > 0) {
+        // Add video slides if there are any video URLs
+        let updatedSlides = [...presentation.slides];
+        
+        // Add video slides after the first slide
+        if (videoUrls.length > 0) {
+          const videoSlides = videoUrls.map((url, index) => ({
+            id: nanoid(),
+            title: "Video Content",
+            content: "",
+            videoUrl: url,
+            layout: "videoSlide" as SlideLayout,
+            order: index + 1, // Start after the first slide
+          }));
+
+          // Insert video slides after the first slide
+          updatedSlides.splice(1, 0, ...videoSlides);
+        }
+
         const presentationToSave = {
           ...presentation,
+          email: userEmail, // Add email to the presentation data
+          slides: updatedSlides,
           theme: presentation.theme || theme,
           transition: presentation.transition || transition,
-        }
+        };
 
-        const { id, error } = await savePresentation(presentationToSave)
-        if (error) {
-          throw new Error(error)
-        }
+        const { id, error } = await savePresentation(presentationToSave);
+        if (error) throw new Error(error);
 
-        setPresentationId(id)
-        setGeneratedPresentation(presentationToSave)
-        onGenerated(presentationToSave)
+        setPresentationId(id);
+        setGeneratedPresentation(presentationToSave);
+        onGenerated(presentationToSave);
 
         toast({
           title: "Presentation generated",
-          description: `Your ${slideCount}-slide presentation has been created and saved.`,
-        })
-      } else {
-        throw new Error("Failed to generate presentation: Invalid or empty response")
+          description: `Your presentation with ${updatedSlides.length} slides has been created and saved.`,
+        });
       }
+      // ... rest of the error handling
     } catch (error) {
-      console.error("Error generating presentation:", error)
-      toast({
-        title: "Error",
-        description:
-          error instanceof Error ? error.message : "An unexpected error occurred while generating the presentation",
-        variant: "destructive",
-      })
+      // ... existing error handling ...
     } finally {
-      setIsGenerating(false)
+      setIsGenerating(false);
     }
-  }
+  };
 
   const handleGenerateUsingAI = async () => {
     setIsExtracting(true)
@@ -347,7 +425,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
 
       document.body.removeChild(container)
 
-      const filename = `${generatedPresentation.topic.replace(/\s+/g, "_")}_presentation.pdf`
+      const filename = `${generatedPresentation.topic?.replace(/\s+/g, "_") || "untitled"}_presentation.pdf`
       pdf.save(filename)
 
       toast({
@@ -406,6 +484,128 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     setFormChanged(true)
   }
 
+  // Update the handleAddVideo function
+  const handleAddVideo = async () => {
+    if (!videoInput) return;
+    
+    const videoId = extractYoutubeId(videoInput);
+    if (!videoId) {
+      toast({
+        title: "Invalid URL",
+        description: "Please enter a valid YouTube URL",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    setVideoUrls(prev => [...prev, embedUrl]);
+    setVideoInput("");
+    
+    if (generatedPresentation) {
+      const newSlide: Slide = {
+        id: nanoid(),
+        title: "Video Content",
+        content: "",
+        videoUrl: embedUrl,
+        layout: "videoSlide",
+        order: currentSlideIndex + 1,
+      };
+
+      const updatedSlides = [...generatedPresentation.slides];
+      updatedSlides.splice(currentSlideIndex + 1, 0, newSlide);
+      
+      const updatedPresentation = {
+        ...generatedPresentation,
+        slides: updatedSlides,
+      };
+
+      setGeneratedPresentation(updatedPresentation);
+      onGenerated(updatedPresentation);
+      
+      toast({
+        title: "Video Added",
+        description: "Video has been added as a new slide",
+      });
+    }
+  };
+
+  const removeVideo = (index: number) => {
+    const videoUrl = videoUrls[index]
+    const updatedUrls = videoUrls.filter((_, i) => i !== index)
+    setVideoUrls(updatedUrls)
+  
+    if (generatedPresentation) {
+      const updatedSlides = generatedPresentation.slides.filter(
+        slide => slide.videoUrl !== videoUrl
+      )
+      const updatedPresentation = {
+        ...generatedPresentation,
+        slides: updatedSlides,
+      }
+      setGeneratedPresentation(updatedPresentation)
+      onGenerated(updatedPresentation)
+      setFormChanged(true)
+    }
+  }
+
+  const extractYoutubeId = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return match && match[2].length === 11 ? match[2] : null;
+  };
+
+  // Update the addYoutubeSlide function
+  const addYoutubeSlide = () => {
+    if (youtubeUrl) {
+      const videoId = extractYoutubeId(youtubeUrl);
+      const embedUrl = videoId ? `https://www.youtube.com/embed/${videoId}` : "";
+      
+      // Debug logging
+      debugVideoData(videoId, embedUrl);
+
+      if (videoId && generatedPresentation) {
+        const newSlide: Slide = {
+          id: nanoid(),
+          type: "youtube",
+          title: "Video Content",
+          content: "",
+          videoUrl: embedUrl,
+          layout: "videoSlide",
+          order: currentSlideIndex + 1,
+        };
+
+        const updatedSlides = [...generatedPresentation.slides];
+        // Insert after current slide
+        updatedSlides.splice(currentSlideIndex + 1, 0, newSlide);
+        
+        // Debug logging for slide
+        console.log("New video slide:", newSlide);
+        console.log("Updated slides:", updatedSlides);
+
+        const updatedPresentation = {
+          ...generatedPresentation,
+          slides: updatedSlides,
+        };
+        
+        setGeneratedPresentation(updatedPresentation);
+        onGenerated(updatedPresentation);
+        setYoutubeUrl("");
+        
+        toast({
+          title: "Success",
+          description: "YouTube video slide added successfully",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Invalid YouTube URL or no presentation",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     if (generatedPresentation && presentationRef.current) {
       const revealElement = presentationRef.current.querySelector(".reveal") as HTMLElement
@@ -422,8 +622,77 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     }
   }, [generatedPresentation, transition])
 
+  useEffect(() => {
+    const fetchPresentations = async () => {
+      setIsLoadingHistory(true)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user?.email) {
+          throw new Error("User not authenticated")
+        }
+  
+        const { data: presentations, error } = await supabase
+          .from("shared_presentations")
+          .select("*")
+          .eq("email", user.email)
+          .order("created_at", { ascending: false })
+  
+        if (error) throw error
+  
+        setPresentations(presentations || [])
+      } catch (error) {
+        console.error("Error fetching presentations:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load presentation history",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingHistory(false)
+      }
+    }
+  
+    fetchPresentations()
+  }, [])
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email) {
+        setUserEmail(user.email)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const handleSelectPresentation = (presentation: Presentation) => {
+    setGeneratedPresentation(presentation)
+    setTheme(presentation.theme)
+    setTransition(presentation.transition as typeof transition)
+    onGenerated(presentation)
+    toast({
+      title: "Presentation loaded",
+      description: "You can now edit the selected presentation",
+    })
+  }
+
+  function nanoid(): string {
+    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+  }
+
   return (
     <div className="space-y-8">
+      <div className="flex justify-end">
+        <PresentationHistory
+          presentations={presentations}
+          onSelect={handleSelectPresentation}
+          isLoading={isLoadingHistory}
+        />
+      </div>
+      
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="detailedContent">Detailed Content (Optional)</Label>
@@ -474,7 +743,22 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
           </Button>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-3 gap-4">
+          <div>
+            <Label htmlFor="model">AI Model</Label>
+            <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as "gpt4" | "groq")}>
+              <SelectTrigger id="model">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                {models.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div>
             <Label htmlFor="theme">Theme</Label>
             <Select value={theme} onValueChange={handleThemeChange}>
@@ -606,6 +890,50 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
                 )}
               </div>
             </div>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="videoUrl">YouTube Videos (Max 5)</Label>
+                <div className="flex space-x-2">
+                  <Input
+                    id="videoUrl"
+                    value={videoInput}
+                    onChange={(e) => setVideoInput(e.target.value)}
+                    placeholder="Paste YouTube video URL here"
+                    disabled={videoUrls.length >= 5}
+                  />
+                  <Button
+                    type="button"
+                    onClick={handleAddVideo}
+                    disabled={!videoInput || videoUrls.length >= 5}
+                  >
+                    Add Video
+                  </Button>
+                </div>
+                {videoUrls.length > 0 && (
+                  <div className="mt-2 space-y-2">
+                    {videoUrls.map((url, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-gray-100 rounded">
+                        <span className="truncate max-w-[80%]">{url}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => removeVideo(index)}
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <div className="flex space-x-2">
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -645,28 +973,27 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
         </div>
       </form>
       {generatedPresentation && (
-        <Button onClick={handlePresent} variant="outline">
-          <Play className="mr-2 h-4 w-4" />
-          Present
-        </Button>
-      )}
+        <div>
+          <Button onClick={handlePresent} variant="outline">
+            <Play className="mr-2 h-4 w-4" />
+            Present
+          </Button>
 
-      {generatedPresentation && (
-        <div className="mt-4">
-          <h2 className="text-2xl font-bold mb-4">Generated Presentation</h2>
-          <div ref={presentationRef} className="w-full mt-8">
-            <div className="w-full overflow-hidden">
-              <RevealPresentation
-                key={`${generatedPresentation.id}-${theme}-${transition}`}
-                presentation={generatedPresentation}
-                onSave={handleSave}
-                isEditing={isEditing}
-                theme={theme}
-                transition={transition}
-              />
+          <div className="mt-4"></div>
+            <h2 className="text-2xl font-bold mb-4">Generated Presentation</h2>
+            <div ref={presentationRef} className="w-full mt-8">
+              <div className="w-full overflow-hidden">
+                <RevealPresentation
+                  key={`${generatedPresentation.id}-${theme}-${transition}`}
+                  presentation={generatedPresentation}
+                  onSave={handleSave}
+                  isEditing={isEditing}
+                  theme={theme}
+                  transition={transition}
+                />
+              </div>
             </div>
           </div>
-        </div>
       )}
       <div className="mt-4 p-4 bg-blue-100 border border-blue-300 rounded-md text-blue-800">
         <p className="text-sm font-medium">

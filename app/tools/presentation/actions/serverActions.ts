@@ -7,7 +7,7 @@ import type { Presentation } from "../types/presentation"
 export async function savePresentation(presentation: Presentation) {
   try {
     const cookieStore = cookies()
-    const supabase = await createClient(cookieStore)
+    const supabase = await createClient()
     
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     if (userError || !user?.email) {
@@ -40,7 +40,7 @@ export async function savePresentation(presentation: Presentation) {
 export async function getPresentation(id: string) {
   try {
     const cookieStore = cookies()
-    const supabase = await createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data, error } = await supabase
       .from("shared_presentations")

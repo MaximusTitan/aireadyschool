@@ -1,11 +1,14 @@
 export interface Board {
   id: string;
   name: string;
+  grades?: Grade[];
+  subjects?: Subject[];
 }
 
 export interface Grade {
   id: string;
   name: string;
+  sections?: Section[];
   board?: {
     id: string;
     name: string;
@@ -41,30 +44,36 @@ export interface TeacherAssignment {
   };
 }
 
+export interface TeacherData {
+  teacher: {
+    id: string;
+    user_id: string;
+  };
+  subject: {
+    id: string;
+    name: string;
+  };
+}
+
 export interface Teacher {
   id: string;
   auth: {
     email: string;
   };
-  assignments: TeacherAssignment[];
+  subject?: {
+    id: string;
+    name: string;
+    board_id: string;
+  };
+  assignments?: TeacherAssignment[];
 }
 
 export interface Student {
   id: string;
-  roll_number: string;
   auth: {
     email: string;
   };
-  grade: {
-    id: string;
-    name: string;
-    board: {
-      id: string;
-      name: string;
-    };
-  };
-  section: {
-    id: string;
-    name: string;
-  };
+  roll_number?: string;
+  grade?: Grade;
+  section?: Section;
 }

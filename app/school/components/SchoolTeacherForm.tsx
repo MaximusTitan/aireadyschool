@@ -22,9 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Eye, EyeOff } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
 
 const teacherFormSchema = z.object({
   email: z.string().email(),
+  password: z.string().min(6).max(100),
   board_id: z.string().uuid(),
   grade_id: z.string().uuid(),
   section_id: z.string().uuid(),
@@ -42,17 +45,20 @@ export default function SchoolTeacherForm({
   schoolId,
   onSuccess,
 }: SchoolTeacherFormProps) {
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [boards, setBoards] = useState<{ id: string; name: string }[]>([]);
   const [grades, setGrades] = useState<{ id: string; name: string }[]>([]);
   const [sections, setSections] = useState<{ id: string; name: string }[]>([]);
   const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+  const [showPassword, setShowPassword] = useState(false);
   const supabase = createClient();
 
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherFormSchema),
     defaultValues: {
       email: "",
+      password: "",
       board_id: "",
       grade_id: "",
       section_id: "",
@@ -119,7 +125,7 @@ export default function SchoolTeacherForm({
       // Create auth user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: data.email,
-        password: Math.random().toString(36).slice(-8), // Generate random password
+        password: data.password,
         options: {
           data: {
             role: "Teacher",
@@ -135,6 +141,9 @@ export default function SchoolTeacherForm({
         user_id: authData.user.id,
         site_id: schoolId,
         role_type: "Teacher",
+        email: data.email,
+        image_credits: 25,
+        video_credits: 5,
       });
 
       if (userError) throw userError;
@@ -164,11 +173,19 @@ export default function SchoolTeacherForm({
 
       if (assignError) throw assignError;
 
+      toast({
+        title: "Success",
+        description: "Teacher registered successfully",
+      });
       onSuccess?.();
       form.reset();
     } catch (error) {
       console.error("Error:", error);
-      alert("Failed to register teacher. Please try again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to register teacher. Please try again.",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -191,6 +208,42 @@ export default function SchoolTeacherForm({
                 />
               </FormControl>
               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <div className="relative">
+                  <Input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter password"
+                    {...field}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              </FormControl>
+              <FormMessage />
+              <p className="text-sm text-muted-foreground">
+                Note: Teachers can change their password after signing in for
+                the first time.
+              </p>
             </FormItem>
           )}
         />

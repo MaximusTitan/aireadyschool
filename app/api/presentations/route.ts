@@ -5,7 +5,7 @@ import { cookies } from "next/headers"
 export async function GET() {
   try {
     const cookieStore = cookies()
-    const supabase = await createClient(cookieStore)
+    const supabase = await createClient()
 
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
@@ -36,7 +36,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const cookieStore = cookies()
-    const supabase = await createClient(cookieStore)
+    const supabase = await createClient()
     const { data: { user }, error: userError } = await supabase.auth.getUser()
     
     if (userError || !user?.email) {

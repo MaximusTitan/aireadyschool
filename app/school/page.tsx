@@ -184,54 +184,13 @@ export default function SchoolsPage() {
                 {school.boards && (
                   <div className="space-y-4 mt-4">
                     {school.boards.map((board) => (
-                      <div key={board.id} className="border rounded-lg p-4">
+                      <Link
+                        href={`/school/${encodeURIComponent(board.name)}`}
+                        key={board.id}
+                        className="block border rounded-lg p-4 hover:bg-muted transition-colors"
+                      >
                         <h4 className="font-medium mb-2">{board.name}</h4>
-
-                        {/* Subjects */}
-                        {board.subjects && board.subjects.length > 0 && (
-                          <div className="mb-3">
-                            <h5 className="text-sm font-medium mb-1">
-                              Subjects:
-                            </h5>
-                            <div className="flex flex-wrap gap-1">
-                              {board.subjects.map((subject: Subject) => (
-                                <span
-                                  key={subject.id}
-                                  className="text-xs bg-muted px-2 py-1 rounded"
-                                >
-                                  {subject.name}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Grades and Sections */}
-                        {board.grades && board.grades.length > 0 && (
-                          <div>
-                            <h5 className="text-sm font-medium mb-1">
-                              Grades:
-                            </h5>
-                            <div className="space-y-2">
-                              {board.grades.map((grade) => (
-                                <div key={grade.id} className="text-sm">
-                                  <span className="font-medium">
-                                    {grade.name}
-                                  </span>
-                                  {grade.sections && (
-                                    <span className="text-muted-foreground">
-                                      {" - "}
-                                      {grade.sections
-                                        .map((s: Section) => s.name)
-                                        .join(", ")}
-                                    </span>
-                                  )}
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
+                      </Link>
                     ))}
                   </div>
                 )}

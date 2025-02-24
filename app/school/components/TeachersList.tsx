@@ -125,13 +125,13 @@ export default function TeachersList({ schoolId }: TeachersListProps) {
 
         if (filters.board) {
           filteredData = filteredData.filter((teacher) =>
-            teacher.assignments.some((a) => a.board.id === filters.board)
+            teacher.assignments?.some((a) => a.board.id === filters.board)
           );
         }
 
         if (filters.subject) {
           filteredData = filteredData.filter((teacher) =>
-            teacher.assignments.some((a) => a.subject.id === filters.subject)
+            teacher.assignments?.some((a) => a.subject.id === filters.subject)
           );
         }
 
@@ -213,14 +213,20 @@ export default function TeachersList({ schoolId }: TeachersListProps) {
               <TableCell>{teacher.auth.email}</TableCell>
               <TableCell>
                 <div className="space-y-1">
-                  {teacher.assignments?.map((assignment) => (
-                    <div
-                      key={assignment.id}
-                      className="text-sm text-muted-foreground"
-                    >
-                      {`${assignment.board.name} - Grade ${assignment.grade.name} ${assignment.section.name} - ${assignment.subject.name}`}
+                  {teacher.assignments?.length ? (
+                    teacher.assignments.map((assignment) => (
+                      <div
+                        key={assignment.id}
+                        className="text-sm text-muted-foreground"
+                      >
+                        {`${assignment.board.name} - Grade ${assignment.grade.name} ${assignment.section.name} - ${assignment.subject.name}`}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No assignments
                     </div>
-                  ))}
+                  )}
                 </div>
               </TableCell>
             </TableRow>

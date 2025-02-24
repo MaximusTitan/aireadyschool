@@ -130,27 +130,27 @@ export default function StudentsList({ schoolId }: StudentsListProps) {
               student.auth.email
                 .toLowerCase()
                 .includes(filters.search.toLowerCase()) ||
-              student.roll_number
-                .toLowerCase()
-                .includes(filters.search.toLowerCase())
+              (student.roll_number?.toLowerCase() || "").includes(
+                filters.search.toLowerCase()
+              )
           );
         }
 
         if (filters.board) {
           filteredData = filteredData.filter(
-            (student) => student.grade.board.id === filters.board
+            (student) => student.grade?.board?.id === filters.board
           );
         }
 
         if (filters.grade) {
           filteredData = filteredData.filter(
-            (student) => student.grade.id === filters.grade
+            (student) => student.grade?.id === filters.grade
           );
         }
 
         if (filters.section) {
           filteredData = filteredData.filter(
-            (student) => student.section.id === filters.section
+            (student) => student.section?.id === filters.section
           );
         }
 
@@ -258,11 +258,11 @@ export default function StudentsList({ schoolId }: StudentsListProps) {
         <TableBody>
           {students.map((student) => (
             <TableRow key={student.id}>
-              <TableCell>{student.roll_number}</TableCell>
+              <TableCell>{student.roll_number || "N/A"}</TableCell>
               <TableCell>{student.auth.email}</TableCell>
-              <TableCell>{student.grade.board.name}</TableCell>
-              <TableCell>{student.grade.name}</TableCell>
-              <TableCell>{student.section.name}</TableCell>
+              <TableCell>{student.grade?.board?.name || "N/A"}</TableCell>
+              <TableCell>{student.grade?.name || "N/A"}</TableCell>
+              <TableCell>{student.section?.name || "N/A"}</TableCell>
             </TableRow>
           ))}
         </TableBody>

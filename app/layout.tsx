@@ -2,7 +2,7 @@ import { Poppins } from "next/font/google";
 import "./globals.css";
 import { Metadata } from "next";
 import ClientLayout from "./client-layout";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "@/components/ui/toaster";
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
@@ -37,7 +37,7 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <ClientLayout>{children}</ClientLayout>
-        <Toaster position="top-right" />
+        <Toaster />
       </body>
     </html>
   );

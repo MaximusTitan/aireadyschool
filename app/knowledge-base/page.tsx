@@ -38,41 +38,41 @@ export default function KnowledgeBase() {
   const [availableSections, setAvailableSections] = useState<string[]>([])
   const [availableSubjects, setAvailableSubjects] = useState<string[]>([])
 
-  const boards = ["CBSE", "ICSE", "CAIE"]
+  const boards = ["All", "CBSE", "ICSE", "CAIE"]
   const supabase = createClient()
 
   // When board is selected, set available grades and reset lower filters.
+  // When board is selected, update available grades and reset lower filters
   useEffect(() => {
-    if (board) {
-      const grades: string[] = Array.from({ length: 12 }, (_, i) => (i + 1).toString())
+    if (board && board !== "All") {
+      const grades: string[] = ["All", ...Array.from({ length: 12 }, (_, i) => (i + 1).toString())]
       setAvailableGrades(grades)
-      setGrade("")
-      setSection("")
-      setSubject("")
+      setGrade("All")
+      setSection("All")
+      setSubject("All")
     } else {
-      setAvailableGrades([])
+      setAvailableGrades(["All"])
+      setGrade("All")
+      setSection("All")
+      setSubject("All")
     }
   }, [board])
 
-  // When grade is selected, set available sections and reset lower filters.
+  // When grade is selected, update available sections and reset lower filters
   useEffect(() => {
     let sections: string[] = []
-    if (board && grade) {
-      if (board === "CBSE" || board === "ICSE" || board === "CAIE") {
-        if (Number.parseInt(grade) <= 5) {
-          sections = ["A", "B", "C"]
-        } else if (Number.parseInt(grade) <= 10) {
-          sections = ["A", "B", "C", "D"]
-        } else {
-          sections = ["Science", "Commerce", "Arts"]
-        }
+    if (board && grade && grade !== "All") {
+      if (Number.parseInt(grade) <= 5) {
+        sections = ["A", "B", "C"]
+      } else if (Number.parseInt(grade) <= 10) {
+        sections = ["A", "B", "C", "D"]
+      } else {
+        sections = ["Science", "Commerce", "Arts"]
       }
-      setAvailableSections(["All", ...sections])
-      setSection("")
-      setSubject("")
-    } else {
-      setAvailableSections([])
     }
+    setAvailableSections(["All", ...sections])
+    setSection("All")
+    setSubject("All")
   }, [board, grade])
 
   // When section is selected, set available subjects and reset subject.
@@ -151,13 +151,10 @@ export default function KnowledgeBase() {
     }
   }, [board, grade, section])
 
-  // Fetch records every time a filter is applied.
+  // Always fetch records so that when no filter is selected, all records are shown.
   useEffect(() => {
-    // Only trigger if at least board is selected.
-    if (board) {
-      console.log("Fetching records with filters:", { board, grade, section, subject })
-      fetchRecords()
-    }
+    console.log("Fetching records with filters:", { board, grade, section, subject })
+    fetchRecords()
   }, [board, grade, section, subject])
 
   const fetchRecords = async () => {
@@ -167,33 +164,31 @@ export default function KnowledgeBase() {
     if (!user) {
       console.error("User is not authenticated")
       return
-    } else {
-      console.log("User is authenticated:", user)
     }
-
-    // Build a query that applies only the filters that have been selected.
-    let query = supabase.from("knowledge_base").select("*").eq("education_board", board)
-
-    if (grade) {
+  
+    let query = supabase.from("knowledge_base").select("*")
+  
+    if (board && board !== "All") {
+      query = query.eq("education_board", board)
+    }
+    if (grade && grade !== "All") {
       query = query.eq("grade", grade)
     }
-    if (section && section.toLowerCase() !== "all") {
+    if (section && section !== "All") {
       query = query.eq("section", section)
     }
-    if (subject && subject.toLowerCase() !== "all") {
+    if (subject && subject !== "All") {
       query = query.eq("subject", subject)
     }
-
-    console.log("Executing query with filters:", { board, grade, section, subject })
+  
     const { data, error } = await query
-
+  
     if (error) {
       console.error("Error fetching records:", error)
-    } else if (data) {
-      console.log("Fetched data:", data)
+    } else {
       setRecords(data)
     }
-  }
+  }  
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -226,19 +221,19 @@ export default function KnowledgeBase() {
       return
     }
 
-    const formData = new FormData()
-    formData.append("title", title)
-    formData.append("board", board)
-    formData.append("grade", grade)
-    formData.append("section", section)
-    formData.append("subject", subject)
-    formData.append("description", description)
-    formData.append("file", uploadedFile)
+    const formDataUpload = new FormData()
+    formDataUpload.append("title", title)
+    formDataUpload.append("board", board)
+    formDataUpload.append("grade", grade)
+    formDataUpload.append("section", section)
+    formDataUpload.append("subject", subject)
+    formDataUpload.append("description", description)
+    formDataUpload.append("file", uploadedFile)
 
     try {
       const res = await fetch("/api/knowledge-base", {
         method: "POST",
-        body: formData,
+        body: formDataUpload,
       })
 
       if (res.ok) {
@@ -270,7 +265,7 @@ export default function KnowledgeBase() {
             Back
           </Button>
 
-          <h1 className="text-2xl font-semibold text-pink-600 mb-8">Upload New Document</h1>
+          <h1 className="text-2xl font-semibold text-pink-600 mb-8">Upload New Resource</h1>
 
           <div className="bg-white border-2 border-purple-100 rounded-lg p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -300,33 +295,33 @@ export default function KnowledgeBase() {
               <div className="space-y-2">
                 <Label htmlFor="board">Education Board</Label>
                 <Select value={board} onValueChange={setBoard}>
-                  <SelectTrigger id="board" className="border-gray-200">
-                    <SelectValue placeholder="Select Board" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {boards.map((b) => (
-                      <SelectItem key={b} value={b}>
-                        {b}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectTrigger className="border-gray-200">
+                  <SelectValue placeholder="Select Board" />
+                </SelectTrigger>
+                <SelectContent>
+                  {boards.map((b) => (
+                    <SelectItem key={b} value={b}>
+                      {b}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
                 <Select value={grade} onValueChange={setGrade} disabled={!board}>
-                  <SelectTrigger id="grade" className="border-gray-200">
-                    <SelectValue placeholder="Select Grade" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableGrades.map((g) => (
-                      <SelectItem key={g} value={g}>
-                        Grade {g}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SelectTrigger className="border-gray-200">
+                  <SelectValue placeholder="Select Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableGrades.map((g) => (
+                    <SelectItem key={g} value={g}>
+                      Grade {g}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               </div>
 
               <div className="space-y-2">
@@ -398,10 +393,16 @@ export default function KnowledgeBase() {
   return (
     <div className="min-h-screen bg-pink-50/50 p-6">
       <div className="max-w-7xl mx-auto">
+      <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">
+            Knowledge Base
+          </h2>
+        </div>
+
         <div className="mb-8">
           <Button onClick={() => setIsUploadView(true)} className="bg-pink-500 hover:bg-pink-600 text-white">
             <Plus className="w-4 h-4 mr-2" />
-            New Document
+            Resources
           </Button>
         </div>
 
@@ -467,63 +468,44 @@ export default function KnowledgeBase() {
           </div>
         </div>
 
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            {board && grade && section && subject
-              ? `${board} - Grade ${grade} - Section ${section} - ${subject}`
-              : board && grade && section
-                ? `${board} - Grade ${grade} - Section ${section}`
-                : board && grade
-                  ? `${board} - Grade ${grade}`
-                  : board
-                    ? board
-                    : "Select filters to view content"}
-          </h2>
-        </div>
-
         <div className="bg-white border-2 border-purple-100 rounded-lg p-6 overflow-x-auto">
-          {board ? (
-            records.length > 0 ? (
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium text-gray-600">Board</th>
-                    <th className="text-left p-4 font-medium text-gray-600">Document Title</th>
-                    <th className="text-left p-4 font-medium text-gray-600">Grade</th>
-                    <th className="text-left p-4 font-medium text-gray-600">Subject</th>
-                    <th className="text-left p-4 font-medium text-gray-600">Section</th>
+          {records.length > 0 ? (
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left p-4 font-medium text-gray-600">Board</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Document Title</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Grade</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Subject</th>
+                  <th className="text-left p-4 font-medium text-gray-600">Section</th>
+                </tr>
+              </thead>
+              <tbody>
+                {records.map((record) => (
+                  <tr key={record.id} className="border-b last:border-b-0">
+                    <td className="p-4">{record.education_board}</td>
+                    <td className="p-4">
+                      <a
+                        href={record.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-500 hover:text-blue-700 underline"
+                      >
+                        {record.title}
+                      </a>
+                    </td>
+                    <td className="p-4">{`${record.grade}th Grade`}</td>
+                    <td className="p-4">{record.subject}</td>
+                    <td className="p-4">{record.section}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {records.map((record) => (
-                    <tr key={record.id} className="border-b last:border-b-0">
-                      <td className="p-4">{record.education_board}</td>
-                      <td className="p-4">
-                        <a
-                          href={record.file_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-500 hover:text-blue-700 underline"
-                        >
-                          {record.title}
-                        </a>
-                      </td>
-                      <td className="p-4">{`${record.grade}th Grade`}</td>
-                      <td className="p-4">{record.subject}</td>
-                      <td className="p-4">{record.section}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            ) : (
-              <div className="text-center text-gray-500 p-4">No resources uploaded yet for the selected filters.</div>
-            )
+                ))}
+              </tbody>
+            </table>
           ) : (
-            <div className="text-center text-gray-500 p-4">Select board to view resources</div>
+            <div className="text-center text-gray-500 p-4">No resources uploaded yet for the selected filters.</div>
           )}
         </div>
       </div>
     </div>
   )
 }
-

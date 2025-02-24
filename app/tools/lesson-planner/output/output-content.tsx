@@ -213,7 +213,11 @@ export default function OutputContent() {
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="font-semibold">Assignment</h3>
-            <Button variant="ghost" size="icon" onClick={() => handleEdit("assignment", day.assignment, day.day - 1)}>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleEdit("teachingAids", day.teachingAids, day.day - 1)}
+            >
               <Edit className="h-4 w-4" />
             </Button>
           </div>
@@ -234,9 +238,7 @@ export default function OutputContent() {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <h2 className="text-xl font-semibold">Assessment Plan</h2>
-        <Button variant="ghost" size="icon">
-          <Edit className="h-4 w-4" />
-        </Button>
+        
       </div>
 
       <div className="space-y-6">
@@ -489,7 +491,7 @@ export default function OutputContent() {
       </Card>
 
       <div className="mt-6">
-        <Button onClick={() => router.push("/create")} className="bg-pink-600 hover:bg-pink-700 text-white">
+        <Button onClick={() => router.push("/tools/lesson-planner/create")} className="bg-pink-600 hover:bg-pink-700 text-white">
           Generate New Lesson Plan
         </Button>
       </div>

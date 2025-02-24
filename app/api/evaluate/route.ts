@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server"
 import createParser from "pdf2json"
-import OpenAI from "openai"
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+import { openai } from '@ai-sdk/openai'
+import { generateText } from 'ai'
 
 const SYSTEM_PROMPT = `You are an expert educational evaluator with years of experience in assessing student assignments across various subjects and grade levels. Your task is to analyze the given student assignment and provide a comprehensive evaluation based on the following criteria:
 
@@ -54,15 +51,19 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData()
     const file = formData.get("file") as File | null
+    const title = formData.get("title") as string
+    const description = formData.get("description") as string
     const assignmentText = formData.get("assignmentText") as string
     const gradeLevel = formData.get("gradeLevel") as string
     const subject = formData.get("subject") as string
     const rubric = formData.get("rubric") as File | null
     const rubricTextInput = formData.get("rubricText") as string
+    const country = formData.get("country") as string
+    const board = formData.get("board") as string
 
-    if ((!file && !assignmentText) || !gradeLevel || !subject) {
+    if ((!file && !assignmentText) || !gradeLevel || !subject || !title || !description || !country || !board) {
       return NextResponse.json(
-        { error: "Please provide an assignment (file or text), fill in all fields." },
+        { error: "Please fill in all required fields and provide an assignment (file or text)." },
         { status: 400 }
       )
     }
@@ -145,20 +146,34 @@ export async function POST(request: Request) {
     }
 
     // Prepare the prompt for the AI
-    const userPrompt = `Grade Level: ${gradeLevel}\nSubject: ${subject}\n\nStudent Assignment:\n${assignmentContent}\n\nPlease evaluate this assignment based on the criteria provided.`
+    const userPrompt = `Assignment Title: ${title}
+Assignment Description: ${description}
+Grade Level: ${gradeLevel}
+Subject: ${subject}
+Country: ${country}
+Educational Board: ${board}
 
-    // Call OpenAI API for evaluation
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+Student Assignment:
+${assignmentContent}
+
+Please evaluate this assignment based on the criteria provided.`
+
+    // Call OpenAI API for evaluation using AI SDK
+    const { text: aiResponse } = await generateText({
+      model: openai('gpt-4o'),
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
+        { role: "user", content: userPrompt }
       ],
+      maxTokens: 1500,
       temperature: 0.7,
-      max_tokens: 1000,
+      providerOptions: {
+        openai: {
+          // Enable structured outputs for consistent JSON responses
+          structuredOutputs: true,
+        }
+      }
     })
-
-    const aiResponse = completion.choices[0].message.content
 
     let evaluation
     try {
@@ -176,8 +191,24 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ evaluation })
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error processing assignment or evaluating:", error)
+
+    // Handle specific API errors
+    if (error.code === 'context_length_exceeded') {
+      return NextResponse.json(
+        { error: "Assignment is too long. Please try with a shorter text." },
+        { status: 413 }
+      )
+    }
+
+    if (error.code === 'rate_limit_exceeded') {
+      return NextResponse.json(
+        { error: "Rate limit exceeded. Please try again in a few moments." },
+        { status: 429 }
+      )
+    }
+
     return NextResponse.json(
       { error: "Failed to process assignment or evaluate." },
       { status: 500 }

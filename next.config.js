@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    
     remotePatterns: [
       {
         protocol: "https",
@@ -39,7 +38,6 @@ const nextConfig = {
         port: "",
         pathname: "/storage/v1/object/**",
       },
-      
     ],
   },
   async headers() {
@@ -64,6 +62,9 @@ const nextConfig = {
         permanent: false, // Use 'true' if the redirect is permanent
       },
     ];
+  },
+  env: {
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   },
 };
 

@@ -21,7 +21,13 @@ import {
   Brain,
   Users,
   FileText,
-  BarChart3
+  BarChart3,
+  Megaphone,
+  Hash,
+  Mail,
+  TrendingUp,
+  Search as SearchIcon,
+  Hammer
 } from "lucide-react";
 
 interface Tool {
@@ -39,6 +45,7 @@ interface CategoryTools {
     Research: Tool[];
     Creative: Tool[];
     Tech: Tool[];
+    Marketing: Tool[];
   };
 }
 
@@ -157,6 +164,12 @@ export const categories: CategoryTools = {
     ],
     Tech: [
       {
+        title: "App Builder",
+        description: "Build apps without coding",
+        route: "/tools/builder",
+        icon: Hammer
+      },
+      {
         title: "Creative Coding Playground",
         description: "Code in P5.js",
         route: "/tools/p5",
@@ -168,7 +181,8 @@ export const categories: CategoryTools = {
         route: "/tools/code-playground",
         icon: Terminal
       }
-    ]
+    ],
+    Marketing: []
   },
   Teacher: {
     Learning: [
@@ -180,7 +194,7 @@ export const categories: CategoryTools = {
       },
       {
         title: "Assessment Generator",
-        description: "Create interactive assessments",
+        description: "Create interactive multiple-choice, descriptive, fill in the blanks questions for students to assess their understanding.",
         route: "/tools/mcq-generator",
         icon: ClipboardList
       },
@@ -259,7 +273,8 @@ export const categories: CategoryTools = {
         route: "/tools/teachable-machine",
         icon: Brain
       }
-    ]
+    ],
+    Marketing: []
   },
   School: {
     Learning: [
@@ -319,6 +334,50 @@ export const categories: CategoryTools = {
         isHot: true
       }
     ],
-    Tech: []
+    Tech: [],
+    Marketing: [
+      {
+        title: "School Event Announcements",
+        description: "Generate engaging announcements for school events, activities, and important dates.",
+        route: "/tools/marketing-content-generator/event-announcements",
+        icon: Megaphone
+      },
+      {
+        title: "School Promotional Video Script",
+        description: "Create compelling video scripts to showcase your school's values and achievements.",
+        route: "/tools/marketing-content-generator/video-script",
+        icon: Video
+      },
+      {
+        title: "School Social Media Posts",
+        description: "Generate engaging social media content to connect with students and parents.",
+        route: "/tools/marketing-content-generator/social-media-posts",
+        icon: Hash
+      },
+      {
+        title: "School Newsletter Generator",
+        description: "Create informative newsletters to keep parents, students, and staff updated on school activities.",
+        route: "/tools/marketing-content-generator/newsletter-generator",
+        icon: Mail
+      },
+      {
+        title: "Education Trend Analyzer",
+        description: "Identify trending topics and approaches in education.",
+        route: "/tools/marketing-content-generator/trend-analyzer",
+        icon: TrendingUp
+      },
+      {
+        title: "Education SEO Keywords",
+        description: "Research keywords for school website optimization and content strategy.",
+        route: "/tools/marketing-content-generator/keyword-research",
+        icon: SearchIcon
+      },
+      {
+        title: "School Marketing Poster",
+        description: "Create professional posters for school events, admissions, and announcements.",
+        route: "/tools/marketing-content-generator/marketing-poster",
+        icon: Image
+      }
+    ]
   }
 };

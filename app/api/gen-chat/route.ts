@@ -1,5 +1,6 @@
 import { anthropic } from '@ai-sdk/anthropic';
-import { streamText, smoothStream } from 'ai';
+// import { openai } from '@ai-sdk/openai';
+import { streamText, smoothStream, Message, CreateMessage } from 'ai';
 import { tools } from '@/app/tools/gen-chat/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
@@ -7,7 +8,8 @@ import {
   SCIENCE_TEACHER_PROMPT,
   MATH_TEACHER_PROMPT,
   ENGLISH_TEACHER_PROMPT,
-  GENERIC_TEACHER_PROMPT
+  GENERIC_TEACHER_PROMPT,
+  TEACHER_BUDDY_PROMPT
 } from '@/app/utils/systemPrompt';
 
 export const runtime = 'edge';
@@ -50,23 +52,45 @@ interface UserDetails {
   subjects?: string[];
 }
 
-function getSystemPrompt(messages: any[]): string {
+interface ThreadMessage extends Message {
+  toolCalls?: Array<{
+    id: string;
+    tool: string;
+    parameters: Record<string, any>;
+    result?: any;
+    state?: string;
+  }>;
+}
+
+function getSystemPrompt(messages: any[], userRole?: string): string {
+  // For teachers, only use teacher buddy prompt
+  if (userRole === 'Teacher') {
+    return TEACHER_BUDDY_PROMPT;
+  }
+
+  // For students, use existing subject-specific logic
   const subject = detectSubject(messages);
   const basePrompt = prompts[subject];
   
-  // Get user details from messages if available
   const userDetailsMessage = messages.find(m => 
     m.toolCalls?.some((t: any) => t.tool === 'collectUserDetails' && t.state === 'result')
   );
   
-  let userDetails: UserDetails = {};
+  // Only process user details for students
+  let userDetailsPrompt = `
+I haven't collected the student's details yet. Start by asking about:
+- Name of the student
+- Age and grade level
+- Subjects they're interested in
+Use the collectUserDetails tool to store this information.
+`;
+
   if (userDetailsMessage) {
     const toolCall = userDetailsMessage.toolCalls.find((t: any) => t.tool === 'collectUserDetails');
-    userDetails = toolCall.result;
-  }
-
-  // Add user details to prompt if available
-  const userDetailsPrompt = userDetails.age ? `
+    const userDetails: UserDetails = toolCall.result;
+    
+    if (userDetails.age) {
+      userDetailsPrompt = `
 Student Profile:
 - Name: ${userDetails.name}
 - Age: ${userDetails.age}
@@ -74,13 +98,9 @@ Student Profile:
 - Interests: ${userDetails.subjects?.join(', ')}
 
 Adapt your teaching style according to this student's profile.
-` : `
-I haven't collected the student's details yet. Start by asking about:
-- Name of the student
-- Age and grade level
-- Subjects they're interested in
-Use the collectUserDetails tool to store this information.
 `;
+    }
+  }
 
   return `${basePrompt}
 ${userDetailsPrompt}
@@ -95,40 +115,145 @@ You can use various tools to enhance the learning experience:
 Always provide clear explanations and encourage active learning.`;
 }
 
-export async function POST(request: Request) {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
+async function saveToolOutputs(
+  supabase: any,
+  messageId: string,
+  toolCalls: Array<{
+    id: string;
+    tool: string;
+    parameters: Record<string, any>;
+    result?: any;
+    state?: string;
+  }>
+) {
+  const outputs = toolCalls.map(call => ({
+    message_id: messageId,
+    tool_name: call.tool,
+    tool_call_id: call.id,
+    parameters: call.parameters,
+    result: call.result,
+    state: call.state || 'pending'
+  }));
+
+  const { error } = await supabase
+    .from('tool_outputs')
+    .insert(outputs);
+
   if (error) {
-    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    console.error('Error saving tool outputs:', error);
+    throw error;
   }
+}
 
-  const { messages } = await request.json();
+export async function POST(request: Request) {
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
 
-  const result = streamText({
-    model: anthropic('claude-3-5-sonnet-20240620'),
-    system: getSystemPrompt(messages),
-    messages,
-    maxSteps: 5,
-    tools,
-    temperature: 0.5,
-    maxTokens: 500,
-    experimental_transform: smoothStream({
-      delayInMs: 5,
-      chunking: 'word',
-    }),
-    onFinish: async ({ usage }) => {
-      if (usage) {
-        await logTokenUsage(
-          'Learning Buddy',
-          'GPT-4o',
-          usage.promptTokens,
-          usage.completionTokens,
-          user?.email
-        );
+    if (error || !user) {
+      return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
+    }
+
+    // Get user role from metadata
+    const userRole = user.user_metadata?.role;
+
+    const { messages, id: threadId } = await request.json();
+
+    // Add logging to debug thread access
+    console.log('Thread ID:', threadId);
+    console.log('User ID:', user.id);
+
+    // Verify thread belongs to user
+    if (threadId) {
+      const { data: thread, error: threadError } = await supabase
+        .from('chat_threads')
+        .select('user_id')
+        .eq('id', threadId)
+        .single();
+
+      console.log('Thread data:', thread);
+      console.log('Thread error:', threadError);
+
+      if (threadError) {
+        return Response.json({ error: 'Thread not found' }, { status: 404 });
+      }
+
+      if (thread?.user_id !== user.id) {
+        return Response.json({ 
+          error: 'Unauthorized thread access',
+          details: {
+            threadUserId: thread?.user_id,
+            currentUserId: user.id
+          }
+        }, { status: 403 });
       }
     }
-  });
 
-  return result.toDataStreamResponse();
+    const result = streamText({
+      // model: openai('gpt-4o'),
+      model: anthropic('claude-3-5-sonnet-20240620'),
+      system: getSystemPrompt(messages, userRole),
+      messages: messages as CreateMessage[],
+      maxSteps: 5,
+      tools,
+      temperature: 0.5,
+      maxTokens: 500,
+      experimental_transform: smoothStream({
+        delayInMs: 5,
+        chunking: 'word',
+      }),
+      onStepFinish: async ({ text, toolCalls, toolResults }) => {
+        if (!toolCalls?.length) return;
+
+        // Generate a message ID for this step
+        const messageId = crypto.randomUUID();
+
+        // Save the message first
+        const { error: messageError } = await supabase
+          .from('chat_messages')
+          .insert({
+            id: messageId,
+            thread_id: threadId,
+            role: 'assistant',
+            content: text
+          });
+
+        if (messageError) {
+          console.error('Error saving message:', messageError);
+          return;
+        }
+
+        // Map tool results to their corresponding calls
+        const toolCallsWithResults = toolCalls.map(call => {
+          const result = toolResults?.find(r => r.toolCallId === call.toolCallId);
+          return {
+            id: call.toolCallId,
+            tool: call.toolName,
+            parameters: call.args,
+            result: result?.result || undefined,
+            state: result ? 'result' : 'pending'
+          };
+        });
+
+        // Save tool outputs
+        await saveToolOutputs(supabase, messageId, toolCallsWithResults);
+      },
+      onFinish: async ({ usage }) => {
+        if (usage) {
+          await logTokenUsage(
+            'Learning Buddy',
+            'GPT-4o',
+            usage.promptTokens,
+            usage.completionTokens,
+            user.email || undefined
+          );
+        }
+      }
+    });
+
+    return result.toDataStreamResponse();
+  } catch (err: any) {
+    console.error('Error in POST /api/gen-chat:', err);
+    return Response.json({ error: err.message || 'An unknown error occurred.' }, { status: 500 });
+  }
 }

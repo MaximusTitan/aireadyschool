@@ -9,6 +9,8 @@ import { ALLOWED_ROLES } from "./types";
 import { SearchProvider } from "./search-context";
 import { FilterBar } from "./filter-bar";
 
+export const dynamic = "force-dynamic";
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!,
@@ -27,6 +29,25 @@ export default async function RolesPage() {
   } = await supabase.auth.admin.listUsers();
 
   if (error) throw new Error(`Error fetching users: ${error.message}`);
+
+  // Updated query to fetch user credits
+  const { data: userCredits, error: creditsError } = await supabase
+    .from("users")
+    .select("user_id, image_credits, video_credits");
+
+  if (creditsError) {
+    console.error("Error fetching credits:", creditsError);
+  }
+
+  const creditsMap = new Map(
+    userCredits?.map((credit) => [
+      credit.user_id,
+      {
+        image_credits: credit.image_credits,
+        video_credits: credit.video_credits,
+      },
+    ]) || []
+  );
 
   const stats = {
     total: users.length,
@@ -108,7 +129,15 @@ export default async function RolesPage() {
           </div>
 
           <Suspense fallback={<UsersTableSkeleton />}>
-            <PaginatedUsers users={users} />
+            <PaginatedUsers
+              users={users.map((user) => ({
+                ...user,
+                credits: creditsMap.get(user.id) || {
+                  image_credits: null,
+                  video_credits: null,
+                },
+              }))}
+            />
           </Suspense>
         </div>
       </div>

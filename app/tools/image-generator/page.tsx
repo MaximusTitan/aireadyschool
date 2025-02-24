@@ -372,347 +372,344 @@ export default function Page() {
     }
   };
 
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen p-8 bg-gradient-to-b from-gray-50 to-gray-100 dark:from-neutral-900 dark:to-neutral-800">
-      <div className="max-w-7xl mx-auto">
-        <div className="flex items-center space-x-4 mb-8">
-          <Link
-            href="/tools"
-            className="transition-colors hover:text-neutral-600"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Link>
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-neutral-800 to-neutral-600 dark:from-neutral-200 dark:to-neutral-400">
-            Image Playground
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
+        </Link>
+
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Image Generator
           </h1>
+          <p className="text-muted-foreground text-lg">
+            Create stunning AI-generated images with customizable styles, sizes, and settings for your educational content.
+          </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <Tabs
-            value={activeTab}
-            onValueChange={setActiveTab}
-            className="w-full"
-          >
-            <TabsList className="grid grid-cols-2 mb-4">
-              <TabsTrigger value="regular">Regular</TabsTrigger>
-              <TabsTrigger value="chat">Buddy</TabsTrigger>
-            </TabsList>
+        {initialLoading ? (
+          <div className="flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid grid-cols-2 mb-4">
+                <TabsTrigger value="regular">Regular</TabsTrigger>
+                <TabsTrigger value="chat">Buddy</TabsTrigger>
+              </TabsList>
 
-            <TabsContent value="regular">
-              {/* Existing regular mode UI */}
-              <Card className="border-neutral-500/20 shadow-lg transition-shadow hover:shadow-xl">
-                <CardHeader>
-                  {credits !== null && (
-                    <div className="text-sm text-neutral-500">
-                      Available Credits: {credits}
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Prompt Input with character count */}
-                  <div className="space-y-2">
-                    <Label htmlFor="prompt" className="flex justify-between">
-                      <span>Prompt</span>
-                      <span className="text-sm text-neutral-500">
-                        {prompt.length}/1000
-                      </span>
-                    </Label>
-                    <Textarea
-                      id="prompt"
-                      placeholder="A serene landscape with mountains..."
-                      value={prompt}
-                      onChange={(e) => setPrompt(e.target.value.slice(0, 1000))}
-                      className="h-32 transition-colors focus:border-neutral-500"
-                    />
-                  </div>
-
-                  {/* Settings Grid */}
-                  <div className="grid grid-cols-1 gap-6">
-                    {/* Image Size */}
-                    <div className="space-y-2">
-                      <Label>Image Size</Label>
-                      <Select
-                        value={settings.image_size}
-                        onValueChange={(value) =>
-                          setSettings({ ...settings, image_size: value })
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select size" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="square_hd">Square HD</SelectItem>
-                          <SelectItem value="square">Square</SelectItem>
-                          <SelectItem value="portrait_4_3">
-                            3:4 Portrait
-                          </SelectItem>
-                          <SelectItem value="portrait_16_9">
-                            9:16 Portrait
-                          </SelectItem>
-                          <SelectItem value="landscape_4_3">
-                            4:3 Landscape
-                          </SelectItem>
-                          <SelectItem value="landscape_16_9">
-                            16:9 Landscape
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Style */}
-                    <div className="space-y-2">
-                      <Label>Style</Label>
-                      <Select
-                        value={settings.style}
-                        onValueChange={(value) =>
-                          setSettings({ ...settings, style: value })
-                        }
-                      >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select style" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="realistic_image">
-                              Realistic Image
-                            </SelectItem>
-                            <SelectItem value="digital_illustration">
-                              Digital Illustration
-                            </SelectItem>
-                            <SelectItem value="vector_illustration">
-                              Vector Illustration
-                            </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    {/* Inference Steps */}
-                    <div className="space-y-2">
-                      <Label>
-                        Inference Steps: {settings.num_inference_steps}
-                      </Label>
-                      <Slider
-                        value={[settings.num_inference_steps]}
-                        onValueChange={([value]) =>
-                          setSettings({
-                            ...settings,
-                            num_inference_steps: value,
-                          })
-                        }
-                        min={1}
-                        max={10}
-                        step={1}
-                        className="w-full"
-                      />
-                    </div>
-
-                    {/* Number of Images */}
-                    <div className="space-y-2">
-                      <Label>Number of Images: {settings.num_images}</Label>
-                      <Slider
-                        value={[settings.num_images]}
-                        onValueChange={([value]) =>
-                          setSettings({ ...settings, num_images: value })
-                        }
-                        min={1}
-                        max={4}
-                        step={1}
-                        className="w-full"
-                      />
-                    </div>
-
-                    {/* Safety Checker */}
-                    <div className="flex items-center justify-between">
-                      <Label>Enable Safety Checker</Label>
-                      <Switch
-                        checked={settings.enable_safety_checker}
-                        onCheckedChange={(checked) =>
-                          setSettings({
-                            ...settings,
-                            enable_safety_checker: checked,
-                          })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  {/* Generate Button */}
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleGenerate}
-                      disabled={loading || !prompt.trim()}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-white min-w-52 transition-all duration-200 ease-in-out transform hover:scale-105"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Generating...
-                        </>
-                      ) : (
-                        <>
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                          Generate Image
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-            <TabsContent value="chat">
-              <Card className="border-neutral-500/20 shadow-lg transition-shadow hover:shadow-xl">
-                <CardHeader>
-                  {credits !== null && (
-                    <div className="text-sm text-neutral-500">
-                      Available Credits: {credits}
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {/* Enhanced Chat UI */}
-                  <div className="h-[400px] overflow-y-auto border rounded-lg p-4 space-y-4">
-                    {messages.map((message) => (
-                      <div
-                        key={message.id}
-                        className={`flex ${
-                          message.role === "user"
-                            ? "justify-end"
-                            : "justify-start"
-                        }`}
-                      >
-                        <div
-                          className={`
-                            max-w-[85%] rounded-lg px-3 py-2
-                            ${
-                              message.role === "user"
-                                ? "bg-neutral-800 text-white"
-                                : "bg-neutral-100"
-                            }
-                            relative group
-                          `}
-                        >
-                          <div className="text-sm">{message.content}</div>
-                          {message.toolInvocations?.map((toolInvocation) => {
-                            const { toolName, toolCallId, state } =
-                              toolInvocation;
-
-                            if (
-                              state === "result" &&
-                              toolName === "generateImage" &&
-                              toolInvocation.result.pending
-                            ) {
-                              if (
-                                !pendingImageRequests.has(toolCallId) &&
-                                !completedImages.has(toolCallId)
-                              ) {
-                                handleImageGeneration(toolCallId, {
-                                  prompt: toolInvocation.result.prompt,
-                                  style: toolInvocation.result.style,
-                                  imageSize: toolInvocation.result.imageSize,
-                                  numInferenceSteps: 1,
-                                  numImages: 1,
-                                  enableSafetyChecker: true,
-                                });
-                              }
-                            }
-                            return null;
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                    {isTyping && (
-                      <div className="flex gap-1 items-center text-neutral-500">
-                        <div className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce" />
-                        <div className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0.2s]" />
-                        <div className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0.4s]" />
+              <TabsContent value="regular">
+                {/* Existing regular mode UI */}
+                <Card className="border-neutral-500/20 shadow-lg transition-shadow hover:shadow-xl">
+                  <CardHeader>
+                    {credits !== null && (
+                      <div className="text-sm text-neutral-500">
+                        Available Credits: {credits}
                       </div>
                     )}
-                    <div ref={messagesEndRef} />
-                  </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    {/* Prompt Input with character count */}
+                    <div className="space-y-2">
+                      <Label htmlFor="prompt" className="flex justify-between">
+                        <span>Prompt</span>
+                        <span className="text-sm text-neutral-500">
+                          {prompt.length}/1000
+                        </span>
+                      </Label>
+                      <Textarea
+                        id="prompt"
+                        placeholder="A serene landscape with mountains..."
+                        value={prompt}
+                        onChange={(e) => setPrompt(e.target.value.slice(0, 1000))}
+                        className="h-32 transition-colors focus:border-neutral-500"
+                      />
+                    </div>
 
-                  <form onSubmit={handleChatSubmit} className="flex gap-2">
-                    <input
-                      type="text"
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      placeholder="Message..."
-                      className="flex-1 p-2 rounded-lg bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-300"
-                      disabled={isChatLoading}
-                    />
-                    <Button
-                      type="submit"
-                      disabled={isChatLoading || !input.trim()}
-                      className="bg-neutral-800 hover:bg-neutral-700 text-white"
-                    >
-                      <SendIcon className="w-4 h-4" />
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                    {/* Settings Grid */}
+                    <div className="grid grid-cols-1 gap-6">
+                      {/* Image Size */}
+                      <div className="space-y-2">
+                        <Label>Image Size</Label>
+                        <Select
+                          value={settings.image_size}
+                          onValueChange={(value) =>
+                            setSettings({ ...settings, image_size: value })
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select size" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="square_hd">Square HD</SelectItem>
+                            <SelectItem value="square">Square</SelectItem>
+                            <SelectItem value="portrait_4_3">
+                              3:4 Portrait
+                            </SelectItem>
+                            <SelectItem value="portrait_16_9">
+                              9:16 Portrait
+                            </SelectItem>
+                            <SelectItem value="landscape_4_3">
+                              4:3 Landscape
+                            </SelectItem>
+                            <SelectItem value="landscape_16_9">
+                              16:9 Landscape
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-          {/* Modified Result Card - Shows only most recent image */}
-          <Card className="border-neutral-500/20 shadow-lg">
-            <CardHeader>
-              <CardDescription className="text-lg">
-                Latest Generated Result
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="relative">
-                  <div
-                    className={`animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg aspect-square`}
-                  />
-                </div>
-              ) : generatedImages.length > 0 ? (
-                <div className="relative group">
-                  <div
-                    className={`${
-                      aspectRatioMap[
-                        generatedImages[0].aspectRatio as keyof typeof aspectRatioMap
-                      ]
-                    }`}
-                  >
-                    <img
-                      src={generatedImages[0].url}
-                      alt={generatedImages[0].prompt}
-                      className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:brightness-75"
+                      {/* Style */}
+                      <div className="space-y-2">
+                        <Label>Style</Label>
+                        <Select
+                          value={settings.style}
+                          onValueChange={(value) =>
+                            setSettings({ ...settings, style: value })
+                          }
+                        >
+                          <SelectTrigger>
+                              <SelectValue placeholder="Select style" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="realistic_image">
+                                Realistic Image
+                              </SelectItem>
+                              <SelectItem value="digital_illustration">
+                                Digital Illustration
+                              </SelectItem>
+                              <SelectItem value="vector_illustration">
+                                Vector Illustration
+                              </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      {/* Inference Steps */}
+                      <div className="space-y-2">
+                        <Label>
+                          Inference Steps: {settings.num_inference_steps}
+                        </Label>
+                        <Slider
+                          value={[settings.num_inference_steps]}
+                          onValueChange={([value]) =>
+                            setSettings({
+                              ...settings,
+                              num_inference_steps: value,
+                            })
+                          }
+                          min={1}
+                          max={10}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Number of Images */}
+                      <div className="space-y-2">
+                        <Label>Number of Images: {settings.num_images}</Label>
+                        <Slider
+                          value={[settings.num_images]}
+                          onValueChange={([value]) =>
+                            setSettings({ ...settings, num_images: value })
+                          }
+                          min={1}
+                          max={4}
+                          step={1}
+                          className="w-full"
+                        />
+                      </div>
+
+                      {/* Safety Checker */}
+                      <div className="flex items-center justify-between">
+                        <Label>Enable Safety Checker</Label>
+                        <Switch
+                          checked={settings.enable_safety_checker}
+                          onCheckedChange={(checked) =>
+                            setSettings({
+                              ...settings,
+                              enable_safety_checker: checked,
+                            })
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {/* Generate Button */}
+                    <div className="flex justify-end">
+                      <Button
+                        onClick={handleGenerate}
+                        disabled={loading || !prompt.trim()}
+                        className="bg-neutral-800 hover:bg-neutral-700 text-white min-w-52 transition-all duration-200 ease-in-out transform hover:scale-105"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          <>
+                            <ImageIcon className="mr-2 h-4 w-4" />
+                            Generate Image
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              <TabsContent value="chat">
+                <Card className="border-neutral-500/20 shadow-lg transition-shadow hover:shadow-xl">
+                  <CardHeader>
+                    {credits !== null && (
+                      <div className="text-sm text-neutral-500">
+                        Available Credits: {credits}
+                      </div>
+                    )}
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {/* Enhanced Chat UI */}
+                    <div className="h-[400px] overflow-y-auto border rounded-lg p-4 space-y-4">
+                      {messages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${
+                            message.role === "user"
+                              ? "justify-end"
+                              : "justify-start"
+                          }`}
+                        >
+                          <div
+                            className={`
+                              max-w-[85%] rounded-lg px-3 py-2
+                              ${
+                                message.role === "user"
+                                  ? "bg-neutral-800 text-white"
+                                  : "bg-neutral-100"
+                              }
+                              relative group
+                            `}
+                          >
+                            <div className="text-sm">{message.content}</div>
+                            {message.toolInvocations?.map((toolInvocation) => {
+                              const { toolName, toolCallId, state } =
+                                toolInvocation;
+
+                              if (
+                                state === "result" &&
+                                toolName === "generateImage" &&
+                                toolInvocation.result.pending
+                              ) {
+                                if (
+                                  !pendingImageRequests.has(toolCallId) &&
+                                  !completedImages.has(toolCallId)
+                                ) {
+                                  handleImageGeneration(toolCallId, {
+                                    prompt: toolInvocation.result.prompt,
+                                    style: toolInvocation.result.style,
+                                    imageSize: toolInvocation.result.imageSize,
+                                    numInferenceSteps: 1,
+                                    numImages: 1,
+                                    enableSafetyChecker: true,
+                                  });
+                                }
+                              }
+                              return null;
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      {isTyping && (
+                        <div className="flex gap-1 items-center text-neutral-500">
+                          <div className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce" />
+                          <div className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0.2s]" />
+                          <div className="w-2 h-2 rounded-full bg-neutral-400 animate-bounce [animation-delay:0.4s]" />
+                        </div>
+                      )}
+                      <div ref={messagesEndRef} />
+                    </div>
+
+                    <form onSubmit={handleChatSubmit} className="flex gap-2">
+                      <input
+                        type="text"
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        placeholder="Message..."
+                        className="flex-1 p-2 rounded-lg bg-neutral-100 focus:outline-none focus:ring-1 focus:ring-neutral-300"
+                        disabled={isChatLoading}
+                      />
+                      <Button
+                        type="submit"
+                        disabled={isChatLoading || !input.trim()}
+                        className="bg-neutral-800 hover:bg-neutral-700 text-white"
+                      >
+                        <SendIcon className="w-4 h-4" />
+                      </Button>
+                    </form>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+
+            {/* Modified Result Card - Shows only most recent image */}
+            <Card className="border-neutral-500/20 shadow-lg">
+              <CardHeader>
+                <CardDescription className="text-lg">
+                  Latest Generated Result
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loading ? (
+                  <div className="relative">
+                    <div
+                      className={`animate-pulse bg-neutral-200 dark:bg-neutral-700 rounded-lg aspect-square`}
                     />
                   </div>
-                  <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleDownload(generatedImages[0].url)}
-                      className="transform scale-95 group-hover:scale-100 transition-transform"
+                ) : generatedImages.length > 0 ? (
+                  <div className="relative group">
+                    <div
+                      className={`${
+                        aspectRatioMap[
+                          generatedImages[0].aspectRatio as keyof typeof aspectRatioMap
+                        ]
+                      }`}
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
+                      <img
+                        src={generatedImages[0].url}
+                        alt={generatedImages[0].prompt}
+                        className="w-full h-full object-cover rounded-lg transition-all duration-300 group-hover:brightness-75"
+                      />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleDownload(generatedImages[0].url)}
+                        className="transform scale-95 group-hover:scale-100 transition-transform"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Download
+                      </Button>
+                    </div>
+                    <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent">
+                      <p className="text-white text-sm truncate">
+                        {generatedImages[0].prompt}
+                      </p>
+                    </div>
                   </div>
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent">
-                    <p className="text-white text-sm truncate">
-                      {generatedImages[0].prompt}
-                    </p>
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-[300px] text-neutral-500">
+                    <ImageIcon className="h-12 w-12 mb-4" />
+                    <p>Generate an image to see it here</p>
                   </div>
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-[300px] text-neutral-500">
-                  <ImageIcon className="h-12 w-12 mb-4" />
-                  <p>Generate an image to see it here</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         {/* Previous Images Section */}
         {previousImages.length > 0 && (

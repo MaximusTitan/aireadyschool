@@ -4,69 +4,162 @@ import { useChat } from "ai/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
-import { CommandInput } from "./components/command-input";
 import { ChatArea } from "./components/chat-area";
+import { useChatThread } from "@/app/hooks/useChatThread";
+import { ThreadList } from "./components/thread-list";
+import { useRouter } from "next/navigation";
+import { Message } from "ai";
+import { ChatMessage, ToolCall, ToolState } from "@/types/chat";
+
+// Simplified interfaces
+interface GeneratedImage {
+  url: string;
+  credits: number;
+}
 
 export default function Page() {
+  const router = useRouter();
   const { setOpen } = useSidebar();
+  const {
+    threadId,
+    threads,
+    createThread,
+    saveMessage,
+    loadThread,
+    deleteThread,
+    startNewThread,
+    currentMessages,
+    setCurrentMessages,
+  } = useChatThread();
 
-  // Close sidebar on component mount
-  useEffect(() => {
-    setOpen(false);
-  }, [setOpen]);
-
-  const [simulationCode, setSimulationCode] = useState<string | null>(null);
-  const simulationCodeRef = useRef<string | null>(null);
-  const { messages, input, setInput, handleSubmit, append, isLoading } =
-    useChat({
-      api: "/api/gen-chat",
-      onFinish: useCallback((message: any) => {
-        const toolInvocation = message.toolInvocations?.find(
-          (t: any) => t.toolName === "conceptVisualizer"
-        );
-        if (toolInvocation && toolInvocation.state === "result") {
-          const code = (toolInvocation.result as any).code;
-          if (code !== simulationCodeRef.current) {
-            simulationCodeRef.current = code;
-            setSimulationCode(code.trim());
-          }
-        }
-      }, []),
-    });
+  // State management
   const [showCommands, setShowCommands] = useState(false);
   const [pendingImageRequests] = useState(() => new Set<string>());
   const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
   const [completedImages] = useState(() => new Set<string>());
   const [generatedImages, setGeneratedImages] = useState<
-    Record<string, { url: string; credits: number }>
+    Record<string, GeneratedImage>
   >({});
   const [pendingVisualizations] = useState(() => new Set<string>());
   const [pendingQuizzes] = useState(() => new Set<string>());
   const [generatedQuizzes, setGeneratedQuizzes] = useState<Record<string, any>>(
     {}
   );
+  const [generatedVideos, setGeneratedVideos] = useState<
+    Record<string, string>
+  >({});
+  const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(
+    null
+  );
+  const [simulationCode, setSimulationCode] = useState<string | null>(null);
+  const simulationCodeRef = useRef<string | null>(null);
+  const chatRef = useRef<any>(null);
 
-  const handleAnswerSubmit = async (data: {
-    studentAnswer: number;
-    correctAnswer: number;
-    question: string;
-    topic: string;
-    level: string;
-  }) => {
-    const userMessage = {
-      id: String(Date.now()),
-      role: "user" as const,
-      content: `Evaluate my answer: ${data.studentAnswer} for the question: "${data.question}"`,
-      toolCalls: [
-        {
-          tool: "evaluateAnswer",
-          parameters: data,
-        },
-      ],
-    };
-    await append(userMessage);
+  // Initialize chat and handle message saving
+  const chat = useChat({
+    api: "/api/gen-chat",
+    id: threadId,
+    initialMessages: currentMessages.map((msg) => ({
+      id: msg.id || String(Date.now()),
+      role: msg.role,
+      content: msg.content,
+      createdAt: msg.createdAt,
+    })),
+    body: { id: threadId },
+    onFinish: useCallback(
+      async (message: Message) => {
+        const messageToSave: ChatMessage = {
+          id: String(Date.now()),
+          role: message.role as ChatMessage["role"],
+          content: message.content,
+          createdAt: new Date(),
+          toolCalls: (message as any).toolCalls?.map((call: any) => ({
+            id: call.id || String(Date.now()),
+            tool: call.tool || call.function?.name,
+            parameters: call.parameters || call.function?.arguments,
+            result: call.result,
+            state: (call.state || "result") as ToolState,
+          })),
+        };
+        await saveMessage(messageToSave);
+      },
+      [saveMessage]
+    ),
+  });
+
+  // Store chat instance in ref
+  chatRef.current = chat;
+  const { messages, input, setInput, append, isLoading, setMessages } = chat;
+
+  // Side effects
+  useEffect(() => {
+    setOpen(false);
+    const searchParams = new URLSearchParams(window.location.search);
+    const threadParam = searchParams.get("thread");
+    if (threadParam) handleThreadSelect(threadParam);
+  }, [setOpen]);
+
+  useEffect(() => {
+    if (currentMessages) {
+      setMessages(
+        currentMessages.map((msg) => ({
+          id: msg.id || String(Date.now()),
+          role: msg.role,
+          content: msg.content,
+          createdAt: msg.createdAt,
+        }))
+      );
+    }
+  }, [currentMessages, setMessages]);
+
+  // Helper function to create tool calls
+  const createToolCall = (
+    tool: string,
+    parameters: Record<string, any>
+  ): ToolCall => ({
+    id: String(Date.now()),
+    tool,
+    parameters,
+    state: "pending",
+  });
+
+  // Handle thread operations
+  const handleThreadSelect = async (selectedThreadId: string) => {
+    try {
+      const messages = await loadThread(selectedThreadId);
+      if (messages) setMessages(messages);
+      router.push(`/tools/gen-chat?thread=${selectedThreadId}`);
+    } catch (error) {
+      console.error("Failed to load thread:", error);
+    }
   };
 
+  const handleDeleteThread = async (threadId: string) => {
+    if (confirm("Are you sure you want to delete this chat?")) {
+      try {
+        await deleteThread(threadId);
+        setMessages([]);
+        setCurrentMessages([]);
+        setInput("");
+        chatRef.current = null;
+        router.replace("/tools/gen-chat", { scroll: false });
+      } catch (error) {
+        console.error("Failed to delete thread:", error);
+      }
+    }
+  };
+
+  const handleNewThread = async () => {
+    try {
+      const newThreadId = await startNewThread();
+      setMessages([]);
+      router.push(`/tools/gen-chat?thread=${newThreadId}`);
+    } catch (error) {
+      console.error("Failed to create new thread:", error);
+    }
+  };
+
+  // Tool handlers
   const handleQuizAnswer = useCallback(
     async (data: {
       selectedOption: { id: string; text: string; isCorrect: boolean };
@@ -94,12 +187,33 @@ export default function Page() {
             },
           },
         ],
-        isHidden: true, // Add this flag
+        isHidden: true,
       };
       await append(userMessage);
     },
     [append]
   );
+
+  const handleAnswerSubmit = async (data: {
+    studentAnswer: number;
+    correctAnswer: number;
+    question: string;
+    topic: string;
+    level: string;
+  }) => {
+    const userMessage = {
+      id: String(Date.now()),
+      role: "user" as const,
+      content: `Evaluate my answer: ${data.studentAnswer} for the question: "${data.question}"`,
+      toolCalls: [
+        {
+          tool: "evaluateAnswer",
+          parameters: data,
+        },
+      ],
+    };
+    await append(userMessage);
+  };
 
   const handleImageGeneration = async (
     toolCallId: string,
@@ -112,12 +226,9 @@ export default function Page() {
       enableSafetyChecker: boolean;
     }
   ) => {
-    if (
-      pendingImageRequests.has(toolCallId) ||
-      completedImages.has(toolCallId)
-    ) {
+    if (pendingImageRequests.has(toolCallId) || completedImages.has(toolCallId))
       return;
-    }
+
     pendingImageRequests.add(toolCallId);
     try {
       const response = await fetch("/api/gen-chat-image", {
@@ -128,11 +239,14 @@ export default function Page() {
       const data = await response.json();
       pendingImageRequests.delete(toolCallId);
       completedImages.add(toolCallId);
+
       if (data.images?.[0]) {
+        const imageUrl = data.images[0].url;
+        setLastGeneratedImage(imageUrl);
         setGeneratedImages((prev) => ({
           ...prev,
           [toolCallId]: {
-            url: data.images[0].url,
+            url: imageUrl,
             credits: data.remainingCredits,
           },
         }));
@@ -156,9 +270,7 @@ export default function Page() {
         difficulty: string;
       }
     ) => {
-      if (pendingQuizzes.has(toolCallId)) {
-        return;
-      }
+      if (pendingQuizzes.has(toolCallId)) return;
 
       pendingQuizzes.add(toolCallId);
       try {
@@ -168,22 +280,15 @@ export default function Page() {
           body: JSON.stringify(params),
         });
 
-        if (!response.ok) {
-          throw new Error("Failed to generate quiz");
-        }
+        if (!response.ok) throw new Error("Failed to generate quiz");
 
         const data = await response.json();
-        setGeneratedQuizzes((prev) => ({
-          ...prev,
-          [toolCallId]: data,
-        }));
+        setGeneratedQuizzes((prev) => ({ ...prev, [toolCallId]: data }));
       } catch (error) {
         console.error("Quiz generation failed:", error);
         setGeneratedQuizzes((prev) => ({
           ...prev,
-          [toolCallId]: {
-            error: "Failed to generate quiz",
-          },
+          [toolCallId]: { error: "Failed to generate quiz" },
         }));
       } finally {
         pendingQuizzes.delete(toolCallId);
@@ -199,9 +304,9 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject, concept }),
       });
-      if (!response.ok) {
-        throw new Error("Failed to generate visualization");
-      }
+
+      if (!response.ok) throw new Error("Failed to generate visualization");
+
       const { visualization } = await response.json();
       return { code: visualization };
     } catch (error) {
@@ -211,102 +316,168 @@ export default function Page() {
   };
 
   const handleDirectCommand = async (command: string) => {
+    // Ensure thread exists
+    if (!threadId) {
+      const newThreadId = await createThread();
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      await router.push(`/tools/gen-chat?thread=${newThreadId}`);
+    }
+
     const parts = command.slice(1).split(" ");
     const toolName = parts[0].toLowerCase();
-    if (toolName === "math") {
-      const level = parts[1] || "easy";
-      const topic = parts[2] || "addition";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
-        content: `Generate a ${level} ${topic} math problem`,
-        toolCalls: [
-          { tool: "generateMathProblem", parameters: { level, topic } },
-        ],
-      };
-      await append(userMessage);
-    } else if (toolName === "quiz") {
-      const subject = parts[1] || "general";
-      const difficulty = parts[2] || "easy";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
-        content: `Generate a ${difficulty} quiz about ${subject}`,
-        toolCalls: [
-          { tool: "generateQuiz", parameters: { subject, difficulty } },
-        ],
-      };
-      await append(userMessage);
-    } else if (toolName === "image") {
-      const prompt = parts.slice(1, -1).join(" ");
-      const style = parts[parts.length - 1] || "realistic_image";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
-        content: `Generate an educational image about: ${prompt}`,
-        toolCalls: [
-          {
-            tool: "generateImage",
-            parameters: {
-              pending: true,
-              prompt,
-              style,
-              imageSize: "square_hd",
-              numInferenceSteps: 1,
-              numImages: 1,
-              enableSafetyChecker: true,
-            },
-          },
-        ],
-      };
-      await append(userMessage);
-    } else if (toolName === "visualize") {
-      const subject = parts[1] || "physics";
-      const concept = parts.slice(2).join(" ") || "";
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
-        content: `Generate a visualization of ${concept} ${subject}`,
-        toolCalls: [
-          { tool: "generateVisualization", parameters: { subject, concept } },
-        ],
-      };
-      await append(userMessage);
-    } else if (toolName === "mindmap") {
-      const topic = parts.slice(1).join(" ");
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
-        content: `Generate a mind map about ${topic}`,
-        toolCalls: [{ tool: "generateMindMap", parameters: { topic } }],
-      };
-      await append(userMessage);
+    const baseMessage = {
+      id: String(Date.now()),
+      role: "user" as const,
+      createdAt: new Date(),
+      content: "",
+      toolCalls: [] as ToolCall[],
+    };
+
+    switch (toolName) {
+      case "math":
+        const level = parts[1] || "easy";
+        const topic = parts[2] || "addition";
+        baseMessage.content = `Generate a ${level} ${topic} math problem`;
+        baseMessage.toolCalls = [
+          createToolCall("generateMathProblem", { level, topic }),
+        ];
+        break;
+      case "quiz":
+        const subject = parts[1] || "general";
+        const difficulty = parts[2] || "easy";
+        baseMessage.content = `Generate a ${difficulty} quiz about ${subject}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateQuiz", { subject, difficulty }),
+        ];
+        break;
+      case "image":
+        const prompt = parts.slice(1, -1).join(" ");
+        const style = parts[parts.length - 1] || "realistic_image";
+        baseMessage.content = `Generate an educational image about: ${prompt}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateImage", {
+            prompt,
+            style,
+            imageSize: "square_hd",
+            numInferenceSteps: 1,
+            numImages: 1,
+            enableSafetyChecker: true,
+          }),
+        ];
+        break;
+      case "visualize":
+        const vizSubject = parts[1] || "physics";
+        const concept = parts.slice(2).join(" ") || "";
+        baseMessage.content = `Generate a visualization of ${concept} ${vizSubject}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateVisualization", {
+            subject: vizSubject,
+            concept,
+          }),
+        ];
+        break;
+      case "mindmap":
+        const mindmapTopic = parts.slice(1).join(" ");
+        baseMessage.content = `Generate a mind map about ${mindmapTopic}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateMindMap", { mindmapTopic }),
+        ];
+        break;
+      case "video":
+        const videoPrompt = parts.slice(1).join(" ");
+        baseMessage.content = `Generate a video with this description: ${videoPrompt}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateVideo", {
+            prompt: videoPrompt,
+            imageUrl: lastGeneratedImage,
+          }),
+        ];
+        break;
+      default:
+        baseMessage.content = `Unknown command: ${command}`;
+        baseMessage.toolCalls = [];
+    }
+
+    try {
+      await saveMessage(baseMessage);
+      await append(baseMessage);
+    } catch (error) {
+      console.error("Failed to save command message:", error);
     }
   };
 
-  const handleFormSubmit = async (e: React.FormEvent) => {
+  // Handle message submission
+  const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.startsWith("/")) {
-      await handleDirectCommand(input);
-      setInput("");
-    } else {
-      handleSubmit(e);
-    }
-  };
+    if (!input.trim()) return;
 
-  const handleInputChange = (value: string) => {
-    setInput(value);
+    try {
+      let activeThreadId = threadId;
+      if (!activeThreadId) {
+        activeThreadId = await createThread();
+        await router.push(`/tools/gen-chat?thread=${activeThreadId}`);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      if (!activeThreadId) {
+        console.warn("No active thread available");
+        return;
+      }
+
+      const userMessage: ChatMessage = {
+        id: String(Date.now()),
+        role: "user",
+        content: input,
+        createdAt: new Date(),
+      };
+
+      try {
+        await saveMessage(userMessage, activeThreadId);
+
+        if (input.toLowerCase().includes("video") && lastGeneratedImage) {
+          const messageWithTool: ChatMessage = {
+            ...userMessage,
+            toolCalls: [
+              createToolCall("generateVideo", {
+                prompt: input,
+                imageUrl: lastGeneratedImage,
+              }),
+            ],
+          };
+          await append(messageWithTool);
+        } else if (input.startsWith("/")) {
+          await handleDirectCommand(input);
+        } else {
+          await chatRef.current?.append(userMessage);
+        }
+
+        setInput("");
+      } catch (error) {
+        console.error("Message processing failed:", error);
+      }
+    } catch (error) {
+      console.error("Thread creation failed:", error);
+    }
   };
 
   return (
     <TooltipProvider>
       <div className="flex h-screen">
+        <ThreadList
+          threads={threads}
+          currentThreadId={threadId}
+          onThreadSelect={handleThreadSelect}
+          onDeleteThread={handleDeleteThread}
+          onNewThread={handleNewThread}
+          messages={messages}
+          isLoading={isLoading}
+        />
         <ChatArea
           messages={messages}
           input={input}
           isLoading={isLoading}
-          onInputChange={handleInputChange}
-          onSubmit={handleFormSubmit}
+          onInputChange={setInput}
+          onSubmit={handleMessageSubmit}
           simulationCode={simulationCode}
           simulationCodeRef={simulationCodeRef}
           generatedImages={generatedImages}
@@ -320,7 +491,10 @@ export default function Page() {
           handleQuizGeneration={handleQuizGeneration}
           handleVisualization={handleVisualization}
           handleQuizAnswer={handleQuizAnswer}
-          onSimulationCode={(code: string) => setSimulationCode(code)}
+          onSimulationCode={setSimulationCode}
+          generatedVideos={generatedVideos}
+          setGeneratedVideos={setGeneratedVideos}
+          lastGeneratedImage={lastGeneratedImage}
         />
       </div>
     </TooltipProvider>

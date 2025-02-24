@@ -64,6 +64,7 @@ export default function ClientLayout({
     pathname.startsWith("/chatbot") ||
     pathname.startsWith("/protected") ||
     pathname.startsWith("/schools") ||
+    pathname.startsWith("/school") ||
     pathname.startsWith("/livebot") ||
     pathname.startsWith("/audiobot") ||
     pathname.startsWith("/learn-ai") ||
@@ -76,7 +77,9 @@ export default function ClientLayout({
     pathname.startsWith("/document-vault") ||
     pathname.startsWith("/connect-database") ||
     pathname.startsWith("/feedback") ||
-    (pathname.startsWith("/profile") &&
+    pathname.startsWith("/profile") ||
+    pathname.startsWith("/knowledge-base") ||
+    (pathname.startsWith("/portfolio") &&
       userRole === "Student" &&
       hasCognitiveAssessment);
 

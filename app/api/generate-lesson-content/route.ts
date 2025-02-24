@@ -1,5 +1,5 @@
 import { streamText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { anthropic } from '@ai-sdk/anthropic';
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
 import { logTokenUsage } from '@/utils/logTokenUsage';
@@ -276,9 +276,9 @@ export async function POST(req: Request) {
   }
 
   try {
-    const { topic, subject, grade, board, contentType } = await req.json();
+    const { topic, subject, grade, board, contentType, country } = await req.json();
 
-    if (!topic || !subject || !grade || !board || !contentType) {
+    if (!topic || !subject || !grade || !board || !contentType || !country) {
       return NextResponse.json(
         { error: "Missing required parameters" },
         { status: 400 },
@@ -290,11 +290,11 @@ export async function POST(req: Request) {
       topic,
       subject,
       grade,
-      board,
+      `${country} ${board}`, // Include country in board description
     );
 
     const response = streamText({
-      model: openai("gpt-4o"),
+      model: anthropic('claude-3-5-sonnet-20240620'),
       messages: [
         { role: "system", content: systemPrompt },
         {

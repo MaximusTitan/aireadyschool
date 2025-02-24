@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link"; // Add this import
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,11 @@ import {
 import { GeneratedContent } from "./components/GeneratedContent";
 import { Loader2 } from "lucide-react";
 import { PdfDownloader } from "./components/PdfDownloader"; // New import
+import {
+  countries,
+  boardsByCountry,
+  subjects,
+} from "@/app/constants/education-data";
 
 const generateText = async (
   topic: string,
@@ -22,7 +28,8 @@ const generateText = async (
   grade: string,
   board: string,
   contentType: string,
-  retries = 3,
+  country: string,
+  retries = 3
 ): Promise<{ title: string; result: string; imageUrl?: string }> => {
   try {
     const textResponse = await fetch("/api/generate-lesson-content", {
@@ -30,7 +37,14 @@ const generateText = async (
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ topic, subject, grade, board, contentType }),
+      body: JSON.stringify({
+        topic,
+        subject,
+        grade,
+        board,
+        contentType,
+        country,
+      }),
     });
 
     if (!textResponse.ok) {
@@ -48,7 +62,8 @@ const generateText = async (
           grade,
           board,
           contentType,
-          retries - 1,
+          country,
+          retries - 1
         );
       } else {
         throw new Error("Failed to generate a response in the valid format");
@@ -64,7 +79,8 @@ const generateText = async (
         grade,
         board,
         contentType,
-        retries - 1,
+        country,
+        retries - 1
       );
     } else {
       throw new Error("Failed to generate a response in the valid format");
@@ -103,6 +119,7 @@ const ContentGenerator = () => {
   const [lessonTitle, setLessonTitle] = useState("");
   const [history, setHistory] = useState<any[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [country, setCountry] = useState("");
 
   const contentRef = useRef<HTMLDivElement>(null); // New ref for generated content
 
@@ -124,7 +141,14 @@ const ContentGenerator = () => {
     setLessonTitle("");
 
     try {
-      const textData = await generateText(topic, subject, grade, board, contentType);
+      const textData = await generateText(
+        topic,
+        subject,
+        grade,
+        board,
+        contentType,
+        country
+      );
       setTextContent(textData.result);
       setLessonTitle(textData.title);
       setIsLoading(false);
@@ -174,7 +198,8 @@ const ContentGenerator = () => {
   };
 
   const handleNextPage = () => {
-    if (currentPage * lessonsPerPage < history.length) setCurrentPage(currentPage + 1);
+    if (currentPage * lessonsPerPage < history.length)
+      setCurrentPage(currentPage + 1);
   };
 
   // Add this new function to format the image URL
@@ -182,8 +207,8 @@ const ContentGenerator = () => {
     if (!url) return "No image";
     try {
       const storageUrl = new URL(url);
-      if (storageUrl.hostname.includes('supabase')) {
-        return `Supabase Storage: ${storageUrl.pathname.split('/').pop()}`;
+      if (storageUrl.hostname.includes("supabase")) {
+        return `Supabase Storage: ${storageUrl.pathname.split("/").pop()}`;
       }
       return "Image stored";
     } catch {
@@ -193,44 +218,109 @@ const ContentGenerator = () => {
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+      <Link href="/tools">
+        <Button variant="outline" className="mb-2 border-neutral-500">
+          ← Back
+        </Button>
+      </Link>
+
+      <div className="mb-8 space-y-2">
+        <h1 className="text-3xl font-bold text-rose-500">
+          Lesson Content Generator
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Generates lesson content to aid educators in preparing teaching
+          materials.
+        </p>
+      </div>
+
       <Card className="shadow-lg border-2">
-        <CardHeader className="bg-muted/50 border-b">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-neutral-900 to-neutral-600 bg-clip-text text-transparent">
-            Lesson Content Generator
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-6 space-y-8">
           {/* Form Section */}
           <div className="space-y-6">
+            {/* First Row - Country and Board */}
             <div className="grid md:grid-cols-2 gap-8">
               <div className="space-y-2">
-                <Label htmlFor="subjectInput" className="text-base font-semibold">Subject</Label>
-                <Input
-                  id="subjectInput"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Enter subject..."
-                  className="h-11"
-                />
+                <Label
+                  htmlFor="countrySelect"
+                  className="text-base font-semibold"
+                >
+                  Country
+                </Label>
+                <Select
+                  value={country}
+                  onValueChange={(value) => {
+                    setCountry(value);
+                    setBoard(""); // Reset board when country changes
+                  }}
+                >
+                  <SelectTrigger className="w-full h-11 bg-white">
+                    <SelectValue placeholder="Select country..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countries.map((country) => (
+                      <SelectItem key={country.value} value={country.value}>
+                        {country.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="textInput" className="text-base font-semibold">Topic</Label>
-                <Input
-                  id="textInput"
-                  value={topic}
-                  onChange={(e) => setTopic(e.target.value)}
-                  onKeyDown={handleKeyPressed}
-                  placeholder="Enter topic..."
-                  className="h-11"
-                />
+                <Label
+                  htmlFor="boardSelect"
+                  className="text-base font-semibold"
+                >
+                  Educational Board
+                </Label>
+                <Select value={board} onValueChange={setBoard}>
+                  <SelectTrigger className="w-full h-11 bg-white">
+                    <SelectValue placeholder="Select board..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {country &&
+                      boardsByCountry[country]?.map((board) => (
+                        <SelectItem key={board.value} value={board.value}>
+                          {board.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
+            {/* Second Row - Subject, Grade and Content Type */}
             <div className="grid md:grid-cols-3 gap-8">
               <div className="space-y-2">
-                <Label htmlFor="gradeSelect" className="text-base font-semibold">Grade</Label>
+                <Label
+                  htmlFor="subjectSelect"
+                  className="text-base font-semibold"
+                >
+                  Subject
+                </Label>
+                <Select value={subject} onValueChange={setSubject}>
+                  <SelectTrigger className="w-full h-11 bg-white">
+                    <SelectValue placeholder="Select subject..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {subjects.map((subject) => (
+                      <SelectItem key={subject.value} value={subject.value}>
+                        {subject.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label
+                  htmlFor="gradeSelect"
+                  className="text-base font-semibold"
+                >
+                  Grade
+                </Label>
                 <Select value={grade} onValueChange={setGrade}>
-                  <SelectTrigger className="w-full h-11">
+                  <SelectTrigger className="w-full h-11 bg-white">
                     <SelectValue placeholder="Select grade..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -242,42 +332,63 @@ const ContentGenerator = () => {
                   </SelectContent>
                 </Select>
               </div>
+
               <div className="space-y-2">
-                <Label htmlFor="boardInput" className="text-base font-semibold">Educational Board</Label>
-                <Input
-                  id="boardInput"
-                  type="text"
-                  value={board}
-                  onChange={(e) => setBoard(e.target.value)}
-                  placeholder="Enter educational board..."
-                  className="h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contentTypeSelect" className="text-base font-semibold">Content Type</Label>
+                <Label
+                  htmlFor="contentTypeSelect"
+                  className="text-base font-semibold"
+                >
+                  Content Type
+                </Label>
                 <Select value={contentType} onValueChange={setContentType}>
-                  <SelectTrigger className="w-full h-11">
+                  <SelectTrigger className="w-full h-11 bg-white">
                     <SelectValue placeholder="Select content type..." />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="guided-notes">Guided Notes</SelectItem>
                     <SelectItem value="exemplar">Exemplar</SelectItem>
-                    <SelectItem value="depth-of-knowledge">Depth of Knowledge Questions</SelectItem>
+                    <SelectItem value="depth-of-knowledge">
+                      Depth of Knowledge Questions
+                    </SelectItem>
                     <SelectItem value="faqs">FAQs</SelectItem>
                     <SelectItem value="worksheets">Worksheets</SelectItem>
                     <SelectItem value="case-studies">Case Studies</SelectItem>
-                    <SelectItem value="scenario-activities">Scenario Based Activities</SelectItem>
+                    <SelectItem value="scenario-activities">
+                      Scenario Based Activities
+                    </SelectItem>
                     <SelectItem value="glossary">Glossary</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
+
+            {/* Topic Input */}
+            <div className="space-y-2">
+              <Label htmlFor="textInput" className="text-base font-semibold">
+                Lesson Topic
+              </Label>
+              <Input
+                id="textInput"
+                value={topic}
+                onChange={(e) => setTopic(e.target.value)}
+                onKeyDown={handleKeyPressed}
+                placeholder="Enter lesson topic..."
+                className="h-11 bg-white"
+              />
+            </div>
           </div>
 
           <Button
             onClick={generateContent}
-            disabled={!topic || !subject || !grade || !board || !contentType || isLoading}
-            className="w-full h-12 text-lg font-semibold bg-neutral-900 hover:bg-neutral-800"
+            disabled={
+              !topic ||
+              !subject ||
+              !grade ||
+              !board ||
+              !contentType ||
+              isLoading
+            }
+            className="w-fit h-10 text-base font-semibold bg-rose-500 hover:bg-rose-600"
           >
             {isLoading ? (
               <>
@@ -285,7 +396,7 @@ const ContentGenerator = () => {
                 Generating...
               </>
             ) : (
-              'Create Lesson'
+              "Create Lesson"
             )}
           </Button>
 
@@ -355,7 +466,8 @@ const ContentGenerator = () => {
                         Image: {formatImageUrl(lesson.image_url)}
                       </span>
                       <span className="text-sm text-muted-foreground block">
-                        Created: {new Date(lesson.created_at).toLocaleDateString()}
+                        Created:{" "}
+                        {new Date(lesson.created_at).toLocaleDateString()}
                       </span>
                     </div>
                     <PdfDownloader

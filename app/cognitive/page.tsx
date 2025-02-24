@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Header from "../profile/components/profile/Header";
+import Header from "../portfolio/components/profile/Header";
 import { CognitiveAssessment } from "./components/CognitiveAssessment";
 import { createClient } from "@/utils/supabase/client";
 

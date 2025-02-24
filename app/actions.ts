@@ -9,11 +9,12 @@ export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
   const role = formData.get("role")?.toString();
+  const name = formData.get("name")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
-  if (!email || !password || !role) {
-    return { error: "Email, password, and role are required" };
+  if (!email || !password || !role || !name) {
+    return { error: "Name, email, password, and role are required" };
   }
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -22,8 +23,10 @@ export const signUpAction = async (formData: FormData) => {
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
-        role: role,
-        status: 'disabled'  // Set initial status as disabled
+        name,
+        role,
+        status: 'disabled',  // Set initial status as disabled
+        email: email,
       },
     },
   });
@@ -41,7 +44,7 @@ export const signUpAction = async (formData: FormData) => {
       user_id: signUpData.user!.id,
       role_type: role,
       image_credits: 25,
-      video_credits: 25
+      video_credits: 5
     });
 
   if (insertError) {
@@ -60,11 +63,12 @@ export const schoolSignUpAction = async (formData: FormData, site_id: string) =>
   const email = formData.get("email")?.toString();
   const password = formData.get("password")?.toString();
   const role = formData.get("role")?.toString();
+  const name = formData.get("name")?.toString();
   const supabase = await createClient();
   const origin = (await headers()).get("origin");
 
-  if (!email || !password || !role) {
-    return { error: "Email, password, and role are required" };
+  if (!email || !password || !role || !name) {
+    return { error: "Name, email, password, and role are required" };
   }
 
   const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -73,9 +77,11 @@ export const schoolSignUpAction = async (formData: FormData, site_id: string) =>
     options: {
       emailRedirectTo: `${origin}/auth/callback`,
       data: {
-        role: role,
+        name,
+        role,
         site_id: site_id.toLowerCase(),
-        status: 'disabled'  // Set initial status as disabled
+        status: 'disabled',
+        email: email,
       },
     },
   });
@@ -125,19 +131,19 @@ export const signInAction = async (formData: FormData) => {
   // Get user role from metadata
   const role = authData.user?.user_metadata?.role;
 
-  if (role === 'Student') {
-    // Check if student exists in students table
-    const { data: studentData, error: studentError } = await supabase
-      .from('students')
-      .select('student_email')
-      .eq('student_email', email)
-      .single();
+  // if (role === 'Student') {
+  //   // Check if student exists in students table
+  //   const { data: studentData, error: studentError } = await supabase
+  //     .from('students')
+  //     .select('student_email')
+  //     .eq('student_email', email)
+  //     .single();
 
-    if (studentError || !studentData) {
-      // Student not found in students table, redirect to profile
-      return redirect("/profile");
-    }
-  }
+  //   if (studentError || !studentData) {
+  //     // Student not found in students table, redirect to profile
+  //     return redirect("/portfolio");
+  //   }
+  // }
 
   // Default redirect or if student exists in table
   return redirect("/tools");

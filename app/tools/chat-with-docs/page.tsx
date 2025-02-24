@@ -217,146 +217,154 @@ export default function Home() {
   };
 
   return (
-    <>
-      <div className="ml-4 flex h-16 items-center space-x-2">
-        <Link href="/tools" className="text-neutral-500 hover:text-neutral-700">
-          <ChevronLeft className="h-6 w-6 text-neutral-800" />
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <CardTitle className="text-neutral-800 text-3xl">
-          Chat With Docs
-        </CardTitle>
-      </div>
 
-      <div className="flex gap-4 mx-8 h-[calc(100vh-6rem)]">
-        <Card className="bg-white dark:bg-neutral-950 flex-grow">
-          <CardContent className="p-0 h-full flex flex-col">
-            <div className="flex-grow overflow-y-auto p-4 space-y-4">
-              {chat.map((msg, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    "p-4 rounded-lg max-w-[80%]",
-                    msg.role === "user"
-                      ? "ml-auto bg-neutral-500 text-white"
-                      : msg.role === "assistant"
-                        ? "bg-neutral-100 dark:bg-neutral-800"
-                        : "bg-neutral-200 dark:bg-neutral-800 italic"
-                  )}
-                >
-                  {msg.content}
-                </div>
-              ))}
-              {loading && (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="animate-spin text-neutral-500" />
-                </div>
-              )}
-            </div>
-            <div className="p-4 border-t dark:border-neutral-800">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="flex gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="dark:border-neutral-800 dark:hover:bg-neutral-800"
-                    onClick={() =>
-                      document.getElementById("file-upload")?.click()
-                    }
-                    disabled={loading}
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Chat With Docs
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Upload your documents and have interactive conversations with AI to analyze and extract insights from your content.
+          </p>
+        </div>
+
+        <div className="flex gap-4 h-[calc(100vh-16rem)]">
+          <Card className="bg-white dark:bg-neutral-950 flex-grow">
+            <CardContent className="p-0 h-full flex flex-col">
+              <div className="flex-grow overflow-y-auto p-4 space-y-4">
+                {chat.map((msg, i) => (
+                  <div
+                    key={i}
+                    className={cn(
+                      "p-4 rounded-lg max-w-[80%]",
+                      msg.role === "user"
+                        ? "ml-auto bg-neutral-500 text-white"
+                        : msg.role === "assistant"
+                          ? "bg-neutral-100 dark:bg-neutral-800"
+                          : "bg-neutral-200 dark:bg-neutral-800 italic"
+                    )}
                   >
-                    <Upload className="w-4 h-4 mr-2" />
-                    Upload Doc
-                  </Button>
-                  <input
-                    id="file-upload"
-                    type="file"
-                    className="hidden"
-                    accept=".pdf,.doc,.docx,.txt"
-                    multiple // Added multiple attribute
-                    onChange={handleFileUpload}
-                    aria-label="Upload documents"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Ask a question about your document..."
-                    className="flex-1 dark:bg-neutral-800 dark:border-neutral-800"
-                    disabled={loading}
-                  />
-                  <Button
-                    type="submit"
-                    disabled={loading || !message.trim()}
-                    className="bg-neutral-500 hover:bg-neutral-600"
-                  >
-                    <Send className="w-4 h-4" />
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="w-80 space-y-4">
-          {fetchedFiles.length > 0 && (
-            <Card className="sticky top-4">
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">
-                  Available Documents
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-2">
-                  {fetchedFiles.map((fileName, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center p-2 rounded-lg border dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                    {msg.content}
+                  </div>
+                ))}
+                {loading && (
+                  <div className="flex items-center justify-center p-4">
+                    <Loader2 className="animate-spin text-neutral-500" />
+                  </div>
+                )}
+              </div>
+              <div className="p-4 border-t dark:border-neutral-800">
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="dark:border-neutral-800 dark:hover:bg-neutral-800"
+                      onClick={() =>
+                        document.getElementById("file-upload")?.click()
+                      }
+                      disabled={loading}
                     >
-                      <Checkbox
-                        checked={selectedDocs.includes(fileName)}
-                        onCheckedChange={() =>
-                          toggleDocumentSelection(fileName)
-                        }
-                        className="mr-2"
-                      />
-                      <FileText className="h-4 w-4 mr-2 text-neutral-500" />
-                      <span className="text-sm truncate" title={fileName}>
-                        {fileName}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {files.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg font-medium">
-                  Recently Uploaded
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-col gap-2">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center p-2 rounded-lg border dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
+                      <Upload className="w-4 h-4 mr-2" />
+                      Upload Doc
+                    </Button>
+                    <input
+                      id="file-upload"
+                      type="file"
+                      className="hidden"
+                      accept=".pdf,.doc,.docx,.txt"
+                      multiple // Added multiple attribute
+                      onChange={handleFileUpload}
+                      aria-label="Upload documents"
+                    />
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      value={message}
+                      onChange={(e) => setMessage(e.target.value)}
+                      placeholder="Ask a question about your document..."
+                      className="flex-1 dark:bg-neutral-800 dark:border-neutral-800"
+                      disabled={loading}
+                    />
+                    <Button
+                      type="submit"
+                      disabled={loading || !message.trim()}
+                      className="bg-neutral-500 hover:bg-neutral-600"
                     >
-                      <FileText className="h-4 w-4 mr-2 text-neutral-500" />
-                      <span className="text-sm truncate" title={file.name}>
-                        {file.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </form>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="w-80 space-y-4">
+            {fetchedFiles.length > 0 && (
+              <Card className="sticky top-4">
+                <CardHeader>
+                  <CardTitle className="text-lg font-medium">
+                    Available Documents
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2">
+                    {fetchedFiles.map((fileName, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center p-2 rounded-lg border dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedDocs.includes(fileName)}
+                          onCheckedChange={() =>
+                            toggleDocumentSelection(fileName)
+                          }
+                          className="mr-2"
+                        />
+                        <FileText className="h-4 w-4 mr-2 text-neutral-500" />
+                        <span className="text-sm truncate" title={fileName}>
+                          {fileName}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {files.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg font-medium">
+                    Recently Uploaded
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col gap-2">
+                    {files.map((file, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center p-2 rounded-lg border dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900"
+                      >
+                        <FileText className="h-4 w-4 mr-2 text-neutral-500" />
+                        <span className="text-sm truncate" title={file.name}>
+                          {file.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }

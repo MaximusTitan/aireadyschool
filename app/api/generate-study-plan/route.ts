@@ -14,6 +14,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json()
     const {
+      country,
       grade,
       board,
       subject,
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
       availableStudyTimePerDay,
     } = body
 
-    const prompt = `Create a detailed study plan for a ${grade} grade student following the ${board} curriculum for the subject ${subject}. The plan should help achieve the following learning goal: ${learningGoal}. The syllabus/topics to cover are: ${syllabus}. Areas needing improvement: ${areasOfImprovement}. The plan should span ${availableDays} days, with ${availableStudyTimePerDay} hours available for study each day.
+    const prompt = `Create a detailed study plan for a ${grade} grade student in ${country} following the ${board} curriculum for the subject ${subject}. The plan should help achieve the following learning goal: ${learningGoal}. The syllabus/topics to cover are: ${syllabus}. Areas needing improvement: ${areasOfImprovement}. The plan should span ${availableDays} days, with ${availableStudyTimePerDay} hours available for study each day.
 
     Please format the study plan as a structured JSON array with the following structure:
     [
@@ -88,6 +89,7 @@ export async function POST(req: Request) {
     // Add metadata to the response
     const response = {
       metadata: {
+        country,
         grade,
         board,
         subject,

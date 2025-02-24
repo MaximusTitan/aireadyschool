@@ -8,68 +8,72 @@ export async function POST(req: Request) {
 
     let prompt = "";
     if (message) {
-      prompt = `Please provide your answer in markdown format. 
-Ensure that you include a top-level header, bullet points, and any necessary code blocks.
-
+      prompt = `Please provide your answer in markdown format focusing only on addressing questions that were answered incorrectly.
+      
 The student asked a follow-up question: "${message}".
 
-Context:
+Context of incorrect answers only:
 ${assessment.map((q: any, i: number) => {
   const userAnswer = userAnswers[i];
-  const correctness = 
+  const isCorrect = 
     (q.correctAnswer !== undefined && typeof q.correctAnswer === "number")
-      ? (userAnswer === q.correctAnswer ? "Correct" : "Incorrect")
+      ? userAnswer === q.correctAnswer
       : (typeof q.correctAnswer === "boolean")
-        ? (userAnswer === q.correctAnswer ? "Correct" : "Incorrect")
+        ? userAnswer === q.correctAnswer
         : (typeof q.answer === "string")
-          ? (userAnswer?.toLowerCase() === q.answer.toLowerCase() ? "Correct" : "Incorrect")
-          : "Unknown";
-  return `Q${i + 1}: ${q.question} | Your Answer: ${userAnswer} | ${correctness}`;
-}).join("\n")}
+          ? userAnswer?.toLowerCase() === q.answer.toLowerCase()
+          : false;
+          
+  if (!isCorrect) {
+    return `Q${i + 1}: ${q.question} | Your Answer: ${userAnswer}`;
+  }
+  return null;
+}).filter(Boolean).join("\n")}
 
-Please respond exclusively using markdown syntax.
-`;
+Please respond exclusively using markdown syntax.`;
     } else {
-      prompt = `Please analyze this assessment in markdown format following this structure:
+      prompt = `Please analyze only the incorrect answers in this assessment using markdown format:
 
-# Assessment Analysis
+# Assessment Review
 
-## Question-by-Question Review
+## Incorrect Answers Analysis
 ${assessment.map((q: any, i: number) => {
   const userAnswer = userAnswers[i];
+  let isCorrect = false;
   let answerDetails = '';
   
   if (q.options) { // For MCQ
-    answerDetails = `
+    isCorrect = userAnswer === q.correctAnswer;
+    answerDetails = isCorrect ? '' : `
 Options:
 ${q.options.map((opt: string, idx: number) => `${idx + 1}. ${opt}`).join('\n')}
 Student chose: ${userAnswer !== null ? q.options[userAnswer] : 'No answer'}
 Correct answer: ${q.options[q.correctAnswer]}`;
-  } else if (q.correctAnswer !== undefined && typeof q.correctAnswer === 'boolean') { // For True/False
-    answerDetails = `
+  } else if (q.correctAnswer !== undefined && typeof q.correctAnswer === 'boolean') {
+    isCorrect = userAnswer === q.correctAnswer;
+    answerDetails = isCorrect ? '' : `
 Student answered: ${userAnswer !== null ? userAnswer.toString() : 'No answer'}
 Correct answer: ${q.correctAnswer.toString()}`;
-  } else if (q.answer) { // For Fill in the blank
-    answerDetails = `
+  } else if (q.answer) {
+    isCorrect = userAnswer?.toLowerCase() === q.answer.toLowerCase();
+    answerDetails = isCorrect ? '' : `
 Student answered: ${userAnswer || 'No answer'}
 Correct answer: ${q.answer}`;
   }
 
-  return `
-Question ${i + 1}: ${q.question}
-${answerDetails}`;
-}).join('\n\n')}
+  return !isCorrect ? `
+### Question ${i + 1}: ${q.question}
+${answerDetails}` : '';
+}).filter(Boolean).join('\n\n')}
 
-For each question:
-1. Start with "### Question X:"
-2. Show the correct answer
-3. Provide a brief solution/explanation (4-5 sentences)
-4. If the student's answer was wrong, explain specifically why their chosen answer was incorrect
+For each incorrect answer:
+1. Explain why the student's answer was incorrect
+2. Provide the correct solution with explanation
+3. Suggest a relevant learning resource or example
 
-## Overall Review
-After individual questions:
-1. List key concepts that need review (bullet points)
-2. Provide improvement suggestions
+## Summary of Areas for Improvement
+1. List key concepts that need review (based only on incorrect answers)
+2. Provide specific improvement suggestions for the topics where mistakes were made
 
 Use markdown formatting for clear organization.`;
     }

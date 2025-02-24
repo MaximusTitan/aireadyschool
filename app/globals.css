@@ -8,7 +8,7 @@
 
 @layer base {
   :root {
-    --background: 16 33% 96%;
+    --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 3.9%;
@@ -139,6 +139,18 @@
 
 .prose blockquote {
   @apply border-l-4 border-gray-200 pl-4 italic my-4;
+}
+
+input {
+  background-color: white !important;
+}
+
+textarea {
+  background-color: white !important;
+}
+
+select {
+  background-color: white !important;
 }
 
 @media print {

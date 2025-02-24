@@ -12,20 +12,10 @@ import {
   TrendingUp,
   SearchIcon,
   Image,
-  School,
 } from "lucide-react";
-import { EventAnnouncements } from "./components/event-announcements";
-import { VideoScript } from "./components/video-script";
-import { SocialMediaPosts } from "./components/social-media-posts";
-import { NewsletterGenerator } from "./components/newsletter-generator";
-import { TrendAnalyzer } from "./components/trend-analyzer";
-import { KeywordResearch } from "./components/keyword-research";
-import { MarketingPoster } from "./components/marketing-poster";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
 
 export default function SchoolMarketingDashboard() {
-  const [selectedTool, setSelectedTool] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   const tools = [
@@ -34,48 +24,48 @@ export default function SchoolMarketingDashboard() {
       title: "School Event Announcements",
       description:
         "Generate engaging announcements for school events, activities, and important dates.",
-      component: <EventAnnouncements />,
+      href: "/tools/marketing-content-generator/event-announcements",
     },
     {
       icon: <Video className="w-10 h-10 text-red-600" />,
       title: "School Promotional Video Script",
       description:
         "Create compelling video scripts to showcase your school's values and achievements.",
-      component: <VideoScript />,
+      href: "/tools/marketing-content-generator/video-script",
     },
     {
       icon: <Hash className="w-10 h-10 text-purple-600" />,
       title: "School Social Media Posts",
       description:
         "Generate engaging social media content to connect with students and parents.",
-      component: <SocialMediaPosts />,
+      href: "/tools/marketing-content-generator/social-media-posts",
     },
     {
       icon: <Mail className="w-10 h-10 text-green-600" />,
       title: "School Newsletter Generator",
       description:
         "Create informative newsletters to keep parents, students, and staff updated on school activities.",
-      component: <NewsletterGenerator />,
+      href: "/tools/marketing-content-generator/newsletter-generator",
     },
     {
       icon: <TrendingUp className="w-10 h-10 text-indigo-600" />,
       title: "Education Trend Analyzer",
       description: "Identify trending topics and approaches in education.",
-      component: <TrendAnalyzer />,
+      href: "/tools/marketing-content-generator/trend-analyzer",
     },
     {
       icon: <SearchIcon className="w-10 h-10 text-pink-600" />,
       title: "Education SEO Keywords",
       description:
         "Research keywords for school website optimization and content strategy.",
-      component: <KeywordResearch />,
+      href: "/tools/marketing-content-generator/keyword-research",
     },
     {
       icon: <Image className="w-10 h-10 text-orange-600" />,
       title: "School Marketing Poster",
       description:
         "Create professional posters for school events, admissions, and announcements.",
-      component: <MarketingPoster />,
+      href: "/tools/marketing-content-generator/marketing-poster",
     },
   ];
 
@@ -105,33 +95,10 @@ export default function SchoolMarketingDashboard() {
           </div>
         </div>
 
-        {selectedTool ? (
-          <div className="space-y-6">
-            <Card className="bg-white border-gray-200 shadow-lg overflow-hidden">
-              <CardHeader className="p-6">
-                <CardTitle className="text-2xl font-bold flex items-center">
-                  <button
-                    onClick={() => setSelectedTool(null)}
-                    className="text-neutral-600 hover:text-neutral-800 transition-colors flex items-center"
-                  >
-                    <ChevronLeft className="w-6 h-6 mr-2" />
-                  </button>
-                  {tools.find((t) => t.title === selectedTool)?.title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-6">
-                {tools.find((t) => t.title === selectedTool)?.component}
-              </CardContent>
-            </Card>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTools.map((tool, index) => (
-              <Card
-                key={index}
-                className="group bg-white border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer overflow-hidden"
-                onClick={() => setSelectedTool(tool.title)}
-              >
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredTools.map((tool, index) => (
+            <Link key={index} href={tool.href}>
+              <Card className="group bg-white border-gray-200 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer overflow-hidden">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div className="p-3 bg-gray-100 rounded-xl group-hover:bg-gray-200 transition-colors duration-300">
@@ -148,9 +115,9 @@ export default function SchoolMarketingDashboard() {
                   </p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );

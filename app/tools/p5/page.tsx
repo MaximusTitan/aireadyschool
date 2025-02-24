@@ -3,7 +3,7 @@
 import Script from "next/script";
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 const SAMPLE_SKETCHES = [
   {
@@ -208,44 +208,51 @@ export default function P5Page() {
   }, [selectedSketch, scriptLoaded]);
 
   return (
-    <div className="p-4">
-      <div className="flex items-center gap-2 mb-6">
-        <Link
-          href="/tools"
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <ChevronLeft className="w-6 h-6" />
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Creative Coding Playground</h1>
-      </div>
 
-      <div className="flex gap-4">
-        <div className="w-64 bg-gray-100 p-4 rounded-lg">
-          <h2 className="text-xl font-bold mb-4">Sample Sketches</h2>
-          <div className="space-y-2">
-            {SAMPLE_SKETCHES.map((sketch, index) => (
-              <button
-                key={index}
-                className={`w-full text-left p-2 rounded ${
-                  selectedSketch === index
-                    ? "bg-blue-500 text-white"
-                    : "hover:bg-gray-200"
-                }`}
-                onClick={() => setSelectedSketch(index)}
-              >
-                {sketch.title}
-              </button>
-            ))}
-          </div>
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Creative Coding Playground
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Explore and experiment with interactive p5.js sketches to learn creative coding and visual programming concepts.
+          </p>
         </div>
 
-        <div className="flex-1">
-          <Script
-            src="//toolness.github.io/p5.js-widget/p5-widget.js"
-            strategy="afterInteractive"
-            onLoad={() => setScriptLoaded(true)}
-          />
-          <div ref={containerRef} className="p5-widget" />
+        <div className="flex gap-4">
+          <div className="w-64 bg-gray-100 dark:bg-neutral-900 p-4 rounded-lg">
+            <h2 className="text-xl font-bold mb-4">Sample Sketches</h2>
+            <div className="space-y-2">
+              {SAMPLE_SKETCHES.map((sketch, index) => (
+                <button
+                  key={index}
+                  className={`w-full text-left p-2 rounded ${
+                    selectedSketch === index
+                      ? "bg-rose-500 text-white"
+                      : "hover:bg-gray-200 dark:hover:bg-neutral-800"
+                  }`}
+                  onClick={() => setSelectedSketch(index)}
+                >
+                  {sketch.title}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1">
+            <Script
+              src="//toolness.github.io/p5.js-widget/p5-widget.js"
+              strategy="afterInteractive"
+              onLoad={() => setScriptLoaded(true)}
+            />
+            <div ref={containerRef} className="p5-widget" />
+          </div>
         </div>
       </div>
     </div>

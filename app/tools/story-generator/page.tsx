@@ -18,6 +18,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { jsPDF } from "jspdf"; // Added jsPDF import
+import { Button } from "@/components/ui/button";
 
 interface StoryResponse {
   story: string;
@@ -259,21 +260,24 @@ export default function GenerateStory() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3 max-w-6xl mx-auto mb-12">
-        <Link
-          href="/tools"
-          className="hover:bg-gray-50 p-2 rounded-full transition-all"
-        >
-          <ChevronLeft className="text-gray-900" />
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">
-          AI Story Generator
-        </h1>
-      </div>
 
-      <div className="max-w-4xl mx-auto"></div>
-        <div className="mb-16">
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Story Generator
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Create captivating stories with AI-powered storytelling and beautiful illustrations for your educational content.
+          </p>
+        </div>
+
+        <div className="max-w-4xl mx-auto">
           <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-8">
             <div>
               <label className="block text-sm font-medium mb-2">
@@ -487,5 +491,6 @@ export default function GenerateStory() {
           </div>
         </div>
       </div>
+    </div>
   );
 }

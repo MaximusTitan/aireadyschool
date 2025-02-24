@@ -1,17 +1,28 @@
-import { AssignmentEvaluator } from "./components/assignment-evaluator";
+"use client";
+
+import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { AssignmentEvaluator } from "./components/assignment-evaluator";
 
 export default function Home() {
   return (
-    <main className="container mx-auto mt-4">
-      <div className="flex items-center gap-4 mb-6">
-        <Link href="/tools" className="hover:opacity-75">
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-        <h1 className="text-3xl text-neutral-800 font-bold mb-1">Assignment Evaluator</h1>
+    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+      <Link href="/tools">
+        <Button variant="outline" className="mb-2 border-neutral-500">
+          ← Back
+        </Button>
+      </Link>
+
+      <div className="mb-8 space-y-2">
+        <h1 className="text-3xl font-bold text-rose-500">
+          Assignment Evaluator
+        </h1>
+        <p className="text-muted-foreground text-lg">
+          Evaluate answers quickly and accurately, providing instant feedback
+          and grading.
+        </p>
       </div>
       <AssignmentEvaluator />
-    </main>
+    </div>
   );
 }

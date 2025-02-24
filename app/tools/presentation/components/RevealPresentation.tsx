@@ -1,41 +1,109 @@
-"use client"
+"use client";
 
-import { useEffect, useRef, useState } from "react"
-import Reveal from "reveal.js"
-import "reveal.js/dist/reveal.css"
-import "../styles/themes.css"
-import type { Presentation, Slide } from "../types/presentation"
-import { Button } from "@/components/ui/button"
-import { Pencil, RefreshCw, Upload } from "lucide-react"
-import { regenerateImage } from "../actions/generatePresentation"
-import { toast } from "@/hooks/use-toast"
-import type RevealType from "reveal.js"
+import { useEffect, useRef, useState } from "react";
+import Reveal from "reveal.js";
+import "reveal.js/dist/reveal.css";
+import "../styles/themes.css";
+import type { Presentation, Slide } from "../types/presentation";
+import { Button } from "@/components/ui/button";
+import { Pencil, RefreshCw, Upload } from "lucide-react";
+import { regenerateImage } from "../actions/generatePresentation";
+import { toast } from "@/hooks/use-toast";
+import type RevealType from "reveal.js";
 // Add to the top of your RevealPresentation.tsx file or your global styles
-import 'reveal.js/dist/reveal.css'
-import 'reveal.js/dist/theme/white.css' // or any other theme you prefer
+import "reveal.js/dist/reveal.css";
+import "reveal.js/dist/theme/white.css"; // or any other theme you prefer
 
 interface RevealPresentationProps {
-  presentation: Presentation
-  onSave: (updatedPresentation: Presentation) => void
-  isEditing: boolean
-  theme: string
-  transition: "none" | "fade" | "slide" | "convex" | "concave" | "zoom"
+  presentation: Presentation;
+  onSave: (updatedPresentation: Presentation) => void;
+  isEditing: boolean;
+  theme: string;
+  transition: "none" | "fade" | "slide" | "convex" | "concave" | "zoom";
 }
 
-export function RevealPresentation({ presentation, onSave, isEditing, theme, transition }: RevealPresentationProps) {
-  const revealRef = useRef<HTMLDivElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [editedSlides, setEditedSlides] = useState<Slide[]>(presentation.slides)
-  const [scale, setScale] = useState(1)
-  const [isFullscreen, setIsFullscreen] = useState(false)
+export function RevealPresentation({
+  presentation,
+  onSave,
+  isEditing,
+  theme,
+  transition,
+}: RevealPresentationProps) {
+  const revealRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [editedSlides, setEditedSlides] = useState<Slide[]>(
+    presentation.slides
+  );
+  const [scale, setScale] = useState(1);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [activeEditField, setActiveEditField] = useState<{
-    slideIndex: number
-    field: string
-  } | null>(null)
-  const [isRegeneratingImage, setIsRegeneratingImage] = useState(false)
+    slideIndex: number;
+    field: string;
+  } | null>(null);
+  const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
+  const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const revealInstance = useRef<RevealType.Api | null>(null);
+  const [initializing, setInitializing] = useState(true);
+  const lastKnownSlideIndex = useRef(0);
 
-  const SLIDE_WIDTH = 1280
-  const SLIDE_HEIGHT = 720
+  const SLIDE_WIDTH = 1280;
+  const SLIDE_HEIGHT = 720;
+
+  const calculateDimensions = () => {
+    if (isFullscreen) {
+      const windowRatio = window.innerWidth / window.innerHeight;
+      const presentationRatio = SLIDE_WIDTH / SLIDE_HEIGHT;
+
+      if (windowRatio > presentationRatio) {
+        // Window is wider than needed
+        const height = window.innerHeight;
+        const width = height * presentationRatio;
+        return {
+          width,
+          height,
+          scale: height / SLIDE_HEIGHT,
+        };
+      } else {
+        // Window is taller than needed
+        const width = window.innerWidth;
+        const height = width / presentationRatio;
+        return {
+          width,
+          height,
+          scale: width / SLIDE_WIDTH,
+        };
+      }
+    } else {
+      // Preview mode
+      const containerWidth = containerRef.current?.offsetWidth || SLIDE_WIDTH;
+      const previewScale = containerWidth / SLIDE_WIDTH;
+      return {
+        width: SLIDE_WIDTH,
+        height: SLIDE_HEIGHT,
+        scale: previewScale,
+      };
+    }
+  };
+
+  // Handle resize for both modes
+  useEffect(() => {
+    const handleResize = () => {
+      const { scale } = calculateDimensions();
+      setScale(scale);
+
+      if (revealInstance.current) {
+        revealInstance.current.configure({
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
+        });
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+    handleResize(); // Initial calculation
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, [isFullscreen]);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -53,26 +121,51 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
 
     return () => {
       document.removeEventListener("fullscreenchange", handleFullscreenChange);
-      document.removeEventListener("webkitfullscreenchange", handleFullscreenChange);
-      document.removeEventListener("msfullscreenchange", handleFullscreenChange);
+      document.removeEventListener(
+        "webkitfullscreenchange",
+        handleFullscreenChange
+      );
+      document.removeEventListener(
+        "msfullscreenchange",
+        handleFullscreenChange
+      );
     };
   }, []);
 
   useEffect(() => {
     let deck: RevealType.Api | null = null;
-    let cleanup = false;
 
     const initializeReveal = async () => {
-      if (!revealRef.current || !containerRef.current || cleanup) return;
+      if (!revealRef.current || !containerRef.current) return;
 
       try {
-        const themeClasses = ["modern", "corporate", "creative", "minimal", "dark"]
-          .map((t) => `theme-${t}`);
+        const themeClasses = [
+          "modern",
+          "corporate",
+          "creative",
+          "minimal",
+          "dark",
+        ].map((t) => `theme-${t}`);
+
+        // Safely destroy existing instance
+        if (
+          revealInstance.current &&
+          typeof revealInstance.current.destroy === "function"
+        ) {
+          try {
+            revealInstance.current.destroy();
+          } catch (e) {
+            console.warn("Error destroying previous instance:", e);
+          }
+        }
+
+        const { width, height, scale } = calculateDimensions();
+        setScale(scale);
 
         // Initialize Reveal with safeguards
         const config = {
-          width: isFullscreen ? window.innerWidth : SLIDE_WIDTH,
-          height: isFullscreen ? window.innerHeight : SLIDE_HEIGHT,
+          width: SLIDE_WIDTH,
+          height: SLIDE_HEIGHT,
           margin: 0,
           center: true,
           hash: false,
@@ -90,24 +183,44 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
           maxScale: 2.0,
           viewDistance: 4,
           display: "block",
-          // Add these to prevent event listener issues
-          dependencies: [],
-          plugins: []
+          fragmentInURL: false,
+          transitionSpeed: "fast" as "fast", // Fix: Type assertion for transitionSpeed
+          backgroundTransition: "fade" as const,
+          deck: {
+            width,
+            height,
+          },
         };
 
         deck = new Reveal(revealRef.current, config);
+        revealInstance.current = deck;
 
-        // Initialize and handle classes after successful initialization
+        // Add event listener before initialization
+        deck.addEventListener("slidechanged", (event: any) => {
+          const slideIndex = event.indexh;
+          lastKnownSlideIndex.current = slideIndex;
+          setCurrentSlideIndex(slideIndex);
+        });
+
+        // Initialize and sync theme
         await deck.initialize();
 
-        if (!cleanup && revealRef.current && containerRef.current) {
+        // Apply theme after initialization
+        if (revealRef.current && containerRef.current) {
           revealRef.current.classList.remove(...themeClasses);
           revealRef.current.classList.add(`theme-${theme}`);
           containerRef.current.classList.remove(...themeClasses);
           containerRef.current.classList.add(`theme-${theme}`);
         }
+
+        // Restore slide position
+        if (!initializing && lastKnownSlideIndex.current > 0) {
+          deck.slide(lastKnownSlideIndex.current, 0, 0);
+        }
+
+        setInitializing(false);
       } catch (error) {
-        console.error('Error initializing Reveal:', error);
+        console.error("Error initializing Reveal:", error);
       }
     };
 
@@ -115,92 +228,101 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
 
     // Cleanup function
     return () => {
-      cleanup = true;
-      if (deck) {
+      if (deck && typeof deck.destroy === "function") {
         try {
-          // Remove event listeners manually before destroying
-          const container = revealRef.current;
-          if (container) {
-            const events = ['touchstart', 'touchmove', 'touchend', 'click', 'keydown'];
-            events.forEach(event => {
-              container.removeEventListener(event, () => {});
-            });
-          }
-          
           deck.destroy();
-        } catch (error) {
-          // Ignore cleanup errors
-          console.warn('Non-critical error during Reveal cleanup:', error);
+        } catch (e) {
+          console.warn("Error during cleanup:", e);
         }
       }
+      revealInstance.current = null;
     };
   }, [isFullscreen, theme, transition, editedSlides]);
 
-  const handleSlideChange = (index: number, field: keyof Slide, value: string | string[]) => {
-    const updatedSlides = [...editedSlides]
-    updatedSlides[index] = { ...updatedSlides[index], [field]: value }
-    setEditedSlides(updatedSlides)
-    onSave({ ...presentation, slides: updatedSlides })
-  }
+  const handleSlideChange = (
+    index: number,
+    field: keyof Slide,
+    value: string | string[]
+  ) => {
+    const updatedSlides = [...editedSlides];
+    updatedSlides[index] = { ...updatedSlides[index], [field]: value };
+    setEditedSlides(updatedSlides);
+
+    // Store current position before save
+    const currentIndex = lastKnownSlideIndex.current;
+
+    onSave({ ...presentation, slides: updatedSlides });
+
+    // Restore position after save
+    if (revealInstance.current) {
+      setTimeout(() => {
+        revealInstance.current?.slide(currentIndex, 0, 0);
+      }, 0);
+    }
+  };
 
   const handleRegenerateImage = async (index: number) => {
-    setIsRegeneratingImage(true)
+    setIsRegeneratingImage(true);
     try {
-      const slide = editedSlides[index]
-      const newImage = await regenerateImage(slide.title, theme)
-      const updatedSlides = [...editedSlides]
-      updatedSlides[index] = { ...slide, image: newImage }
-      setEditedSlides(updatedSlides)
-      onSave({ ...presentation, slides: updatedSlides })
+      const slide = editedSlides[index];
+      const newImage = await regenerateImage(slide.title, theme);
+      const updatedSlides = [...editedSlides];
+      updatedSlides[index] = { ...slide, image: newImage };
+      setEditedSlides(updatedSlides);
+      onSave({ ...presentation, slides: updatedSlides });
       toast({
         title: "Image Regenerated",
         description: "The slide image has been successfully regenerated.",
-      })
+      });
     } catch (error) {
-      console.error("Error regenerating image:", error)
+      console.error("Error regenerating image:", error);
       toast({
         title: "Error",
         description: "Failed to regenerate the image. Please try again.",
         variant: "destructive",
-      })
+      });
     } finally {
-      setIsRegeneratingImage(false)
+      setIsRegeneratingImage(false);
     }
-  }
+  };
 
   const handleUploadImage = async (index: number) => {
-    const input = document.createElement("input")
-    input.type = "file"
-    input.accept = "image/*"
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
     input.onchange = async (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0]
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         try {
-          const reader = new FileReader()
+          const reader = new FileReader();
           reader.onload = async (e) => {
-            const imageDataUrl = e.target?.result as string
-            const updatedSlides = [...editedSlides]
-            updatedSlides[index] = { ...updatedSlides[index], image: imageDataUrl }
-            setEditedSlides(updatedSlides)
-            onSave({ ...presentation, slides: updatedSlides })
+            const imageDataUrl = e.target?.result as string;
+            const updatedSlides = [...editedSlides];
+            updatedSlides[index] = {
+              ...updatedSlides[index],
+              image: imageDataUrl,
+            };
+            setEditedSlides(updatedSlides);
+            onSave({ ...presentation, slides: updatedSlides });
             toast({
               title: "Image Uploaded",
-              description: "Your image has been successfully uploaded to the slide.",
-            })
-          }
-          reader.readAsDataURL(file)
+              description:
+                "Your image has been successfully uploaded to the slide.",
+            });
+          };
+          reader.readAsDataURL(file);
         } catch (error) {
-          console.error("Error uploading image:", error)
+          console.error("Error uploading image:", error);
           toast({
             title: "Error",
             description: "Failed to upload the image. Please try again.",
             variant: "destructive",
-          })
+          });
         }
       }
-    }
-    input.click()
-  }
+    };
+    input.click();
+  };
 
   const EditableText = ({
     value,
@@ -211,41 +333,43 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
     multiline = false,
     style,
   }: {
-    value: string
-    onChange: (value: string) => void
-    slideIndex: number
-    field: string
-    className?: string
-    multiline?: boolean
-    style?: React.CSSProperties
+    value: string;
+    onChange: (value: string) => void;
+    slideIndex: number;
+    field: string;
+    className?: string;
+    multiline?: boolean;
+    style?: React.CSSProperties;
   }) => {
-    const isActive = activeEditField?.slideIndex === slideIndex && activeEditField?.field === field
-    const [editValue, setEditValue] = useState(value)
+    const isActive =
+      activeEditField?.slideIndex === slideIndex &&
+      activeEditField?.field === field;
+    const [editValue, setEditValue] = useState(value);
 
     const handleDoubleClick = () => {
       if (isEditing) {
-        setActiveEditField({ slideIndex, field })
-        setEditValue(value)
+        setActiveEditField({ slideIndex, field });
+        setEditValue(value);
       }
-    }
+    };
 
     const handleBlur = () => {
       if (editValue !== value) {
-        onChange(editValue)
+        onChange(editValue);
       }
-      setActiveEditField(null)
-    }
+      setActiveEditField(null);
+    };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
       if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault()
-        handleBlur()
+        e.preventDefault();
+        handleBlur();
       }
       if (e.key === "Escape") {
-        setEditValue(value)
-        setActiveEditField(null)
+        setEditValue(value);
+        setActiveEditField(null);
       }
-    }
+    };
 
     if (!isActive) {
       return (
@@ -268,9 +392,13 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
               <Pencil className="h-4 w-4" />
             </Button>
           )}
-          {multiline ? <div className="whitespace-pre-wrap">{value}</div> : <div>{value}</div>}
+          {multiline ? (
+            <div className="whitespace-pre-wrap">{value}</div>
+          ) : (
+            <div>{value}</div>
+          )}
         </div>
-      )
+      );
     }
 
     return multiline ? (
@@ -298,15 +426,17 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
         style={style}
         autoFocus
       />
-    )
-  }
+    );
+  };
 
   const renderSlideContent = (slide: Slide, index: number) => {
-    const isTextLeft = slide.layout === 'textLeft'
+    const isTextLeft = slide.layout === "textLeft";
 
     return (
       <div className="flex h-full" data-theme={theme}>
-        <div className={`w-1/2 flex flex-col justify-start ${isTextLeft ? "pr-8" : "pl-8"} p-12`}>
+        <div
+          className={`w-1/2 flex flex-col justify-start ${isTextLeft ? "pr-8" : "pl-8"} p-12`}
+        >
           <EditableText
             value={slide.title}
             onChange={(value) => handleSlideChange(index, "title", value)}
@@ -329,9 +459,9 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
                   <EditableText
                     value={point}
                     onChange={(value) => {
-                      const newBulletPoints = [...(slide.bulletPoints || [])]
-                      newBulletPoints[pointIndex] = value
-                      handleSlideChange(index, "bulletPoints", newBulletPoints)
+                      const newBulletPoints = [...(slide.bulletPoints || [])];
+                      newBulletPoints[pointIndex] = value;
+                      handleSlideChange(index, "bulletPoints", newBulletPoints);
                     }}
                     slideIndex={index}
                     field={`bulletPoint-${pointIndex}`}
@@ -342,7 +472,9 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
             </ul>
           )}
         </div>
-        <div className={`w-1/2 flex flex-col items-center justify-center ${isTextLeft ? "pl-8" : "pr-8"} p-12`}>
+        <div
+          className={`w-1/2 flex flex-col items-center justify-center ${isTextLeft ? "pl-8" : "pr-8"} p-12`}
+        >
           <div className="relative w-full">
             {slide.image && (
               <img
@@ -362,7 +494,11 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
                   <RefreshCw className="h-4 w-4 mr-2" />
                   Regenerate Image
                 </Button>
-                <Button size="sm" variant="secondary" onClick={() => handleUploadImage(index)}>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => handleUploadImage(index)}
+                >
                   <Upload className="h-4 w-4 mr-2" />
                   Upload Image
                 </Button>
@@ -371,29 +507,40 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
           </div>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
   return (
     <div
       ref={containerRef}
-      className={`${isFullscreen ? "fixed inset-0 z-50 bg-black" : "w-full h-full p-2"}`}
+      className={`${isFullscreen ? "fixed inset-0 z-50 bg-black flex items-center justify-center" : "w-full h-full p-2"}`}
       style={{
         minHeight: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
         aspectRatio: isFullscreen ? "auto" : "16/9",
       }}
     >
       <div
-        className={`w-full h-full flex items-center justify-center ${isFullscreen ? "min-h-screen" : ""}`}
+        className={`${isFullscreen ? "w-full h-full flex items-center justify-center" : ""}`}
         style={{
-          width: isFullscreen ? "100vw" : `${SLIDE_WIDTH}px`,
-          height: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
-          transform: isFullscreen ? "none" : `scale(${scale})`,
-          transformOrigin: "center",
-          margin: "0 auto",
+          ...(isFullscreen && {
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            width: "100%",
+            height: "100%",
+          }),
         }}
       >
-        <div ref={revealRef} className={`reveal w-full h-full theme-${theme}`}>
+        <div
+          ref={revealRef}
+          className={`reveal theme-${theme}`}
+          style={{
+            width: isFullscreen ? "100%" : `${SLIDE_WIDTH}px`,
+            height: isFullscreen ? "100%" : `${SLIDE_HEIGHT}px`,
+            transform: isFullscreen ? "none" : `scale(${scale})`,
+            transformOrigin: "center",
+          }}
+        >
           <div className="slides">
             {editedSlides.map((slide, index) => (
               <section
@@ -411,5 +558,5 @@ export function RevealPresentation({ presentation, onSave, isEditing, theme, tra
         </div>
       </div>
     </div>
-  )
+  );
 }

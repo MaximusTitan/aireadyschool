@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { PasswordInput } from "@/components/PasswordInput"; // Added import
 import Image from "next/image"; // Added import
-import logo from "@/public/logo.webp";
+import newLogo from "@/public/newLogo.png";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/utils/supabase/client";
 
 interface LoginProps {
   searchParams: Promise<Message>;
@@ -17,6 +19,21 @@ interface LoginProps {
 
 export default function Login({ searchParams }: LoginProps) {
   const [message, setMessage] = useState<Message | null>(null);
+  const router = useRouter();
+  const supabase = createClient();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      if (session) {
+        router.replace("/tools");
+      }
+    };
+
+    checkSession();
+  }, [router, supabase]);
 
   // Use useEffect to resolve the searchParams Promise
   useEffect(() => {
@@ -37,10 +54,10 @@ export default function Login({ searchParams }: LoginProps) {
       >
         <div className="flex justify-center w-full">
           <Image
-            src={logo}
+            src={newLogo}
             alt="AI Ready School"
-            width={150}
-            height={150}
+            width={200}
+            height={200}
             className="mx-auto relative"
             priority
           />
@@ -55,7 +72,7 @@ export default function Login({ searchParams }: LoginProps) {
           </Link>
         </p> */}
 
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 mt-2">
           <div className="flex flex-col gap-1">
             <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">
               Email

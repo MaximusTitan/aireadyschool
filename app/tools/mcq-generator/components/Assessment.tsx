@@ -1,11 +1,15 @@
+"use client";
+
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import MCQQuestion from "./MCQQuestion";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import FillInTheBlankQuestion from "./FillInTheBlankQuestion";
-import ShortQuestion from "./ShortQuestion"; // new import
+import ShortQuestion from "./ShortQuestion";
 import { downloadAssessment } from "@/utils/exportAssessment";
-import { Download } from "lucide-react";
+import { Download, Edit, Save } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
 interface AssessmentProps {
@@ -14,8 +18,8 @@ interface AssessmentProps {
   onSubmit: (answers: any[]) => void;
   showResults: boolean;
   userAnswers: any[];
-  assessmentId?: string; // Make assessmentId optional
-  topic: string; // Add this prop
+  assessmentId?: string;
+  topic: string;
 }
 
 export default function Assessment({
@@ -34,12 +38,15 @@ export default function Assessment({
   );
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
-  // New state for summary explanation and chat
   const [explanation, setExplanation] = useState("");
   const [chatInput, setChatInput] = useState("");
   const [chatHistory, setChatHistory] = useState<string[]>([]);
-  const [chatContext, setChatContext] = useState<string>(""); // Add this new state
+  const [chatContext, setChatContext] = useState<string>("");
   const [shortAnswerScores, setShortAnswerScores] = useState<number[]>([]);
+  const [editMode, setEditMode] = useState(false);
+  const [editedAssessment, setEditedAssessment] = useState(assessment);
+  const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
 
   useEffect(() => {
     setAnswers(
@@ -49,7 +56,10 @@ export default function Assessment({
     );
   }, [userAnswers, assessment]);
 
-  // New effect to evaluate short answer questions when results are shown
+  useEffect(() => {
+    setEditedAssessment(assessment);
+  }, [assessment]);
+
   useEffect(() => {
     if (showResults && assessmentType === "shortanswer") {
       const evaluateAnswers = async () => {
@@ -81,10 +91,8 @@ export default function Assessment({
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     const newAnswers = [...answers];
     if (assessmentType === "mcq") {
-      // For MCQ, store the numeric index
       newAnswers[questionIndex] = typeof answer === "number" ? answer : null;
     } else {
-      // For other types, store the answer as is
       newAnswers[questionIndex] = answer;
     }
     setAnswers(newAnswers);
@@ -104,10 +112,16 @@ export default function Assessment({
       if (!question) return score;
       if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
         return score + (answer === question.correctAnswer ? 1 : 0);
-      } else if (assessmentType === "truefalse" && question.correctAnswer !== undefined) {
+      } else if (
+        assessmentType === "truefalse" &&
+        question.correctAnswer !== undefined
+      ) {
         return score + (answer === question.correctAnswer ? 1 : 0);
       } else if (assessmentType === "fillintheblank" && question.answer) {
-        return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
+        return (
+          score +
+          (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
+        );
       } else if (assessmentType === "shortanswer") {
         return score + (shortAnswerScores[index] || 0);
       }
@@ -147,9 +161,13 @@ export default function Assessment({
     }
   };
 
-  // New function to fetch summary explanation
-  const fetchSummaryExplanation = async (followUpMessage?: string) => {
+  const fetchSummaryExplanation = async (followUpMessage?: string): Promise<void> => {
     try {
+      if (followUpMessage) {
+        setIsLoadingChat(true);
+      } else {
+        setIsLoadingAnalysis(true);
+      }
       const payload: any = { assessment, userAnswers: answers };
       if (followUpMessage) {
         payload.message = followUpMessage;
@@ -162,17 +180,22 @@ export default function Assessment({
       const data = await response.json();
       if (data.explanation) {
         if (followUpMessage) {
-          // Only show follow-up messages in chat history
-          setChatHistory((prev) => [...prev, `You: ${followUpMessage}`, `Bot: ${data.explanation}`]);
+          setChatHistory((prev) => [
+            ...prev,
+            `You: ${followUpMessage}`,
+            `Bot: ${data.explanation}`,
+          ]);
         } else {
-          // Store initial analysis separately
           setExplanation(data.explanation);
-          setChatContext(data.explanation); // Save context but don't show in chat
-          setChatHistory([]); // Reset chat history when getting new explanation
+          setChatContext(data.explanation);
+          setChatHistory([]);
         }
       }
     } catch (error) {
       console.error("Error fetching summary:", error);
+    } finally {
+      setIsLoadingChat(false);
+      setIsLoadingAnalysis(false);
     }
   };
 
@@ -183,70 +206,218 @@ export default function Assessment({
     }
   };
 
+  const handleEdit = (index: number, field: string, value: string) => {
+    const newAssessment = [...editedAssessment];
+    newAssessment[index] = { ...newAssessment[index], [field]: value };
+    setEditedAssessment(newAssessment);
+  };
+
+  const handleOptionEdit = (
+    questionIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
+    const newAssessment = [...editedAssessment];
+    newAssessment[questionIndex].options[optionIndex] = value;
+    setEditedAssessment(newAssessment);
+  };
+
+  const saveEdits = async () => {
+    setIsSaving(true);
+    try {
+      const response = await fetch("/api/generate-assessment", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: assessmentId,
+          questions: editedAssessment,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update assessment");
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setEditMode(false);
+        // Update the assessment state with the edited version
+        setEditedAssessment(data.data[0].questions);
+        setSaveError("");
+        console.log("Assessment updated successfully:", data.data[0].questions);
+      } else {
+        throw new Error("Failed to update assessment");
+      }
+    } catch (error) {
+      console.error("Error updating assessment:", error);
+      setSaveError("Failed to update assessment. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const renderQuestion = (question: any, index: number) => {
+    if (editMode) {
+      return (
+        <div key={index} className="border rounded-lg p-4 mb-4">
+          <Textarea
+            value={question.question}
+            onChange={(e) => handleEdit(index, "question", e.target.value)}
+            className="mb-2"
+          />
+          {assessmentType === "mcq" && (
+            <div>
+              {question.options.map((option: string, optionIndex: number) => (
+                <Input
+                  key={optionIndex}
+                  value={option}
+                  onChange={(e) =>
+                    handleOptionEdit(index, optionIndex, e.target.value)
+                  }
+                  className="mb-1"
+                />
+              ))}
+            </div>
+          )}
+          {(assessmentType === "truefalse" ||
+            assessmentType === "fillintheblank" ||
+            assessmentType === "shortanswer") && (
+            <Input
+              value={question.answer}
+              onChange={(e) => handleEdit(index, "answer", e.target.value)}
+              className="mt-2"
+            />
+          )}
+        </div>
+      );
+    } else {
+      switch (assessmentType) {
+        case "mcq":
+          return (
+            <MCQQuestion
+              key={index}
+              question={editedAssessment[index]}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+            />
+          );
+        case "truefalse":
+          return (
+            <TrueFalseQuestion
+              key={index}
+              question={editedAssessment[index]}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+            />
+          );
+        case "fillintheblank":
+          return (
+            <FillInTheBlankQuestion
+              key={index}
+              question={editedAssessment[index]}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+            />
+          );
+        case "shortanswer":
+          return (
+            <ShortQuestion
+              key={index}
+              question={editedAssessment[index]}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+              evaluatedScore={shortAnswerScores[index]}
+            />
+          );
+        default:
+          return null;
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
-      <div className="flex justify-end mb-4">
-        <Button 
-          onClick={() => downloadAssessment(assessment, assessmentType, topic, 'pdf', showResults)}
+      <div className="flex justify-between items-center mb-4">
+        <Button
+          onClick={() =>
+            downloadAssessment(
+              assessment,
+              assessmentType,
+              topic,
+              "pdf",
+              showResults
+            )
+          }
           className="bg-neutral-900 hover:bg-neutral-700"
         >
           <Download className="mr-2 h-4 w-4" />
           Download {showResults ? "PDF with Answers" : "Questions PDF"}
         </Button>
+        <Button
+          onClick={() => {
+            if (editMode) {
+              saveEdits();
+            } else {
+              setEditMode(true);
+            }
+          }}
+          className="bg-black hover:bg-rose-500"
+        >
+          {editMode ? (
+            <Save className="mr-2 h-4 w-4" />
+          ) : (
+            <Edit className="mr-2 h-4 w-4" />
+          )}
+          {editMode ? "Save Changes" : "Edit Questions"}
+        </Button>
       </div>
 
-      {assessment.map((question, index) => (
-        <div key={index} className="border rounded-lg p-4">
-          {assessmentType === "mcq" && (
-            <MCQQuestion
-              question={question}
-              index={index}
-              userAnswer={answers[index]}
-              onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
-            />
+      {editMode ? (
+        <div>
+          {editedAssessment.map((question, index) =>
+            renderQuestion(question, index)
           )}
-          {assessmentType === "truefalse" && (
-            <TrueFalseQuestion
-              question={question}
-              index={index}
-              userAnswer={answers[index]}
-              onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
-            />
+          <Button
+            onClick={saveEdits}
+            className="mt-4 bg-rose-600 hover:bg-rose-500"
+            disabled={isSaving}
+          >
+            {isSaving ? "Saving..." : "Save Edits"}
+          </Button>
+        </div>
+      ) : (
+        <div>
+          {editedAssessment.map((question, index) =>
+            renderQuestion(question, index)
           )}
-          {assessmentType === "fillintheblank" && (
-            <FillInTheBlankQuestion
-              question={question}
-              index={index}
-              userAnswer={answers[index]}
-              onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
-            />
-          )}
-          {assessmentType === "shortanswer" && (  // new branch for short answer questions
-            <ShortQuestion
-              question={question}
-              index={index}
-              userAnswer={answers[index]}
-              onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
-              evaluatedScore={shortAnswerScores[index]} // pass evaluated score
-            />
+          {!showResults && (
+            <Button
+              onClick={handleSubmit}
+              className="w-full bg-neutral-500 hover:bg-neutral-600"
+            >
+              Submit Answers
+            </Button>
           )}
         </div>
-      ))}
-      {!showResults ? (
-        <Button
-          onClick={handleSubmit}
-          className="w-full bg-neutral-500 hover:bg-neutral-600"
-        >
-          Submit Answers
-        </Button>
-      ) : (
+      )}
+
+      {showResults && !editMode && (
         <div className="text-center">
           <h2 className="text-2xl font-bold">
-            Your Score: {calculateScore()} / {assessmentType === "shortanswer" ? assessment.length * 5 : assessment.length}
+            Your Score: {calculateScore()} /{" "}
+            {assessmentType === "shortanswer"
+              ? assessment.length * 5
+              : assessment.length}
           </h2>
           <div className="flex justify-center gap-2 mt-4">
             <Button
@@ -256,8 +427,16 @@ export default function Assessment({
             >
               {isSaving ? "Saving..." : "Save Results"}
             </Button>
-            <Button 
-              onClick={() => downloadAssessment(assessment, assessmentType, topic, 'pdf', true)}
+            <Button
+              onClick={() =>
+                downloadAssessment(
+                  assessment,
+                  assessmentType,
+                  topic,
+                  "pdf",
+                  true
+                )
+              }
               className="bg-neutral-900 hover:bg-neutral-700"
             >
               <Download className="mr-2 h-4 w-4" />
@@ -271,19 +450,20 @@ export default function Assessment({
             </Button>
           </div>
           {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
-          {/* New section for summary explanation and chat */}
           <div className="mt-8 border-t pt-4">
             <Button
               onClick={() => fetchSummaryExplanation()}
-              className="bg-blue-600 hover:bg-blue-500 text-white"
+              className="bg-rose-600 hover:bg-rose-500 text-white"
+              disabled={isLoadingAnalysis}
             >
-              Get Summary Explanation
+              {isLoadingAnalysis ? "Loading..." : "Get Analysis"}
             </Button>
             {explanation && (
               <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
                 <h3 className="font-semibold mb-2">Summary Explanation:</h3>
-                {/* Changed className to reduce extra spacing */}
-                <ReactMarkdown className="prose prose-sm leading-tight">{explanation}</ReactMarkdown>
+                <ReactMarkdown className="prose prose-sm leading-tight">
+                  {explanation}
+                </ReactMarkdown>
               </div>
             )}
             {chatHistory.length > 0 && (
@@ -292,8 +472,9 @@ export default function Assessment({
                 <div className="space-y-2">
                   {chatHistory.map((msg, idx) => (
                     <div key={idx} className="p-2 rounded bg-white shadow-sm">
-                      {/* Changed className to reduce extra spacing */}
-                      <ReactMarkdown className="prose prose-sm leading-tight">{msg}</ReactMarkdown>
+                      <ReactMarkdown className="prose prose-sm leading-tight">
+                        {msg}
+                      </ReactMarkdown>
                     </div>
                   ))}
                 </div>
@@ -306,9 +487,14 @@ export default function Assessment({
                 onChange={(e) => setChatInput(e.target.value)}
                 placeholder="Ask a follow-up question..."
                 className="border rounded p-2 flex-grow"
+                disabled={isLoadingChat}
               />
-              <Button onClick={handleChatSubmit} className="bg-green-600 hover:bg-green-500 text-white">
-                Send
+              <Button
+                onClick={handleChatSubmit}
+                className="bg-rose-600 hover:bg-rose-500 text-white"
+                disabled={isLoadingChat}
+              >
+                {isLoadingChat ? "Sending..." : "Send"}
               </Button>
             </div>
           </div>

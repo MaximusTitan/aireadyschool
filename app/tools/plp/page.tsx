@@ -598,21 +598,33 @@ const StudentAssessmentForm = () => {
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!name) newErrors.name = "Name is required";
-    if (!age) newErrors.age = "Age is required";
+    if (!name.trim()) newErrors.name = "Name is required";
+    if (!age.trim()) newErrors.age = "Age is required";
+    if (!gender) newErrors.gender = "Gender is required";
     if (!grade) newErrors.grade = "Grade is required";
     if (!board) newErrors.board = "Board is required";
+    if (!nationality.trim()) newErrors.nationality = "Nationality is required";
     if (selectedCognitiveParams.length === 0)
       newErrors.cognitive = "Select at least one cognitive parameter";
     if (!selectedSubject) newErrors.subject = "Subject is required";
     if (selectedKnowledgeParams.length === 0)
       newErrors.knowledge = "Select at least one knowledge parameter";
-    if (!goals) newErrors.goals = "Goals are required";
-    if (!timeline) {
-      newErrors.timeline = "Timeline is required";
-    } else if (timeline === "custom" && !customTimeline) {
-      newErrors.timeline = "Please enter a custom timeline";
-    }
+    if (!goals.trim()) newErrors.goals = "Goals are required";
+    if (!timeline) newErrors.timeline = "Timeline is required";
+    if (timeline === "custom" && !customTimeline.trim())
+      newErrors.customTimeline = "Custom timeline is required";
+    if (!topic.trim()) newErrors.topic = "Topic is required";
+    if (!otherInfo.trim())
+      newErrors.otherInfo = "Additional information is required";
+
+    // Validate ratings for selected parameters
+    [...selectedCognitiveParams, ...selectedKnowledgeParams].forEach(
+      (param) => {
+        if (!ratings[param]) {
+          newErrors[`rating_${param}`] = `Rating required for ${param}`;
+        }
+      }
+    );
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -625,12 +637,12 @@ const StudentAssessmentForm = () => {
         description: "Please fill in all required fields",
         variant: "destructive",
       });
-      return false; // Return false to indicate failure
+      return false;
     }
 
     setIsLoading(true);
-    const effectiveTimeline = getEffectiveTimeline();
     try {
+      const effectiveTimeline = getEffectiveTimeline();
       const response = await fetch("/api/generate-plp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -663,22 +675,27 @@ const StudentAssessmentForm = () => {
         }),
       });
 
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate learning plan");
+      }
+
       const plan = await response.json();
       setLearningPlan(plan);
-      setCurrentStep(3); // Immediately move to step 3 after successful generation
+      setCurrentStep(3);
       toast({
         title: "Success",
         description: "Learning plan generated successfully",
       });
-      return true; // Return true to indicate success
-    } catch (error) {
-      console.error(error);
+      return true;
+    } catch (error: any) {
+      console.error("Error:", error);
       toast({
         title: "Error",
-        description: "Failed to generate learning plan",
+        description: error.message || "Failed to generate learning plan",
         variant: "destructive",
       });
-      return false; // Return false to indicate failure
+      return false;
     } finally {
       setIsLoading(false);
     }
@@ -705,51 +722,61 @@ const StudentAssessmentForm = () => {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Update print styles */}
-      <style jsx global>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .print-content,
-          .print-content * {
-            visibility: visible;
-          }
-          .print-content {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100%;
-          }
-          .no-print {
-            display: none;
-          }
-          @page {
-            size: auto;
-            margin: 20mm;
-          }
-        }
-      `}</style>
-
-      {/* Existing header */}
-      <div className="flex items-center gap-4 mb-6 no-print">
-        <Link href="/tools" className="hover:opacity-75">
-          <ChevronLeft className="h-6 w-6" />
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <h1 className="text-2xl font-bold">Personalized Learning Planner</h1>
-      </div>
 
-      {/* Step indicator */}
-      <div className="no-print">
-        <StepIndicator steps={steps} currentStep={currentStep} />
-      </div>
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">
+            Personalized Learning Planner
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            Create comprehensive learning plans tailored to individual student needs, goals, and progress tracking.
+          </p>
+        </div>
 
-      {/* Loading skeleton */}
-      {isLoading && <LoadingSkeleton />}
+        {/* Add print styles */}
+        <style type="text/css" media="print">
+          {`
+          @media print {
+            body * {
+              visibility: hidden;
+            }
+            .print-content,
+            .print-content * {
+              visibility: visible;
+            }
+            .print-content {
+              position: absolute;
+              left: 0;
+              top: 0;
+              width: 100%;
+            }
+            .no-print {
+              display: none;
+            }
+            @page {
+              size: auto;
+              margin: 20mm;
+            }
+          }
+        `}
+        </style>
 
-      {!isLoading && (
-        <>
+        {/* Step indicator */}
+        <div className="no-print">
+          <StepIndicator steps={steps} currentStep={currentStep} />
+        </div>
+
+        {/* Rest of the existing content */}
+        {isLoading && <LoadingSkeleton />}
+        
+        {!isLoading && (
+          <>
           {/* Steps 0-2 with no-print class */}
           <div className="no-print">
             {currentStep === 0 && (
@@ -1116,9 +1143,15 @@ const StudentAssessmentForm = () => {
                     </div>
 
                     <div className="space-y-4">
-                      <Label htmlFor="topic" className="text-lg font-semibold">
-                        Specific Topic Focus
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Label
+                          htmlFor="topic"
+                          className="text-lg font-semibold"
+                        >
+                          Specific Topic Focus
+                        </Label>
+                        <span className="text-red-500">*</span>
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         Specify any particular topics or subjects that need
                         special attention
@@ -1132,12 +1165,15 @@ const StudentAssessmentForm = () => {
                     </div>
 
                     <div className="space-y-4">
-                      <Label
-                        htmlFor="otherInfo"
-                        className="text-lg font-semibold"
-                      >
-                        Additional Information
-                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Label
+                          htmlFor="otherInfo"
+                          className="text-lg font-semibold"
+                        >
+                          Additional Information
+                        </Label>
+                        <span className="text-red-500">*</span>
+                      </div>
                       <p className="text-sm text-muted-foreground">
                         Include any learning preferences, challenges, or
                         specific requirements that should be considered
@@ -1271,33 +1307,6 @@ const StudentAssessmentForm = () => {
             </Card>
           )}
         </>
-      )}
-
-      {/* Navigation buttons with no-print class */}
-      <div className="flex justify-end gap-4 mt-6 mr-14 no-print">
-        {currentStep > 0 && (
-          <Button variant="outline" onClick={prevStep}>
-            Previous
-          </Button>
-        )}
-        {currentStep < 2 && <Button onClick={nextStep}>Next</Button>}
-        {currentStep === 2 && (
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? "Generating Plan..." : "Generate Learning Plan"}
-          </Button>
-        )}
-        {currentStep === 3 && learningPlan && (
-          <div className="flex justify-end gap-4 no-print">
-            <Button
-              variant="outline"
-              onClick={() => exportToPDF(learningPlan, name)}
-            >
-              Download PDF
-            </Button>
-            <Button variant="outline" onClick={handlePrint}>
-              Print Plan
-            </Button>
-          </div>
         )}
       </div>
     </div>

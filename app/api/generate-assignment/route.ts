@@ -24,6 +24,9 @@ export async function POST(req: Request) {
     const {
       prompt,
       email,
+      country,           // Used in prompt but not saved
+      board,            // Used in prompt but not saved
+      subject,          // Used in prompt but not saved
       gradeLevel,
       assignmentType,
       textInput,
@@ -31,30 +34,31 @@ export async function POST(req: Request) {
       collaboration,
       dueDate,
     } = await req.json();
-    // Validate prompt existence
-    if (!prompt || prompt.trim().length === 0) {
+
+    if (!prompt || !email) {
       return NextResponse.json(
-        { error: "Prompt is missing or empty" },
+        { error: "Required fields are missing" },
         { status: 400 }
       );
     }
-    // email should be provided to tie the assignment with the user
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4",  // Fixed typo in model name
       messages: [
         {
           role: "system",
           content: `
-            You are an assignment generator. Please create an assignment with the following structure:
+            You are an assignment generator for ${country}'s ${board} education board.
+            Please create a ${subject} assignment with the following structure:
             - A concise title for the assignment, followed by "---" on a new line
-            - The assignment content, including instructions, questions, or tasks
-            Ensure the content is factual and avoid hallucination. Always separate the title and content with three hyphens (---) on a new line.
+            - The assignment content, including clear instructions, questions, or tasks
+            - Make sure the content is appropriate for grade ${gradeLevel}
+            Ensure the content is factual and avoid hallucination.
           `,
         },
         {
           role: "user",
-          content: `Generate an assignment on the following topic: ${prompt}`,
+          content: prompt,
         },
       ],
     });
@@ -69,7 +73,7 @@ export async function POST(req: Request) {
       throw new Error("Generated content is not in the expected format");
     }
 
-    // Save the assignment along with all form inputs into Supabase
+    // Save only the fields that exist in the database schema
     await supabase.from("assignment_history").insert([
       {
         email,
@@ -81,12 +85,13 @@ export async function POST(req: Request) {
         due_date: dueDate,
         title,
         content,
+        created_at: new Date().toISOString(),
       },
     ]);
 
     return NextResponse.json({
-      title: title,
-      content: content,
+      title,
+      content,
     });
   } catch (error) {
     console.error("Error:", error);

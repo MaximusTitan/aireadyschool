@@ -49,12 +49,14 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { signOutAction } from "@/app/actions";
-import logo from "@/public/logo.png";
-import logo1 from "@/public/logo1.png";
+import newLogo from "@/public/newLogo.png";
+import airsStar from "@/public/airsStar.png";
 import { stat } from "fs";
 import { title } from "process";
+import { usePathname } from "next/navigation";
 
 export function AppSidebar() {
+  const pathname = usePathname();
   const [userEmail, setUserEmail] = useState("guest@example.com"); // Default email
   const [userRole, setUserRole] = useState<string | null>(null); // User role
 
@@ -90,11 +92,11 @@ export function AppSidebar() {
         url: "/learn-ai",
         icon: BrainCircuit,
       },
-      {
-        title: "Games",
-        url: "/games",
-        icon: Gamepad2,
-      },
+      // {
+      //   title: "Games",
+      //   url: "/games",
+      //   icon: Gamepad2,
+      // },
 
       ...(userRole === "Admin"
         ? [
@@ -113,21 +115,6 @@ export function AppSidebar() {
               url: "/connect-database",
               icon: Plugin,
             },
-            {
-              title: "Marketing Content Generator",
-              url: "/tools/marketing-content-generator",
-              icon: BadgeCheck,
-            },
-          ]
-        : []),
-
-      ...(userRole === "School"
-        ? [
-            {
-              title: "Marketing Content Generator",
-              url: "/tools/marketing-content-generator",
-              icon: BadgeCheck,
-            },
           ]
         : []),
     ],
@@ -137,13 +124,13 @@ export function AppSidebar() {
   const Logo = () => {
     const { state } = useSidebar();
     return (
-      <Link href="/">
+      <Link href="/tools">
         <Image
-          src={state === "expanded" ? logo : logo1}
+          src={state === "expanded" ? newLogo : airsStar}
           alt="AI Ready School"
-          width={140}
-          height={130}
-          className={state === "expanded" ? "ml-6" : ""}
+          width={state === "expanded" ? 140 : 40}
+          height={state === "expanded" ? 130 : 40}
+          className={state === "expanded" ? "ml-8" : ""}
         />
       </Link>
     );
@@ -171,17 +158,33 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarMenu>
             {navData.navMain.map((item) => (
-              <SidebarMenuItem key={item.title} className="mt-[-0.5rem] ">
-                <SidebarMenuButton tooltip={item.title} asChild>
+              <SidebarMenuItem key={item.title} className="mt-[-0.3rem]">
+                <SidebarMenuButton
+                  tooltip={item.title}
+                  asChild
+                  className={
+                    pathname === item.url ? "bg-neutral-100 rounded-lg" : ""
+                  }
+                >
                   <Link href={item.url}>
                     {item.icon && (
                       <item.icon
-                        className="font-bold text-rose-500 mr-[0.5rem] "
-                        size={36}
+                        className={`font-bold mr-[0.5rem] ${
+                          pathname === item.url
+                            ? "text-rose-500 font-extrabold"
+                            : "text-neutral-800"
+                        }`}
+                        size={38}
                         strokeWidth={2}
                       />
                     )}
-                    <span className="font-semibold text-[14px]">
+                    <span
+                      className={`font-semibold text-[16px] ${
+                        pathname === item.url
+                          ? "text-rose-500 font-extrabold"
+                          : ""
+                      }`}
+                    >
                       {item.title}
                     </span>
                   </Link>
@@ -246,6 +249,22 @@ export function AppSidebar() {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
+                {userRole === "Admin" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/logs" className="flex items-center">
+                        <PieChart className="mr-2 h-4 w-4" />
+                        <span>Logs</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/roles" className="flex items-center">
+                        <BadgeCheck className="mr-2 h-4 w-4" />
+                        <span>Roles</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuItem>
                   <form className="w-full">
                     <Link href={"/feedback"}>

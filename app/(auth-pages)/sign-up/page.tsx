@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import Link from "next/link";
 import { PasswordInput } from "@/components/PasswordInput";
 import Image from "next/image";
-import logo from "@/public/logo.webp";
+import newLogo from "@/public/newLogo.png";
 import {
   Select,
   SelectTrigger,
@@ -37,10 +37,10 @@ export default async function Signup(props: {
       <form className="w-full max-w-xl px-16 py-12 bg-white shadow-sm dark:bg-neutral-800 rounded-lg border border-neutral-200 dark:border-neutral-700 flex flex-col">
         <div className="flex justify-center w-full">
           <Image
-            src={logo}
+            src={newLogo}
             alt="AI Ready School"
-            width={150}
-            height={150}
+            width={200}
+            height={200}
             className="mx-auto relative"
             priority
           />
@@ -56,6 +56,19 @@ export default async function Signup(props: {
         </p>
 
         <div className="flex flex-col gap-6">
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="name" className="text-gray-700 dark:text-gray-300">
+              Name
+            </Label>
+            <Input
+              name="name"
+              type="text"
+              placeholder="Your full name"
+              required
+              className="border-gray-300 dark:border-neutral-700 focus:border-rose-500 focus:ring-rose-500"
+            />
+          </div>
+
           <div className="flex flex-col gap-1">
             <Label htmlFor="email" className="text-gray-700 dark:text-gray-300">
               Email

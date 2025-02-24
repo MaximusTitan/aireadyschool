@@ -11,8 +11,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import Image from "next/image";
-import logo from "@/public/logo.webp";
 import { LogOut, Mail } from "lucide-react";
+import newLogo from "@/public/newLogo.png";
 
 export default function VerificationWaiting() {
   const router = useRouter();
@@ -51,10 +51,10 @@ export default function VerificationWaiting() {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <Image
-              src={logo}
+              src={newLogo}
               alt="AI Ready School Logo"
-              width={150}
-              height={150}
+              width={200}
+              height={200}
               priority
             />
           </div>

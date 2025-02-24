@@ -14,7 +14,7 @@ export const boardsByCountry: Record<string, { value: string; label: string }[]>
     { value: "cisce", label: "CISCE" },
     { value: "state-board", label: "State Board" },
     { value: "ib", label: "IB" },
-    { value: "igcse", label: "IGCSE" },
+    { value: "caie", label: "CAIE" },
     { value: "nios", label: "NIOS" },
   ],
   nigeria: [

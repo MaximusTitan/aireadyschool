@@ -76,18 +76,14 @@ export interface Slide {
   order: number
 }
 
-
-
 export interface Presentation {
-  transition: string;
-
   id: string;
-
-  topic: string;
-
+  topic?: string;  // Make topic optional
+  title?: string;  // Add title field
   slides: Slide[];
-
   theme: string;
-
+  transition: string;
+  created_at?: string;
+  email?: string;
 }
 

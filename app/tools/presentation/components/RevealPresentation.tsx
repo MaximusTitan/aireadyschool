@@ -15,6 +15,7 @@ import "reveal.js/dist/reveal.css";
 import "reveal.js/dist/theme/white.css"; // or any other theme you prefer
 import { Spinner } from "./ui/spinner";
 import { YouTubeSlide } from "./YouTubeSlide";
+import { cn } from "@/utils/cn";
 
 interface RevealPresentationProps {
   presentation: Presentation;
@@ -443,28 +444,39 @@ export function RevealPresentation({
     }
     return slide.image && (
       <div className="relative group">
-        <img src={slide.image} alt={slide.title} className="w-full rounded-lg" />
+        <img 
+          src={slide.image} 
+          alt={slide.title} 
+          className={cn(
+            "w-full rounded-lg transition-all duration-200",
+            isEditing && "filter brightness-75" // Blur effect when editing
+          )}
+        />
         {isEditing && (
-          <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleRegenerateImage(index)}
-                disabled={isRegeneratingImage}
-              >
-                {isRegeneratingImage ? <Spinner className="mr-2 h-4 w-4" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-                Regenerate
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleUploadImage(index)}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                Upload
-              </Button>
-            </div>
+          <div className="absolute top-4 right-4 flex gap-3">
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => handleRegenerateImage(index)}
+              disabled={isRegeneratingImage}
+              className="bg-white/90 hover:bg-white text-black shadow-lg flex items-center gap-2 py-6 px-4"
+            >
+              {isRegeneratingImage ? (
+                <Spinner className="h-5 w-5" />
+              ) : (
+                <RefreshCw className="h-5 w-5" />
+              )}
+              Regenerate
+            </Button>
+            <Button
+              variant="secondary"
+              size="lg"
+              onClick={() => handleUploadImage(index)}
+              className="bg-white/90 hover:bg-white text-black shadow-lg flex items-center gap-2 py-6 px-4"
+            >
+              <Upload className="h-5 w-5" />
+              Upload
+            </Button>
           </div>
         )}
       </div>
@@ -472,22 +484,18 @@ export function RevealPresentation({
   }
 
   const renderSlideContent = (slide: Slide, index: number) => {
-    // Debug logging
-    console.log("Rendering slide:", {
-      slideType: slide.type,
-      slideLayout: slide.layout,
-      hasVideoUrl: Boolean(slide.videoUrl),
-      slideIndex: index
-    });
-
-    if ((slide.type === "youtube" || slide.layout === "videoSlide") && slide.videoUrl) {
+    if (slide.type === "youtube" || slide.layout === "videoSlide") {
       return (
-        <YouTubeSlide
-          slide={slide}
-          theme={theme}
-          isEditing={isEditing}
-          presentationTopic={presentation.topic} // Pass the presentation topic
-        />
+        <div className="absolute inset-0 w-full h-full" data-slide-type="video">
+          <div className={`w-full h-full ${theme}`}>
+            <YouTubeSlide
+              slide={slide}
+              theme={theme}
+              isEditing={isEditing}
+              presentationTopic={presentation.topic || presentation.title} // Pass the presentation title
+            />
+          </div>
+        </div>
       );
     }
 
@@ -584,7 +592,8 @@ export function RevealPresentation({
             {editedSlides.map((slide, index) => (
               <section
                 key={slide.id}
-                className="relative"
+                className={`relative ${slide.type === "youtube" || slide.layout === "videoSlide" ? "video-slide" : ""}`}
+                data-slide-type={slide.type === "youtube" || slide.layout === "videoSlide" ? "video" : "content"}
                 style={{
                   width: `${SLIDE_WIDTH}px`,
                   height: `${SLIDE_HEIGHT}px`,

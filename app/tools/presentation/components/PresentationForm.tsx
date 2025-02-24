@@ -20,6 +20,10 @@ import html2canvas from "html2canvas"
 import { Spinner } from "@/components/ui/spinner"
 import { ShareButton } from "./ShareButton"
 import { YouTubeVideoInput } from "./YouTubeVideoInput"
+import { PresentationHistory } from "./PresentationHistory"
+import { PlaceholderImage } from "@/app/components/ui/placeholder-image"
+import { useAuth } from "@/hooks/use-auth" // Create this hook if you haven't already
+import { createClient } from "@/utils/supabase/client"
 
 // Add this helper function after the imports
 const extractVideoId = (url: string) => {
@@ -92,6 +96,9 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
   const [videoInput, setVideoInput] = useState("")
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
   const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [presentations, setPresentations] = useState<Presentation[]>([])
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   const themes = [
     { value: "modern", label: "Modern" },
@@ -117,6 +124,14 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!userEmail) {
+      toast({
+        title: "Error",
+        description: "Please sign in to create presentations",
+        variant: "destructive",
+      })
+      return
+    }
     setIsGenerating(true);
     setFormChanged(false);
     try {
@@ -156,6 +171,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
 
         const presentationToSave = {
           ...presentation,
+          email: userEmail, // Add email to the presentation data
           slides: updatedSlides,
           theme: presentation.theme || theme,
           transition: presentation.transition || transition,
@@ -409,7 +425,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
 
       document.body.removeChild(container)
 
-      const filename = `${generatedPresentation.topic.replace(/\s+/g, "_")}_presentation.pdf`
+      const filename = `${generatedPresentation.topic?.replace(/\s+/g, "_") || "untitled"}_presentation.pdf`
       pdf.save(filename)
 
       toast({
@@ -606,12 +622,77 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     }
   }, [generatedPresentation, transition])
 
+  useEffect(() => {
+    const fetchPresentations = async () => {
+      setIsLoadingHistory(true)
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        
+        if (!user?.email) {
+          throw new Error("User not authenticated")
+        }
+  
+        const { data: presentations, error } = await supabase
+          .from("shared_presentations")
+          .select("*")
+          .eq("email", user.email)
+          .order("created_at", { ascending: false })
+  
+        if (error) throw error
+  
+        setPresentations(presentations || [])
+      } catch (error) {
+        console.error("Error fetching presentations:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load presentation history",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingHistory(false)
+      }
+    }
+  
+    fetchPresentations()
+  }, [])
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.email) {
+        setUserEmail(user.email)
+      }
+    }
+    fetchUser()
+  }, [])
+
+  const handleSelectPresentation = (presentation: Presentation) => {
+    setGeneratedPresentation(presentation)
+    setTheme(presentation.theme)
+    setTransition(presentation.transition as typeof transition)
+    onGenerated(presentation)
+    toast({
+      title: "Presentation loaded",
+      description: "You can now edit the selected presentation",
+    })
+  }
+
   function nanoid(): string {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
 
   return (
     <div className="space-y-8">
+      <div className="flex justify-end">
+        <PresentationHistory
+          presentations={presentations}
+          onSelect={handleSelectPresentation}
+          isLoading={isLoadingHistory}
+        />
+      </div>
+      
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-2">
           <Label htmlFor="detailedContent">Detailed Content (Optional)</Label>
@@ -898,7 +979,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
             Present
           </Button>
 
-          <div className="mt-4">
+          <div className="mt-4"></div>
             <h2 className="text-2xl font-bold mb-4">Generated Presentation</h2>
             <div ref={presentationRef} className="w-full mt-8">
               <div className="w-full overflow-hidden">
@@ -913,7 +994,6 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
               </div>
             </div>
           </div>
-        </div>
       )}
       <div className="mt-4 p-4 bg-blue-100 border border-blue-300 rounded-md text-blue-800">
         <p className="text-sm font-medium">

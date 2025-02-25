@@ -112,7 +112,7 @@ export default function VideoGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       {loading && (
         <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
           <div className="bg-white p-4 rounded-lg flex items-center gap-2">
@@ -134,7 +134,8 @@ export default function VideoGenerator() {
             Image to Video Generator
           </h1>
           <p className="text-muted-foreground text-lg">
-            Transform your static images into dynamic videos with AI-powered motion and animations.
+            Transform your static images into dynamic videos with AI-powered
+            motion and animations.
           </p>
         </div>
 
@@ -153,8 +154,8 @@ export default function VideoGenerator() {
                   loop
                 />
                 <p className="text-sm text-gray-500 mt-2">
-                  Tip: Download the video by clicking the three dots on the video
-                  player.
+                  Tip: Download the video by clicking the three dots on the
+                  video player.
                 </p>
               </div>
             )}
@@ -232,7 +233,9 @@ export default function VideoGenerator() {
               )}
             </div>
 
-            {error && <p className="text-red-500 text-sm text-center">{error}</p>}
+            {error && (
+              <p className="text-red-500 text-sm text-center">{error}</p>
+            )}
           </CardContent>
         </Card>
       </div>

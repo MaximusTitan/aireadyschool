@@ -74,8 +74,8 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      <Header 
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
+      <Header
         title="Event Announcements"
         description="Create professional and engaging announcements for school events, activities, and important dates for your educational community."
       />

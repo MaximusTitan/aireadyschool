@@ -98,9 +98,8 @@ export default function ComicGenerator() {
       if (!imageResponse.ok) throw new Error(imageGenData.message);
 
       // Pre-load all images in parallel
-      const preloadPromises: Promise<HTMLImageElement>[] = imageGenData.imageUrls.map(
-        (url: string) => loadImage(url)
-      );
+      const preloadPromises: Promise<HTMLImageElement>[] =
+        imageGenData.imageUrls.map((url: string) => loadImage(url));
       await Promise.all(preloadPromises);
 
       // Save generated data to state
@@ -247,7 +246,7 @@ export default function ComicGenerator() {
 
   return (
     <div
-      className={`min-h-screen bg-background text-foreground ${comicNeue.variable}`}
+      className={`min-h-screen bg-backgroundApp text-foreground ${comicNeue.variable}`}
     >
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
@@ -257,11 +256,10 @@ export default function ComicGenerator() {
         </Link>
 
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">
-            Comic Generator
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-500">Comic Generator</h1>
           <p className="text-muted-foreground text-lg">
-            Transform your ideas into engaging comic strips with AI-powered image generation and storytelling.
+            Transform your ideas into engaging comic strips with AI-powered
+            image generation and storytelling.
           </p>
         </div>
 

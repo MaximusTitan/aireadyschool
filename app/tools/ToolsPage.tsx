@@ -390,7 +390,7 @@ const ToolsPage = () => {
   };
 
   return (
-    <div className="bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
+    <div className="min-h-screen bg-[#f7f3f2] bg-cover bg-center bg-no-repeat dark:bg-[radial-gradient(circle,rgba(0,0,0,0.3)_0%,rgba(55,0,20,0.3)_35%,rgba(0,0,0,0.3)_100%)] dark:bg-neutral-950">
       <div className="container max-w-7xl mx-auto px-4 pb-8">
         <div className="flex mb-4 pt-4">
           <div className="flex items-center">

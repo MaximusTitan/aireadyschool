@@ -167,24 +167,29 @@ const AssignmentGenerator: React.FC = () => {
   };
 
   return (
-    <FormProvider {...formMethods}>
-      <form onSubmit={formMethods.handleSubmit(onSubmit)} className="space-y-8">
-        <AssignmentForm isLoading={isLoading} />
-        <div ref={outputRef}>
-          <AssignmentDisplay assignment={assignment} isLoading={isLoading} />
-          {/* Render AssignmentHistory only when a valid userEmail is set */}
-          {userEmail && (
-            <AssignmentHistory
-              userEmail={userEmail}
-              onSelectAssignment={(selected) => {
-                setAssignment(selected);
-                scrollToOutput(); // Scroll to the content textarea after selection
-              }}
-            />
-          )}
-        </div>
-      </form>
-    </FormProvider>
+    <div className="bg-backgroundApp min-h-screen">
+      <FormProvider {...formMethods}>
+        <form
+          onSubmit={formMethods.handleSubmit(onSubmit)}
+          className="space-y-8"
+        >
+          <AssignmentForm isLoading={isLoading} />
+          <div ref={outputRef}>
+            <AssignmentDisplay assignment={assignment} isLoading={isLoading} />
+            {/* Render AssignmentHistory only when a valid userEmail is set */}
+            {userEmail && (
+              <AssignmentHistory
+                userEmail={userEmail}
+                onSelectAssignment={(selected) => {
+                  setAssignment(selected);
+                  scrollToOutput(); // Scroll to the content textarea after selection
+                }}
+              />
+            )}
+          </div>
+        </form>
+      </FormProvider>
+    </div>
   );
 };
 

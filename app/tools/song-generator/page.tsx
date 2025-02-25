@@ -269,7 +269,7 @@ const SongGenerator = () => {
   if (!isMounted) return <LoadingSkeleton />;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -278,16 +278,15 @@ const SongGenerator = () => {
         </Link>
 
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">
-            Song Generator
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-500">Song Generator</h1>
           <p className="text-muted-foreground text-lg">
-            Create custom AI-generated songs with your own lyrics or let AI compose the perfect melody for your educational content.
+            Create custom AI-generated songs with your own lyrics or let AI
+            compose the perfect melody for your educational content.
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          <div className="bg-gray-50 p-6 rounded-lg border border-gray-100">
+          <div className="bg-white border p-6 rounded-lg border-red-100">
             <label className="block text-gray-700 font-bold mb-3">
               Song Lyrics
             </label>
@@ -379,7 +378,7 @@ const SongGenerator = () => {
                   <div
                     key={song.url}
                     onClick={() => handleSongSelect(song)}
-                    className={`p-4 border rounded-lg text-left transition-all flex items-center justify-between group hover:border-gray-400 cursor-pointer ${
+                    className={`p-4 border bg-white rounded-lg text-left transition-all flex items-center justify-between group hover:border-gray-400 cursor-pointer ${
                       !useCustomUrl && selectedSong === song.url
                         ? "border-gray-900 bg-gray-50"
                         : "border-gray-200"

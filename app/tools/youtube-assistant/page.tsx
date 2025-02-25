@@ -277,7 +277,7 @@ const YoutubeAssistantPage = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -290,13 +290,17 @@ const YoutubeAssistantPage = () => {
             YouTube Assistant
           </h1>
           <p className="text-muted-foreground text-lg">
-            Analyze YouTube videos, get summaries, and chat with AI about video content to enhance your learning experience.
+            Analyze YouTube videos, get summaries, and chat with AI about video
+            content to enhance your learning experience.
           </p>
         </div>
 
         <div className="max-w-5xl">
           {/* Rest of the existing content */}
-          <form onSubmit={handleVideoSubmit} className="flex flex-col gap-4 mb-6">
+          <form
+            onSubmit={handleVideoSubmit}
+            className="flex flex-col gap-4 mb-6"
+          >
             <div className="flex gap-4">
               <Input
                 type="url"

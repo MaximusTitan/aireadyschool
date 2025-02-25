@@ -217,7 +217,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -226,11 +226,10 @@ export default function Home() {
         </Link>
 
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">
-            Chat With Docs
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-500">Chat With Docs</h1>
           <p className="text-muted-foreground text-lg">
-            Upload your documents and have interactive conversations with AI to analyze and extract insights from your content.
+            Upload your documents and have interactive conversations with AI to
+            analyze and extract insights from your content.
           </p>
         </div>
 

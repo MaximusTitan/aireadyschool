@@ -198,7 +198,7 @@ export default function GenerateStory() {
     const pageWidth = doc.internal.pageSize.width;
     const availableWidth = pageWidth - margin * 2;
     let yOffset = margin;
-  
+
     if (result.imageUrl) {
       try {
         const response = await fetch(result.imageUrl);
@@ -215,14 +215,14 @@ export default function GenerateStory() {
         console.error("Error loading image", err);
       }
     }
-  
+
     // Split the story into paragraphs using newline
     const paragraphs = result.story.split("\n").filter(Boolean);
     // Title is the first paragraph
     const titleText = paragraphs[0] || "";
     // Remaining paragraphs are the content
     const contentParagraphs = paragraphs.slice(1);
-  
+
     // Add title in bold with larger font size and center it
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
@@ -237,7 +237,7 @@ export default function GenerateStory() {
       yOffset += 14;
     });
     yOffset += 4; // gap after title
-  
+
     // Add content paragraphs separately
     doc.setFont("helvetica", "normal");
     doc.setFontSize(10);
@@ -255,12 +255,12 @@ export default function GenerateStory() {
       });
       yOffset += lineHeight; // extra gap between paragraphs
     });
-  
+
     doc.save(`story_${result.storyId || "download"}.pdf`);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -269,11 +269,10 @@ export default function GenerateStory() {
         </Link>
 
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">
-            Story Generator
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-500">Story Generator</h1>
           <p className="text-muted-foreground text-lg">
-            Create captivating stories with AI-powered storytelling and beautiful illustrations for your educational content.
+            Create captivating stories with AI-powered storytelling and
+            beautiful illustrations for your educational content.
           </p>
         </div>
 
@@ -428,8 +427,18 @@ export default function GenerateStory() {
                   text-gray-700 bg-white border border-gray-300 rounded-lg 
                   hover:bg-gray-50 transition-colors"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4"/>
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 4v16m8-8H4"
+                  />
                 </svg>
                 Download PDF
               </button>

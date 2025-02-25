@@ -3,7 +3,7 @@ import { StoryGeneratorComponent } from "./components/StoryGenerator";
 
 export default function StoryGenerator() {
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-backgroundApp">
       <StoryGeneratorComponent />
       {/* <VideoStitcher /> */}
     </main>

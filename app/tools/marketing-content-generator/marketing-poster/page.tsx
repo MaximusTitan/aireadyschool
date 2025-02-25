@@ -79,13 +79,12 @@ export default function Page() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
-      <Header 
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
+      <Header
         title="Marketing Poster Generator"
         description="Design eye-catching posters for school events, announcements, and promotions with AI-powered visual generation."
       />
       <div className="container mx-auto px-4 max-w-6xl">
-
         <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
           {error && (
             <Alert variant="destructive">

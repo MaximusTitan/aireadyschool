@@ -79,7 +79,7 @@ const StepIndicator: React.FC<{ steps: Step[]; currentStep: number }> = ({
         {steps.map((step, idx) => (
           <div
             key={step.id}
-            className="relative flex flex-col items-center z-10 bg-background"
+            className="relative flex flex-col items-center z-10 bg-backgroundApp"
           >
             <div
               className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all duration-300
@@ -719,7 +719,7 @@ const StudentAssessmentForm = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -732,7 +732,8 @@ const StudentAssessmentForm = () => {
             Personalized Learning Planner
           </h1>
           <p className="text-muted-foreground text-lg">
-            Create comprehensive learning plans tailored to individual student needs, goals, and progress tracking.
+            Create comprehensive learning plans tailored to individual student
+            needs, goals, and progress tracking.
           </p>
         </div>
 
@@ -765,545 +766,563 @@ const StudentAssessmentForm = () => {
         </style>
 
         {/* Step indicator */}
-        <div className="no-print">
+        <div className="no-print ">
           <StepIndicator steps={steps} currentStep={currentStep} />
         </div>
 
         {/* Rest of the existing content */}
         {isLoading && <LoadingSkeleton />}
-        
+
         {!isLoading && (
           <>
-          {/* Steps 0-2 with no-print class */}
-          <div className="no-print">
-            {currentStep === 0 && (
-              <Card className="w-full max-w-6xl mx-auto shadow-lg">
-                <CardHeader>
-                  <CardTitle>Student Information</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-8 pt-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name" className="flex items-center gap-1">
-                        Full Name
-                        <span className="text-red-500">*</span>
-                        <span className="text-xs text-gray-400">
-                          (as per records)
-                        </span>
-                      </Label>
-                      <Input
-                        id="name"
-                        placeholder="Enter student's full name"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        className={`${errors.name ? "border-red-500" : ""} transition-colors`}
-                      />
-                      {errors.name && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.name}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="grade"
-                        className="flex items-center gap-1"
-                      >
-                        Grade/Class
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Select
-                        value={grade}
-                        onValueChange={(value) => setGrade(value)}
-                      >
-                        <SelectTrigger
-                          id="grade"
-                          className={`${errors.grade ? "border-red-500" : ""} transition-colors`}
-                        >
-                          <SelectValue placeholder="Select current grade" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {[...Array(12)].map((_, i) => (
-                            <SelectItem key={i + 1} value={(i + 1).toString()}>
-                              Grade {i + 1}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {errors.grade && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.grade}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="age" className="flex items-center gap-1">
-                        Age
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Input
-                        id="age"
-                        type="number"
-                        min="3"
-                        max="20"
-                        placeholder="Enter age in years"
-                        value={age}
-                        onChange={(e) => setAge(e.target.value)}
-                        className={`${errors.age ? "border-red-500" : ""} transition-colors`}
-                      />
-                      {errors.age && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.age}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="gender">Gender</Label>
-                      <Select value={gender} onValueChange={setGender}>
-                        <SelectTrigger id="gender">
-                          <SelectValue placeholder="Select gender" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="male">Male</SelectItem>
-                          <SelectItem value="female">Female</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                          <SelectItem value="prefer-not-to-say">
-                            Prefer not to say
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label
-                        htmlFor="board"
-                        className="flex items-center gap-1"
-                      >
-                        Education Board
-                        <span className="text-red-500">*</span>
-                      </Label>
-                      <Select value={board} onValueChange={setBoard}>
-                        <SelectTrigger
-                          id="board"
-                          className={`${errors.board ? "border-red-500" : ""} transition-colors`}
-                        >
-                          <SelectValue placeholder="Select education board" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="CBSE">CBSE</SelectItem>
-                          <SelectItem value="ICSE">ICSE</SelectItem>
-                          <SelectItem value="State">State Board</SelectItem>
-                          <SelectItem value="IB">IB</SelectItem>
-                          <SelectItem value="IGCSE">IGCSE</SelectItem>
-                          <SelectItem value="other">Other</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      {errors.board && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.board}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="nationality">Nationality</Label>
-                      <Input
-                        id="nationality"
-                        placeholder="Enter nationality"
-                        value={nationality}
-                        onChange={(e) => setNationality(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-gray-500 mt-4">
-                    <span className="text-red-500">*</span> Required fields
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {currentStep === 1 && (
-              <Card className="w-full max-w-6xl mx-auto shadow-lg">
-                <CardContent className="space-y-8 pt-6">
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      Cognitive Parameters
-                    </h3>
-                    <div className="space-y-2">
-                      {Object.entries(cognitiveParamsCategories).map(
-                        ([category, params]) => (
-                          <CategorySection
-                            key={category}
-                            title={category}
-                            isOpen={openCategories[category]}
-                            onToggle={() =>
-                              setOpenCategories((prev) => ({
-                                ...prev,
-                                [category]: !prev[category],
-                              }))
-                            }
-                          >
-                            {params.map((param) => (
-                              <ParameterCard
-                                key={param}
-                                param={param}
-                                selected={selectedCognitiveParams.includes(
-                                  param
-                                )}
-                                rating={ratings[param] || ""}
-                                onSelect={() => {
-                                  setSelectedCognitiveParams((prev) =>
-                                    prev.includes(param)
-                                      ? prev.filter((p) => p !== param)
-                                      : [...prev, param]
-                                  );
-                                }}
-                                onRatingChange={(value) =>
-                                  handleRatingChange(param, value)
-                                }
-                              />
-                            ))}
-                          </CategorySection>
-                        )
-                      )}
-                    </div>
-                    {errors.cognitive && (
-                      <p className="text-red-500 text-sm">{errors.cognitive}</p>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">
-                      Knowledge Parameters
-                    </h3>
-                    <Select
-                      value={selectedSubject}
-                      onValueChange={(value) => {
-                        setSelectedSubject(value as SubjectKeys);
-                        setSelectedKnowledgeParams([]);
-                      }}
-                    >
-                      <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Select subject" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Object.keys(subjects).map((subject) => (
-                          <SelectItem key={subject} value={subject}>
-                            {subject}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-
-                    {selectedSubject && (
-                      <div className="grid grid-cols-2 gap-4">
-                        {subjects[selectedSubject].map((param) => (
-                          <ParameterCard
-                            key={param}
-                            param={param}
-                            selected={selectedKnowledgeParams.includes(param)}
-                            rating={ratings[param] || ""}
-                            onSelect={() => {
-                              setSelectedKnowledgeParams((prev) =>
-                                prev.includes(param)
-                                  ? prev.filter((p) => p !== param)
-                                  : [...prev, param]
-                              );
-                            }}
-                            onRatingChange={(value) =>
-                              handleRatingChange(param, value)
-                            }
-                          />
-                        ))}
-                      </div>
-                    )}
-                    {errors.knowledge && (
-                      <p className="text-red-500 text-sm">{errors.knowledge}</p>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {currentStep === 2 && (
-              <Card className="w-full max-w-6xl mx-auto shadow-lg">
-                <CardContent className="space-y-8 pt-6">
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
+            {/* Steps 0-2 with no-print class */}
+            <div className="no-print">
+              {currentStep === 0 && (
+                <Card className="w-full max-w-6xl mx-auto shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Student Information</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-8 pt-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-2">
                         <Label
-                          htmlFor="goals"
-                          className="text-lg font-semibold"
+                          htmlFor="name"
+                          className="flex items-center gap-1"
                         >
-                          Learning Goals
+                          Full Name
+                          <span className="text-red-500">*</span>
+                          <span className="text-xs text-gray-400">
+                            (as per records)
+                          </span>
                         </Label>
-                        <span className="text-red-500">*</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Define specific, measurable, and achievable goals for
-                        the learning period. Consider including goals from
-                        different categories below:
-                      </p>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-                        {goalCategories.map((category) => (
-                          <div
-                            key={category.label}
-                            className="p-4 bg-muted rounded-lg"
-                          >
-                            <h4 className="font-medium mb-2">
-                              {category.label}
-                            </h4>
-                            <ul className="text-sm text-muted-foreground list-disc pl-4">
-                              {category.examples.map((example, i) => (
-                                <li key={i}>{example}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        ))}
-                      </div>
-                      <textarea
-                        className={`w-full p-3 border rounded-lg h-32 ${
-                          errors.goals ? "border-red-500" : "border-input"
-                        }`}
-                        placeholder="Enter your learning goals, considering the categories above..."
-                        value={goals}
-                        onChange={(e) => setGoals(e.target.value)}
-                      />
-                      {errors.goals && (
-                        <p className="text-red-500 text-sm">{errors.goals}</p>
-                      )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Label
-                          htmlFor="timeline"
-                          className="text-lg font-semibold"
-                        >
-                          Timeline
-                        </Label>
-                        <span className="text-red-500">*</span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        Select the duration for achieving these learning goals
-                      </p>
-                      <Select
-                        value={timeline}
-                        onValueChange={(value) => {
-                          setTimeline(value);
-                          if (value !== "custom") {
-                            setCustomTimeline("");
-                          }
-                        }}
-                      >
-                        <SelectTrigger
-                          className={`w-full ${errors.timeline ? "border-red-500" : ""}`}
-                        >
-                          <SelectValue placeholder="Select timeline duration">
-                            {timeline === "custom"
-                              ? customTimeline || "Enter custom timeline"
-                              : timelineOptions.find(
-                                  (opt) => opt.value === timeline
-                                )?.label}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {timelineOptions.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      {timeline === "custom" && (
-                        <div className="space-y-2">
-                          <Input
-                            placeholder="e.g., 6 weeks, 2.5 months"
-                            value={customTimeline}
-                            onChange={(e) => setCustomTimeline(e.target.value)}
-                            className={`mt-2 ${errors.timeline ? "border-red-500" : ""}`}
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Please specify the duration in weeks or months
+                        <Input
+                          id="name"
+                          placeholder="Enter student's full name"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className={`${errors.name ? "border-red-500" : ""} transition-colors`}
+                        />
+                        {errors.name && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.name}
                           </p>
-                        </div>
-                      )}
-                      {errors.timeline && (
-                        <p className="text-red-500 text-sm">
-                          {errors.timeline}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Label
-                          htmlFor="topic"
-                          className="text-lg font-semibold"
-                        >
-                          Specific Topic Focus
-                        </Label>
-                        <span className="text-red-500">*</span>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Specify any particular topics or subjects that need
-                        special attention
-                      </p>
-                      <Input
-                        id="topic"
-                        placeholder="E.g., Algebra fundamentals, Reading comprehension, Scientific method"
-                        value={topic}
-                        onChange={(e) => setTopic(e.target.value)}
-                      />
-                    </div>
 
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2">
+                      <div className="space-y-2">
                         <Label
-                          htmlFor="otherInfo"
-                          className="text-lg font-semibold"
+                          htmlFor="grade"
+                          className="flex items-center gap-1"
                         >
-                          Additional Information
+                          Grade/Class
+                          <span className="text-red-500">*</span>
                         </Label>
-                        <span className="text-red-500">*</span>
+                        <Select
+                          value={grade}
+                          onValueChange={(value) => setGrade(value)}
+                        >
+                          <SelectTrigger
+                            id="grade"
+                            className={`${errors.grade ? "border-red-500" : ""} transition-colors`}
+                          >
+                            <SelectValue placeholder="Select current grade" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {[...Array(12)].map((_, i) => (
+                              <SelectItem
+                                key={i + 1}
+                                value={(i + 1).toString()}
+                              >
+                                Grade {i + 1}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {errors.grade && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.grade}
+                          </p>
+                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        Include any learning preferences, challenges, or
-                        specific requirements that should be considered
-                      </p>
-                      <textarea
-                        className="w-full p-3 border rounded-lg h-32 border-input"
-                        placeholder="E.g., Preferred learning style, specific challenges, accommodations needed..."
-                        value={otherInfo}
-                        onChange={(e) => setOtherInfo(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
 
-          {/* Step 3 - Learning Plan with print-content class */}
-          {currentStep === 3 && learningPlan && (
-            <Card
-              id="learning-plan"
-              className="w-full max-w-6xl mx-auto shadow-lg animate-fade-in print-content"
-            >
-              <CardHeader>
-                <CardTitle>Learning Plan for {name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Summary Section */}
-                <div className="bg-muted p-4 rounded-lg">
-                  <h3 className="font-semibold text-lg mb-3">
-                    Executive Summary
-                  </h3>
-                  <div className="space-y-2">
-                    <p>
-                      <strong>Current Status:</strong>{" "}
-                      {learningPlan.summary.currentStatus}
-                    </p>
-                    <p>
-                      <strong>Expected Outcome:</strong>{" "}
-                      {learningPlan.summary.expectedOutcome}
-                    </p>
-                    <div>
-                      <strong>Key Strengths:</strong>
-                      <ul className="list-disc pl-6 mt-1">
-                        {learningPlan.summary.keyStrengths.map(
-                          (strength, i) => (
-                            <li key={i}>{strength}</li>
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="age"
+                          className="flex items-center gap-1"
+                        >
+                          Age
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Input
+                          id="age"
+                          type="number"
+                          min="3"
+                          max="20"
+                          placeholder="Enter age in years"
+                          value={age}
+                          onChange={(e) => setAge(e.target.value)}
+                          className={`${errors.age ? "border-red-500" : ""} transition-colors`}
+                        />
+                        {errors.age && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.age}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="gender">Gender</Label>
+                        <Select value={gender} onValueChange={setGender}>
+                          <SelectTrigger id="gender">
+                            <SelectValue placeholder="Select gender" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="male">Male</SelectItem>
+                            <SelectItem value="female">Female</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                            <SelectItem value="prefer-not-to-say">
+                              Prefer not to say
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label
+                          htmlFor="board"
+                          className="flex items-center gap-1"
+                        >
+                          Education Board
+                          <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={board} onValueChange={setBoard}>
+                          <SelectTrigger
+                            id="board"
+                            className={`${errors.board ? "border-red-500" : ""} transition-colors`}
+                          >
+                            <SelectValue placeholder="Select education board" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="CBSE">CBSE</SelectItem>
+                            <SelectItem value="ICSE">ICSE</SelectItem>
+                            <SelectItem value="State">State Board</SelectItem>
+                            <SelectItem value="IB">IB</SelectItem>
+                            <SelectItem value="IGCSE">IGCSE</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {errors.board && (
+                          <p className="text-red-500 text-sm mt-1">
+                            {errors.board}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="nationality">Nationality</Label>
+                        <Input
+                          id="nationality"
+                          placeholder="Enter nationality"
+                          value={nationality}
+                          onChange={(e) => setNationality(e.target.value)}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="text-sm text-gray-500 mt-4">
+                      <span className="text-red-500">*</span> Required fields
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {currentStep === 1 && (
+                <Card className="w-full max-w-6xl mx-auto shadow-lg">
+                  <CardContent className="space-y-8 pt-6">
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">
+                        Cognitive Parameters
+                      </h3>
+                      <div className="space-y-2">
+                        {Object.entries(cognitiveParamsCategories).map(
+                          ([category, params]) => (
+                            <CategorySection
+                              key={category}
+                              title={category}
+                              isOpen={openCategories[category]}
+                              onToggle={() =>
+                                setOpenCategories((prev) => ({
+                                  ...prev,
+                                  [category]: !prev[category],
+                                }))
+                              }
+                            >
+                              {params.map((param) => (
+                                <ParameterCard
+                                  key={param}
+                                  param={param}
+                                  selected={selectedCognitiveParams.includes(
+                                    param
+                                  )}
+                                  rating={ratings[param] || ""}
+                                  onSelect={() => {
+                                    setSelectedCognitiveParams((prev) =>
+                                      prev.includes(param)
+                                        ? prev.filter((p) => p !== param)
+                                        : [...prev, param]
+                                    );
+                                  }}
+                                  onRatingChange={(value) =>
+                                    handleRatingChange(param, value)
+                                  }
+                                />
+                              ))}
+                            </CategorySection>
                           )
                         )}
-                      </ul>
+                      </div>
+                      {errors.cognitive && (
+                        <p className="text-red-500 text-sm">
+                          {errors.cognitive}
+                        </p>
+                      )}
                     </div>
-                    <div>
-                      <strong>Focus Areas:</strong>
-                      <ul className="list-disc pl-6 mt-1">
-                        {learningPlan.summary.focusAreas.map((area, i) => (
-                          <li key={i}>{area}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </div>
-                </div>
 
-                {/* Weekly Plans */}
-                {learningPlan.weeklyPlans.map((week) => (
-                  <div
-                    key={week.week}
-                    className="border rounded-lg p-4 space-y-3"
-                  >
-                    <div className="flex justify-between items-center">
-                      <h3 className="font-semibold text-lg">
-                        Week {week.week}
+                    <div className="space-y-4">
+                      <h3 className="text-lg font-semibold">
+                        Knowledge Parameters
                       </h3>
-                      <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
-                        Progress Target: {week.expectedProgress}
-                      </span>
-                    </div>
-                    <p className="font-medium">Focus: {week.focus}</p>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div>
-                        <h4 className="font-medium">Activities:</h4>
-                        <ul className="list-disc pl-6">
-                          {week.activities.map((activity, i) => (
-                            <li key={i}>{activity}</li>
+                      <Select
+                        value={selectedSubject}
+                        onValueChange={(value) => {
+                          setSelectedSubject(value as SubjectKeys);
+                          setSelectedKnowledgeParams([]);
+                        }}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select subject" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {Object.keys(subjects).map((subject) => (
+                            <SelectItem key={subject} value={subject}>
+                              {subject}
+                            </SelectItem>
                           ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedSubject && (
+                        <div className="grid grid-cols-2 gap-4">
+                          {subjects[selectedSubject].map((param) => (
+                            <ParameterCard
+                              key={param}
+                              param={param}
+                              selected={selectedKnowledgeParams.includes(param)}
+                              rating={ratings[param] || ""}
+                              onSelect={() => {
+                                setSelectedKnowledgeParams((prev) =>
+                                  prev.includes(param)
+                                    ? prev.filter((p) => p !== param)
+                                    : [...prev, param]
+                                );
+                              }}
+                              onRatingChange={(value) =>
+                                handleRatingChange(param, value)
+                              }
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {errors.knowledge && (
+                        <p className="text-red-500 text-sm">
+                          {errors.knowledge}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {currentStep === 2 && (
+                <Card className="w-full max-w-6xl mx-auto shadow-lg">
+                  <CardContent className="space-y-8 pt-6">
+                    <div className="space-y-6">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor="goals"
+                            className="text-lg font-semibold"
+                          >
+                            Learning Goals
+                          </Label>
+                          <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Define specific, measurable, and achievable goals for
+                          the learning period. Consider including goals from
+                          different categories below:
+                        </p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                          {goalCategories.map((category) => (
+                            <div
+                              key={category.label}
+                              className="p-4 bg-muted rounded-lg"
+                            >
+                              <h4 className="font-medium mb-2">
+                                {category.label}
+                              </h4>
+                              <ul className="text-sm text-muted-foreground list-disc pl-4">
+                                {category.examples.map((example, i) => (
+                                  <li key={i}>{example}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </div>
+                        <textarea
+                          className={`w-full p-3 border rounded-lg h-32 ${
+                            errors.goals ? "border-red-500" : "border-input"
+                          }`}
+                          placeholder="Enter your learning goals, considering the categories above..."
+                          value={goals}
+                          onChange={(e) => setGoals(e.target.value)}
+                        />
+                        {errors.goals && (
+                          <p className="text-red-500 text-sm">{errors.goals}</p>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor="timeline"
+                            className="text-lg font-semibold"
+                          >
+                            Timeline
+                          </Label>
+                          <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Select the duration for achieving these learning goals
+                        </p>
+                        <Select
+                          value={timeline}
+                          onValueChange={(value) => {
+                            setTimeline(value);
+                            if (value !== "custom") {
+                              setCustomTimeline("");
+                            }
+                          }}
+                        >
+                          <SelectTrigger
+                            className={`w-full ${errors.timeline ? "border-red-500" : ""}`}
+                          >
+                            <SelectValue placeholder="Select timeline duration">
+                              {timeline === "custom"
+                                ? customTimeline || "Enter custom timeline"
+                                : timelineOptions.find(
+                                    (opt) => opt.value === timeline
+                                  )?.label}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent>
+                            {timelineOptions.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {timeline === "custom" && (
+                          <div className="space-y-2">
+                            <Input
+                              placeholder="e.g., 6 weeks, 2.5 months"
+                              value={customTimeline}
+                              onChange={(e) =>
+                                setCustomTimeline(e.target.value)
+                              }
+                              className={`mt-2 ${errors.timeline ? "border-red-500" : ""}`}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Please specify the duration in weeks or months
+                            </p>
+                          </div>
+                        )}
+                        {errors.timeline && (
+                          <p className="text-red-500 text-sm">
+                            {errors.timeline}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor="topic"
+                            className="text-lg font-semibold"
+                          >
+                            Specific Topic Focus
+                          </Label>
+                          <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Specify any particular topics or subjects that need
+                          special attention
+                        </p>
+                        <Input
+                          id="topic"
+                          placeholder="E.g., Algebra fundamentals, Reading comprehension, Scientific method"
+                          value={topic}
+                          onChange={(e) => setTopic(e.target.value)}
+                        />
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Label
+                            htmlFor="otherInfo"
+                            className="text-lg font-semibold"
+                          >
+                            Additional Information
+                          </Label>
+                          <span className="text-red-500">*</span>
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          Include any learning preferences, challenges, or
+                          specific requirements that should be considered
+                        </p>
+                        <textarea
+                          className="w-full p-3 border rounded-lg h-32 border-input"
+                          placeholder="E.g., Preferred learning style, specific challenges, accommodations needed..."
+                          value={otherInfo}
+                          onChange={(e) => setOtherInfo(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+
+            {/* Step 3 - Learning Plan with print-content class */}
+            {currentStep === 3 && learningPlan && (
+              <Card
+                id="learning-plan"
+                className="w-full max-w-6xl mx-auto shadow-lg animate-fade-in print-content"
+              >
+                <CardHeader>
+                  <CardTitle>Learning Plan for {name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Summary Section */}
+                  <div className="bg-muted p-4 rounded-lg">
+                    <h3 className="font-semibold text-lg mb-3">
+                      Executive Summary
+                    </h3>
+                    <div className="space-y-2">
+                      <p>
+                        <strong>Current Status:</strong>{" "}
+                        {learningPlan.summary.currentStatus}
+                      </p>
+                      <p>
+                        <strong>Expected Outcome:</strong>{" "}
+                        {learningPlan.summary.expectedOutcome}
+                      </p>
+                      <div>
+                        <strong>Key Strengths:</strong>
+                        <ul className="list-disc pl-6 mt-1">
+                          {learningPlan.summary.keyStrengths.map(
+                            (strength, i) => (
+                              <li key={i}>{strength}</li>
+                            )
+                          )}
                         </ul>
                       </div>
                       <div>
-                        <h4 className="font-medium">Targets:</h4>
-                        <ul className="list-disc pl-6">
-                          {week.targets.map((target, i) => (
-                            <li key={i}>{target}</li>
+                        <strong>Focus Areas:</strong>
+                        <ul className="list-disc pl-6 mt-1">
+                          {learningPlan.summary.focusAreas.map((area, i) => (
+                            <li key={i}>{area}</li>
                           ))}
                         </ul>
                       </div>
-                    </div>
-                    <div>
-                      <h4 className="font-medium">Required Resources:</h4>
-                      <ul className="list-disc pl-6">
-                        {week.resources.map((resource, i) => (
-                          <li key={i}>{resource}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className="bg-muted p-3 rounded-lg mt-2">
-                      <h4 className="font-medium">
-                        Parent/Guardian Involvement:
-                      </h4>
-                      <p>{week.parentInvolvement}</p>
                     </div>
                   </div>
-                ))}
 
-                <div>
-                  <h3 className="font-semibold">Recommendations</h3>
-                  <ul className="list-disc pl-4">
-                    {learningPlan.recommendations.map((rec, i) => (
-                      <li key={i}>{rec}</li>
-                    ))}
-                  </ul>
-                </div>
+                  {/* Weekly Plans */}
+                  {learningPlan.weeklyPlans.map((week) => (
+                    <div
+                      key={week.week}
+                      className="border rounded-lg p-4 space-y-3"
+                    >
+                      <div className="flex justify-between items-center">
+                        <h3 className="font-semibold text-lg">
+                          Week {week.week}
+                        </h3>
+                        <span className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm">
+                          Progress Target: {week.expectedProgress}
+                        </span>
+                      </div>
+                      <p className="font-medium">Focus: {week.focus}</p>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <h4 className="font-medium">Activities:</h4>
+                          <ul className="list-disc pl-6">
+                            {week.activities.map((activity, i) => (
+                              <li key={i}>{activity}</li>
+                            ))}
+                          </ul>
+                        </div>
+                        <div>
+                          <h4 className="font-medium">Targets:</h4>
+                          <ul className="list-disc pl-6">
+                            {week.targets.map((target, i) => (
+                              <li key={i}>{target}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                      <div>
+                        <h4 className="font-medium">Required Resources:</h4>
+                        <ul className="list-disc pl-6">
+                          {week.resources.map((resource, i) => (
+                            <li key={i}>{resource}</li>
+                          ))}
+                        </ul>
+                      </div>
+                      <div className="bg-muted p-3 rounded-lg mt-2">
+                        <h4 className="font-medium">
+                          Parent/Guardian Involvement:
+                        </h4>
+                        <p>{week.parentInvolvement}</p>
+                      </div>
+                    </div>
+                  ))}
 
-                <div>
-                  <h3 className="font-semibold">Assessment Strategy</h3>
-                  <ul className="list-disc pl-4">
-                    {learningPlan.assessmentStrategy.map((strategy, i) => (
-                      <li key={i}>{strategy}</li>
-                    ))}
-                  </ul>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </>
+                  <div>
+                    <h3 className="font-semibold">Recommendations</h3>
+                    <ul className="list-disc pl-4">
+                      {learningPlan.recommendations.map((rec, i) => (
+                        <li key={i}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold">Assessment Strategy</h3>
+                    <ul className="list-disc pl-4">
+                      {learningPlan.assessmentStrategy.map((strategy, i) => (
+                        <li key={i}>{strategy}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -101,11 +101,10 @@ export default function TextTools() {
         </Link>
 
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">
-            Write Right
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-500">Text Tools</h1>
           <p className="text-muted-foreground text-lg">
-            Transform your text with AI-powered tools for rewriting, proofreading, translation, and more.
+            Transform your text with AI-powered tools for rewriting,
+            proofreading, translation, and more.
           </p>
         </div>
 

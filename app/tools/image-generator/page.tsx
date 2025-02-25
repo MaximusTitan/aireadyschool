@@ -373,7 +373,7 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-950">
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -382,11 +382,10 @@ export default function Page() {
         </Link>
 
         <div className="mb-8 space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">
-            Image Generator
-          </h1>
+          <h1 className="text-3xl font-bold text-rose-500">Image Generator</h1>
           <p className="text-muted-foreground text-lg">
-            Create stunning AI-generated images with customizable styles, sizes, and settings for your educational content.
+            Create stunning AI-generated images with customizable styles, sizes,
+            and settings for your educational content.
           </p>
         </div>
 
@@ -396,7 +395,11 @@ export default function Page() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList className="grid grid-cols-2 mb-4">
                 <TabsTrigger value="regular">Regular</TabsTrigger>
                 <TabsTrigger value="chat">Buddy</TabsTrigger>
@@ -425,7 +428,9 @@ export default function Page() {
                         id="prompt"
                         placeholder="A serene landscape with mountains..."
                         value={prompt}
-                        onChange={(e) => setPrompt(e.target.value.slice(0, 1000))}
+                        onChange={(e) =>
+                          setPrompt(e.target.value.slice(0, 1000))
+                        }
                         className="h-32 transition-colors focus:border-neutral-500"
                       />
                     </div>
@@ -473,18 +478,18 @@ export default function Page() {
                           }
                         >
                           <SelectTrigger>
-                              <SelectValue placeholder="Select style" />
+                            <SelectValue placeholder="Select style" />
                           </SelectTrigger>
                           <SelectContent>
-                              <SelectItem value="realistic_image">
-                                Realistic Image
-                              </SelectItem>
-                              <SelectItem value="digital_illustration">
-                                Digital Illustration
-                              </SelectItem>
-                              <SelectItem value="vector_illustration">
-                                Vector Illustration
-                              </SelectItem>
+                            <SelectItem value="realistic_image">
+                              Realistic Image
+                            </SelectItem>
+                            <SelectItem value="digital_illustration">
+                              Digital Illustration
+                            </SelectItem>
+                            <SelectItem value="vector_illustration">
+                              Vector Illustration
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
@@ -674,7 +679,8 @@ export default function Page() {
                     <div
                       className={`${
                         aspectRatioMap[
-                          generatedImages[0].aspectRatio as keyof typeof aspectRatioMap
+                          generatedImages[0]
+                            .aspectRatio as keyof typeof aspectRatioMap
                         ]
                       }`}
                     >
@@ -751,7 +757,9 @@ export default function Page() {
                     </Button>
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/50 to-transparent">
-                    <p className="text-white text-sm truncate">{image.prompt}</p>
+                    <p className="text-white text-sm truncate">
+                      {image.prompt}
+                    </p>
                     <p className="text-white/70 text-xs">
                       {new Date(image.created_at).toLocaleDateString()}
                     </p>
@@ -778,7 +786,8 @@ export default function Page() {
               hasNext={
                 previousImages.findIndex(
                   (img) => img.image_url === selectedImage?.image_url
-                ) < previousImages.length - 1
+                ) <
+                previousImages.length - 1
               }
             />
 

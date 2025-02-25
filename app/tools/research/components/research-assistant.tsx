@@ -416,7 +416,7 @@ export function ResearchAssistant({
                   </AlertDescription>
                 </Alert>
               )}
-              <div className="bg-white rounded-lg p-4 mb-4 transition-all">
+              <div className="rounded-lg p-4 mb-4 transition-all">
                 <form
                   onSubmit={handleSubmit}
                   className="flex flex-col gap-3 w-2/3 mx-auto mb-4"
@@ -740,7 +740,7 @@ export function ResearchAssistant({
                 </AlertDescription>
               </Alert>
             )}
-            <div className="bg-white rounded-lg p-4 mb-4 transition-all">
+            <div className="bg-backgroundApp rounded-lg p-4 mb-4 transition-all">
               <form
                 onSubmit={handleSubmit}
                 className="flex flex-col gap-3 w-2/3 mx-auto mb-4"

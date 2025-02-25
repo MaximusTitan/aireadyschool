@@ -68,7 +68,8 @@ const config = {
   				'3': 'hsl(var(--chart-3))',
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
-  			}
+  			},
+  			backgroundApp: '#f7f3f2'
   		},
   		fontFamily: {
   			sans: ['var(--font-poppins)', 'system-ui', 'sans-serif'],

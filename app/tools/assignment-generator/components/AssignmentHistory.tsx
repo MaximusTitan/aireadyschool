@@ -21,7 +21,10 @@ interface AssignmentHistoryProps {
   onSelectAssignment: (assignment: { title: string; content: string }) => void;
 }
 
-export function AssignmentHistory({ userEmail, onSelectAssignment }: AssignmentHistoryProps) {
+export function AssignmentHistory({
+  userEmail,
+  onSelectAssignment,
+}: AssignmentHistoryProps) {
   const [history, setHistory] = useState<AssignmentHistoryItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [totalPages, setTotalPages] = useState(0);
@@ -36,7 +39,10 @@ export function AssignmentHistory({ userEmail, onSelectAssignment }: AssignmentH
       const end = start + pageSize - 1;
       const { data, error, count } = await supabase
         .from("assignment_history")
-        .select("id, title, content, created_at, grade_level, assignment_type", { count: "exact" })
+        .select(
+          "id, title, content, created_at, grade_level, assignment_type",
+          { count: "exact" }
+        )
         .eq("email", userEmail)
         .order("created_at", { ascending: false })
         .range(start, end);
@@ -57,13 +63,19 @@ export function AssignmentHistory({ userEmail, onSelectAssignment }: AssignmentH
     return <Skeleton className="h-24 w-full mt-4" />;
   }
   if (!history.length) {
-    return <p className="mt-4 text-center text-muted-foreground">No assignment history found.</p>;
+    return (
+      <p className="mt-4 text-center text-muted-foreground">
+        No assignment history found.
+      </p>
+    );
   }
   return (
     <>
       <Card className="mt-8 mb-8 max-w-6xl mx-auto shadow-md">
         <CardHeader className="border-b bg-muted/50">
-          <CardTitle className="text-xl font-bold">Assignment History</CardTitle>
+          <CardTitle className="text-xl font-bold">
+            Assignment History
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
           <ul className="space-y-4">
@@ -71,7 +83,10 @@ export function AssignmentHistory({ userEmail, onSelectAssignment }: AssignmentH
               <li
                 key={item.id}
                 onClick={() =>
-                  onSelectAssignment({ title: item.title, content: item.content })
+                  onSelectAssignment({
+                    title: item.title,
+                    content: item.content,
+                  })
                 }
                 className="group p-4 border rounded-lg cursor-pointer transition-all duration-200 hover:bg-muted/50 hover:border-primary"
               >
@@ -93,7 +108,7 @@ export function AssignmentHistory({ userEmail, onSelectAssignment }: AssignmentH
           </ul>
         </CardContent>
       </Card>
-      <div className="flex justify-center items-center gap-3 mt-6 mb-8">
+      <div className="flex justify-center items-center gap-3 mt-6 pb-8">
         {currentPage > 1 && (
           <Button
             variant="outline"

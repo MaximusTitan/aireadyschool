@@ -10,16 +10,25 @@ import PresentationSection from "./media/PresentationSection";
 import ArtworkSection from "./media/ArtworkSection";
 import ResearchWorkSection from "./media/ResearchWorkSection";
 import { AppSection } from "./media/AppSection";
+import AboutSection from "./profile/AboutSection";
 import { createClient } from "@/utils/supabase/client";
 
-export function StudentPortfolio() {
-  const [studentEmail, setStudentEmail] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+
+interface StudentPortfolioProps {
+  initialEmail?: string;
+}
+
+export function StudentPortfolio({ initialEmail }: StudentPortfolioProps) {
+  const [studentEmail, setStudentEmail] = useState<string | null>(initialEmail || null);
+  const [isLoading, setIsLoading] = useState(!initialEmail);
   const [error, setError] = useState<string | null>(null);
+  const [isPublicView, setIsPublicView] = useState(!!initialEmail);
 
   useEffect(() => {
-    fetchStudentEmail();
-  }, []);
+    if (!initialEmail) {
+      fetchStudentEmail();
+    }
+  }, [initialEmail]);
 
   const fetchStudentEmail = async () => {
     const supabase = createClient();
@@ -53,14 +62,17 @@ export function StudentPortfolio() {
     return <div className="text-red-500">{error}</div>;
   }
 
+  
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
+      {!isPublicView && <Header />}
       <main className="container mx-auto px-4 py-8">
         <div className="bg-white rounded-lg shadow-sm p-8">
           {studentEmail && (
             <>
               <ProfileHeader />
+              <AboutSection/>
               <SkillsSection />
               <InterestsSection />
               <VideoSection />
@@ -68,6 +80,7 @@ export function StudentPortfolio() {
               <ArtworkSection />
               <ResearchWorkSection />
               <AppSection />
+              
             </>
           )}
         </div>
@@ -75,3 +88,4 @@ export function StudentPortfolio() {
     </div>
   );
 }
+

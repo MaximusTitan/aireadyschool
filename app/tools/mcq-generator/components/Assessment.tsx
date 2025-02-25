@@ -346,7 +346,7 @@ export default function Assessment({
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 bg-[#f7f3f2] p-4 rounded-lg">
       <div className="flex justify-between items-center mb-4">
         <Button
           onClick={() =>
@@ -403,7 +403,7 @@ export default function Assessment({
           {!showResults && (
             <Button
               onClick={handleSubmit}
-              className="w-full bg-neutral-500 hover:bg-neutral-600"
+              className="w-full bg-rose-500 hover:bg-rose-600 text-white mt-6"
             >
               Submit Answers
             </Button>
@@ -422,7 +422,7 @@ export default function Assessment({
           <div className="flex justify-center gap-2 mt-4">
             <Button
               onClick={handleSaveResults}
-              className="bg-neutral-900 hover:bg-neutral-700"
+              className=" mr-2 bg-rose-500 hover:bg-rose-600"
               disabled={isSaving}
             >
               {isSaving ? "Saving..." : "Save Results"}

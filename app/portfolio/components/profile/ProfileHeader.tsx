@@ -16,6 +16,8 @@ interface StudentData {
   role: string;
   about: string;
   interests: string[];
+  profile_slug?: string;
+  profile_url?: string;
 }
 
 export default function ProfileHeader() {
@@ -23,11 +25,10 @@ export default function ProfileHeader() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [studentData, setStudentData] = useState<StudentData | null>(null);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(
-    null
-  );
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [profileUrlCopied, setProfileUrlCopied] = useState(false);
 
   const [editableData, setEditableData] = useState({
     name: "",
@@ -44,6 +45,55 @@ export default function ProfileHeader() {
       });
     }
   }, [studentData]);
+
+  const generateUniqueSlug = (name: string, email: string) => {
+    const baseSlug = name.toLowerCase()
+      .replace(/[^a-z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+    
+    const emailPart = email.split('@')[0].toLowerCase();
+    return `${baseSlug}-${emailPart}`;
+  };
+
+  const handleShareProfile = async () => {
+    if (!userEmail || !studentData?.name) {
+      setError("Profile information is incomplete");
+      return;
+    }
+
+    try {
+      let slug = studentData.profile_slug;
+      if (!slug) {
+        slug = generateUniqueSlug(studentData.name, userEmail);
+      }
+
+      const profileUrl = `https://app.aireadyschool.com/portfolio/${slug}`;
+
+      const { error: updateError } = await supabase
+        .from("students")
+        .update({
+          profile_slug: slug,
+          profile_url: profileUrl
+        })
+        .eq("student_email", userEmail);
+
+      if (updateError) throw updateError;
+
+      setStudentData({
+        ...studentData,
+        profile_slug: slug,
+        profile_url: profileUrl
+      });
+
+      await navigator.clipboard.writeText(profileUrl);
+      setProfileUrlCopied(true);
+      setTimeout(() => setProfileUrlCopied(false), 2000);
+    } catch (error) {
+      console.error("Error generating profile URL:", error);
+      setError("Failed to generate profile URL");
+    }
+  };
 
   const handleSaveProfile = async () => {
     if (!userEmail) return;
@@ -96,12 +146,9 @@ export default function ProfileHeader() {
 
       if (error) {
         if (error.code === "PGRST116") {
-          // No profile picture found - this is normal for new users
           return;
         }
-        if (error instanceof Error) {
-          console.error("Error fetching profile picture:", error.message);
-        }
+        console.error("Error fetching profile picture:", error);
         return;
       }
 
@@ -125,7 +172,6 @@ export default function ProfileHeader() {
         .single();
 
       if (error && error.code === "PGRST116") {
-        // No data found, create initial record
         const { data: newData, error: createError } = await supabase
           .from("students")
           .insert([
@@ -164,9 +210,7 @@ export default function ProfileHeader() {
     fetchStudentData();
   }, [userEmail, supabase]);
 
-  const handleImageUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !userEmail) return;
 
@@ -174,37 +218,29 @@ export default function ProfileHeader() {
     setError(null);
 
     try {
-      // Delete old image if it exists
       if (profilePictureUrl) {
         const oldFilePath = profilePictureUrl.split("/").pop();
         if (oldFilePath) {
-          const { error: deleteError } = await supabase.storage
+          await supabase.storage
             .from("profile-pictures")
             .remove([oldFilePath]);
-
-          if (deleteError) {
-            console.error("Error deleting old image:", deleteError);
-          }
         }
       }
 
       const fileExt = file.name.split(".").pop();
       const fileName = `${userEmail}-${Date.now()}.${fileExt}`;
-      const filePath = `${fileName}`;
+      const filePath = fileName;
 
-      // Upload file to Supabase Storage
-      const { error: uploadError, data } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from("profile-pictures")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
-      // Get public URL
       const {
         data: { publicUrl },
       } = supabase.storage.from("profile-pictures").getPublicUrl(filePath);
 
-      // Update or insert into profile_pictures table
       const { error: dbError } = await supabase
         .from("profile_pictures")
         .upsert({
@@ -335,18 +371,22 @@ export default function ProfileHeader() {
                   Level 1
                 </span>
               </div>
+              <div className="mt-4">
+                <Button
+                  onClick={handleShareProfile}
+                  className="flex items-center gap-1"
+                >
+                  {studentData.profile_url ? "Copy Profile Link" : "Generate Profile Link"}
+                </Button>
+                {profileUrlCopied && (
+                  <span className="ml-2 text-xs text-green-600">
+                    Copied to clipboard!
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-2">
-                {/* <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-                  <Image
-                    src="/placeholder.svg?height=32&width=32"
-                    alt="Points Icon"
-                    width={32}
-                    height={32}
-                    className="w-6 h-6 text-white"
-                  />
-                </div> */}
                 <div>
                   <div className="text-sm text-gray-600">Overall Points</div>
                   <div className="text-2xl font-bold">0</div>

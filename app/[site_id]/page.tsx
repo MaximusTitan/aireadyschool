@@ -2,7 +2,7 @@ import React from "react";
 import {
   ChevronRight,
   Book,
-  Image,
+  Image as LucideImage,
   FileText,
   Layout,
   Video,
@@ -14,14 +14,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { readSiteById } from "@/utils/actions/readSiteById";
 import { notFound } from "next/navigation";
+import PublicPortfolio from "../portfolio/components/PublicPortfolio";
 
 interface PageParams {
   site_id: string;
+  slug: string;
 }
 
 const LandingPage = async ({ params }: { params: Promise<PageParams> }) => {
   const resolvedParams = await params;
   const siteId = parseInt(resolvedParams.site_id, 10);
+  const { slug } = resolvedParams;
 
   if (isNaN(siteId)) {
     notFound();
@@ -119,6 +122,11 @@ const LandingPage = async ({ params }: { params: Promise<PageParams> }) => {
         </div>
       </div>
 
+      {/* Public Portfolio Section */}
+      <div className="container mx-auto px-4 py-24">
+        <PublicPortfolio slug={slug} />
+      </div>
+
       {/* Footer */}
       <footer className="bg-white dark:bg-neutral-900 border-t border-gray-100 dark:border-neutral-800">
         <div className="container mx-auto px-4 py-12">
@@ -160,7 +168,7 @@ const tools = [
   {
     name: "Visual Learning Tools",
     description: "Create engaging visual content for better understanding.",
-    icon: Image,
+    icon: LucideImage,
   },
   {
     name: "Course Builder",

@@ -13,6 +13,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceRole, {
 })
 
 interface CreateTeacherParams {
+  name: string;
   email: string;
   password: string;
   schoolId: string;
@@ -23,6 +24,7 @@ interface CreateTeacherParams {
 }
 
 interface CreateStudentParams {
+  name: string;
   email: string;
   password: string;
   schoolId: string;
@@ -32,8 +34,21 @@ interface CreateStudentParams {
   rollNumber: string;
 }
 
+interface BulkCreateStudentParams {
+  students: {
+    name: string;
+    email: string;
+    password: string;
+    schoolId: string;
+    boardId: string;
+    gradeId: string;
+    sectionId: string;
+    rollNumber: string;
+  }[];
+}
+
 export async function createTeacher(params: CreateTeacherParams) {
-  const { email, password, schoolId, boardId, gradeId, sectionId, subjectId } = params;
+  const { name, email, password, schoolId, boardId, gradeId, sectionId, subjectId } = params;
 
   try {
     // Create auth user with email confirmed
@@ -46,6 +61,19 @@ export async function createTeacher(params: CreateTeacherParams) {
 
     if (authError) throw authError;
     if (!authData.user) throw new Error("No user created");
+
+    // Update metadata to include name
+    await supabase.auth.admin.updateUserById(authData.user.id, {
+      user_metadata: {
+        name,
+        role: 'Teacher',
+        school_id: schoolId,
+        board_id: boardId,
+        grade_id: gradeId,
+        section_id: sectionId,
+        subject_id: subjectId,
+      },
+    });
 
     // Create user record
     const { error: userError } = await supabase.from("users").insert({
@@ -92,7 +120,7 @@ export async function createTeacher(params: CreateTeacherParams) {
 }
 
 export async function createStudent(params: CreateStudentParams) {
-  const { email, password, schoolId, boardId, gradeId, sectionId, rollNumber } = params;
+  const { name, email, password, schoolId, boardId, gradeId, sectionId, rollNumber } = params;
 
   try {
     // Create auth user with email confirmed
@@ -105,6 +133,19 @@ export async function createStudent(params: CreateStudentParams) {
 
     if (authError) throw authError;
     if (!authData.user) throw new Error("No user created");
+
+    // Update metadata to include name
+    await supabase.auth.admin.updateUserById(authData.user.id, {
+      user_metadata: {
+        name,
+        role: 'Student',
+        school_id: schoolId,
+        board_id: boardId,
+        grade_id: gradeId,
+        section_id: sectionId,
+        roll_number: rollNumber,
+      },
+    });
 
     // Create user record
     const { error: userError } = await supabase.from("users").insert({
@@ -134,6 +175,19 @@ export async function createStudent(params: CreateStudentParams) {
     return { success: true };
   } catch (error) {
     console.error("Error creating student:", error);
+    return { success: false, error };
+  }
+}
+
+export async function createBulkStudents(params: BulkCreateStudentParams) {
+  try {
+    for (const student of params.students) {
+      const result = await createStudent(student);
+      if (!result.success) throw result.error;
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("Error in bulk creation:", error);
     return { success: false, error };
   }
 }

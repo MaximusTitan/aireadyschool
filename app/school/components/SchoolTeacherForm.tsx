@@ -27,6 +27,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { createTeacher } from "@/app/actions/auth";
 
 const teacherFormSchema = z.object({
+  name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email(),
   password: z.string().min(6).max(100),
   board_id: z.string().uuid(),
@@ -58,6 +59,7 @@ export default function SchoolTeacherForm({
   const form = useForm<TeacherFormValues>({
     resolver: zodResolver(teacherFormSchema),
     defaultValues: {
+      name: "",
       email: "",
       password: "",
       board_id: "",
@@ -124,6 +126,7 @@ export default function SchoolTeacherForm({
     setIsSubmitting(true);
     try {
       const result = await createTeacher({
+        name: data.name,
         email: data.email,
         password: data.password,
         schoolId,
@@ -156,6 +159,19 @@ export default function SchoolTeacherForm({
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Full Name</FormLabel>
+              <FormControl>
+                <Input placeholder="Enter full name" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         <FormField
           control={form.control}
           name="email"

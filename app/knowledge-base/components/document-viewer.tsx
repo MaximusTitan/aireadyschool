@@ -1,4 +1,4 @@
-import { ArrowLeft, Download, Pencil, Printer } from "lucide-react"
+import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import type { KnowledgeBaseRecord } from "../page"
@@ -47,23 +47,9 @@ export function DocumentViewer({ document, onBack }: DocumentViewerProps) {
           <div className="space-y-6">
             <div className="flex items-center justify-between">
               <h1 className="text-2xl font-semibold text-gray-900">{document.title}</h1>
-              <div className="flex items-center gap-2">
-                <Button variant="ghost" size="icon">
-                  <Download className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Pencil className="w-4 h-4" />
-                </Button>
-                <Button variant="ghost" size="icon">
-                  <Printer className="w-4 h-4" />
-                </Button>
-              </div>
             </div>
 
             <div className="flex items-center gap-4 flex-wrap">
-              <Badge variant="outline" className="text-gray-600">
-                21 Feb 25
-              </Badge>
               <Badge variant="outline" className="text-gray-600">
                 {document.education_board}
               </Badge>
@@ -71,16 +57,12 @@ export function DocumentViewer({ document, onBack }: DocumentViewerProps) {
                 {document.grade}th Grade
               </Badge>
               <Badge variant="outline" className="text-gray-600 uppercase">
-                PDF
+                Section {document.section}
               </Badge>
             </div>
 
             <p className="text-gray-600 leading-relaxed">
-              As we look at our surroundings, we see a large variety of things with different shapes, sizes and
-              textures. Everything in this universe is made up of material which scientists have named "matter". The air
-              we breathe, the food we eat, stones, clouds, stars, plants and animals, even a small drop of water or a
-              particle of sand – everything is matter. We can also see as we look around that all the things mentioned
-              above occupy space and have mass.
+              {document.description}
             </p>
           </div>
         </div>

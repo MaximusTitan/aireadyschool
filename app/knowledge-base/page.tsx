@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
+import { DocumentViewer } from "./components/document-viewer"
 import { ArrowLeft, Plus, type File, Upload } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
@@ -10,7 +11,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { createClient } from "@/utils/supabase/client"
 
-type KnowledgeBaseRecord = {
+export type KnowledgeBaseRecord = {
   id: string
   title: string
   description: string
@@ -33,6 +34,7 @@ export default function KnowledgeBase() {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [records, setRecords] = useState<KnowledgeBaseRecord[]>([])
+  const [selectedDocument, setSelectedDocument] = useState<KnowledgeBaseRecord | null>(null)
 
   const [availableGrades, setAvailableGrades] = useState<string[]>([])
   const [availableSections, setAvailableSections] = useState<string[]>([])
@@ -41,8 +43,7 @@ export default function KnowledgeBase() {
   const boards = ["All", "CBSE", "ICSE", "CAIE"]
   const supabase = createClient()
 
-  // When board is selected, set available grades and reset lower filters.
-  // When board is selected, update available grades and reset lower filters
+  // Effect hooks for updating available options based on selections
   useEffect(() => {
     if (board && board !== "All") {
       const grades: string[] = ["All", ...Array.from({ length: 12 }, (_, i) => (i + 1).toString())]
@@ -58,7 +59,6 @@ export default function KnowledgeBase() {
     }
   }, [board])
 
-  // When grade is selected, update available sections and reset lower filters
   useEffect(() => {
     let sections: string[] = []
     if (board && grade && grade !== "All") {
@@ -75,7 +75,6 @@ export default function KnowledgeBase() {
     setSubject("All")
   }, [board, grade])
 
-  // When section is selected, set available subjects and reset subject.
   useEffect(() => {
     if (board && grade) {
       let subjects: string[] = []
@@ -151,7 +150,6 @@ export default function KnowledgeBase() {
     }
   }, [board, grade, section])
 
-  // Always fetch records so that when no filter is selected, all records are shown.
   useEffect(() => {
     console.log("Fetching records with filters:", { board, grade, section, subject })
     fetchRecords()
@@ -165,9 +163,9 @@ export default function KnowledgeBase() {
       console.error("User is not authenticated")
       return
     }
-  
+
     let query = supabase.from("knowledge_base").select("*")
-  
+
     if (board && board !== "All") {
       query = query.eq("education_board", board)
     }
@@ -180,15 +178,15 @@ export default function KnowledgeBase() {
     if (subject && subject !== "All") {
       query = query.eq("subject", subject)
     }
-  
+
     const { data, error } = await query
-  
+
     if (error) {
       console.error("Error fetching records:", error)
     } else {
       setRecords(data)
     }
-  }  
+  }
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
@@ -252,6 +250,10 @@ export default function KnowledgeBase() {
     }
   }
 
+  if (selectedDocument) {
+    return <DocumentViewer document={selectedDocument} onBack={() => setSelectedDocument(null)} />
+  }
+
   if (isUploadView) {
     return (
       <div className="min-h-screen bg-pink-50/50 p-6">
@@ -265,7 +267,7 @@ export default function KnowledgeBase() {
             Back
           </Button>
 
-          <h1 className="text-2xl font-semibold text-pink-600 mb-8">Upload New Resource</h1>
+          <h1 className="text-2xl font-semibold text-pink-600 mb-8">Upload New Document</h1>
 
           <div className="bg-white border-2 border-purple-100 rounded-lg p-8">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -295,33 +297,33 @@ export default function KnowledgeBase() {
               <div className="space-y-2">
                 <Label htmlFor="board">Education Board</Label>
                 <Select value={board} onValueChange={setBoard}>
-                <SelectTrigger className="border-gray-200">
-                  <SelectValue placeholder="Select Board" />
-                </SelectTrigger>
-                <SelectContent>
-                  {boards.map((b) => (
-                    <SelectItem key={b} value={b}>
-                      {b}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger className="border-gray-200">
+                    <SelectValue placeholder="Select Board" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {boards.map((b) => (
+                      <SelectItem key={b} value={b}>
+                        {b}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
                 <Select value={grade} onValueChange={setGrade} disabled={!board}>
-                <SelectTrigger className="border-gray-200">
-                  <SelectValue placeholder="Select Grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableGrades.map((g) => (
-                    <SelectItem key={g} value={g}>
-                      Grade {g}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectTrigger className="border-gray-200">
+                    <SelectValue placeholder="Select Grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableGrades.map((g) => (
+                      <SelectItem key={g} value={g}>
+                        Grade {g}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -393,16 +395,14 @@ export default function KnowledgeBase() {
   return (
     <div className="min-h-screen bg-pink-50/50 p-6">
       <div className="max-w-7xl mx-auto">
-      <div className="mb-6">
-          <h2 className="text-xl font-semibold text-gray-900">
-            Knowledge Base
-          </h2>
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-gray-900">Knowledge Base</h2>
         </div>
 
         <div className="mb-8">
           <Button onClick={() => setIsUploadView(true)} className="bg-pink-500 hover:bg-pink-600 text-white">
             <Plus className="w-4 h-4 mr-2" />
-            Resources
+            New Document
           </Button>
         </div>
 
@@ -485,14 +485,12 @@ export default function KnowledgeBase() {
                   <tr key={record.id} className="border-b last:border-b-0">
                     <td className="p-4">{record.education_board}</td>
                     <td className="p-4">
-                      <a
-                        href={record.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-500 hover:text-blue-700 underline"
+                      <button
+                        onClick={() => setSelectedDocument(record)}
+                        className="text-blue-500 hover:text-blue-700 hover:underline text-left"
                       >
                         {record.title}
-                      </a>
+                      </button>
                     </td>
                     <td className="p-4">{`${record.grade}th Grade`}</td>
                     <td className="p-4">{record.subject}</td>
@@ -509,3 +507,4 @@ export default function KnowledgeBase() {
     </div>
   )
 }
+

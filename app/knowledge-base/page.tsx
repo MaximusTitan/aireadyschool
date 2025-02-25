@@ -1,5 +1,6 @@
 "use client"
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import type React from "react"
 import { useState, useEffect } from "react"
 import { DocumentViewer } from "./components/document-viewer"
@@ -470,35 +471,56 @@ export default function KnowledgeBase() {
 
         <div className="bg-white border-2 border-purple-100 rounded-lg p-6 overflow-x-auto">
           {records.length > 0 ? (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-4 font-medium text-gray-600">Board</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Document Title</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Grade</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Subject</th>
-                  <th className="text-left p-4 font-medium text-gray-600">Section</th>
-                </tr>
-              </thead>
-              <tbody>
-                {records.map((record) => (
-                  <tr key={record.id} className="border-b last:border-b-0">
-                    <td className="p-4">{record.education_board}</td>
-                    <td className="p-4">
+          <TooltipProvider>
+          <table className="w-full">
+            <thead>
+              <tr className="border-b">
+                <th className="text-left p-4 font-medium text-gray-600">Board</th>
+                <th className="text-left p-4 font-medium text-gray-600">Document Title</th>
+                <th className="text-left p-4 font-medium text-gray-600">Grade</th>
+                <th className="text-left p-4 font-medium text-gray-600">Subject</th>
+                <th className="text-left p-4 font-medium text-gray-600">Section</th>
+              </tr>
+            </thead>
+            <tbody>
+              {records.map((record: KnowledgeBaseRecord) => (
+                <tr key={record.id} className="border-b last:border-b-0">
+                  <td className="p-4">{record.education_board}</td>
+                  <td className="p-4">
+                    {record.description ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            onClick={() => setSelectedDocument(record)}
+                            className="text-blue-500 hover:text-blue-700 hover:underline text-left"
+                          >
+                            {record.title}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          className="max-w-[250px] max-h-[150px] overflow-y-auto p-2 rounded-md bg-gray-900 text-white text-sm shadow-lg"
+                        >
+                          <p>Description:</p>
+                          <p>{record.description}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
                       <button
                         onClick={() => setSelectedDocument(record)}
                         className="text-blue-500 hover:text-blue-700 hover:underline text-left"
                       >
                         {record.title}
                       </button>
-                    </td>
-                    <td className="p-4">{`${record.grade}th Grade`}</td>
-                    <td className="p-4">{record.subject}</td>
-                    <td className="p-4">{record.section}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    )}
+                  </td>
+                  <td className="p-4">{`${record.grade}th Grade`}</td>
+                  <td className="p-4">{record.subject}</td>
+                  <td className="p-4">{record.section}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </TooltipProvider>        
           ) : (
             <div className="text-center text-gray-500 p-4">No resources uploaded yet for the selected filters.</div>
           )}

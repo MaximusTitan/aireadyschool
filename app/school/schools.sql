@@ -136,3 +136,50 @@ comment on table subjects is 'Subjects taught within each board';
 comment on table teachers is 'Teachers registered in schools';
 comment on table school_students is 'Students enrolled in schools';
 comment on table teacher_assignments is 'Teacher assignments to board-grade-section-subject combinations';
+
+-- Create a view for easily getting students with their user profile information
+CREATE OR REPLACE VIEW student_profiles AS
+SELECT 
+  ss.id AS student_id,
+  ss.user_id,
+  ss.school_id,
+  ss.grade_id,
+  ss.section_id,
+  ss.roll_number,
+  g.name AS grade_name,
+  s.name AS section_name,
+  up.first_name,
+  up.last_name,
+  up.email
+FROM 
+  school_students ss
+JOIN 
+  grades g ON ss.grade_id = g.id
+JOIN 
+  sections s ON ss.section_id = s.id
+LEFT JOIN 
+  user_profiles up ON ss.user_id = up.user_id;
+
+-- Create a view for teacher assignments with expanded information
+CREATE OR REPLACE VIEW teacher_assignments_expanded AS
+SELECT 
+  ta.id AS assignment_id,
+  ta.teacher_id,
+  ta.board_id,
+  ta.grade_id,
+  ta.section_id,
+  ta.subject_id,
+  b.name AS board_name,
+  g.name AS grade_name,
+  s.name AS section_name,
+  subj.name AS subject_name
+FROM 
+  teacher_assignments ta
+JOIN 
+  boards b ON ta.board_id = b.id
+JOIN 
+  grades g ON ta.grade_id = g.id
+JOIN 
+  sections s ON ta.section_id = s.id
+JOIN 
+  subjects subj ON ta.subject_id = subj.id;

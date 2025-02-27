@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { useAudioSettings } from "@/app/hooks/useAudioSettings";
+import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
 
 const GIF_URLS = {
   constant:
@@ -31,6 +32,7 @@ export function BuddyPanel({ messages, isLoading }: BuddyPanelProps) {
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
   const [isTalking, setIsTalking] = useState(false);
   const { isAudioEnabled, toggleAudio } = useAudioSettings();
+  const { language } = useLanguageSettings();
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -78,12 +80,16 @@ export function BuddyPanel({ messages, isLoading }: BuddyPanelProps) {
           {isAudioEnabled ? (
             <>
               <Volume2 className="h-4 w-4" />
-              <span className="text-sm">Audio On</span>
+              <span className="text-sm">
+                {language === "english" ? "Audio On" : "ऑडियो चालू"}
+              </span>
             </>
           ) : (
             <>
               <VolumeX className="h-4 w-4" />
-              <span className="text-sm">Audio Off</span>
+              <span className="text-sm">
+                {language === "english" ? "Audio Off" : "ऑडियो बंद"}
+              </span>
             </>
           )}
         </button>

@@ -1,6 +1,7 @@
 import { ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, KeyboardEvent } from "react";
+import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
 
 const AVAILABLE_COMMANDS = [
   {
@@ -30,6 +31,17 @@ const AVAILABLE_COMMANDS = [
   },
 ];
 
+const placeholders = {
+  english: {
+    thinking: "Thinking...",
+    prompt: "Type / for commands or ask a question..."
+  },
+  hindi: {
+    thinking: "सोच रहा हूँ...",
+    prompt: "कमांड के लिए / टाइप करें या प्रश्न पूछें..."
+  }
+};
+
 type CommandInputProps = {
   input: string;
   isLoading: boolean;
@@ -46,6 +58,7 @@ export const CommandInput = ({
   const [showCommands, setShowCommands] = useState(false);
   const [filteredCommands, setFilteredCommands] = useState(AVAILABLE_COMMANDS);
   const inputRef = useRef<HTMLInputElement>(null);
+  const { language } = useLanguageSettings();
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -77,6 +90,8 @@ export const CommandInput = ({
     }
   };
 
+  const currentPlaceholders = placeholders[language as keyof typeof placeholders] || placeholders.english;
+
   return (
     <form
       onSubmit={onSubmit}
@@ -91,8 +106,8 @@ export const CommandInput = ({
           onKeyDown={handleKeyDown}
           placeholder={
             isLoading
-              ? "Thinking..."
-              : "Type / for commands or ask a question..."
+              ? currentPlaceholders.thinking
+              : currentPlaceholders.prompt
           }
           className="flex-1 p-3 rounded-lg bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition-all"
           disabled={isLoading}

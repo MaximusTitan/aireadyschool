@@ -9,7 +9,11 @@ import {
   MATH_TEACHER_PROMPT,
   ENGLISH_TEACHER_PROMPT,
   GENERIC_TEACHER_PROMPT,
-  TEACHER_BUDDY_PROMPT
+  TEACHER_BUDDY_PROMPT,
+  SCIENCE_TEACHER_PROMPT_HINDI,
+  MATH_TEACHER_PROMPT_HINDI,
+  ENGLISH_TEACHER_PROMPT_HINDI,
+  GENERIC_TEACHER_PROMPT_HINDI
 } from '@/app/utils/systemPrompt';
 
 export const runtime = 'edge';
@@ -19,12 +23,21 @@ if (!process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY) {
 }
 
 type Subject = 'science' | 'math' | 'english' | 'generic';
+type Language = 'english' | 'hindi';
 
-const prompts: Record<Subject, string> = {
-  science: SCIENCE_TEACHER_PROMPT,
-  math: MATH_TEACHER_PROMPT,
-  english: ENGLISH_TEACHER_PROMPT,
-  generic: GENERIC_TEACHER_PROMPT
+const prompts: Record<Language, Record<Subject, string>> = {
+  english: {
+    science: SCIENCE_TEACHER_PROMPT,
+    math: MATH_TEACHER_PROMPT,
+    english: ENGLISH_TEACHER_PROMPT,
+    generic: GENERIC_TEACHER_PROMPT
+  },
+  hindi: {
+    science: SCIENCE_TEACHER_PROMPT_HINDI,
+    math: MATH_TEACHER_PROMPT_HINDI,
+    english: ENGLISH_TEACHER_PROMPT_HINDI,
+    generic: GENERIC_TEACHER_PROMPT_HINDI
+  }
 };
 
 function detectSubject(messages: any[]): Subject {
@@ -62,7 +75,7 @@ interface ThreadMessage extends Message {
   }>;
 }
 
-function getSystemPrompt(messages: any[], userRole?: string): string {
+function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english'): string {
   // For teachers, only use teacher buddy prompt
   if (userRole === 'Teacher') {
     return TEACHER_BUDDY_PROMPT;
@@ -70,27 +83,40 @@ function getSystemPrompt(messages: any[], userRole?: string): string {
 
   // For students, use existing subject-specific logic
   const subject = detectSubject(messages);
-  const basePrompt = prompts[subject];
+  const basePrompt = prompts[language][subject];
   
   const userDetailsMessage = messages.find(m => 
     m.toolCalls?.some((t: any) => t.tool === 'collectUserDetails' && t.state === 'result')
   );
   
   // Only process user details for students
-  let userDetailsPrompt = `
+  let userDetailsPrompt;
+  
+  if (language === 'english') {
+    userDetailsPrompt = `
 I haven't collected the student's details yet. Start by asking about:
 - Name of the student
 - Age and grade level
 - Subjects they're interested in
 Use the collectUserDetails tool to store this information.
 `;
+  } else {
+    userDetailsPrompt = `
+मैंने अभी तक छात्र का विवरण एकत्र नहीं किया है। निम्न के बारे में पूछकर प्रारंभ करें:
+- छात्र का नाम
+- आयु और कक्षा का स्तर
+- वे किन विषयों में रुचि रखते हैं
+इस जानकारी को स्टोर करने के लिए collectUserDetails टूल का उपयोग करें।
+`;
+  }
 
   if (userDetailsMessage) {
     const toolCall = userDetailsMessage.toolCalls.find((t: any) => t.tool === 'collectUserDetails');
     const userDetails: UserDetails = toolCall.result;
     
     if (userDetails.age) {
-      userDetailsPrompt = `
+      if (language === 'english') {
+        userDetailsPrompt = `
 Student Profile:
 - Name: ${userDetails.name}
 - Age: ${userDetails.age}
@@ -99,10 +125,22 @@ Student Profile:
 
 Adapt your teaching style according to this student's profile.
 `;
+      } else {
+        userDetailsPrompt = `
+छात्र प्रोफ़ाइल:
+- नाम: ${userDetails.name}
+- आयु: ${userDetails.age}
+- कक्षा: ${userDetails.grade}
+- रुचियाँ: ${userDetails.subjects?.join(', ')}
+
+इस छात्र की प्रोफ़ाइल के अनुसार अपनी शिक्षण शैली को अपनाएं।
+`;
+      }
     }
   }
-
-  return `${basePrompt}
+  
+  if (language === 'english') {
+    return `${basePrompt}
 ${userDetailsPrompt}
 
 You can use various tools to enhance the learning experience:
@@ -113,6 +151,19 @@ You can use various tools to enhance the learning experience:
 - Generate mind maps
 
 Always provide clear explanations and encourage active learning.`;
+  } else {
+    return `${basePrompt}
+${userDetailsPrompt}
+
+आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
+- इंटरैक्टिव गणित समस्याएँ उत्पन्न करें
+- क्विज़ बनाएँ
+- शैक्षिक छवियाँ उत्पन्न करें
+- अवधारणा विज़ुअलाइज़ेशन बनाएँ
+- माइंड मैप उत्पन्न करें
+
+हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें।`;
+  }
 }
 
 async function saveToolOutputs(
@@ -157,11 +208,12 @@ export async function POST(request: Request) {
     // Get user role from metadata
     const userRole = user.user_metadata?.role;
 
-    const { messages, id: threadId } = await request.json();
+    const { messages, id: threadId, language = 'english' } = await request.json();
 
-    // Add logging to debug thread access
+    // Add logging to debug language toggle
     console.log('Thread ID:', threadId);
     console.log('User ID:', user.id);
+    console.log('Language selected:', language);
 
     // Verify thread belongs to user
     if (threadId) {
@@ -192,7 +244,7 @@ export async function POST(request: Request) {
     const result = streamText({
       // model: openai('gpt-4o'),
       model: anthropic('claude-3-5-sonnet-20240620'),
-      system: getSystemPrompt(messages, userRole),
+      system: getSystemPrompt(messages, userRole, language as Language),
       messages: messages as CreateMessage[],
       maxSteps: 5,
       tools,

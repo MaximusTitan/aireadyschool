@@ -10,6 +10,7 @@ import { ThreadList } from "./components/thread-list";
 import { useRouter } from "next/navigation";
 import { Message } from "ai";
 import { ChatMessage, ToolCall, ToolState } from "@/types/chat";
+import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
 
 // Simplified interfaces
 interface GeneratedImage {
@@ -20,6 +21,7 @@ interface GeneratedImage {
 export default function Page() {
   const router = useRouter();
   const { setOpen } = useSidebar();
+  const { language } = useLanguageSettings();
   const {
     threadId,
     threads,
@@ -65,7 +67,7 @@ export default function Page() {
       content: msg.content,
       createdAt: msg.createdAt,
     })),
-    body: { id: threadId },
+    body: { id: threadId, language },
     onFinish: useCallback(
       async (message: Message) => {
         const messageToSave: ChatMessage = {
@@ -471,6 +473,7 @@ export default function Page() {
           onNewThread={handleNewThread}
           messages={messages}
           isLoading={isLoading}
+          language={language}
         />
         <ChatArea
           messages={messages}

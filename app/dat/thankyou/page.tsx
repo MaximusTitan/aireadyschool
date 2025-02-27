@@ -1,8 +1,7 @@
 "use client";
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import Image from 'next/image';
+import { motion, Variants } from 'framer-motion';
 import ThankYouContent from './ThankYouContent';
 
 export default function ThankYouPage() {
@@ -15,6 +14,12 @@ export default function ThankYouPage() {
             opacity: 1,
             transition: { duration: 0.5, when: "beforeChildren", staggerChildren: 0.2 }
         }
+    };
+
+    // Item variants with proper typing
+    const itemVariants: Variants = {
+        hidden: { y: 20, opacity: 0 },
+        visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
     };
 
     // Direct user to the DATA-AI-Talks website
@@ -33,10 +38,7 @@ export default function ThankYouPage() {
                 <Suspense fallback={<LoadingState />}>
                     <ThankYouContent 
                         handleBackToHome={handleBackToHome} 
-                        itemVariants={{
-                            hidden: { y: 20, opacity: 0 },
-                            visible: { y: 0, opacity: 1, transition: { duration: 0.5 } }
-                        }} 
+                        itemVariants={itemVariants}
                     />
                 </Suspense>
             </motion.div>

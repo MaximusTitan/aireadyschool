@@ -1,15 +1,12 @@
 "use client";
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import Image from 'next/image';
 
 interface ThankYouContentProps {
     handleBackToHome: () => void;
-    itemVariants: {
-        hidden: object;
-        visible: object;
-    };
+    itemVariants: Variants;
 }
 
 export default function ThankYouContent({ handleBackToHome, itemVariants }: ThankYouContentProps) {

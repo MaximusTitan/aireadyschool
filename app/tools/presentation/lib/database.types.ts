@@ -11,6 +11,7 @@ export interface Database {
           created_at: string
           theme: string | null
           transition: string | null
+          last_edited: string | null
         }
         Insert: {
           id?: string
@@ -19,6 +20,7 @@ export interface Database {
           created_at?: string
           theme?: string | null
           transition?: string | null
+          last_edited?: string | null
         }
         Update: {
           id?: string
@@ -27,6 +29,7 @@ export interface Database {
           created_at?: string
           theme?: string | null
           transition?: string | null
+          last_edited?: string | null
         }
       }
     }

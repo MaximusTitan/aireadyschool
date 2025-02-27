@@ -15,6 +15,91 @@ interface PosterOptions {
   interface PosterResponse {
     imageUrl: string
   }
+
+interface ThumbnailOptions {
+  prompt: string;
+  style: string;
+  ratio: "16:9" | "9:16" | "5:2";
+  logo?: File | null;
+}
+
+export async function generateImage(options: ThumbnailOptions): Promise<{ imageUrl: string }> {
+  const apiKey = process.env.FLUX_API_KEY;
+  if (!apiKey) {
+    throw new Error("FLUX_API_KEY is not set in environment variables");
+  }
+
+  // Map style preferences to Fal AI styles
+  const styleMap: { [key: string]: string } = {
+    digital: "digital_illustration/cover",
+    "3d": "digital_illustration/handmade_3d",
+    neon: "digital_illustration/neon_calm",
+    dark: "digital_illustration/noir",
+    tech: "vector_illustration/line_circuit",
+    minimal: "vector_illustration/thin",
+    anime: "digital_illustration/young_adult_book",
+  };
+
+  // Map ratios to Fal AI image sizes
+  const ratioToImageSize = {
+    "16:9": "landscape_16_9",
+    "9:16": "portrait_16_9",
+    "5:2": "landscape_4_3", // Best approximation for banner
+  };
+
+  const imageSize = ratioToImageSize[options.ratio] || "landscape_16_9";
+  console.log(`Using image size: ${imageSize} for ratio: ${options.ratio}`);
+
+  // Ensure prompt is within limits
+  const truncatedPrompt = options.prompt.slice(0, 900); // Leave room for additional instructions
+
+  try {
+    const requestBody = {
+      prompt: truncatedPrompt,
+      style: styleMap[options.style] || "digital_illustration/cover",
+      image_size: imageSize,
+      num_images: 1,
+      steps: 10,
+      seed: Math.floor(Math.random() * 1000000),
+    };
+
+    console.log("Sending request to Fal AI:", {
+      ...requestBody,
+      prompt: requestBody.prompt.substring(0, 100) + "..." // Log truncated version
+    });
+
+    const response = await fetch("https://fal.run/fal-ai/recraft-v3", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Key ${apiKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await response.text();
+    
+    if (!response.ok) {
+      console.error("Fal AI error response:", responseText);
+      console.error("Request body:", requestBody);
+      throw new Error(`Fal AI API error (${response.status}): ${responseText}`);
+    }
+
+    try {
+      const data = JSON.parse(responseText);
+      if (!data.images?.[0]?.url) {
+        throw new Error("Missing image URL in response");
+      }
+      return { imageUrl: data.images[0].url };
+    } catch (parseError) {
+      console.error("Failed to parse Fal AI response:", responseText);
+      throw new Error("Invalid response format from Fal AI");
+    }
+  } catch (error) {
+    console.error("Error in generateImage:", error);
+    throw error;
+  }
+}
   
   export async function generatePoster(options: PosterOptions, signal: AbortSignal): Promise<PosterResponse> {
     const apiKey = process.env.FLUX_API_KEY
@@ -78,5 +163,4 @@ interface PosterOptions {
       throw error
     }
   }
-  
-  
+

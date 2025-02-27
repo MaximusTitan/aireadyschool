@@ -85,5 +85,6 @@ export interface Presentation {
   transition: string;
   created_at?: string;
   email?: string;
+  lastEdited?: string;
 }
 

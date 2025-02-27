@@ -67,6 +67,13 @@ export default function SchoolMarketingDashboard() {
         "Create professional posters for school events, admissions, and announcements.",
       href: "/tools/marketing-content-generator/marketing-poster",
     },
+    {
+      icon: <Video className="w-10 h-10 text-yellow-600" />,
+      title: "YouTube Thumbnail Generator",
+      description:
+        "Create eye-catching thumbnails for your educational YouTube videos.",
+      href: "/tools/marketing-content-generator/youtube-thumbnail-generator",
+    },
   ];
 
   const filteredTools = tools.filter(

@@ -35,8 +35,9 @@ export async function GET(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Await the params to extract the ID
-    const { id: studentId } = await context.params;
+    // Wait for params to resolve
+    const params = await context.params;
+    const studentId = params.id;
     
     const { data: studentData, error: studentError } = await supabaseAdmin
       .from('school_students')

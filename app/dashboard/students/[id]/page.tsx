@@ -5,6 +5,7 @@ import DashboardLayout from "../../components/DashboardLayout";
 import DashboardCard from "../../components/DashboardCard";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/utils/supabase/client";
 
 interface StudentDetails {
   id: string;
@@ -14,6 +15,7 @@ interface StudentDetails {
   grade_name: string;
   section_name: string;
   attendance_percentage?: number;
+  chat_threads?: ChatThread[];
 }
 
 interface GradeData {
@@ -34,24 +36,76 @@ interface StudentData {
   sections: SectionData | SectionData[];
 }
 
+interface ChatThread {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function StudentDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const resolvedParams = React.use(params);
   const [student, setStudent] = useState<StudentDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chatThreadsLoading, setChatThreadsLoading] = useState(true);
+  const [chatThreadsError, setChatThreadsError] = useState<string | null>(null);
 
   useEffect(() => {
-    async function loadStudentDetails() {
+    async function loadData() {
       try {
-        const response = await fetch(`/api/students/${resolvedParams.id}`);
-        const data = await response.json();
+        // First load student details
+        setLoading(true);
+        const studentResponse = await fetch(`/api/students/${resolvedParams.id}`);
+        const studentData = await studentResponse.json();
         
-        if (!response.ok) {
-          throw new Error(data.error);
+        if (!studentResponse.ok) {
+          throw new Error(studentData.error);
         }
 
-        setStudent(data);
+        setStudent(studentData);
+        
+        // Fetch chat threads directly using Supabase
+        setChatThreadsLoading(true);
+        try {
+          const supabase = createClient();
+          
+          // First get the user ID associated with this student
+          const { data: studentData, error: studentError } = await supabase
+            .from('school_students')
+            .select('user_id')
+            .eq('id', resolvedParams.id)
+            .single();
+            
+          if (studentError) {
+            throw new Error('Student not found');
+          }
+  
+          const userId = studentData.user_id;
+          
+          // Now fetch chat threads for this user
+          const { data: chatThreads, error: chatThreadsError } = await supabase
+            .from('chat_threads')
+            .select('id, title, created_at, updated_at')
+            .eq('user_id', userId)
+            .eq('archived', false)
+            .order('updated_at', { ascending: false });
+            
+          if (chatThreadsError) {
+            throw new Error('Failed to fetch chat history');
+          }
+          
+          // Update student with chat threads
+          setStudent(prevStudent => 
+            prevStudent ? { ...prevStudent, chat_threads: chatThreads } : null
+          );
+        } catch (chatErr) {
+          console.error('Error loading chat threads:', chatErr);
+          setChatThreadsError('Failed to load chat history');
+        } finally {
+          setChatThreadsLoading(false);
+        }
       } catch (err) {
         console.error('Error loading student details:', err);
         setError('Could not load student details');
@@ -60,8 +114,12 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
       }
     }
 
-    loadStudentDetails();
+    loadData();
   }, [resolvedParams.id]);
+
+  const navigateToChatThread = (threadId: string) => {
+    router.push(`/tools/gen-chat?thread=${threadId}`);
+  };
 
   if (loading) {
     return (
@@ -118,6 +176,63 @@ export default function StudentDetailsPage({ params }: { params: Promise<{ id: s
               <label className="text-sm font-medium text-gray-500">Class</label>
               <p className="text-base text-gray-900">{student.grade_name} - {student.section_name}</p>
             </div>
+          </div>
+        </DashboardCard>
+
+        <DashboardCard title="Chat History">
+          <div className="p-6">
+            {chatThreadsLoading ? (
+              <div className="animate-pulse text-center py-4">
+                Loading chat history...
+              </div>
+            ) : chatThreadsError ? (
+              <div className="text-red-500 text-center py-4">
+                {chatThreadsError}
+              </div>
+            ) : (student.chat_threads && student.chat_threads.length > 0) ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Chat Title
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Created At
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Last Updated
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {student.chat_threads.map((thread) => (
+                      <tr 
+                        key={thread.id} 
+                        onClick={() => navigateToChatThread(thread.id)}
+                        className="hover:bg-gray-100 cursor-pointer"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{thread.title}</div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">
+                            {new Date(thread.created_at).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-500">
+                            {new Date(thread.updated_at).toLocaleDateString()}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500">No chat history available</p>
+            )}
           </div>
         </DashboardCard>
       </div>

@@ -6,6 +6,8 @@ import SchoolInfo from "./SchoolInfo";
 import StatCard from "./StatCard";
 import TeacherClasses from "./TeacherClasses";
 import TeacherStudents from "./TeacherStudents";
+import Link from "next/link";
+import { BookOpen, ClipboardList, CheckSquare, Users, FileText } from "lucide-react";
 
 // Define proper interfaces to match Supabase response
 interface School {
@@ -32,6 +34,29 @@ interface SupabaseTeacherResponse {
     name: string;
     address: string;
   };
+}
+
+// Quick Access Tool Component
+interface QuickAccessToolProps {
+  title: string;
+  description: string;
+  href: string;
+  icon: React.ReactNode;
+}
+
+function QuickAccessTool({ title, description, href, icon }: QuickAccessToolProps) {
+  return (
+    <Link 
+      href={href}
+      className="flex items-center p-3 rounded-lg border border-gray-100 bg-white hover:bg-gray-50 hover:border-gray-200 transition-colors group"
+    >
+      <div className="mr-3 text-gray-500 group-hover:text-primary">{icon}</div>
+      <div>
+        <h3 className="font-medium text-gray-700 group-hover:text-primary">{title}</h3>
+        <p className="text-xs text-gray-500 line-clamp-1">{description}</p>
+      </div>
+    </Link>
+  );
 }
 
 export default function TeacherDashboard() {
@@ -163,26 +188,68 @@ export default function TeacherDashboard() {
         </div>
       )}
       
-      <SchoolInfo school={schoolData} userRole="teacher" size="small" />
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <StatCard 
-          title="My Classes" 
-          value={classCount.toString()} 
-          icon="📚" 
-          color="bg-blue-50" 
-        />
-        <StatCard 
-          title="My Students" 
-          value={studentCount.toString()} 
-          icon="👨‍🎓" 
-          color="bg-green-50" 
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TeacherClasses />
-        <TeacherStudents />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 space-y-6">
+          <SchoolInfo school={schoolData} userRole="teacher" size="small" />
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <StatCard 
+              title="My Classes" 
+              value={classCount.toString()} 
+              icon="📚" 
+              color="bg-blue-50" 
+            />
+            <StatCard 
+              title="My Students" 
+              value={studentCount.toString()} 
+              icon="👨‍🎓" 
+              color="bg-green-50" 
+            />
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <TeacherClasses />
+            <TeacherStudents />
+          </div>
+        </div>
+        
+        <div className="lg:col-span-1">
+          <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-100">
+            <h2 className="text-lg font-medium text-gray-800 mb-4">Quick Access</h2>
+            <div className="space-y-2">
+              <QuickAccessTool 
+                title="Lesson Plan Generator" 
+                description="Create lesson plans" 
+                href="/tools/lesson-planner" 
+                icon={<BookOpen size={18} />} 
+              />
+              <QuickAccessTool 
+                title="Assessment Generator" 
+                description="Create interactive multiple-choice questions" 
+                href="/tools/mcq-generator" 
+                icon={<ClipboardList size={18} />} 
+              />
+              <QuickAccessTool 
+                title="Evaluator" 
+                description="Evaluate student answers" 
+                href="/tools/evaluator" 
+                icon={<CheckSquare size={18} />} 
+              />
+              <QuickAccessTool 
+                title="Personalized Learning Plan" 
+                description="Plan individualized education for students" 
+                href="/tools/plp" 
+                icon={<Users size={18} />} 
+              />
+              <QuickAccessTool 
+                title="Assignment Generator" 
+                description="Generate assignments" 
+                href="/tools/assignment-generator" 
+                icon={<FileText size={18} />} 
+              />
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

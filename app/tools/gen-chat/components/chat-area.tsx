@@ -53,6 +53,7 @@ export const ChatArea = ({
   generatedVideos,
   setGeneratedVideos,
   lastGeneratedImage,
+  isOwner = true,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
@@ -397,6 +398,7 @@ export const ChatArea = ({
             isLoading={isLoading}
             onInputChange={onInputChange}
             onSubmit={onSubmit}
+            isOwner={isOwner} // Pass isOwner prop
           />
         </div>
       </div>

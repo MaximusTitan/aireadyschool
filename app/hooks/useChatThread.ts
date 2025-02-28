@@ -24,6 +24,7 @@ export function useChatThread(initialThreadId?: string) {
   const [currentMessages, setCurrentMessages] = useState<ChatMessage[]>([]);
   const [title, setTitle] = useState<string>('New Chat');
   const [threads, setThreads] = useState<Array<{id: string; title: string; created_at: string}>>([]);
+  const [isOwner, setIsOwner] = useState<boolean>(true); // Add this state variable
 
   const clearMessages = useCallback(() => {
     setCurrentMessages([]);
@@ -147,6 +148,21 @@ export function useChatThread(initialThreadId?: string) {
     if (!threadId) return null;
 
     try {
+      // Check if user owns thread
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (user) {
+        const { data: threadOwnership } = await supabase
+          .from('chat_threads')
+          .select('user_id')
+          .eq('id', threadId)
+          .single();
+        
+        setIsOwner(threadOwnership?.user_id === user.id);
+      } else {
+        setIsOwner(false);
+      }
+
       // Load messages with their tool outputs
       const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
@@ -273,6 +289,7 @@ export function useChatThread(initialThreadId?: string) {
     deleteThread,
     startNewThread,
     clearMessages, // Export the clearMessages function
-    setCurrentMessages // Add this line
+    setCurrentMessages, // Add this line
+    isOwner // Add this to the returned values
   };
 }

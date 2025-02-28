@@ -23,7 +23,7 @@ export default function DashboardLayout({
 
   return (
     <div className="bg-backgroundApp min-h-screen">
-    <div className="container mx-auto px-3 py-6 max-w-6xl">
+    <div className="container mx-auto px-3 py-6 max-w-8xl">
       <h1 className="text-2xl font-medium mb-4 text-rose-500 border-b pb-2">
         {title}
       </h1>

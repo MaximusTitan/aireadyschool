@@ -77,7 +77,7 @@ export type ChatAreaProps = {
     }>;
     subject: string;
     difficulty: string;
-    explanation: string; // Added this field
+    explanation: string;
   }) => Promise<void>;
   input: string;
   isLoading: boolean;
@@ -86,4 +86,5 @@ export type ChatAreaProps = {
   generatedVideos: Record<string, string>;
   setGeneratedVideos: (videos: Record<string, string>) => void;
   lastGeneratedImage: string | null;
+  isOwner?: boolean;
 };

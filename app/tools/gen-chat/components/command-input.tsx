@@ -2,6 +2,7 @@ import { ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, KeyboardEvent } from "react";
 import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
+import { cn } from "@/lib/utils"; // Add this import for the cn utility
 
 const AVAILABLE_COMMANDS = [
   {
@@ -34,11 +35,13 @@ const AVAILABLE_COMMANDS = [
 const placeholders = {
   english: {
     thinking: "Thinking...",
-    prompt: "Type / for commands or ask a question..."
+    prompt: "Type / for commands or ask a question...",
+    viewOnly: "View only - you don't own this chat"
   },
   hindi: {
     thinking: "सोच रहा हूँ...",
-    prompt: "कमांड के लिए / टाइप करें या प्रश्न पूछें..."
+    prompt: "कमांड के लिए / टाइप करें या प्रश्न पूछें...",
+    viewOnly: "केवल देखें - यह चैट आपके स्वामित्व में नहीं है"
   }
 };
 
@@ -47,6 +50,7 @@ type CommandInputProps = {
   isLoading: boolean;
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
+  isOwner?: boolean; // Add this prop
 };
 
 export const CommandInput = ({
@@ -54,6 +58,7 @@ export const CommandInput = ({
   isLoading,
   onInputChange,
   onSubmit,
+  isOwner = true, // Set default value
 }: CommandInputProps) => {
   const [showCommands, setShowCommands] = useState(false);
   const [filteredCommands, setFilteredCommands] = useState(AVAILABLE_COMMANDS);
@@ -91,6 +96,16 @@ export const CommandInput = ({
   };
 
   const currentPlaceholders = placeholders[language as keyof typeof placeholders] || placeholders.english;
+  
+  // Determine if input should be disabled
+  const isDisabled = isLoading || !isOwner;
+  
+  // Determine appropriate placeholder text
+  const placeholderText = isLoading
+    ? currentPlaceholders.thinking
+    : !isOwner
+    ? currentPlaceholders.viewOnly
+    : currentPlaceholders.prompt;
 
   return (
     <form
@@ -104,17 +119,16 @@ export const CommandInput = ({
           value={input}
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
-          placeholder={
-            isLoading
-              ? currentPlaceholders.thinking
-              : currentPlaceholders.prompt
-          }
-          className="flex-1 p-3 rounded-lg bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition-all"
-          disabled={isLoading}
+          placeholder={placeholderText}
+          className={cn(
+            "flex-1 p-3 rounded-lg bg-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-300 transition-all",
+            !isOwner && "opacity-70"
+          )}
+          disabled={isDisabled}
         />
         <Button
           type="submit"
-          disabled={isLoading || !input.trim()}
+          disabled={isDisabled || !input.trim()}
           className="p-3 bg-neutral-800 hover:bg-neutral-700 text-white rounded-lg disabled:opacity-50 transition-colors"
         >
           {isLoading ? (
@@ -162,6 +176,14 @@ export const CommandInput = ({
           </div>
         )}
       </div>
+      
+      {!isOwner && (
+        <div className="mt-2 text-xs text-center text-amber-600">
+          {language === "english" 
+            ? "You are viewing a chat that belongs to someone else" 
+            : "आप किसी और के स्वामित्व वाली चैट देख रहे हैं"}
+        </div>
+      )}
     </form>
   );
 };

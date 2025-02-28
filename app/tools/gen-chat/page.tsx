@@ -32,6 +32,7 @@ export default function Page() {
     startNewThread,
     currentMessages,
     setCurrentMessages,
+    isOwner, // Add this
   } = useChatThread();
 
   // State management
@@ -498,6 +499,7 @@ export default function Page() {
           generatedVideos={generatedVideos}
           setGeneratedVideos={setGeneratedVideos}
           lastGeneratedImage={lastGeneratedImage}
+          isOwner={isOwner}
         />
       </div>
     </TooltipProvider>

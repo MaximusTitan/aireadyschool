@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation";
 import DashboardCard from "./DashboardCard";
 
 interface Student {
   id: string;
   user_id: string;
-  first_name: string;
-  last_name: string;
+  email: string;
   roll_number: string | null;
   grade_name: string;
   section_name: string;
@@ -29,6 +29,7 @@ interface TeacherAssignment {
 }
 
 export default function TeacherStudents() {
+  const router = useRouter();
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -132,19 +133,18 @@ export default function TeacherStudents() {
             return [];
           }
 
-          // For each student, get their profile information
+          // For each student, get their email from users table
           const studentsWithProfiles = await Promise.all(
             studentData.map(async (student) => {
-              const { data: profileData } = await supabase
-                .from('user_profiles')
-                .select('first_name, last_name')
+              const { data: userData } = await supabase
+                .from('users')
+                .select('email')
                 .eq('user_id', student.user_id)
                 .single();
 
               return {
                 ...student,
-                first_name: profileData?.first_name || 'Unknown',
-                last_name: profileData?.last_name || '',
+                email: userData?.email || 'No email',
                 grade_name: assignment.grade_name,
                 section_name: assignment.section_name
               };
@@ -167,6 +167,10 @@ export default function TeacherStudents() {
 
     loadStudents();
   }, [supabase]);
+
+  const handleStudentClick = (studentId: string) => {
+    router.push(`/dashboard/students/${studentId}`);
+  };
 
   if (loading) {
     return (
@@ -222,17 +226,21 @@ export default function TeacherStudents() {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Roll No</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {classStudents.map((student) => (
-                    <tr key={student.id} className="hover:bg-gray-50">
+                    <tr 
+                      key={student.id} 
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => handleStudentClick(student.id)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         {student.roll_number || 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {student.first_name} {student.last_name}
+                        {student.email}
                       </td>
                     </tr>
                   ))}

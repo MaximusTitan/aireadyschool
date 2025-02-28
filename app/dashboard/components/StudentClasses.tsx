@@ -6,7 +6,7 @@ import DashboardCard from "./DashboardCard";
 
 interface StudentClass {
   subject_name: string;
-  teacher_name?: string;
+  teacher_email?: string;
 }
 
 // Update the TeacherAssignment interface to match the actual data structure
@@ -17,11 +17,6 @@ interface TeacherAssignment {
   teachers: {
     user_id: string;
   };
-}
-
-interface UserProfile {
-  first_name: string;
-  last_name: string;
 }
 
 export default function StudentClasses() {
@@ -57,10 +52,9 @@ export default function StudentClasses() {
           .eq('section_id', student.section_id);
           
         if (assignmentsData && assignmentsData.length > 0) {
-          // For each assignment, get the teacher's profile info
+          // For each assignment, get the teacher's email
           const classesWithTeachers = await Promise.all(
             assignmentsData.map(async (assignment: any) => {
-              // Extract the first element if they are arrays
               const subjectName = assignment.subjects.name || 
                 (Array.isArray(assignment.subjects) && assignment.subjects[0]?.name);
               
@@ -69,24 +63,20 @@ export default function StudentClasses() {
               
               if (teacherId) {
                 const { data: userData } = await supabase
-                  .from('user_profiles')
-                  .select('first_name, last_name')
+                  .from('users')
+                  .select('email')
                   .eq('user_id', teacherId)
                   .single();
                   
-                const typedUserData = userData as UserProfile | null;
-                
                 return {
                   subject_name: subjectName || "Unknown Subject",
-                  teacher_name: typedUserData ? 
-                    `${typedUserData.first_name} ${typedUserData.last_name}` : 
-                    "Assigned Teacher"
+                  teacher_email: userData?.email || "No email"
                 };
               }
               
               return {
                 subject_name: subjectName || "Unknown Subject",
-                teacher_name: "Not assigned"
+                teacher_email: "Not assigned"
               };
             })
           );
@@ -122,14 +112,14 @@ export default function StudentClasses() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher Email</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {classes.map((cls, index) => (
               <tr key={index} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm">{cls.subject_name}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm">{cls.teacher_name || "Not assigned"}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm">{cls.teacher_email || "Not assigned"}</td>
               </tr>
             ))}
           </tbody>

@@ -33,6 +33,7 @@ export default function StudentDashboard() {
   const [studentData, setStudentData] = useState<Student | null>(null);
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [school, setSchool] = useState<School | null>(null);
+  const [userName, setUserName] = useState<string>("");
   
   const supabase = createClient();
 
@@ -44,6 +45,11 @@ export default function StudentDashboard() {
       if (!user) {
         setLoading(false);
         return;
+      }
+      
+      // Get user name from metadata
+      if (user.user_metadata?.name) {
+        setUserName(user.user_metadata.name);
       }
       
       // Get student data
@@ -106,7 +112,16 @@ export default function StudentDashboard() {
 
   return (
     <div>
-      <SchoolInfo school={school} userRole="student" />
+      {userName && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 mb-6">
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Welcome, {userName}
+          </h1>
+          <p className="text-gray-500 mt-1">Ready for today's lessons?</p>
+        </div>
+      )}
+      
+      <SchoolInfo school={school} userRole="student" size="small" />
       
       <div className="mb-6">
         <DashboardCard title="Student Information">

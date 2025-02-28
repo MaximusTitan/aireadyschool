@@ -39,6 +39,8 @@ export default function TeacherDashboard() {
   const [schoolData, setSchoolData] = useState<School | null>(null);
   const [classCount, setClassCount] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [userName, setUserName] = useState<string>("");
+  const [studentCount, setStudentCount] = useState<number>(0);
   
   const supabase = createClient();
 
@@ -52,6 +54,12 @@ export default function TeacherDashboard() {
           return;
         }
         
+        // Get user name from metadata
+        if (user.user_metadata?.name) {
+          setUserName(user.user_metadata.name);
+        }
+        
+        // Rest of existing fetch code
         const { data: teacher } = await supabase
           .from('teachers')
           .select(`
@@ -100,6 +108,30 @@ export default function TeacherDashboard() {
           if (classesCount !== null) {
             setClassCount(classesCount);
           }
+          
+          // Get student count for this teacher
+          let studentCountVal = 0;
+          const { data: assignments } = await supabase
+            .from('teacher_assignments')
+            .select('grade_id, section_id')
+            .eq('teacher_id', teacher.id);
+            
+          if (assignments && assignments.length > 0) {
+            // For each assignment, count the number of students
+            const promises = assignments.map(async (assignment) => {
+              const { count } = await supabase
+                .from('school_students')
+                .select('*', { count: 'exact', head: true })
+                .eq('grade_id', assignment.grade_id)
+                .eq('section_id', assignment.section_id);
+                
+              return count || 0;
+            });
+            
+            const counts = await Promise.all(promises);
+            studentCountVal = counts.reduce((sum, count) => sum + count, 0);
+            setStudentCount(studentCountVal);
+          }
         }
         
         setLoading(false);
@@ -122,9 +154,18 @@ export default function TeacherDashboard() {
   
   return (
     <div className="space-y-6">
-      <SchoolInfo school={schoolData} userRole="teacher" />
+      {userName && (
+        <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Welcome, {userName}
+          </h1>
+          <p className="text-gray-500 mt-1">Have a productive day teaching!</p>
+        </div>
+      )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <SchoolInfo school={schoolData} userRole="teacher" size="small" />
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <StatCard 
           title="My Classes" 
           value={classCount.toString()} 
@@ -133,15 +174,9 @@ export default function TeacherDashboard() {
         />
         <StatCard 
           title="My Students" 
-          value="--" 
+          value={studentCount.toString()} 
           icon="👨‍🎓" 
           color="bg-green-50" 
-        />
-        <StatCard 
-          title="Assignments" 
-          value="--" 
-          icon="✏️" 
-          color="bg-amber-50" 
         />
       </div>
       

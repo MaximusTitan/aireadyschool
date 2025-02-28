@@ -182,7 +182,14 @@ export const categories: CategoryTools = {
         icon: Terminal
       }
     ],
-    Marketing: []
+    Marketing: [
+      {
+        title: "YouTube Thumbnail Generator",
+        description: "Create eye-catching thumbnails for your YouTube videos.",
+        route: "/tools/marketing-content-generator/youtube-thumbnail-generator",
+        icon: Video,
+      },
+    ]
   },
   Teacher: {
     Learning: [
@@ -274,7 +281,14 @@ export const categories: CategoryTools = {
         icon: Brain
       }
     ],
-    Marketing: []
+    Marketing: [
+      {
+        title: "YouTube Thumbnail Generator",
+        description: "Create eye-catching thumbnails for your educational YouTube videos.",
+        route: "/tools/marketing-content-generator/youtube-thumbnail-generator",
+        icon: Video,
+      },
+    ]
   },
   School: {
     Learning: [
@@ -377,7 +391,14 @@ export const categories: CategoryTools = {
         description: "Create professional posters for school events, admissions, and announcements.",
         route: "/tools/marketing-content-generator/marketing-poster",
         icon: Image
-      }
+      },
+      {
+        title: "YouTube Thumbnail Generator",
+        description: "Create eye-catching thumbnails for your educational YouTube videos.",
+        route: "/tools/marketing-content-generator/youtube-thumbnail-generator",
+        icon: Video,
+        isHot: true,
+      },
     ]
   }
 };

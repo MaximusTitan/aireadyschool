@@ -13,7 +13,7 @@ import { savePresentation } from "../actions/savePresentations"
 import type { Presentation, SlideLayout, Slide } from "../types/presentation"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Download, Edit, Play, Wand2 } from "lucide-react"
+import { ChevronDown, Download, Edit, Play, Wand2, Save } from "lucide-react"
 import { RevealPresentation } from "./RevealPresentation"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
@@ -24,6 +24,7 @@ import { PresentationHistory } from "./PresentationHistory"
 import { PlaceholderImage } from "@/app/components/ui/placeholder-image"
 import { useAuth } from "@/hooks/use-auth" // Create this hook if you haven't already
 import { createClient } from "@/utils/supabase/client"
+import { updatePresentation } from "../actions/updatePresentation"; // Add this import
 
 // Add this helper function after the imports
 const extractVideoId = (url: string) => {
@@ -99,6 +100,9 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
   const [presentations, setPresentations] = useState<Presentation[]>([])
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isNewPresentation, setIsNewPresentation] = useState(true);
 
   const themes = [
     { value: "modern", label: "Modern" },
@@ -194,6 +198,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
       // ... existing error handling ...
     } finally {
       setIsGenerating(false);
+      setIsNewPresentation(true); // Mark as new presentation when generating
     }
   };
 
@@ -274,12 +279,14 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
   const handleSave = (updatedPresentation: Presentation) => {
     setGeneratedPresentation(updatedPresentation)
     onGenerated(updatedPresentation)
+    setHasUnsavedChanges(true);
   }
 
   const handleEdit = (e: React.MouseEvent) => {
     e.preventDefault()
     setIsEditing(!isEditing)
     if (!isEditing) {
+      setHasUnsavedChanges(false);
       toast({
         title: "Edit mode activated",
         description: "Click on any text in the presentation to edit. Click 'Exit Edit Mode' when finished.",
@@ -673,15 +680,58 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
     setTheme(presentation.theme)
     setTransition(presentation.transition as typeof transition)
     onGenerated(presentation)
+    setIsNewPresentation(false); // Set this to false for historical presentations
+    setHasUnsavedChanges(false); // Reset unsaved changes
+    setIsEditing(false); // Disable edit mode
     toast({
       title: "Presentation loaded",
-      description: "You can now edit the selected presentation",
-    })
+      description: "This is a historical presentation. Generate a new one to edit.",
+    });
   }
 
   function nanoid(): string {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
   }
+
+  // Add this function to handle saving changes
+  const handleSaveChanges = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent form submission
+    if (!generatedPresentation || !presentationId) return;
+
+    try {
+      setIsLoading(true);
+      const updatedPresentation = await updatePresentation({
+        id: presentationId,
+        presentation: {
+          ...generatedPresentation,
+          theme,
+          transition,
+          lastEdited: new Date().toISOString(),
+        },
+      });
+
+      setGeneratedPresentation(updatedPresentation);
+      setHasUnsavedChanges(false);
+      toast({
+        title: "Changes saved",
+        description: "Your presentation has been updated successfully.",
+      });
+    } catch (error) {
+      console.error("Error saving changes:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Add this function to check if form has changes
+  const hasFormChanges = () => {
+    return formChanged || detailedContent.length > 0 || prompt.length > 0;
+  };
 
   return (
     <div className="space-y-8">
@@ -938,7 +988,14 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
         )}
 
         <div className="flex items-center gap-4 mt-4">
-          <Button type="submit" disabled={isGenerating || !formChanged}>
+          <Button 
+            type="submit" 
+            disabled={isGenerating || !prompt}
+            onClick={(e) => {
+              e.preventDefault();
+              handleSubmit(e);
+            }}
+          >
             {isGenerating ? (
               <>
                 <Spinner className="mr-2 h-4 w-4" />
@@ -948,13 +1005,50 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
               "Generate Presentation"
             )}
           </Button>
+
           {generatedPresentation && (
             <>
-              <Button onClick={handleEdit} variant={isEditing ? "secondary" : "outline"}>
-                <Edit className="mr-2 h-4 w-4" />
-                {isEditing ? "Exit Edit Mode" : "Edit Presentation"}
-              </Button>
-              <Button onClick={handleDownload} variant="outline" disabled={isDownloading}>
+              {isNewPresentation && ( // Only show edit and save buttons for new presentations
+                <>
+                  <Button 
+                    onClick={handleEdit} 
+                    type="button"
+                    variant={isEditing ? "secondary" : "outline"}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    {isEditing ? "Exit Edit Mode" : "Edit Presentation"}
+                  </Button>
+                  
+                  {hasUnsavedChanges && (
+                    <Button 
+                      onClick={handleSaveChanges}
+                      type="button"
+                      variant="secondary"
+                      className="bg-green-100 hover:bg-green-200"
+                      disabled={isLoading}
+                    >
+                      {isLoading ? (
+                        <>
+                          <Spinner className="mr-2 h-4 w-4" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          Save Changes
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </>
+              )}
+
+              <Button 
+                onClick={handleDownload} 
+                type="button"
+                variant="outline" 
+                disabled={isDownloading}
+              >
                 {isDownloading ? (
                   <>
                     <Spinner className="mr-2 h-4 w-4" />
@@ -967,7 +1061,16 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
                   </>
                 )}
               </Button>
-              {generatedPresentation && presentationId && <ShareButton presentationId={presentationId} />}
+
+              {isNewPresentation && !hasUnsavedChanges && (
+                <ShareButton presentationId={presentationId} />
+              )}
+              
+              {isNewPresentation && hasUnsavedChanges && (
+                <div className="text-yellow-600 text-sm">
+                  ⚠️ Save changes before sharing
+                </div>
+              )}
             </>
           )}
         </div>

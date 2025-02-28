@@ -48,11 +48,15 @@ export default function TextTools() {
   const [targetLanguage, setTargetLanguage] = useState("spanish");
   const [targetWords, setTargetWords] = useState(100);
   const [copied, setCopied] = useState(false);
+  const [error, setError] = useState<{ message: string, type: string } | null>(null);
 
   const processText = async () => {
     if (!input.trim()) return;
 
     setLoading(true);
+    setError(null);
+    setOutput("");
+    
     try {
       const response = await fetch("/api/process-text", {
         method: "POST",
@@ -69,10 +73,22 @@ export default function TextTools() {
       });
 
       const data = await response.json();
+      
+      if (!response.ok) {
+        setError({ 
+          message: data.error || "An error occurred while processing your text", 
+          type: data.errorType || "unknown_error"
+        });
+        return;
+      }
+      
       setOutput(data.result);
     } catch (error) {
       console.error("Error processing text:", error);
-      setOutput("An error occurred while processing your text.");
+      setError({ 
+        message: "Network error or server unavailable", 
+        type: "network_error" 
+      });
     } finally {
       setLoading(false);
     }
@@ -225,12 +241,34 @@ export default function TextTools() {
                     Word count: {outputWordCount}
                   </span>
                 </div>
-                <Textarea
-                  placeholder="Processed text will appear here..."
-                  className="min-h-[300px] bg-transparent resize-none"
-                  value={output}
-                  readOnly
-                />
+                
+                {error ? (
+                  <div className="min-h-[300px] flex flex-col items-center justify-center">
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-4 w-full max-w-md">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.28 7.22a.75.75 0 00-1.06 1.06L8.94 10l-1.72 1.72a.75.75 0 101.06 1.06L10 11.06l1.72 1.72a.75.75 0 101.06-1.06L11.06 10l1.72-1.72a.75.75 0 00-1.06-1.06L10 8.94 8.28 7.22z" clipRule="evenodd" />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                          <div className="mt-2 text-sm text-red-700 dark:text-red-300">
+                            <p>{error.message}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <Textarea
+                    placeholder="Processed text will appear here..."
+                    className="min-h-[300px] bg-transparent resize-none"
+                    value={output}
+                    readOnly
+                  />
+                )}
+                
                 {loading && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <Loader2 className="h-8 w-8 animate-spin text-neutral-500" />

@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       for (const chunk of chunks) {
         const embedding = await openai.embeddings.create({
           input: chunk,
-          model: "text-embedding-ada-002"
+          model: "text-embedding-3-small"
         });
 
         await supabase.from('documents').insert({

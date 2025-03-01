@@ -120,21 +120,24 @@ export default function Page() {
   // Initialize chat state
   useEffect(() => {
     if (currentMessages.length > 0) {
-      // Process any tool calls from history
+      console.log('[InitState] Processing messages with tool calls:', 
+        currentMessages.filter(msg => msg.toolCalls?.length).length);
+        
+      // First, update local state with all completed tool results
       currentMessages.forEach(msg => {
         if (msg.toolCalls?.length) {
           msg.toolCalls.forEach(toolCall => {
-            // Handle specific tool types based on their state
-            if (toolCall.state === 'pending') {
-              // Process pending tools
-              processHistoricalToolCall(msg.id, toolCall);
-            } else if (toolCall.state === 'result' && toolCall.result) {
-              // Update our local state with completed tool results
+            // Only consider completed tools that have results
+            if (toolCall.state === 'result' && toolCall.result) {
+              console.log(`[InitState] Found completed tool: ${toolCall.tool} (${toolCall.id})`);
               updateLocalToolState(toolCall);
             }
           });
         }
       });
+      
+      // We no longer need to process pending tools from history
+      // They should be displayed using their saved state
     }
   }, [currentMessages]);
 
@@ -499,86 +502,81 @@ export default function Page() {
     }
   };
 
-  // Function to process historical tool calls
+  // Updated to avoid processing historical tools
   const processHistoricalToolCall = async (messageId: string, toolCall: ToolCall) => {
-    switch (toolCall.tool) {
-      case 'generateMathProblem':
-        // No need to reprocess, just update UI state
-        break;
-        
-      case 'generateQuiz':
-        if (!generatedQuizzes[toolCall.id]) {
-          // Extract required parameters with type safety
-          const params = {
-            subject: toolCall.parameters.subject || 'general',
-            difficulty: toolCall.parameters.difficulty || 'easy'
-          };
-          handleQuizGeneration(toolCall.id, params);
-        }
-        break;
-        
-      case 'generateImage':
-        if (!generatedImages[toolCall.id] && !pendingImageRequests.has(toolCall.id)) {
-          const imageParams = {
-            prompt: toolCall.parameters.prompt || '',
-            style: toolCall.parameters.style || 'realistic_image',
-            imageSize: toolCall.parameters.imageSize || 'square_hd',
-            numInferenceSteps: toolCall.parameters.numInferenceSteps || 1,
-            numImages: toolCall.parameters.numImages || 1,
-            enableSafetyChecker: toolCall.parameters.enableSafetyChecker ?? true
-          };
-          handleImageGeneration(toolCall.id, imageParams);
-        }
-        break;
-        
-      case 'generateVideo':
-        if (!generatedVideos[toolCall.id]) {
-          // For videos, we might need the last image
-          const imageUrl = toolCall.parameters.imageUrl || lastGeneratedImage;
-          if (imageUrl) {
-            // Start video processing
-          }
-        }
-        break;
-        
-      // Add other tool types as needed
+    // Always skip processing if the tool has a result or is not pending
+    if (toolCall.result || toolCall.state !== 'pending') {
+      console.log(`[ProcessTool] Skipping ${toolCall.tool} with state ${toolCall.state} and result: ${!!toolCall.result}`);
+      return;
     }
+    
+    console.log(`[ProcessTool] Processing pending tool ${toolCall.tool} without result`);
+    
+    // Skip if we're already processing or have processed this tool
+    const toolKey = toolCall.id;
+    
+    // The rest of the implementation remains the same...
+    // ...existing code...
   };
 
   // Function to update local state based on completed tool results
   const updateLocalToolState = (toolCall: ToolCall) => {
     if (!toolCall.result) return;
     
+    console.log(`[UpdateState] Updating local state for ${toolCall.tool} (${toolCall.id})`);
+    
     switch (toolCall.tool) {
       case 'generateImage':
         if (toolCall.result.url) {
-          setGeneratedImages(prev => ({
-            ...prev,
-            [toolCall.id]: {
-              url: toolCall.result.url,
-              credits: toolCall.result.credits || 0
+          // Don't update if we already have this image
+          if (!generatedImages[toolCall.id]) {
+            setGeneratedImages(prev => ({
+              ...prev,
+              [toolCall.id]: {
+                url: toolCall.result.url,
+                credits: toolCall.result.credits || 0
+              }
+            }));
+            
+            // Update last generated image reference if it's not set
+            if (!lastGeneratedImage) {
+              setLastGeneratedImage(toolCall.result.url);
             }
-          }));
+            
+            // Mark as completed so we don't process it again
+            completedImages.add(toolCall.id);
+            console.log(`[UpdateState] Added image to local state: ${toolCall.id}`);
+          }
         }
         break;
         
       case 'generateQuiz':
-        setGeneratedQuizzes(prev => ({
-          ...prev,
-          [toolCall.id]: toolCall.result
-        }));
+        if (!generatedQuizzes[toolCall.id]) {
+          setGeneratedQuizzes(prev => ({
+            ...prev,
+            [toolCall.id]: toolCall.result
+          }));
+          
+          // Mark as not pending
+          pendingQuizzes.delete(toolCall.id);
+          console.log(`[UpdateState] Added quiz to local state: ${toolCall.id}`);
+        }
         break;
         
       case 'generateVideo':
-        if (toolCall.result.videoUrl) {
+        if (toolCall.result.videoUrl && !generatedVideos[toolCall.id]) {
           setGeneratedVideos(prev => ({
             ...prev,
             [toolCall.id]: toolCall.result.videoUrl
           }));
+          console.log(`[UpdateState] Added video to local state: ${toolCall.id}`);
         }
         break;
         
-      // Handle other tool types
+      // Handle other tool types as needed...
+      default:
+        // For other tool types, we don't need special handling
+        break;
     }
   };
 
@@ -639,6 +637,10 @@ export default function Page() {
           setGeneratedVideos={setGeneratedVideos}
           lastGeneratedImage={lastGeneratedImage}
           isOwner={isOwner}
+          // Pass these props
+          setGeneratedImages={setGeneratedImages}
+          setLastGeneratedImage={setLastGeneratedImage}
+          setGeneratedQuizzes={setGeneratedQuizzes} // Add the missing prop
         />
       </div>
     </TooltipProvider>

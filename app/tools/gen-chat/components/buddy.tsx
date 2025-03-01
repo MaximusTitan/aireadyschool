@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Volume2, VolumeX } from "lucide-react";
 import { useAudioSettings } from "@/app/hooks/useAudioSettings";
 import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
@@ -33,18 +33,24 @@ export function BuddyPanel({ messages, isLoading }: BuddyPanelProps) {
   const [isTalking, setIsTalking] = useState(false);
   const { isAudioEnabled, toggleAudio } = useAudioSettings();
   const { language } = useLanguageSettings();
+  const messagesLengthRef = useRef<number>(0);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      const currentTime = Date.now();
-      setLastMessageTime(currentTime);
-      setIsTalking(true);
+    // Only trigger animations when the number of messages actually changes
+    if (messages.length !== messagesLengthRef.current) {
+      messagesLengthRef.current = messages.length;
+      
+      if (messages.length > 0) {
+        const currentTime = Date.now();
+        setLastMessageTime(currentTime);
+        setIsTalking(true);
 
-      const timer = setTimeout(() => {
-        setIsTalking(false);
-      }, 3000);
+        const timer = setTimeout(() => {
+          setIsTalking(false);
+        }, 3000);
 
-      return () => clearTimeout(timer);
+        return () => clearTimeout(timer);
+      }
     }
   }, [messages]);
 

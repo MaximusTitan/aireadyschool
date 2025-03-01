@@ -8,7 +8,6 @@ import type { Presentation, Slide } from "../types/presentation";
 import { Button } from "@/components/ui/button";
 import { Pencil, RefreshCw, Upload } from "lucide-react";
 import { regenerateImage } from "../actions/generatePresentation";
-import { toast } from "@/hooks/use-toast";
 import type RevealType from "reveal.js";
 // Add to the top of your RevealPresentation.tsx file or your global styles
 import "reveal.js/dist/reveal.css";
@@ -16,6 +15,10 @@ import "reveal.js/dist/theme/white.css"; // or any other theme you prefer
 import { Spinner } from "./ui/spinner";
 import { YouTubeSlide } from "./YouTubeSlide";
 import { cn } from "@/utils/cn";
+import { SimpleRichEditor } from "./SimpleRichEditor";
+import { FileType2, FileText, Maximize2 } from "lucide-react";
+import { exportToPDF, exportToPPTX } from "../utils/exportUtils";
+import { toast } from "@/hooks/use-toast";
 
 interface RevealPresentationProps {
   presentation: Presentation;
@@ -48,6 +51,9 @@ export function RevealPresentation({
   const revealInstance = useRef<RevealType.Api | null>(null);
   const [initializing, setInitializing] = useState(true);
   const lastKnownSlideIndex = useRef(0);
+  const slideElementsRef = useRef<HTMLElement[]>([]);
+  const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [exportProgress, setExportProgress] = useState({ current: 0, total: 0 });
 
   const SLIDE_WIDTH = 1280;
   const SLIDE_HEIGHT = 720;
@@ -324,111 +330,6 @@ export function RevealPresentation({
     input.click();
   };
 
-  const EditableText = ({
-    value,
-    onChange,
-    slideIndex,
-    field,
-    className = "",
-    multiline = false,
-    style,
-  }: {
-    value: string;
-    onChange: (value: string) => void;
-    slideIndex: number;
-    field: string;
-    className?: string;
-    multiline?: boolean;
-    style?: React.CSSProperties;
-  }) => {
-    const isActive =
-      activeEditField?.slideIndex === slideIndex &&
-      activeEditField?.field === field;
-    const [editValue, setEditValue] = useState(value);
-
-    const handleDoubleClick = () => {
-      if (isEditing) {
-        setActiveEditField({ slideIndex, field });
-        setEditValue(value);
-      }
-    };
-
-    const handleBlur = () => {
-      if (editValue !== value) {
-        onChange(editValue);
-      }
-      setActiveEditField(null);
-    };
-
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleBlur();
-      }
-      if (e.key === "Escape") {
-        setEditValue(value);
-        setActiveEditField(null);
-      }
-    };
-
-    if (!isActive) {
-      return (
-        <div
-          className={`group relative ${className} ${isEditing ? "hover:bg-blue-100 hover:outline hover:outline-2 hover:outline-blue-500" : ""}`}
-          onDoubleClick={handleDoubleClick}
-          style={{
-            ...style,
-            wordBreak: "break-word",
-            overflowWrap: "break-word",
-          }}
-        >
-          {isEditing && (
-            <Button
-              size="sm"
-              variant="ghost"
-              className="absolute -right-8 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
-              onClick={() => setActiveEditField({ slideIndex, field })}
-            >
-              <Pencil className="h-4 w-4" />
-            </Button>
-          )}
-          {multiline ? (
-            <div className="whitespace-pre-wrap">{value}</div>
-          ) : (
-            <div>{value}</div>
-          )}
-        </div>
-      );
-    }
-
-    return multiline ? (
-      <textarea
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className={`w-full bg-transparent resize-none p-0 focus:outline-none focus:ring-0 ${className}`}
-        style={{
-          height: "auto",
-          minHeight: "100px",
-          ...style,
-        }}
-        autoFocus
-      />
-    ) : (
-      <input
-        type="text"
-        value={editValue}
-        onChange={(e) => setEditValue(e.target.value)}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
-        className={`w-full bg-transparent p-0 focus:outline-none focus:ring-0 ${className}`}
-        style={style}
-        autoFocus
-      />
-    );
-  };
-
   const renderMedia = (slide: Slide, isEditing: boolean, index: number) => {
     if (slide.videoUrl) {
       return (
@@ -484,21 +385,47 @@ export function RevealPresentation({
   }
 
   const renderSlideContent = (slide: Slide, index: number) => {
+    // Special handling for YouTube/video slides
     if (slide.type === "youtube" || slide.layout === "videoSlide") {
+      // Always use presentation topic or title as the video slide title
+      const videoTitle = presentation.topic || presentation.title || 'Video Content';
+      
+      // Force update the slide title to match presentation topic
+      const updatedSlides = [...editedSlides];
+      if (updatedSlides[index].title !== videoTitle) {
+        updatedSlides[index] = { 
+          ...updatedSlides[index], 
+          title: videoTitle 
+        };
+        
+        // Update state immediately for UI rendering
+        setEditedSlides(updatedSlides);
+        
+        // Save the updated title persistently
+        setTimeout(() => {
+          onSave({
+            ...presentation,
+            slides: updatedSlides
+          });
+        }, 0);
+      }
+      
       return (
-        <div className="absolute inset-0 w-full h-full" data-slide-type="video">
-          <div className={`w-full h-full ${theme}`}>
-            <YouTubeSlide
-              slide={slide}
-              theme={theme}
-              isEditing={isEditing}
-              presentationTopic={presentation.topic || presentation.title} // Pass the presentation title
-            />
-          </div>
+        <div 
+          className="absolute inset-0 flex flex-col items-center justify-center w-full h-full" 
+          data-slide-type="video"
+        >
+          <YouTubeSlide
+            slide={{...slide, title: videoTitle}} // Force the title here
+            theme={theme}
+            isEditing={isEditing}
+            presentationTopic={videoTitle}
+          />
         </div>
       );
     }
 
+    // Regular slides with text and image
     const isTextLeft = slide.layout === "textLeft";
 
     return (
@@ -506,35 +433,34 @@ export function RevealPresentation({
         <div
           className={`w-1/2 flex flex-col justify-start ${isTextLeft ? "pr-8" : "pl-8"} p-12`}
         >
-          <EditableText
+          <SimpleRichEditor
             value={slide.title}
             onChange={(value) => handleSlideChange(index, "title", value)}
-            slideIndex={index}
-            field="title"
-            className="reveal-title text-[48px] font-bold mb-6 leading-tight text-left"
+            className={`reveal-title text-[48px] font-bold mb-6 leading-tight text-left theme-${theme}`}
+            isEditing={isEditing}
+            theme={theme} // Pass theme to SimpleRichEditor
           />
-          <EditableText
+          <SimpleRichEditor
             value={slide.content || ""}
             onChange={(value) => handleSlideChange(index, "content", value)}
-            slideIndex={index}
-            field="content"
-            className="reveal-content text-[24px] mb-6 leading-relaxed text-left"
-            multiline
+            className={`reveal-content text-[24px] mb-6 leading-relaxed text-left theme-${theme}`}
+            isEditing={isEditing}
+            theme={theme} // Pass theme to SimpleRichEditor
           />
           {slide.bulletPoints && (
-            <ul className="reveal-list text-[24px] space-y-2">
+            <ul className={`reveal-list text-[24px] space-y-2 theme-${theme}`}>
               {slide.bulletPoints.map((point, pointIndex) => (
                 <li key={pointIndex} className="reveal-list-item">
-                  <EditableText
+                  <SimpleRichEditor
                     value={point}
                     onChange={(value) => {
                       const newBulletPoints = [...(slide.bulletPoints || [])];
                       newBulletPoints[pointIndex] = value;
                       handleSlideChange(index, "bulletPoints", newBulletPoints);
                     }}
-                    slideIndex={index}
-                    field={`bulletPoint-${pointIndex}`}
-                    className="inline-block"
+                    className={`inline-block theme-${theme}`}
+                    isEditing={isEditing}
+                    theme={theme} // Pass theme to SimpleRichEditor
                   />
                 </li>
               ))}
@@ -552,56 +478,334 @@ export function RevealPresentation({
     );
   };
 
+  const prepareForExport = async () => {
+    // Ensure slide container is ready
+    if (!revealRef.current) return;
+    
+    // Apply special slide preparation styles to improve export quality
+    const styleElement = document.createElement('style');
+    styleElement.id = 'export-enhancements';
+    styleElement.textContent = `
+      /* Temporary styles applied during export to improve text rendering */
+      .reveal .slides section * {
+        font-family: Arial, Helvetica, sans-serif !important;
+        letter-spacing: 0.025em !important;
+        word-spacing: 0.05em !important;
+        text-rendering: geometricPrecision !important;
+      }
+      
+      .reveal .slides h1, .reveal .slides h2, .reveal .slides h3 {
+        margin-bottom: 0.2em !important;
+      }
+      
+      .reveal .slides p {
+        margin-bottom: 0.5em !important;
+      }
+      
+      .reveal .slides ul li {
+        margin-bottom: 0.3em !important;
+      }
+      
+      /* Make sure all elements are fully visible */
+      .reveal .slides section {
+        opacity: 1 !important;
+        visibility: visible !important;
+      }
+      
+      /* Ensure themes have proper contrast for export */
+      .theme-modern .reveal .slides section {
+        color: white !important;
+        background: linear-gradient(135deg, #2b4162 0%, #12100e 100%) !important;
+      }
+      
+      .theme-dark .reveal .slides section {
+        color: white !important;
+        background: #111111 !important;
+      }
+    `;
+    document.head.appendChild(styleElement);
+    
+    // Return a cleanup function
+    return () => {
+      const element = document.getElementById('export-enhancements');
+      if (element) {
+        document.head.removeChild(element);
+      }
+    };
+  };
+
+  const handleExportToPDF = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Show progress toast
+      toast({
+        title: "Preparing PDF...",
+        description: "This may take a few moments. Please wait.",
+        duration: 5000,
+      });
+      
+      // Ensure revealInstance exists
+      if (!revealInstance.current) {
+        throw new Error("Presentation not initialized");
+      }
+      
+      // Apply temporary export enhancement styles
+      const cleanup = await prepareForExport();
+      
+      // Set progress tracking
+      setExportProgress({ current: 0, total: editedSlides.length });
+      
+      try {
+        // Export with sequential slide capture
+        await exportToPDF(presentation, revealInstance.current);
+        
+        // Success notification
+        toast({
+          title: "PDF Downloaded",
+          description: "Your presentation has been downloaded as a PDF.",
+        });
+      } finally {
+        // Clean up enhancement styles
+        if (cleanup) cleanup();
+      }
+    } catch (error) {
+      console.error("Error exporting to PDF:", error);
+      toast({
+        title: "Export Failed",
+        description: "There was an error creating your PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+      setExportProgress({ current: 0, total: 0 });
+    }
+  };
+  
+  const handleExportToPPTX = async () => {
+    try {
+      setIsExporting(true);
+      
+      // Show progress toast
+      toast({
+        title: "Preparing PowerPoint...",
+        description: "This may take a few moments. Please wait.",
+        duration: 5000,
+      });
+      
+      // Ensure revealInstance exists
+      if (!revealInstance.current) {
+        throw new Error("Presentation not initialized");
+      }
+      
+      // Apply temporary export enhancement styles
+      const cleanup = await prepareForExport();
+      
+      // Set progress tracking
+      setExportProgress({ current: 0, total: editedSlides.length });
+      
+      try {
+        // Export with sequential slide capture
+        await exportToPPTX(presentation, revealInstance.current);
+        
+        // Success notification
+        toast({
+          title: "PowerPoint Downloaded",
+          description: "Your presentation has been downloaded as a PowerPoint file.",
+        });
+      } finally {
+        // Clean up enhancement styles
+        if (cleanup) cleanup();
+      }
+    } catch (error) {
+      console.error("Error exporting to PPTX:", error);
+      toast({
+        title: "Export Failed",
+        description: "There was an error creating your PowerPoint file. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
+      setExportProgress({ current: 0, total: 0 });
+    }
+  };
+
+  // Add a new state to track fullscreen mode client-side
+  const [isInFullscreenMode, setIsInFullscreenMode] = useState(false);
+  
+  // Update the fullscreen state whenever document.fullscreenElement changes
+  useEffect(() => {
+    const updateFullscreenState = () => {
+      setIsInFullscreenMode(!!document.fullscreenElement);
+    };
+    
+    // Initial check
+    updateFullscreenState();
+    
+    // Add event listeners for fullscreen changes
+    document.addEventListener('fullscreenchange', updateFullscreenState);
+    document.addEventListener('webkitfullscreenchange', updateFullscreenState);
+    document.addEventListener('mozfullscreenchange', updateFullscreenState);
+    document.addEventListener('MSFullscreenChange', updateFullscreenState);
+    
+    return () => {
+      // Clean up event listeners
+      document.removeEventListener('fullscreenchange', updateFullscreenState);
+      document.removeEventListener('webkitfullscreenchange', updateFullscreenState);
+      document.removeEventListener('mozfullscreenchange', updateFullscreenState);
+      document.removeEventListener('MSFullscreenChange', updateFullscreenState);
+    };
+  }, []);
+
+  // Fix the renderExportButtons function to use the state instead of checking document directly
+  const renderExportButtons = () => (
+    <div className="flex items-center gap-2 mb-4">
+      {/* Export PDF Button */}
+      <Button
+        variant="outline"
+        onClick={handleExportToPDF}
+        disabled={isExporting}
+        className="flex items-center gap-2"
+      >
+        {isExporting && exportProgress.total > 0 ? (
+          <div className="flex items-center gap-2">
+            <Spinner className="h-4 w-4" />
+            <span>
+              Exporting... ({exportProgress.current}/{exportProgress.total})
+            </span>
+          </div>
+        ) : (
+          <>
+            <FileText className="w-4 h-4" />
+            <span>Export PDF</span>
+          </>
+        )}
+      </Button>
+      
+      {/* Export PowerPoint Button */}
+      <Button
+        variant="outline"
+        onClick={handleExportToPPTX}
+        disabled={isExporting}
+        className="flex items-center gap-2"
+      >
+        {isExporting && exportProgress.total > 0 ? (
+          <div className="flex items-center gap-2">
+            <Spinner className="h-4 w-4" />
+            <span>
+              Exporting... ({exportProgress.current}/{exportProgress.total})
+            </span>
+          </div>
+        ) : (
+          <>
+            <FileType2 className="w-4 h-4" />
+            <span>Export PowerPoint</span>
+          </>
+        )}
+      </Button>
+      
+      {/* Fullscreen Button - fixed to use state instead of document directly */}
+      <Button
+        variant="outline"
+        onClick={() => {
+          if (isInFullscreenMode) {
+            document.exitFullscreen();
+          } else if (containerRef.current) {
+            containerRef.current.requestFullscreen();
+          }
+        }}
+        className="flex items-center gap-2"
+      >
+        <Maximize2 className="w-4 h-4" />
+        <span>{isInFullscreenMode ? "Exit Fullscreen" : "Fullscreen"}</span>
+      </Button>
+    </div>
+  );
+
+  useEffect(() => {
+    if (!initializing) {
+      // Update slide elements ref whenever slides change
+      slideElementsRef.current = Array.from(
+        document.querySelectorAll('.reveal .slides section')
+      ) as HTMLElement[];
+    }
+  }, [initializing, editedSlides]);
+
+  useEffect(() => {
+    if (!revealInstance.current || !isExporting) return;
+    
+    const handleSlideChange = (event: any) => {
+      if (isExporting && exportProgress.total > 0) {
+        setExportProgress(prev => ({
+          ...prev,
+          current: event.indexh + 1
+        }));
+      }
+    };
+    
+    // Add event listener for slide changes during export
+    revealInstance.current.addEventListener('slidechanged', handleSlideChange);
+    
+    return () => {
+      if (revealInstance.current) {
+        revealInstance.current.removeEventListener('slidechanged', handleSlideChange);
+      }
+    };
+  }, [isExporting, exportProgress.total, revealInstance.current]);
+
   return (
-    <div
-      ref={containerRef}
-      className={`${
-        isFullscreen ? "fixed inset-0 z-50 bg-black" : ""
-      } flex items-center justify-center w-full overflow-hidden`}
-      style={{
-        minHeight: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
-        aspectRatio: "16/9",
-        marginInline: "auto",
-        paddingBottom: "1rem", // Add padding at the bottom
-      }}
-    >
+    <div className="space-y-4">
+      {renderExportButtons()}
       <div
-        className="relative"
+        ref={containerRef}
+        className={`${
+          isFullscreen ? "fixed inset-0 z-50 bg-black" : ""
+        } flex items-center justify-center w-full overflow-hidden`}
         style={{
-          width: `${SLIDE_WIDTH}px`,
-          margin: "0 auto",
+          minHeight: isFullscreen ? "100vh" : `${SLIDE_HEIGHT}px`,
+          aspectRatio: "16/9",
+          marginInline: "auto",
+          paddingBottom: "1rem", // Add padding at the bottom
         }}
       >
         <div
-          ref={revealRef}
-          className={`reveal reveal-viewport theme-${theme}`}
+          className="relative"
           style={{
             width: `${SLIDE_WIDTH}px`,
-            height: `${SLIDE_HEIGHT}px`,
-            transform: `scale(${scale})`,
-            transformOrigin: "center center", // Changed from "top center" to "center center"
-            //margin: "2rem auto", // Added margin to adjust vertical position
-            ["--slide-scale" as any]: "1",
-            ["--viewport-width" as any]: `${SLIDE_WIDTH}px`,
-            ["--viewport-height" as any]: `${SLIDE_HEIGHT}px`,
-            ["--slide-width" as any]: `${SLIDE_WIDTH}px`,
-            ["--slide-height" as any]: `${SLIDE_HEIGHT}px`,
+            margin: "0 auto",
           }}
         >
-          <div className="slides">
-            {editedSlides.map((slide, index) => (
-              <section
-                key={slide.id}
-                className={`relative ${slide.type === "youtube" || slide.layout === "videoSlide" ? "video-slide" : ""}`}
-                data-slide-type={slide.type === "youtube" || slide.layout === "videoSlide" ? "video" : "content"}
-                style={{
-                  width: `${SLIDE_WIDTH}px`,
-                  height: `${SLIDE_HEIGHT}px`,
-                }}
-              >
-                {renderSlideContent(slide, index)}
-              </section>
-            ))}
+          <div
+            ref={revealRef}
+            className={`reveal reveal-viewport theme-${theme}`}
+            style={{
+              width: `${SLIDE_WIDTH}px`,
+              height: `${SLIDE_HEIGHT}px`,
+              transform: `scale(${scale})`,
+              transformOrigin: "center center", // Changed from "top center" to "center center"
+              //margin: "2rem auto", // Added margin to adjust vertical position
+              ["--slide-scale" as any]: "1",
+              ["--viewport-width" as any]: `${SLIDE_WIDTH}px`,
+              ["--viewport-height" as any]: `${SLIDE_HEIGHT}px`,
+              ["--slide-width" as any]: `${SLIDE_WIDTH}px`,
+              ["--slide-height" as any]: `${SLIDE_HEIGHT}px`,
+            }}
+          >
+            <div className="slides">
+              {editedSlides.map((slide, index) => (
+                <section
+                  key={slide.id}
+                  className={`relative ${slide.type === "youtube" || slide.layout === "videoSlide" ? "video-slide" : ""}`}
+                  data-slide-type={slide.type === "youtube" || slide.layout === "videoSlide" ? "video" : "content"}
+                  style={{
+                    width: `${SLIDE_WIDTH}px`,
+                    height: `${SLIDE_HEIGHT}px`,
+                  }}
+                >
+                  {renderSlideContent(slide, index)}
+                </section>
+              ))}
+            </div>
           </div>
         </div>
       </div>

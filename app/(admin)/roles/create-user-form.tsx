@@ -17,6 +17,8 @@ const formSchema = z.object({
   role: z.enum(ALLOWED_ROLES as unknown as [string, ...string[]]),
   status: z.enum(USER_STATUSES as unknown as [string, ...string[]]),
   autoVerify: z.boolean(),
+  image_credits: z.coerce.number().int().nonnegative("Image credits must be 0 or greater"),
+  video_credits: z.coerce.number().int().nonnegative("Video credits must be 0 or greater"),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -38,6 +40,8 @@ export default function CreateUserForm() {
       role: "Student" as UserRole,
       status: "disabled" as UserStatus,
       autoVerify: true,
+      image_credits: 0,
+      video_credits: 0,
     },
   });
 
@@ -152,6 +156,34 @@ export default function CreateUserForm() {
           </select>
           {errors.status && (
             <p className="text-xs text-destructive">{errors.status.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Image Credits</label>
+          <input
+            {...register("image_credits")}
+            type="number"
+            min="0"
+            className={`w-full rounded-md border p-2 ${
+              errors.image_credits ? "border-destructive" : "border-input"
+            }`}
+          />
+          {errors.image_credits && (
+            <p className="text-xs text-destructive">{errors.image_credits.message}</p>
+          )}
+        </div>
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-foreground">Video Credits</label>
+          <input
+            {...register("video_credits")}
+            type="number"
+            min="0"
+            className={`w-full rounded-md border p-2 ${
+              errors.video_credits ? "border-destructive" : "border-input"
+            }`}
+          />
+          {errors.video_credits && (
+            <p className="text-xs text-destructive">{errors.video_credits.message}</p>
           )}
         </div>
         <div className="space-y-2">

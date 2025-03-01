@@ -24,6 +24,8 @@ export async function createUserAction(data: {
   role: UserRole;
   status: UserStatus;
   autoVerify: boolean;
+  image_credits: number;
+  video_credits: number;
 }) {
   try {
     // Create auth user
@@ -49,8 +51,8 @@ export async function createUserAction(data: {
         user_id: result.data.user.id,
         email: data.email,
         role_type: data.role,
-        image_credits: 0,
-        video_credits: 0,
+        image_credits: data.image_credits,
+        video_credits: data.video_credits,
       });
 
     if (userError) throw userError;

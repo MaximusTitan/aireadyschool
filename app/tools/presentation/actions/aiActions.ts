@@ -13,11 +13,37 @@ interface AIGenerationResult {
   transition: string
 }
 
-async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
+// Helper function to extract JSON from AI response
+function extractJsonFromResponse(text: string): any {
   try {
-    if (model === "gpt4") {
+    // Try direct parsing first
+    return JSON.parse(text);
+  } catch (error) {
+    // If that fails, try to extract JSON from markdown code blocks or other text
+    const jsonRegex = /\{[\s\S]*\}/;
+    const match = text.match(jsonRegex);
+    
+    if (match && match[0]) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (nestedError) {
+        console.error("Error parsing extracted JSON content:", nestedError);
+        console.error("Extracted content:", match[0]);
+        throw new Error("Failed to parse extracted JSON content");
+      }
+    } else {
+      console.error("No JSON object found in the response");
+      console.error("Full response:", text);
+      throw new Error("No valid JSON found in the AI response");
+    }
+  }
+}
+
+async function generateWithModel(prompt: string, model: "gpt4o" | "groq") {
+  try {
+    if (model === "gpt4o") {
       return await generateText({
-        model: openai("gpt-4"),
+        model: openai("gpt-4o"),
         prompt: prompt
       })
     } else {
@@ -29,8 +55,8 @@ async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
       })
     }
   } catch (error) {
-    if (model === "gpt4") {
-      console.warn("GPT-4 failed, falling back to Groq")
+    if (model === "gpt4o") {
+      console.warn("GPT-4o failed, falling back to Groq")
       return await generateText({
         model: groq("mixtral-8x7b-32768"), // Changed here too
         prompt: prompt,
@@ -42,7 +68,7 @@ async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
   }
 }
 
-export async function generateUsingAI(prompt: string, model: "gpt4" | "groq" = "gpt4"): Promise<AIGenerationResult> {
+export async function generateUsingAI(prompt: string, model: "gpt4o" | "groq" = "gpt4o"): Promise<AIGenerationResult> {
   try {
     const result = await generateWithModel(
       `Given the topic "${prompt}", generate a structured learning objective, extract 3-5 key concepts, determine an optimal number of slides (between 5-8), and suggest a theme and transition effect. Format the response as JSON with the following structure:
@@ -58,25 +84,26 @@ export async function generateUsingAI(prompt: string, model: "gpt4" | "groq" = "
     )
 
     if (!result.text) {
-      throw new Error("No response received from AI")
+      throw new Error("No response received from AI");
     }
-
-    const parsedResult = JSON.parse(result.text)
+    
+    const parsedResult = extractJsonFromResponse(result.text);
+    
     return {
-      topic: parsedResult.topic,
-      learningObjective: parsedResult.learningObjective,
-      keyConceptsArray: parsedResult.keyConcepts,
-      slideCount: parsedResult.slideCount,
-      theme: parsedResult.theme,
-      transition: parsedResult.transition,
+      topic: parsedResult.topic || prompt,
+      learningObjective: parsedResult.learningObjective || "",
+      keyConceptsArray: parsedResult.keyConcepts || [],
+      slideCount: parsedResult.slideCount || 5,
+      theme: parsedResult.theme || "modern",
+      transition: parsedResult.transition || "slide",
     }
   } catch (error) {
-    console.error("Error in generateUsingAI:", error)
-    throw new Error("Failed to generate content using AI")
+    console.error("Error in generateUsingAI:", error);
+    throw new Error("Failed to generate content using AI");
   }
 }
 
-export async function extractFromText(text: string, model: "gpt4" | "groq" = "gpt4"): Promise<AIGenerationResult> {
+export async function extractFromText(text: string, model: "gpt4o" | "groq" = "gpt4o"): Promise<AIGenerationResult> {
   try {
     const result = await generateWithModel(
       `Given the following text, extract the main topic, generate a structured learning objective, identify 3-5 key concepts, determine an optimal number of slides (between 5-8), and suggest a theme and transition effect. Format the response as JSON with the following structure:
@@ -94,21 +121,22 @@ export async function extractFromText(text: string, model: "gpt4" | "groq" = "gp
     )
 
     if (!result.text) {
-      throw new Error("No response received from AI")
+      throw new Error("No response received from AI");
     }
-
-    const parsedResult = JSON.parse(result.text)
+    
+    const parsedResult = extractJsonFromResponse(result.text);
+    
     return {
-      topic: parsedResult.topic,
-      learningObjective: parsedResult.learningObjective,
-      keyConceptsArray: parsedResult.keyConcepts,
-      slideCount: parsedResult.slideCount,
-      theme: parsedResult.theme,
-      transition: parsedResult.transition,
+      topic: parsedResult.topic || "Extracted Content",
+      learningObjective: parsedResult.learningObjective || "",
+      keyConceptsArray: parsedResult.keyConcepts || [],
+      slideCount: parsedResult.slideCount || 5,
+      theme: parsedResult.theme || "modern",
+      transition: parsedResult.transition || "slide",
     }
   } catch (error) {
-    console.error("Error in extractFromText:", error)
-    throw new Error("Failed to extract information from the text")
+    console.error("Error in extractFromText:", error);
+    throw new Error("Failed to extract information from the text");
   }
 }
 

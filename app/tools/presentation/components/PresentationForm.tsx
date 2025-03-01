@@ -58,11 +58,6 @@ const extractYoutubeId = (url: string) => {
 
 // Add this debug helper function
 const debugVideoData = (videoId: string | null, embedUrl: string) => {
-  console.log({
-    extractedVideoId: videoId,
-    generatedEmbedUrl: embedUrl,
-    timestamp: new Date().toISOString()
-  });
 };
 
 interface PresentationFormProps {
@@ -92,7 +87,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
   const [showAdditionalInputs, setShowAdditionalInputs] = useState(false)
   const [isSmartExtractDisabled, setIsSmartExtractDisabled] = useState(false)
   const [isGenerateUsingAIDisabled, setIsGenerateUsingAIDisabled] = useState(false)
-  const [selectedModel, setSelectedModel] = useState<"gpt4" | "groq">("gpt4")
+  const [selectedModel, setSelectedModel] = useState<"gpt4o" | "groq">("gpt4o")
   const [videoUrls, setVideoUrls] = useState<string[]>([])
   const [videoInput, setVideoInput] = useState("")
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0)
@@ -122,7 +117,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
   ]
 
   const models = [
-    { value: "gpt4", label: "GPT-4" },
+    { value: "gpt4o", label: "GPT-4o" },
     { value: "groq", label: "Groq" },
   ]
 
@@ -447,10 +442,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
         const updatedSlides = [...generatedPresentation.slides];
         // Insert after current slide
         updatedSlides.splice(currentSlideIndex + 1, 0, newSlide);
-        
-        // Debug logging for slide
-        console.log("New video slide:", newSlide);
-        console.log("Updated slides:", updatedSlides);
+      
 
         const updatedPresentation = {
           ...generatedPresentation,
@@ -658,7 +650,7 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
         <div className="grid grid-cols-3 gap-4">
           <div>
             <Label htmlFor="model">AI Model</Label>
-            <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as "gpt4" | "groq")}>
+            <Select value={selectedModel} onValueChange={(value) => setSelectedModel(value as "gpt4o" | "groq")}>
               <SelectTrigger id="model">
                 <SelectValue placeholder="Select a model" />
               </SelectTrigger>

@@ -7,6 +7,32 @@ import { generateImage } from '../utils/flux'
 import { Presentation, Slide, SlideLayout } from '../types/presentation'
 import { nanoid } from 'nanoid'
 
+// Helper function to extract JSON from AI response
+function extractJsonFromResponse(text: string): any {
+  try {
+    // Try direct parsing first
+    return JSON.parse(text);
+  } catch (error) {
+    // If that fails, try to extract JSON from markdown code blocks or other text
+    const jsonRegex = /\{[\s\S]*\}/;
+    const match = text.match(jsonRegex);
+    
+    if (match && match[0]) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (nestedError) {
+        console.error("Error parsing extracted JSON content:", nestedError);
+        console.error("Extracted content:", match[0]);
+        throw new Error("Failed to parse extracted JSON content");
+      }
+    } else {
+      console.error("No JSON object found in the response");
+      console.error("Full response:", text);
+      throw new Error("No valid JSON found in the AI response");
+    }
+  }
+}
+
 const layouts: SlideLayout[] = [
   'titleSlide',
   'contentWithImage',
@@ -48,11 +74,11 @@ async function generateImagesForSlide(slide: any, theme: string, generateImages:
   }
 }
 
-async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
+async function generateWithModel(prompt: string, model: "gpt4o" | "groq") {
   try {
-    if (model === "gpt4") {
+    if (model === "gpt4o") {
       return await generateText({
-        model: openai('gpt-4'),
+        model: openai('gpt-4o'),
         prompt: prompt
       })
     } else {
@@ -64,8 +90,8 @@ async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
       })
     }
   } catch (error) {
-    if (model === "gpt4") {
-      console.warn("GPT-4 failed, falling back to Groq")
+    if (model === "gpt4o") {
+      console.warn("GPT-4o failed, falling back to Groq")
       return await generateText({
         model: groq('mixtral-8x7b-32768'), // Changed here too
         prompt: prompt,
@@ -77,7 +103,7 @@ async function generateWithModel(prompt: string, model: "gpt4" | "groq") {
   }
 }
 
-export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean, generateImages: boolean = true, model: "gpt4" | "groq" = "gpt4"): Promise<Presentation> {
+export async function generatePresentation(prompt: string, theme: string, slideCount: number, learningObjective: string, gradeLevel: string, relevantTopic: string, includeQuiz: boolean, includeQuestions: boolean, includeFeedback: boolean, generateImages: boolean = true, model: "gpt4o" | "groq" = "gpt4o"): Promise<Presentation> {
 
   // Ensure slideCount is within the allowed range
   const validSlideCount = Math.max(2, Math.min(8, slideCount))
@@ -100,30 +126,20 @@ export async function generatePresentation(prompt: string, theme: string, slideC
             "comparison": {
               "left": { "title": "left title", "points": ["point 1", "point 2"] },
               "right": { "title": "right title", "points": ["point 1", "point 2"] }
-            },
+            ],
             "quote": { "text": "quote text", "author": "quote author" }
           }
         ]
       }
       Generate exactly ${validSlideCount} slides with diverse layouts and engaging, educational content suitable for students. Make sure to use different layouts for visual variety. The first slide should always be a titleSlide layout with a catchy title and brief introduction. Ensure each slide has substantial content, including the main content and relevant bullet points or other layout-specific information. Strictly adhere to the JSON format without any additional text or explanations outside the JSON structure.`, model)
-
+    
     let content;
     try {
-      // Remove any potential non-JSON content before and after the JSON structure
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (!jsonMatch) {
-        throw new Error('No valid JSON found in the response');
-      }
-      const jsonString = jsonMatch[0];
-      content = JSON.parse(jsonString);
+      content = extractJsonFromResponse(text);
     } catch (parseError) {
       console.error('Error parsing AI response:', parseError)
       console.error('Raw AI response:', text)
-      if (parseError instanceof Error) {
-        throw new Error(`Invalid response format from AI: ${parseError.message}`)
-      } else {
-        throw new Error('Invalid response format from AI: Unknown error')
-      }
+      throw new Error(`Invalid response format from AI: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`)
     }
 
     if (!content?.slides?.length) {

@@ -13,7 +13,7 @@ import { savePresentation } from "../actions/savePresentations"
 import type { Presentation, SlideLayout, Slide } from "../types/presentation"
 import { useToast } from "@/hooks/use-toast"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { ChevronDown, Download, Edit, Play, Wand2, Save } from "lucide-react"
+import { ChevronDown, Edit, Play, Wand2, Save } from "lucide-react"
 import { RevealPresentation } from "./RevealPresentation"
 import { jsPDF } from "jspdf"
 import html2canvas from "html2canvas"
@@ -311,144 +311,6 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
       const updatedPresentation = { ...generatedPresentation, transition: newTransition }
       setGeneratedPresentation(updatedPresentation)
       onGenerated(updatedPresentation)
-    }
-  }
-
-  const handleDownload = async (e: React.MouseEvent) => {
-    e.preventDefault()
-    if (!presentationRef.current || !generatedPresentation) return
-
-    setIsDownloading(true)
-    setExportProgress(0)
-
-    try {
-      const slideElements = Array.from(
-        presentationRef.current.querySelectorAll(".reveal .slides > section"),
-      ) as HTMLElement[]
-
-      if (slideElements.length === 0) {
-        throw new Error("No slides found")
-      }
-
-      const pdf = new jsPDF({
-        orientation: "landscape",
-        unit: "px",
-        format: [1280, 720],
-        hotfixes: ["px_scaling"],
-      })
-
-      const container = document.createElement("div")
-      container.style.position = "fixed"
-      container.style.left = "-9999px"
-      container.style.top = "0"
-      container.style.width = "1280px"
-      container.style.height = "720px"
-      document.body.appendChild(container)
-
-      for (let i = 0; i < slideElements.length; i++) {
-        try {
-          setExportProgress(Math.round(((i + 1) / slideElements.length) * 100))
-
-          if (i > 0) {
-            pdf.addPage([1280, 720], "landscape")
-          }
-
-          const clonedSlide = slideElements[i].cloneNode(true) as HTMLElement
-          container.innerHTML = ""
-          container.appendChild(clonedSlide)
-
-          clonedSlide.style.width = "1280px"
-          clonedSlide.style.height = "720px"
-          clonedSlide.style.position = "relative"
-          clonedSlide.style.overflow = "hidden"
-          clonedSlide.style.visibility = "visible"
-          clonedSlide.style.opacity = "1"
-
-          const themeClass = `theme-${theme}`
-          clonedSlide.classList.add(themeClass)
-
-          // Wait for fonts and images to load
-          await document.fonts.ready
-          await Promise.all(
-            Array.from(clonedSlide.getElementsByTagName("img")).map(
-              (img) =>
-                new Promise((resolve) => {
-                  if (img.complete) resolve(true)
-                  img.onload = () => resolve(true)
-                  img.onerror = () => resolve(false)
-                }),
-            ),
-          )
-
-          // Add a small delay to ensure rendering is complete
-          await new Promise((resolve) => setTimeout(resolve, 500))
-
-          const canvas = await html2canvas(clonedSlide, {
-            scale: 2,
-            useCORS: true,
-            allowTaint: true,
-            backgroundColor: null,
-            logging: false,
-            width: 1280,
-            height: 720,
-            windowWidth: 1280,
-            windowHeight: 720,
-            onclone: (clonedDoc) => {
-              const styles = document.getElementsByTagName("style")
-              Array.from(styles).forEach((style) => {
-                clonedDoc.head.appendChild(style.cloneNode(true))
-              })
-
-              const themeStyles = document.querySelectorAll(`style[data-theme="${theme}"]`)
-              themeStyles.forEach((style) => {
-                clonedDoc.head.appendChild(style.cloneNode(true))
-              })
-
-              return Promise.resolve()
-            },
-          })
-
-          const slideImage = canvas.toDataURL("image/jpeg", 1.0)
-
-          pdf.addImage({
-            imageData: slideImage,
-            format: "JPEG",
-            x: 0,
-            y: 0,
-            width: 1280,
-            height: 720,
-            compression: "FAST",
-            rotation: 0,
-          })
-        } catch (error) {
-          console.error(`Error processing slide ${i + 1}:`, error)
-          toast({
-            title: "Warning",
-            description: `Error processing slide ${i + 1}. Some slides may be missing.`,
-            variant: "destructive",
-          })
-        }
-      }
-
-      document.body.removeChild(container)
-
-      const filename = `${generatedPresentation.topic?.replace(/\s+/g, "_") || "untitled"}_presentation.pdf`
-      pdf.save(filename)
-
-      toast({
-        title: "Success",
-        description: "Your presentation has been downloaded as PDF.",
-      })
-    } catch (error) {
-      console.error("Error in PDF generation:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate PDF",
-        variant: "destructive",
-      })
-    } finally {
-      setIsDownloading(false)
-      setExportProgress(0)
     }
   }
 
@@ -1043,25 +905,6 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
                 </>
               )}
 
-              <Button 
-                onClick={handleDownload} 
-                type="button"
-                variant="outline" 
-                disabled={isDownloading}
-              >
-                {isDownloading ? (
-                  <>
-                    <Spinner className="mr-2 h-4 w-4" />
-                    <span>Exporting PDF ({exportProgress}%)</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="mr-2 h-4 w-4" />
-                    <span>Download PDF</span>
-                  </>
-                )}
-              </Button>
-
               {isNewPresentation && !hasUnsavedChanges && (
                 <ShareButton presentationId={presentationId} />
               )}
@@ -1077,10 +920,6 @@ export default function PresentationForm({ onGenerated }: PresentationFormProps)
       </form>
       {generatedPresentation && (
         <div>
-          <Button onClick={handlePresent} variant="outline">
-            <Play className="mr-2 h-4 w-4" />
-            Present
-          </Button>
 
           <div className="mt-4"></div>
             <h2 className="text-2xl font-bold mb-4">Generated Presentation</h2>

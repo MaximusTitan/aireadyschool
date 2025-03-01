@@ -177,10 +177,23 @@ export async function generatePresentation(prompt: string, theme: string, slideC
       })
     )
 
+    // Process the generated slides
+    const processedSlides = slides.map((slide: Slide, index: number) => {
+      // Special handling for YouTube slides - ensure they use the presentation topic as the title
+      if (slide.type === 'youtube' || slide.layout === 'videoSlide') {
+        slide.title = prompt;
+      }
+      
+      return {
+        ...slide,
+        id: `slide-${index + 1}`,
+      };
+    });
+
     return {
       id: nanoid(),
       topic: prompt,
-      slides,
+      slides: processedSlides,
       theme,
       transition: 'fade', // Adding default transition
     }

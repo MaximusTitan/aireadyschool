@@ -43,57 +43,80 @@
   justify-content: center;
 }
 
+/* Define theme variables for better consistency */
+:root {
+  --modern-bg: linear-gradient(135deg, #2b4162 0%, #12100e 100%);
+  --modern-text: #ffffff;
+  
+  --creative-bg: linear-gradient(120deg, #ff6b6b 0%, #4ecdc4 100%);
+  --creative-text: #333333;
+}
+
 /* Modern Theme */
 .theme-modern,
 [data-theme="modern"] {
-  background: linear-gradient(135deg, #2b4162 0%, #12100e 100%);
-  color: #ffffff;
+  background: var(--modern-bg);
+  color: var(--modern-text);
 }
 
 .theme-modern .reveal {
-  background: linear-gradient(135deg, #2b4162 0%, #12100e 100%);
-  color: #ffffff;
+  background: var(--modern-bg);
+  color: var(--modern-text);
 }
 
 .theme-modern .reveal .slides section {
   background: transparent;
+  box-shadow: none;
+  border: none;
 }
 
 .theme-modern .reveal h1,
 .theme-modern .reveal h2,
 .theme-modern .reveal h3 {
   color: #ffffff;
-  font-family: "Inter", sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
   font-weight: 600;
   letter-spacing: -0.02em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  text-shadow: none; /* Remove text shadow */
+  background: transparent; /* Ensure no background */
+  border: none; /* Ensure no border */
+  box-shadow: none;
+  padding: 0;
+  margin-bottom: 0.5em;
 }
 
 .theme-modern .reveal p,
-.theme-modern .reveal li {
-  color: rgba(255, 255, 255, 0.9);
-  font-family: "Inter", sans-serif;
+.theme-modern .reveal li,
+.theme-modern .reveal div {
+  color: #ffffff;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  background: transparent; /* Ensure no background */
+  border: none; /* Ensure no border */
+  box-shadow: none;
+  padding: 0;
+  line-height: 1.5;
 }
 
-.reveal ul {
-  list-style: none !important; /* Remove default bullets */
-  padding-left: 0 !important;
-  margin-left: 0 !important;
+/* Clean up bullet points in Modern theme */
+.theme-modern .reveal ul,
+.theme-modern .reveal ul li {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  text-shadow: none !important;
+  padding-left: 1.5em !important;
 }
 
-.reveal ul li {
-  position: relative;
-  padding-left: 1.5em;
-  margin-bottom: 0.8em;
-  line-height: 1.4;
-}
-
-.reveal ul li::before {
+.theme-modern .reveal ul li::before {
   content: "•";
   position: absolute;
   left: 0.5em;
-  color: currentColor;
-  opacity: 0.7;
+  color: #ffffff; /* White bullets for Modern theme */
+  opacity: 0.8;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Corporate Theme */
@@ -152,58 +175,68 @@
 /* Creative Theme */
 .theme-creative,
 [data-theme="creative"] {
-  background: linear-gradient(120deg, #ff6b6b 0%, #4ecdc4 100%);
-  color: #ffffff;
+  background: var(--creative-bg);
+  color: var(--creative-text);
 }
 
 .theme-creative .reveal {
-  background: linear-gradient(120deg, #ff6b6b 0%, #4ecdc4 100%);
-  color: #ffffff;
+  background: var(--creative-bg);
+  color: var(--creative-text);
 }
 
 .theme-creative .reveal .slides section {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
+  background: transparent;
+  backdrop-filter: none; /* Remove blur effects */
+  border-radius: 0;
+  box-shadow: none;
+  border: none;
 }
 
 .theme-creative .reveal h1,
 .theme-creative .reveal h2,
 .theme-creative .reveal h3 {
-  color: #ffffff;
-  font-family: "Poppins", sans-serif;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  color: #333333;
+  font-family: "Poppins", system-ui, sans-serif;
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: normal;
+  text-shadow: none; /* Remove text shadow */
+  background: none; /* Ensure no background */
+  border: none; /* Ensure no border */
+  padding: 0;
 }
 
 .theme-creative .reveal p,
-.theme-creative .reveal li {
-  color: rgba(255, 255, 255, 0.95);
-  font-family: "Poppins", sans-serif;
-  font-weight: 300;
+.theme-creative .reveal li,
+.theme-creative .reveal div {
+  color: #333333;
+  font-family: "Poppins", system-ui, sans-serif;
+  font-weight: 400;
+  background: none; /* Ensure no background */
+  border: none; /* Ensure no border */
+  padding: 0;
 }
 
-.reveal ul {
-  list-style: none !important; /* Remove default bullets */
-  padding-left: 0 !important;
-  margin-left: 0 !important;
+/* Clean up bullet points in Creative theme */
+.theme-creative .reveal ul,
+.theme-creative .reveal ul li {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+  text-shadow: none !important;
+  padding-left: 1.5em !important;
 }
 
-.reveal ul li {
-  position: relative;
-  padding-left: 1.5em;
-  margin-bottom: 0.8em;
-  line-height: 1.4;
-}
-
-.reveal ul li::before {
+.theme-creative .reveal ul li::before {
   content: "•";
   position: absolute;
   left: 0.5em;
-  color: currentColor;
-  opacity: 0.7;
+  color: #333333; /* Dark bullets for Creative theme */
+  opacity: 0.8;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
 }
 
 /* Minimal Theme */
@@ -475,4 +508,382 @@
   display: flex !important;
   opacity: 1 !important;
 }
+
+/* Add these CSS rules to control text color based on theme */
+.theme-modern {
+  --text-color: #333333;
+  color: var(--text-color);
+}
+
+.theme-dark {
+  --text-color: #ffffff;
+  color: var(--text-color);
+}
+
+.theme-corporate {
+  --text-color: #2c3e50;
+  color: var(--text-color);
+}
+
+.theme-creative {
+  --text-color: #333333;
+  color: var(--text-color);
+}
+
+.theme-minimal {
+  --text-color: #333333;
+  color: var(--text-color);
+}
+
+/* Apply text colors to all text elements within themes */
+.theme-modern h1, .theme-modern h2, .theme-modern h3, 
+.theme-modern p, .theme-modern li, .theme-modern div {
+  color: var(--text-color);
+}
+
+.theme-dark h1, .theme-dark h2, .theme-dark h3, 
+.theme-dark p, .theme-dark li, .theme-dark div {
+  color: var(--text-color);
+}
+
+.theme-corporate h1, .theme-corporate h2, .theme-corporate h3, 
+.theme-corporate p, .theme-corporate li, .theme-corporate div {
+  color: var(--text-color);
+}
+
+.theme-creative h1, .theme-creative h2, .theme-creative h3, 
+.theme-creative p, .theme-creative li, .theme-creative div {
+  color: var(--text-color);
+}
+
+.theme-minimal h1, .theme-minimal h2, .theme-minimal h3, 
+.theme-minimal p, .theme-minimal li, .theme-minimal div {
+  color: var(--text-color);
+}
+
+/* Ensure the text in the editor inherits color from the theme */
+[contenteditable] {
+  color: inherit !important;
+}
+
+/* Make sure link colors are appropriate for each theme */
+.theme-dark a {
+  color: #66d9ef;
+}
+
+.theme-modern a, .theme-corporate a, .theme-creative a, .theme-minimal a {
+  color: #0066cc;
+}
+
+/* Override for contenteditable in Modern theme */
+.theme-modern [contenteditable],
+.theme-modern [contenteditable]:focus,
+.theme-modern [contenteditable]:hover {
+  background-color: transparent !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+}
+
+/* Override for contenteditable in Creative theme */
+.theme-creative [contenteditable],
+.theme-creative [contenteditable]:focus,
+.theme-creative [contenteditable]:hover {
+  background-color: transparent !important;
+  outline: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: #ffffff !important;
+}
+
+/* Fix specific highlight issues */
+[contenteditable="true"]:hover,
+[contenteditable="true"]:focus {
+  background-color: transparent !important;
+}
+
+.theme-modern [contenteditable="true"]:hover,
+.theme-creative [contenteditable="true"]:hover {
+  background-color: rgba(255, 255, 255, 0.03) !important; /* Very subtle hover effect */
+}
+
+/* Override any border or background on text elements */
+.reveal-title,
+.reveal-content {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Ensure no selection background */
+::selection {
+  background: rgba(128, 128, 128, 0.3) !important;
+}
+
+/* Fix specific text colors for contenteditable in themes */
+.theme-modern [contenteditable] {
+  color: #ffffff !important;
+}
+
+.theme-creative [contenteditable] {
+  color: #333333 !important;
+}
+
+/* Fix for contenteditable bullet points in specific themes */
+.theme-modern [contenteditable] li,
+.theme-creative [contenteditable] li {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Ensure bullet points in all themes have consistent styling */
+.reveal ul li::before {
+  background: none !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Override any highlighting on list items when contenteditable */
+[contenteditable="true"] li:hover,
+[contenteditable="true"] li:focus {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Specifically target list item elements to ensure no background/border */
+.theme-modern li,
+.theme-creative li,
+.theme-modern li *,
+.theme-creative li * {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Fix for specific bullet point display issues */
+.reveal-list-item {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.reveal-list-item > * {
+  background: transparent !important;
+  border: none !important;
+}
+
+/* Fix YouTube video visibility in Modern and Creative themes */
+
+/* Ensure videos are visible in all themes */
+.theme-modern iframe,
+.theme-creative iframe,
+.theme-modern .video-container,
+.theme-creative .video-container,
+.theme-modern [data-slide-type="video"],
+.theme-creative [data-slide-type="video"] {
+  position: relative !important;
+  z-index: 20 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Fix video slide background in Modern theme */
+.theme-modern [data-slide-type="video"]::before,
+.theme-modern .video-container::before {
+  content: none !important; /* Remove any pseudo element that might be blocking */
+}
+
+/* Fix video container size */
+.theme-modern .video-container,
+.theme-creative .video-container {
+  width: 100% !important;
+  height: 0 !important;
+  padding-bottom: 56.25% !important; /* 16:9 aspect ratio */
+  overflow: hidden !important;
+}
+
+/* Properly position the iframe */
+.theme-modern .video-container iframe,
+.theme-creative .video-container iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Make sure video slides have proper z-index stacking */
+.reveal .slides section.present[data-slide-type="video"] {
+  z-index: 30 !important;
+}
+
+/* Fix for video content in specific themes */
+.theme-modern .slides section[data-slide-type="video"] > div,
+.theme-creative .slides section[data-slide-type="video"] > div {
+  background-color: transparent !important;
+  position: absolute !important;
+  inset: 0 !important;
+}
+
+/* Ensure YouTube component is properly styled */
+.theme-modern .YoutubeSlide,
+.theme-creative .YoutubeSlide {
+  position: relative !important;
+  z-index: 20 !important;
+  height: 100% !important;
+  width: 100% !important;
+}
+
+/* Fix YouTube video visibility and positioning in all themes */
+
+/* Improved video container styling for all themes */
+.reveal .slides section[data-slide-type="video"] {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: inherit !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Remove any pseudo-elements that might interfere with video display */
+.reveal .slides section[data-slide-type="video"]::before,
+.reveal .slides section[data-slide-type="video"]::after {
+  content: none !important;
+}
+
+/* Center the video container in all themes */
+.reveal .slides section[data-slide-type="video"] > div {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  background-color: transparent !important;
+}
+
+/* Ensure video title is properly styled */
+.reveal .slides section[data-slide-type="video"] h2 {
+  margin-bottom: 1.5rem !important;
+  text-align: center !important;
+  width: 100% !important;
+  max-width: 80% !important;
+  font-size: 2rem !important;
+  line-height: 1.2 !important;
+}
+
+/* Ensure video container is properly sized */
+.reveal .slides section[data-slide-type="video"] .video-container {
+  width: 80% !important;
+  max-width: 60% !important;
+  margin: 0 auto !important;
+  background: transparent !important;
+  position: relative !important;
+  padding-bottom: 45% !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* Properly position the iframe */
+.reveal .slides section[data-slide-type="video"] .video-container iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Fix video display in Modern theme */
+.theme-modern .slides section[data-slide-type="video"],
+.theme-modern .slides section[data-slide-type="video"] > div {
+  background: var(--modern-bg) !important;
+}
+
+.theme-modern .slides section[data-slide-type="video"] h2 {
+  color: #ffffff !important;
+}
+
+/* Fix video display in Creative theme */
+.theme-creative .slides section[data-slide-type="video"],
+.theme-creative .slides section[data-slide-type="video"] > div {
+  background: var(--creative-bg) !important;
+}
+
+.theme-creative .slides section[data-slide-type="video"] h2 {
+  color: #333333 !important;
+}
+
+/* Ensure proper stacking in z-index */
+.reveal .slides section.present[data-slide-type="video"] {
+  z-index: 5 !important;
+  display: flex !important;
+}
+
+/* Fix YouTube slide for all themes */
+.YoutubeSlide {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 1rem !important;
+}
+
+/* Make sure iframe is visible and properly sized */
+.video-container iframe {
+  border: none !important;
+  background: transparent !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Update YouTube video container dimensions for proper aspect ratio */
+.reveal .slides section[data-slide-type="video"] .aspect-video {
+  position: relative !important;
+  padding-bottom: 56.25% !important; /* 16:9 aspect ratio */
+  height: 0 !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  margin-bottom: 1rem !important;
+}
+
+.reveal .slides section[data-slide-type="video"] .aspect-video iframe {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Fix the container width to be consistent */
+.reveal .slides section[data-slide-type="video"] .video-container-wrapper {
+  width: 80% !important;
+  max-width: 70% !important;
+  margin: 0 auto !important;
+}
+
+/* Ensure proper video dimensions in all themes */
+.theme-modern .aspect-video,
+.theme-creative .aspect-video,
+.theme-dark .aspect-video,
+.theme-minimal .aspect-video,
+.theme-corporate .aspect-video {
+  padding-bottom: 56.25% !important; /* Standard 16:9 aspect ratio */
+}
+
+/* ...rest of the CSS remains unchanged... */
 

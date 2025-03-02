@@ -89,8 +89,4 @@ export type ChatAreaProps = {
   setGeneratedVideos: (videos: Record<string, string>) => void;
   lastGeneratedImage: string | null;
   isOwner?: boolean;
-  // Add the missing props with proper types
-  setGeneratedImages: React.Dispatch<React.SetStateAction<Record<string, { url: string; credits: number }>>>;
-  setLastGeneratedImage: React.Dispatch<React.SetStateAction<string | null>>;
-  setGeneratedQuizzes: React.Dispatch<React.SetStateAction<Record<string, any>>>;
 };

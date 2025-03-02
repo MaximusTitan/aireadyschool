@@ -27,7 +27,7 @@ export async function POST(req: Request) {
 
   try {
     const result = await generateObject({
-      model: openai('gpt-4o', {
+      model: openai('gpt-4o-2024-08-06', {
         structuredOutputs: true,
       }),
       schemaName: 'quiz',

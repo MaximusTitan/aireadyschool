@@ -54,9 +54,6 @@ export const ChatArea = ({
   setGeneratedVideos,
   lastGeneratedImage,
   isOwner = true,
-  setGeneratedImages,
-  setLastGeneratedImage,
-  setGeneratedQuizzes, // Add the missing prop
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
@@ -236,17 +233,11 @@ export const ChatArea = ({
     state: string;
     result: any;
     parameters?: Record<string, any>;
-    fromHistory?: boolean;
-    messageId?: string;
   }) => {
-    const { toolName, toolCallId, state, result, fromHistory } = invocation;
+    const { toolName, toolCallId, state, result } = invocation;
 
-    // If this is a completed tool (state is 'result' AND has result data),
-    // just display the result without triggering any API calls
-    const isCompletedTool = state === "result" && result && !result.pending;
-
-    // For pending state without result, show a spinner placeholder
-    if (state === "pending" && !result) {
+    // For pending state, show a spinner placeholder
+    if (state !== "result") {
       return (
         <div key={toolCallId} className="mb-4 animate-pulse">
           <div className="h-8 bg-indigo-100 rounded w-3/4" />
@@ -256,7 +247,6 @@ export const ChatArea = ({
 
     switch (toolName) {
       case "generateMathProblem":
-        // Math problems are processed entirely on the server, so just display results
         return (
           <div key={toolCallId} className="mb-4">
             <MathProblem {...result} onAnswer={handleAnswerSubmit} />
@@ -264,150 +254,60 @@ export const ChatArea = ({
         );
 
       case "generateQuiz": {
-        // First check if we already have the quiz in state
-        if (generatedQuizzes[toolCallId]) {
-          return (
-            <div key={toolCallId} className="mb-4">
-              <QuizCard
-                {...generatedQuizzes[toolCallId]}
-                onAnswer={handleQuizAnswer}
-              />
-            </div>
-          );
-        }
-          
-        // If we have result data in the tool result (loaded from history), use it directly
-        if (isCompletedTool) {
-          // Update local state with this result to avoid future API calls
-          if (!generatedQuizzes[toolCallId]) {
-            setTimeout(() => {
-              setGeneratedQuizzes((prev: Record<string, any>) => ({
-                ...prev,
-                [toolCallId]: result
-              }));
-            }, 0);
-          }
-
-          return (
-            <div key={toolCallId} className="mb-4">
-              <QuizCard
-                {...result}
-                onAnswer={handleQuizAnswer}
-              />
-            </div>
-          );
-        }
-
         // Only generate if we don't have the quiz data and haven't started generating
         if (
-          !isCompletedTool && 
-          !pendingQuizzes.has(toolCallId) &&
-          !generatedQuizzes[toolCallId]
+          !generatedQuizzes[toolCallId] &&
+          result.pending &&
+          !pendingQuizzes.has(toolCallId)
         ) {
           handleQuizGeneration(toolCallId, {
-            subject: result?.subject || invocation.parameters?.subject || "general",
-            difficulty: result?.difficulty || invocation.parameters?.difficulty || "easy",
+            subject: result.subject,
+            difficulty: result.difficulty,
           });
         }
 
         // Show loading state
-        return (
-          <div key={toolCallId} className="mb-4">
-            <div className="animate-pulse">
-              <div className="h-24 bg-neutral-100 rounded" />
-              <div className="text-xs text-neutral-500 mt-2">
-                Generating quiz...
+        if (!generatedQuizzes[toolCallId]) {
+          return (
+            <div key={toolCallId} className="mb-4">
+              <div className="animate-pulse">
+                <div className="h-24 bg-neutral-100 rounded" />
+                <div className="text-xs text-neutral-500 mt-2">
+                  Generating quiz...
+                </div>
               </div>
             </div>
+          );
+        }
+
+        return (
+          <div key={toolCallId} className="mb-4">
+            <QuizCard
+              {...generatedQuizzes[toolCallId]}
+              onAnswer={handleQuizAnswer}
+            />
           </div>
         );
       }
 
       case "generateImage": {
-        // Check if we already have this image in state
-        const existingImage = generatedImages[toolCallId];
-        
-        // If we already have the image, display it
-        if (existingImage) {
-          return (
-            <div key={toolCallId} className="mb-4 space-y-2">
-              {existingImage.url === "error" ? (
-                <div className="text-sm text-red-500">
-                  Failed to generate image. Please try again.
-                </div>
-              ) : (
-                <>
-                  <img
-                    src={existingImage.url}
-                    alt={invocation.parameters?.prompt || "Generated image"}
-                    className="w-full max-w-md rounded-lg"
-                    loading="lazy"
-                  />
-                  <div className="text-xs text-neutral-500">
-                    Credits remaining: {existingImage.credits}
-                  </div>
-                </>
-              )}
-            </div>
-          );
-        }
-        
-        // If we have a result with URL directly in the tool call (loaded from history), use it
-        if (isCompletedTool && result.url) {
-          // Update local state with this image to avoid future API calls
-          setTimeout(() => {
-            setGeneratedImages((prev: Record<string, { url: string; credits: number }>) => ({
-              ...prev,
-              [toolCallId]: {
-                url: result.url,
-                credits: result.credits || 0
-              }
-            }));
-            completedImages.add(toolCallId);
-            
-            // Update last generated image reference if needed
-            if (!lastGeneratedImage) {
-              setLastGeneratedImage(result.url);
-            }
-          }, 0);
-          
-          return (
-            <div key={toolCallId} className="mb-4 space-y-2">
-              <img
-                src={result.url}
-                alt={invocation.parameters?.prompt || "Generated image"}
-                className="w-full max-w-md rounded-lg"
-                loading="lazy"
-              />
-              <div className="text-xs text-neutral-500">
-                Credits remaining: {result.credits || "N/A"}
-              </div>
-            </div>
-          );
-        }
-        
-        // Only trigger generation if needed and not already in progress
-        // and not a completed tool from history
         const shouldTriggerGeneration =
-          !isCompletedTool &&
-          !existingImage &&
+          result.pending &&
           !pendingImageRequests.has(toolCallId) &&
           !completedImages.has(toolCallId);
 
         if (shouldTriggerGeneration) {
-          console.log(`Generating new image for toolCallId: ${toolCallId}`);
           handleImageGeneration(toolCallId, {
-            prompt: invocation.parameters?.prompt || "",
-            style: invocation.parameters?.style || "realistic_image",
-            imageSize: invocation.parameters?.imageSize || "square_hd",
-            numInferenceSteps: invocation.parameters?.numInferenceSteps || 1,
-            numImages: invocation.parameters?.numImages || 1,
-            enableSafetyChecker: invocation.parameters?.enableSafetyChecker ?? true,
+            prompt: result.prompt,
+            style: result.style,
+            imageSize: result.imageSize || "square_hd",
+            numInferenceSteps: 1,
+            numImages: 1,
+            enableSafetyChecker: true,
           });
         }
 
-        // Show loading state
-        if (pendingImageRequests.has(toolCallId)) {
+        if (!generatedImages[toolCallId] && result.pending) {
           return (
             <div key={toolCallId} className="mb-4">
               <div className="animate-pulse">
@@ -420,10 +320,33 @@ export const ChatArea = ({
           );
         }
 
-        return null;
+        const imageData = generatedImages[toolCallId];
+        if (!imageData) return null;
+
+        return (
+          <div key={toolCallId} className="mb-4 space-y-2">
+            {imageData.url === "error" ? (
+              <div className="text-sm text-red-500">
+                Failed to generate image. Please try again.
+              </div>
+            ) : (
+              <>
+                <img
+                  src={imageData.url}
+                  alt={result.prompt}
+                  className="w-full max-w-md rounded-lg"
+                  loading="lazy"
+                />
+                <div className="text-xs text-neutral-500">
+                  Credits remaining: {imageData.credits}
+                </div>
+              </>
+            )}
+          </div>
+        );
       }
 
-      case "conceptVisualizer": {
+      case "conceptVisualizer":
         if (simulationCode) {
           return (
             <div key={toolCallId} className="mb-4">
@@ -432,34 +355,9 @@ export const ChatArea = ({
           );
         }
 
-        // If this is a completed tool from history with a visualization result
-        if (isCompletedTool && result.visualization) {
-          setTimeout(() => {
-            let cleaned = result.visualization.trim();
-            if (cleaned.startsWith("```html")) {
-              cleaned = cleaned
-                .replace(/^```html\s*/, "")
-                .replace(/```$/, "")
-                .trim();
-            }
-            simulationCodeRef.current = cleaned;
-            onSimulationCode(cleaned);
-          }, 0);
-          
-          return (
-            <div key={toolCallId} className="mb-4">
-              <div className="text-sm text-neutral-600">Loading visualization...</div>
-            </div>
-          );
-        }
-
-        // Only generate if not completed and not already pending
-        if (!isCompletedTool && !pendingVisualizations.has(toolCallId)) {
+        if (!pendingVisualizations.has(toolCallId)) {
           pendingVisualizations.add(toolCallId);
-          handleVisualization(
-            invocation.parameters?.subject || "physics",
-            invocation.parameters?.concept || ""
-          ).then((res) => {
+          handleVisualization(result.subject, result.concept).then((res) => {
             if (res.code) {
               let cleaned = res.code.trim();
               if (cleaned.startsWith("```html")) {
@@ -484,27 +382,17 @@ export const ChatArea = ({
             </div>
           </div>
         );
-      }
 
-      case "generateMindMap": {
-        // If we have a completed mind map from history
-        if (isCompletedTool) {
-          return (
-            <div key={toolCallId} className="mb-4">
-              <MindMapViewer data={result} />
-            </div>
-          );
-        }
-        
+      case "generateMindMap":
         return (
           <div key={toolCallId} className="mb-4">
-            <MindMapViewer data={result || {topic: invocation.parameters?.topic || ""}} />
+            <MindMapViewer data={result} />
           </div>
         );
-      }
 
       case "generateVideo": {
-        // First check if we already have the video URL in state
+        const imageSource = result.imageUrl || lastGeneratedImage;
+
         if (generatedVideos[toolCallId]) {
           return (
             <div key={toolCallId} className="mb-4">
@@ -516,39 +404,13 @@ export const ChatArea = ({
             </div>
           );
         }
-        
-        // If we have a completed video URL from history
-        if (isCompletedTool && result.videoUrl) {
-          // Update state with this video to avoid future generation
-          setTimeout(() => {
-            setGeneratedVideos({
-              ...generatedVideos,
-              [toolCallId]: result.videoUrl
-            });
-          }, 0);
-          
-          return (
-            <div key={toolCallId} className="mb-4">
-              <video
-                src={result.videoUrl}
-                controls
-                className="w-full rounded-lg"
-              />
-            </div>
-          );
-        }
-
-        // Otherwise, show the video generator
-        const imageSource = invocation.parameters?.imageUrl || 
-                           result?.imageUrl || 
-                           lastGeneratedImage;
 
         return (
           <div key={toolCallId} className="mb-4">
             <VideoGenerator
               toolCallId={toolCallId}
               onComplete={handleVideoComplete}
-              prompt={invocation.parameters?.prompt || ""}
+              prompt={result.prompt}
               initialImage={imageSource}
             />
           </div>
@@ -556,7 +418,6 @@ export const ChatArea = ({
       }
 
       default:
-        console.log(`Unknown tool type: ${toolName}`);
         return null;
     }
   };

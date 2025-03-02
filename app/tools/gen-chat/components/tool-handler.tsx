@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { ToolCall, ToolState } from "@/types/chat";
 import { updateToolOutput } from "./save-tools";
@@ -15,7 +15,6 @@ export function ToolHandler({ messageId, toolCall, onComplete }: ToolHandlerProp
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const supabase = createClient();
-  const processedRef = useRef(false);
 
   const updateToolResult = async (result: any, state: 'result' | 'error' = 'result') => {
     try {
@@ -41,12 +40,7 @@ export function ToolHandler({ messageId, toolCall, onComplete }: ToolHandlerProp
   };
 
   useEffect(() => {
-    // Skip if already processed or if result exists and state is not pending
-    if (processedRef.current || (toolCall.result && toolCall.state !== 'pending')) {
-      return;
-    }
-
-    // Check if this is a new tool call that needs processing
+    // Handle automatic tool processing if needed
     const processToolCall = async () => {
       // Only process pending tools without results
       if (toolCall.state !== 'pending' || toolCall.result) {
@@ -54,8 +48,6 @@ export function ToolHandler({ messageId, toolCall, onComplete }: ToolHandlerProp
       }
 
       setIsLoading(true);
-      processedRef.current = true;
-      
       try {
         // Process the tool based on its type
         // This is just a placeholder - the actual implementation would depend on your tools
@@ -77,7 +69,7 @@ export function ToolHandler({ messageId, toolCall, onComplete }: ToolHandlerProp
     };
 
     processToolCall();
-  }, [toolCall.id, toolCall.tool, toolCall.state, toolCall.result]);
+  }, [toolCall.id, toolCall.tool, toolCall.state]);
 
   return null; // This is a logic component with no UI
 }

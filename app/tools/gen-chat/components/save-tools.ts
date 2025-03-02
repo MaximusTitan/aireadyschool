@@ -64,50 +64,10 @@ export async function getToolOutputsForMessage(
       return { error: `Failed to fetch tool outputs: ${error.message}` };
     }
 
-    console.log(`[ToolOutputs] Retrieved ${data?.length || 0} tool outputs for message ${messageId}`);
-    
     return { data: data as ToolOutput[] };
   } catch (error) {
     console.error('Unexpected error fetching tool outputs:', error);
     return {
-      error: error instanceof Error ? error.message : 'Unknown error occurred',
-    };
-  }
-}
-
-// Fix the return type to include the state property
-export async function checkToolResult(
-  supabase: SupabaseClient,
-  toolCallId: string
-): Promise<{
-  exists: boolean;
-  result?: any;
-  state?: ToolState; // Add state to the return type
-  error?: string;
-}> {
-  try {
-    const { data, error } = await supabase
-      .from('tool_outputs')
-      .select('result, state')
-      .eq('tool_call_id', toolCallId)
-      .single();
-
-    if (error) {
-      if (error.code === 'PGRST116') { // Not found
-        return { exists: false };
-      }
-      return { exists: false, error: `Failed to check tool result: ${error.message}` };
-    }
-
-    return { 
-      exists: !!data,
-      result: data?.result,
-      state: data?.state as ToolState // Cast to ToolState
-    };
-  } catch (error) {
-    console.error('Unexpected error checking tool result:', error);
-    return {
-      exists: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred',
     };
   }

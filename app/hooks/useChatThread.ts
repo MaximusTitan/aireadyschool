@@ -144,49 +144,27 @@ export function useChatThread(initialThreadId?: string) {
     await loadThreads(); // Refresh thread list
   };
 
-  // Improved function to load tool outputs for a message with better error handling
+  // Add a function to load tool outputs for a message
   const loadToolOutputs = async (messageId: string): Promise<ToolCall[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('tool_outputs')
-        .select('*')
-        .eq('message_id', messageId);
-        
-      if (error) {
-        console.error('Error loading tool outputs:', error);
-        return [];
-      }
+    const { data, error } = await supabase
+      .from('tool_outputs')
+      .select('*')
+      .eq('message_id', messageId);
       
-      if (!data || data.length === 0) {
-        return [];
-      }
-      
-      console.log(`[ToolOutputs] Loaded ${data.length} tool calls for message ${messageId}`);
-      
-      // Debug the first tool call to see its structure
-      if (data.length > 0) {
-        console.log(`[ToolOutputs] Sample tool (${data[0].tool_name}):`, {
-          id: data[0].tool_call_id,
-          state: data[0].state,
-          hasResult: !!data[0].result
-        });
-      }
-      
-      return data.map(tool => ({
-        id: tool.tool_call_id || tool.id,
-        tool: tool.tool_name,
-        parameters: tool.parameters || {},
-        result: tool.result,
-        state: tool.state as ToolState,
-        fromHistory: true
-      }));
-    } catch (err) {
-      console.error('Unexpected error loading tool outputs:', err);
+    if (error) {
+      console.error('Error loading tool outputs:', error);
       return [];
     }
+    
+    return data.map(tool => ({
+      id: tool.tool_call_id || tool.id,
+      tool: tool.tool_name,
+      parameters: tool.parameters || {},
+      result: tool.result || undefined,
+      state: tool.state as ToolState,
+    }));
   };
 
-  // Update the loadThread function to log loaded tool outputs for debugging
   const loadThread = async (threadId: string) => {
     if (!threadId) return null;
 
@@ -220,11 +198,6 @@ export function useChatThread(initialThreadId?: string) {
       
       for (const msg of messagesData) {
         const toolCalls = await loadToolOutputs(msg.id);
-        
-        // Log tool calls for debugging
-        if (toolCalls.length > 0) {
-          console.log(`Loaded ${toolCalls.length} tool calls for message ${msg.id}`);
-        }
         
         messagesWithTools.push({
           id: msg.id,

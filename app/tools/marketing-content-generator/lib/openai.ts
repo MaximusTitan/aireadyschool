@@ -30,7 +30,7 @@ export async function generateContent(prompt: string, systemPrompt: string): Pro
     const openai = getOpenAIInstance()
 
     const response = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o",
       messages: [
         {
           role: "system",

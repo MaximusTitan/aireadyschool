@@ -10,7 +10,7 @@ export async function generateFlashcards(text: string): Promise<Flashcard[]> {
   `
 
   const { text: generatedText } = await generateText({
-    model: openai("gpt-4-turbo"),
+    model: openai("gpt-4o"),
     prompt: prompt,
   })
 

@@ -144,27 +144,6 @@ export function useChatThread(initialThreadId?: string) {
     await loadThreads(); // Refresh thread list
   };
 
-  // Add a function to load tool outputs for a message
-  const loadToolOutputs = async (messageId: string): Promise<ToolCall[]> => {
-    const { data, error } = await supabase
-      .from('tool_outputs')
-      .select('*')
-      .eq('message_id', messageId);
-      
-    if (error) {
-      console.error('Error loading tool outputs:', error);
-      return [];
-    }
-    
-    return data.map(tool => ({
-      id: tool.tool_call_id || tool.id,
-      tool: tool.tool_name,
-      parameters: tool.parameters || {},
-      result: tool.result || undefined,
-      state: tool.state as ToolState,
-    }));
-  };
-
   const loadThread = async (threadId: string) => {
     if (!threadId) return null;
 
@@ -184,32 +163,39 @@ export function useChatThread(initialThreadId?: string) {
         setIsOwner(false);
       }
 
-      // Load messages
+      // Load messages with their tool outputs
       const { data: messagesData, error: messagesError } = await supabase
         .from('chat_messages')
-        .select('id, thread_id, role, content, created_at')
+        .select(`
+          id,
+          thread_id,
+          role,
+          content,
+          created_at,
+          tool_outputs (*)
+        `)
         .eq('thread_id', threadId)
         .order('created_at', { ascending: true });
 
       if (messagesError) throw messagesError;
 
-      // Load tool outputs for each message
-      const messagesWithTools: ChatMessage[] = [];
-      
-      for (const msg of messagesData) {
-        const toolCalls = await loadToolOutputs(msg.id);
-        
-        messagesWithTools.push({
-          id: msg.id,
-          role: msg.role as Message['role'],
-          content: msg.content,
-          createdAt: new Date(msg.created_at),
-          toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
-        });
-      }
+      // Transform to ChatMessage format and ensure id is always present
+      const formattedMessages: ChatMessage[] = messagesData.map((msg) => ({
+        id: msg.id,
+        role: msg.role as Message['role'],
+        content: msg.content,
+        createdAt: new Date(msg.created_at),
+        toolCalls: msg.tool_outputs?.length ? msg.tool_outputs.map((tool: any) => ({
+          id: tool.tool_call_id,
+          tool: tool.tool_name,
+          parameters: tool.parameters,
+          result: tool.result,
+          state: tool.state,
+        })) : undefined
+      }));
 
       setCurrentThreadId(threadId);
-      setCurrentMessages(messagesWithTools);
+      setCurrentMessages(formattedMessages);
 
       // Load thread details for title
       const { data: threadData } = await supabase
@@ -222,7 +208,7 @@ export function useChatThread(initialThreadId?: string) {
         setTitle(threadData.title);
       }
 
-      return messagesWithTools;
+      return formattedMessages;
     } catch (error) {
       console.error('Error loading thread:', error);
       throw error;

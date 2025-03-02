@@ -11,7 +11,6 @@ import { useRouter } from "next/navigation";
 import { Message } from "ai";
 import { ChatMessage, ToolCall, ToolState } from "@/types/chat";
 import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
-import { createClient } from "@/utils/supabase/client";
 
 // Simplified interfaces
 interface GeneratedImage {
@@ -23,7 +22,6 @@ export default function Page() {
   const router = useRouter();
   const { setOpen } = useSidebar();
   const { language } = useLanguageSettings();
-  const supabase = createClient();
   const {
     threadId,
     threads,
@@ -116,27 +114,6 @@ export default function Page() {
       );
     }
   }, [currentMessages, setMessages]);
-
-  // Initialize chat state
-  useEffect(() => {
-    if (currentMessages.length > 0) {
-      // Process any tool calls from history
-      currentMessages.forEach(msg => {
-        if (msg.toolCalls?.length) {
-          msg.toolCalls.forEach(toolCall => {
-            // Handle specific tool types based on their state
-            if (toolCall.state === 'pending') {
-              // Process pending tools
-              processHistoricalToolCall(msg.id, toolCall);
-            } else if (toolCall.state === 'result' && toolCall.result) {
-              // Update our local state with completed tool results
-              updateLocalToolState(toolCall);
-            }
-          });
-        }
-      });
-    }
-  }, [currentMessages]);
 
   // Helper function to create tool calls
   const createToolCall = (
@@ -277,19 +254,6 @@ export default function Page() {
           },
         }));
         setRemainingCredits(data.remainingCredits);
-        
-        // Find the message ID for this tool call
-        const messageWithTool = currentMessages.find(msg => 
-          msg.toolCalls?.some(tc => tc.id === toolCallId)
-        );
-        
-        if (messageWithTool) {
-          // Update the tool result in the database
-          await updateToolResult(messageWithTool.id, toolCallId, {
-            url: imageUrl,
-            credits: data.remainingCredits,
-          });
-        }
       }
     } catch (error) {
       console.error("Image generation failed:", error);
@@ -496,109 +460,6 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Thread creation failed:", error);
-    }
-  };
-
-  // Function to process historical tool calls
-  const processHistoricalToolCall = async (messageId: string, toolCall: ToolCall) => {
-    switch (toolCall.tool) {
-      case 'generateMathProblem':
-        // No need to reprocess, just update UI state
-        break;
-        
-      case 'generateQuiz':
-        if (!generatedQuizzes[toolCall.id]) {
-          // Extract required parameters with type safety
-          const params = {
-            subject: toolCall.parameters.subject || 'general',
-            difficulty: toolCall.parameters.difficulty || 'easy'
-          };
-          handleQuizGeneration(toolCall.id, params);
-        }
-        break;
-        
-      case 'generateImage':
-        if (!generatedImages[toolCall.id] && !pendingImageRequests.has(toolCall.id)) {
-          const imageParams = {
-            prompt: toolCall.parameters.prompt || '',
-            style: toolCall.parameters.style || 'realistic_image',
-            imageSize: toolCall.parameters.imageSize || 'square_hd',
-            numInferenceSteps: toolCall.parameters.numInferenceSteps || 1,
-            numImages: toolCall.parameters.numImages || 1,
-            enableSafetyChecker: toolCall.parameters.enableSafetyChecker ?? true
-          };
-          handleImageGeneration(toolCall.id, imageParams);
-        }
-        break;
-        
-      case 'generateVideo':
-        if (!generatedVideos[toolCall.id]) {
-          // For videos, we might need the last image
-          const imageUrl = toolCall.parameters.imageUrl || lastGeneratedImage;
-          if (imageUrl) {
-            // Start video processing
-          }
-        }
-        break;
-        
-      // Add other tool types as needed
-    }
-  };
-
-  // Function to update local state based on completed tool results
-  const updateLocalToolState = (toolCall: ToolCall) => {
-    if (!toolCall.result) return;
-    
-    switch (toolCall.tool) {
-      case 'generateImage':
-        if (toolCall.result.url) {
-          setGeneratedImages(prev => ({
-            ...prev,
-            [toolCall.id]: {
-              url: toolCall.result.url,
-              credits: toolCall.result.credits || 0
-            }
-          }));
-        }
-        break;
-        
-      case 'generateQuiz':
-        setGeneratedQuizzes(prev => ({
-          ...prev,
-          [toolCall.id]: toolCall.result
-        }));
-        break;
-        
-      case 'generateVideo':
-        if (toolCall.result.videoUrl) {
-          setGeneratedVideos(prev => ({
-            ...prev,
-            [toolCall.id]: toolCall.result.videoUrl
-          }));
-        }
-        break;
-        
-      // Handle other tool types
-    }
-  };
-
-  // Update tool result in database
-  const updateToolResult = async (messageId: string, toolCallId: string, result: any) => {
-    try {
-      const { error } = await supabase
-        .from('tool_outputs')
-        .update({ 
-          result,
-          state: 'result' 
-        })
-        .match({
-          message_id: messageId,
-          tool_call_id: toolCallId
-        });
-        
-      if (error) throw error;
-    } catch (error) {
-      console.error('Failed to update tool result:', error);
     }
   };
 

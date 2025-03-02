@@ -20,8 +20,6 @@ export interface ChatMessage extends Omit<Message, 'role'> {
   content: string;
   createdAt?: Date;
   toolCalls?: ToolCall[];
-  isHidden?: boolean;
-  hasBeenPlayed?: boolean;
 }
 
 export interface ThreadMessage extends ChatMessage {

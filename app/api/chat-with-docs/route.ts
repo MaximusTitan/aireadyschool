@@ -35,7 +35,7 @@ export async function POST(request: Request) {
     // Get embedding for the question
     const embedding = await openai.embeddings.create({
       input: message,
-      model: "text-embedding-3-small"
+      model: "text-embedding-ada-002"
     });
 
     // Search for similar content with document filtering

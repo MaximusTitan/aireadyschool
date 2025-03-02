@@ -1,14 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 
-export type ToolState = 'pending' | 'result' | 'error';
-
 export interface ToolOutput {
   message_id: string;
   tool_name: string;
   tool_call_id?: string;
   parameters?: Record<string, any>;
   result?: Record<string, any>;
-  state: ToolState;
+  state: 'pending' | 'result' | 'error';
 }
 
 export async function updateToolOutput(

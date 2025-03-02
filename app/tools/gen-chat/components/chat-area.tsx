@@ -1,34 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { MathProblem } from "./math-problem";
-import { QuizCard } from "./quiz-card";
-import { MindMapViewer } from "./mind-map-viewer";
 import { Bot, User, Volume2, VolumeX } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { CommandInput } from "./command-input";
 import { useNowPlaying } from "@/app/hooks/useNowPlaying";
 import { useAudioSettings } from "@/app/hooks/useAudioSettings";
-import { VideoGenerator } from "./video-generator";
 import { ChatAreaProps } from "@/types/chat";
-
-const SimulationWrapper = ({ code }: { code: string }) => {
-  const iframeRef = useRef<HTMLIFrameElement>(null);
-
-  useEffect(() => {
-    const doc = iframeRef.current?.contentDocument;
-    if (!doc) return;
-    doc.open();
-    doc.write(code);
-    doc.close();
-  }, [code]);
-
-  return (
-    <iframe
-      ref={iframeRef}
-      style={{ width: "100%", height: "800px", border: "none" }}
-    />
-  );
-};
+import { Button } from "@/components/ui/button";
+import { ToolRenderer } from "./ToolRenderer";
 
 export const ChatArea = ({
   messages,
@@ -190,200 +169,22 @@ export const ChatArea = ({
     </div>
   );
 
-  // Handle tool rendering
-  const renderTool = (invocation: any) => {
-    const { toolName, toolCallId, state, result } = invocation;
-
-    // For pending state, show a spinner placeholder
-    if (state !== "result") {
-      return (
-        <div key={toolCallId} className="mb-4 animate-pulse">
-          <div className="h-8 bg-indigo-100 rounded w-3/4" />
-        </div>
-      );
-    }
-
-    switch (toolName) {
-      case "generateMathProblem":
-        return (
-          <div key={toolCallId} className="mb-4">
-            <MathProblem {...result} onAnswer={handleAnswerSubmit} />
-          </div>
-        );
-
-      case "generateQuiz": {
-        // Only generate if we don't have the quiz data and haven't started generating
-        if (
-          !generatedQuizzes[toolCallId] &&
-          result.pending &&
-          !pendingQuizzes.has(toolCallId)
-        ) {
-          handleQuizGeneration(toolCallId, {
-            subject: result.subject,
-            difficulty: result.difficulty,
-          });
-        }
-
-        // Show loading state
-        if (!generatedQuizzes[toolCallId]) {
-          return (
-            <div key={toolCallId} className="mb-4">
-              <div className="animate-pulse">
-                <div className="h-24 bg-neutral-100 rounded" />
-                <div className="text-xs text-neutral-500 mt-2">
-                  Generating quiz...
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        return (
-          <div key={toolCallId} className="mb-4">
-            <QuizCard
-              {...generatedQuizzes[toolCallId]}
-              onAnswer={handleQuizAnswer}
-            />
-          </div>
-        );
-      }
-
-      case "generateImage": {
-        const shouldTriggerGeneration =
-          result.pending &&
-          !pendingImageRequests.has(toolCallId) &&
-          !completedImages.has(toolCallId);
-
-        if (shouldTriggerGeneration) {
-          handleImageGeneration(toolCallId, {
-            prompt: result.prompt,
-            style: result.style,
-            imageSize: result.imageSize || "square_hd",
-            numInferenceSteps: 1,
-            numImages: 1,
-            enableSafetyChecker: true,
-          });
-        }
-
-        if (!generatedImages[toolCallId] && result.pending) {
-          return (
-            <div key={toolCallId} className="mb-4">
-              <div className="animate-pulse">
-                <div className="h-48 bg-neutral-100 rounded" />
-                <div className="text-xs text-neutral-500 mt-2">
-                  Generating image...
-                </div>
-              </div>
-            </div>
-          );
-        }
-
-        const imageData = generatedImages[toolCallId];
-        if (!imageData) return null;
-
-        return (
-          <div key={toolCallId} className="mb-4 space-y-2">
-            {imageData.url === "error" ? (
-              <div className="text-sm text-red-500">
-                Failed to generate image. Please try again.
-              </div>
-            ) : (
-              <>
-                <img
-                  src={imageData.url}
-                  alt={result.prompt}
-                  className="w-full max-w-md rounded-lg"
-                  loading="lazy"
-                />
-                <div className="text-xs text-neutral-500">
-                  Credits remaining: {imageData.credits}
-                </div>
-              </>
-            )}
-          </div>
-        );
-      }
-
-      case "conceptVisualizer":
-        if (simulationCode) {
-          return (
-            <div key={toolCallId} className="mb-4">
-              <SimulationWrapper code={simulationCode} />
-            </div>
-          );
-        }
-
-        if (!pendingVisualizations.has(toolCallId)) {
-          pendingVisualizations.add(toolCallId);
-          handleVisualization(result.subject, result.concept).then((res) => {
-            if (res.code) {
-              let cleaned = res.code.trim();
-              if (cleaned.startsWith("```html")) {
-                cleaned = cleaned
-                  .replace(/^```html\s*/, "")
-                  .replace(/```$/, "")
-                  .trim();
-              }
-              simulationCodeRef.current = cleaned;
-              onSimulationCode(cleaned);
-            }
-          });
-        }
-
-        return (
-          <div key={toolCallId} className="mb-4">
-            <div className="animate-pulse">
-              <div className="h-48 bg-neutral-100 rounded" />
-              <div className="text-xs text-neutral-500 mt-2">
-                Generating visualization...
-              </div>
-            </div>
-          </div>
-        );
-
-      case "generateMindMap":
-        return (
-          <div key={toolCallId} className="mb-4">
-            <MindMapViewer data={result} />
-          </div>
-        );
-
-      case "generateVideo": {
-        const imageSource = result.imageUrl || lastGeneratedImage;
-
-        if (generatedVideos[toolCallId]) {
-          return (
-            <div key={toolCallId} className="mb-4">
-              <video
-                src={generatedVideos[toolCallId]}
-                controls
-                className="w-full rounded-lg"
-              />
-            </div>
-          );
-        }
-
-        return (
-          <div key={toolCallId} className="mb-4">
-            <VideoGenerator
-              toolCallId={toolCallId}
-              onComplete={handleVideoComplete}
-              prompt={result.prompt}
-              initialImage={imageSource}
-            />
-          </div>
-        );
-      }
-
-      default:
-        return null;
-    }
-  };
-
   return (
     <div className="flex w-full h-screen">
       {/* Chat Panel */}
       <div className="w-[50%] flex-shrink-0 flex flex-col h-full border-x">
+        <div className="flex items-center justify-between flex-shrink-0 px-4 py-2 border-b bg-white sticky top-0 z-10">
+          <h2 className="text-lg font-semibold">Chat</h2>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={toggleAudio}
+            className="h-8 w-8 p-0"
+            aria-label={isAudioEnabled ? "Disable audio" : "Enable audio"}
+          >
+            {isAudioEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+          </Button>
+        </div>
         <div className="flex-1 p-4 overflow-hidden">
           <div className="h-full overflow-y-auto">
             {messages
@@ -398,7 +199,7 @@ export const ChatArea = ({
             isLoading={isLoading}
             onInputChange={onInputChange}
             onSubmit={onSubmit}
-            isOwner={isOwner} // Pass isOwner prop
+            isOwner={isOwner}
           />
         </div>
       </div>
@@ -410,7 +211,29 @@ export const ChatArea = ({
             Tools
           </h2>
           <div ref={toolsContentRef} className="flex-1 overflow-y-auto p-4">
-            {toolInvocations.map(renderTool)}
+            {toolInvocations.map((invocation) => (
+              <ToolRenderer
+                key={invocation.toolCallId}
+                invocation={invocation}
+                generatedImages={generatedImages}
+                pendingImageRequests={pendingImageRequests}
+                completedImages={completedImages}
+                pendingVisualizations={pendingVisualizations}
+                simulationCode={simulationCode}
+                simulationCodeRef={simulationCodeRef}
+                onSimulationCode={onSimulationCode}
+                handleAnswerSubmit={handleAnswerSubmit}
+                handleImageGeneration={handleImageGeneration}
+                handleVisualization={handleVisualization}
+                generatedQuizzes={generatedQuizzes}
+                pendingQuizzes={pendingQuizzes}
+                handleQuizGeneration={handleQuizGeneration}
+                handleQuizAnswer={handleQuizAnswer}
+                generatedVideos={generatedVideos}
+                handleVideoComplete={handleVideoComplete}
+                lastGeneratedImage={lastGeneratedImage}
+              />
+            ))}
           </div>
         </div>
       </div>

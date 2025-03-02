@@ -9,14 +9,9 @@ import { useChatThread } from "@/app/hooks/useChatThread";
 import { ThreadList } from "./components/thread-list";
 import { useRouter } from "next/navigation";
 import { Message } from "ai";
-import { ChatMessage, ToolCall, ToolState } from "@/types/chat";
+import { ChatMessage } from "@/types/chat";
 import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
-
-// Simplified interfaces
-interface GeneratedImage {
-  url: string;
-  credits: number;
-}
+import { useTools } from "@/app/hooks/useTools";
 
 export default function Page() {
   const router = useRouter();
@@ -32,31 +27,21 @@ export default function Page() {
     startNewThread,
     currentMessages,
     setCurrentMessages,
-    isOwner, // Add this
+    isOwner,
   } = useChatThread();
 
   // State management
   const [showCommands, setShowCommands] = useState(false);
-  const [pendingImageRequests] = useState(() => new Set<string>());
-  const [remainingCredits, setRemainingCredits] = useState<number | null>(null);
-  const [completedImages] = useState(() => new Set<string>());
-  const [generatedImages, setGeneratedImages] = useState<
-    Record<string, GeneratedImage>
-  >({});
-  const [pendingVisualizations] = useState(() => new Set<string>());
-  const [pendingQuizzes] = useState(() => new Set<string>());
-  const [generatedQuizzes, setGeneratedQuizzes] = useState<Record<string, any>>(
-    {}
-  );
-  const [generatedVideos, setGeneratedVideos] = useState<
-    Record<string, string>
-  >({});
-  const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(
-    null
-  );
+  const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(null);
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const chatRef = useRef<any>(null);
+
+  // Initialize tools hook
+  const tools = useTools({
+    lastGeneratedImage,
+    setLastGeneratedImage,
+  });
 
   // Initialize chat and handle message saving
   const chat = useChat({
@@ -81,7 +66,7 @@ export default function Page() {
             tool: call.tool || call.function?.name,
             parameters: call.parameters || call.function?.arguments,
             result: call.result,
-            state: (call.state || "result") as ToolState,
+            state: (call.state || "result") as "pending" | "result",
           })),
         };
         await saveMessage(messageToSave);
@@ -114,17 +99,6 @@ export default function Page() {
       );
     }
   }, [currentMessages, setMessages]);
-
-  // Helper function to create tool calls
-  const createToolCall = (
-    tool: string,
-    parameters: Record<string, any>
-  ): ToolCall => ({
-    id: String(Date.now()),
-    tool,
-    parameters,
-    state: "pending",
-  });
 
   // Handle thread operations
   const handleThreadSelect = async (selectedThreadId: string) => {
@@ -162,163 +136,8 @@ export default function Page() {
     }
   };
 
-  // Tool handlers
-  const handleQuizAnswer = useCallback(
-    async (data: {
-      selectedOption: { id: string; text: string; isCorrect: boolean };
-      question: string;
-      allOptions: Array<{ id: string; text: string; isCorrect: boolean }>;
-      subject: string;
-      difficulty: string;
-      explanation: string;
-    }) => {
-      const userMessage = {
-        id: String(Date.now()),
-        role: "user" as const,
-        content: `I chose: "${data.selectedOption.text}" for the question: "${data.question}"`,
-        toolCalls: [
-          {
-            tool: "evaluateQuizAnswer",
-            parameters: {
-              selectedAnswer: data.selectedOption,
-              question: data.question,
-              allOptions: data.allOptions,
-              subject: data.subject,
-              difficulty: data.difficulty,
-              explanation: data.explanation,
-              isCorrect: data.selectedOption.isCorrect,
-            },
-          },
-        ],
-        isHidden: true,
-      };
-      await append(userMessage);
-    },
-    [append]
-  );
-
-  const handleAnswerSubmit = async (data: {
-    studentAnswer: number;
-    correctAnswer: number;
-    question: string;
-    topic: string;
-    level: string;
-  }) => {
-    const userMessage = {
-      id: String(Date.now()),
-      role: "user" as const,
-      content: `Evaluate my answer: ${data.studentAnswer} for the question: "${data.question}"`,
-      toolCalls: [
-        {
-          tool: "evaluateAnswer",
-          parameters: data,
-        },
-      ],
-    };
-    await append(userMessage);
-  };
-
-  const handleImageGeneration = async (
-    toolCallId: string,
-    params: {
-      prompt: string;
-      style: string;
-      imageSize: string;
-      numInferenceSteps: number;
-      numImages: number;
-      enableSafetyChecker: boolean;
-    }
-  ) => {
-    if (pendingImageRequests.has(toolCallId) || completedImages.has(toolCallId))
-      return;
-
-    pendingImageRequests.add(toolCallId);
-    try {
-      const response = await fetch("/api/gen-chat-image", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(params),
-      });
-      const data = await response.json();
-      pendingImageRequests.delete(toolCallId);
-      completedImages.add(toolCallId);
-
-      if (data.images?.[0]) {
-        const imageUrl = data.images[0].url;
-        setLastGeneratedImage(imageUrl);
-        setGeneratedImages((prev) => ({
-          ...prev,
-          [toolCallId]: {
-            url: imageUrl,
-            credits: data.remainingCredits,
-          },
-        }));
-        setRemainingCredits(data.remainingCredits);
-      }
-    } catch (error) {
-      console.error("Image generation failed:", error);
-      pendingImageRequests.delete(toolCallId);
-      setGeneratedImages((prev) => ({
-        ...prev,
-        [toolCallId]: { url: "error", credits: remainingCredits || 0 },
-      }));
-    }
-  };
-
-  const handleQuizGeneration = useCallback(
-    async (
-      toolCallId: string,
-      params: {
-        subject: string;
-        difficulty: string;
-      }
-    ) => {
-      if (pendingQuizzes.has(toolCallId)) return;
-
-      pendingQuizzes.add(toolCallId);
-      try {
-        const response = await fetch("/api/gen-quiz", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(params),
-        });
-
-        if (!response.ok) throw new Error("Failed to generate quiz");
-
-        const data = await response.json();
-        setGeneratedQuizzes((prev) => ({ ...prev, [toolCallId]: data }));
-      } catch (error) {
-        console.error("Quiz generation failed:", error);
-        setGeneratedQuizzes((prev) => ({
-          ...prev,
-          [toolCallId]: { error: "Failed to generate quiz" },
-        }));
-      } finally {
-        pendingQuizzes.delete(toolCallId);
-      }
-    },
-    [pendingQuizzes]
-  );
-
-  const handleVisualization = async (subject: string, concept: string) => {
-    try {
-      const response = await fetch("/api/generate-visualization", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, concept }),
-      });
-
-      if (!response.ok) throw new Error("Failed to generate visualization");
-
-      const { visualization } = await response.json();
-      return { code: visualization };
-    } catch (error) {
-      console.error("Visualization generation failed:", error);
-      return { error: "Failed to generate visualization" };
-    }
-  };
-
-  const handleDirectCommand = async (command: string) => {
+  // Handle direct commands from the user
+  const processDirectCommand = async (command: string) => {
     // Ensure thread exists
     if (!threadId) {
       const newThreadId = await createThread();
@@ -326,86 +145,12 @@ export default function Page() {
       await router.push(`/tools/gen-chat?thread=${newThreadId}`);
     }
 
-    const parts = command.slice(1).split(" ");
-    const toolName = parts[0].toLowerCase();
-    const baseMessage = {
-      id: String(Date.now()),
-      role: "user" as const,
-      createdAt: new Date(),
-      content: "",
-      toolCalls: [] as ToolCall[],
-    };
-
-    switch (toolName) {
-      case "math":
-        const level = parts[1] || "easy";
-        const topic = parts[2] || "addition";
-        baseMessage.content = `Generate a ${level} ${topic} math problem`;
-        baseMessage.toolCalls = [
-          createToolCall("generateMathProblem", { level, topic }),
-        ];
-        break;
-      case "quiz":
-        const subject = parts[1] || "general";
-        const difficulty = parts[2] || "easy";
-        baseMessage.content = `Generate a ${difficulty} quiz about ${subject}`;
-        baseMessage.toolCalls = [
-          createToolCall("generateQuiz", { subject, difficulty }),
-        ];
-        break;
-      case "image":
-        const prompt = parts.slice(1, -1).join(" ");
-        const style = parts[parts.length - 1] || "realistic_image";
-        baseMessage.content = `Generate an educational image about: ${prompt}`;
-        baseMessage.toolCalls = [
-          createToolCall("generateImage", {
-            prompt,
-            style,
-            imageSize: "square_hd",
-            numInferenceSteps: 1,
-            numImages: 1,
-            enableSafetyChecker: true,
-          }),
-        ];
-        break;
-      case "visualize":
-        const vizSubject = parts[1] || "physics";
-        const concept = parts.slice(2).join(" ") || "";
-        baseMessage.content = `Generate a visualization of ${concept} ${vizSubject}`;
-        baseMessage.toolCalls = [
-          createToolCall("generateVisualization", {
-            subject: vizSubject,
-            concept,
-          }),
-        ];
-        break;
-      case "mindmap":
-        const mindmapTopic = parts.slice(1).join(" ");
-        baseMessage.content = `Generate a mind map about ${mindmapTopic}`;
-        baseMessage.toolCalls = [
-          createToolCall("generateMindMap", { mindmapTopic }),
-        ];
-        break;
-      case "video":
-        const videoPrompt = parts.slice(1).join(" ");
-        baseMessage.content = `Generate a video with this description: ${videoPrompt}`;
-        baseMessage.toolCalls = [
-          createToolCall("generateVideo", {
-            prompt: videoPrompt,
-            imageUrl: lastGeneratedImage,
-          }),
-        ];
-        break;
-      default:
-        baseMessage.content = `Unknown command: ${command}`;
-        baseMessage.toolCalls = [];
-    }
-
     try {
+      const baseMessage = await tools.handleDirectCommand(command);
       await saveMessage(baseMessage);
       await append(baseMessage);
     } catch (error) {
-      console.error("Failed to save command message:", error);
+      console.error("Failed to process command:", error);
     }
   };
 
@@ -441,7 +186,7 @@ export default function Page() {
           const messageWithTool: ChatMessage = {
             ...userMessage,
             toolCalls: [
-              createToolCall("generateVideo", {
+              tools.createToolCall("generateVideo", {
                 prompt: input,
                 imageUrl: lastGeneratedImage,
               }),
@@ -449,7 +194,7 @@ export default function Page() {
           };
           await append(messageWithTool);
         } else if (input.startsWith("/")) {
-          await handleDirectCommand(input);
+          await processDirectCommand(input);
         } else {
           await chatRef.current?.append(userMessage);
         }
@@ -461,6 +206,11 @@ export default function Page() {
     } catch (error) {
       console.error("Thread creation failed:", error);
     }
+  };
+
+  // Process tool answers
+  const processToolAnswer = async (answer: any) => {
+    await append(answer);
   };
 
   return (
@@ -484,20 +234,26 @@ export default function Page() {
           onSubmit={handleMessageSubmit}
           simulationCode={simulationCode}
           simulationCodeRef={simulationCodeRef}
-          generatedImages={generatedImages}
-          generatedQuizzes={generatedQuizzes}
-          pendingQuizzes={pendingQuizzes}
-          pendingImageRequests={pendingImageRequests}
-          completedImages={completedImages}
-          pendingVisualizations={pendingVisualizations}
-          handleAnswerSubmit={handleAnswerSubmit}
-          handleImageGeneration={handleImageGeneration}
-          handleQuizGeneration={handleQuizGeneration}
-          handleVisualization={handleVisualization}
-          handleQuizAnswer={handleQuizAnswer}
+          generatedImages={tools.generatedImages}
+          generatedQuizzes={tools.generatedQuizzes}
+          pendingQuizzes={tools.pendingQuizzes}
+          pendingImageRequests={tools.pendingImageRequests}
+          completedImages={tools.completedImages}
+          pendingVisualizations={tools.pendingVisualizations}
+          handleAnswerSubmit={async (data) => {
+            const answer = await tools.handleAnswerSubmit(data);
+            processToolAnswer(answer);
+          }}
+          handleQuizAnswer={async (data) => {
+            const answer = await tools.handleQuizAnswer(data);
+            processToolAnswer(answer);
+          }}
+          handleImageGeneration={tools.handleImageGeneration}
+          handleQuizGeneration={tools.handleQuizGeneration}
+          handleVisualization={tools.handleVisualization}
           onSimulationCode={setSimulationCode}
-          generatedVideos={generatedVideos}
-          setGeneratedVideos={setGeneratedVideos}
+          generatedVideos={tools.generatedVideos}
+          setGeneratedVideos={tools.setGeneratedVideos}
           lastGeneratedImage={lastGeneratedImage}
           isOwner={isOwner}
         />

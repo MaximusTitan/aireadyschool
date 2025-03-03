@@ -44,7 +44,7 @@ interface DocumentFile {
   grade: string;
   education_board: string;
   subject: string;
-  topic: string;
+  file_url: string;  //topic of a selectedDoc is just the file_url
 }
 
 export default function Home() {
@@ -100,14 +100,14 @@ export default function Home() {
         board: selectedDoc.education_board,
         classLevel: selectedDoc.grade,
         subject: selectedDoc.subject,
-        topic: selectedDoc.topic,
+        topic: selectedDoc.file_url, //topic of a selectedDoc is just the file_url 
         selectedDocument: docId,
       }));
       console.log("Updated form data:", {
         board: selectedDoc.education_board,
         classLevel: selectedDoc.grade,
         subject: selectedDoc.subject,
-        topic: selectedDoc.topic,
+        topic: selectedDoc.file_url, //topic of a selectedDoc is just the file_url
       });
     }
   };
@@ -127,7 +127,7 @@ export default function Home() {
 
       await Promise.all([
         fetchSavedAssessments(user.email || ""),
-        fetchKnowledgeBaseDocs(user.email || ""),
+        fetchKnowledgeBaseDocs(),
       ]);
     } catch (error) {
       console.error("Error fetching user data:", error);
@@ -152,7 +152,7 @@ export default function Home() {
     }
   };
 
-  const fetchKnowledgeBaseDocs = async (email: string) => {
+  const fetchKnowledgeBaseDocs = async () => {
     try {
       const { data, error } = await supabase.from("knowledge_base").select("*");
       if (error) throw error;
@@ -174,18 +174,12 @@ export default function Home() {
 
     try {
       let submissionData: any = { ...formData };
-
-      // Add model to submissionData
-      submissionData.model =
-        formData.board === "CAIE" ? "claude-3-5-sonnet-20240620" : "gpt-4o";
-      console.log("Selected model:", submissionData.model);
-
-      if (isDocumentSelected && formData.selectedDocument) {
-        const selectedDoc = documentFiles.find(
-          (doc) => doc.id === formData.selectedDocument
-        );
-        if (selectedDoc && selectedDoc.topic) {
-          submissionData.topic = selectedDoc.topic;
+      let apiRoute = "/api/generate-assessment";
+      if (formData.selectedDocument) {
+        apiRoute = "/api/rag-assessment";
+        const selectedDoc = documentFiles.find((doc) => doc.id === formData.selectedDocument);
+        if (selectedDoc && selectedDoc.file_url) {
+          submissionData.topic = selectedDoc.file_url;
           submissionData.board = selectedDoc.education_board;
           submissionData.subject = selectedDoc.subject;
         } else {
@@ -195,11 +189,11 @@ export default function Home() {
         }
       }
 
-      console.log("Submitting form data:", submissionData);
-      let apiRoute = "/api/generate-assessment";
-      if (isDocumentSelected && formData.selectedDocument) {
-        apiRoute = "/api/rag-assessment";
-      }
+      // Add model to submissionData after determining the route
+      submissionData.model =
+        formData.board === "CAIE" ? "claude-3-5-sonnet-20240620" : "gpt-4";
+      console.log("Selected model:", submissionData.model);
+      console.log("Using API route:", apiRoute);
 
       const response = await fetch(apiRoute, {
         method: "POST",
@@ -379,6 +373,7 @@ export default function Home() {
                 {/* Document Selection */}
                 <div className="mb-4">
                   <Select
+                    value={formData.selectedDocument || ""}
                     onValueChange={(value) => handleDocumentSelect(value)}
                   >
                     <SelectTrigger className="w-full">

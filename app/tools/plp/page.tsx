@@ -932,6 +932,9 @@ const StudentAssessmentForm = () => {
                     <div className="text-sm text-gray-500 mt-4">
                       <span className="text-red-500">*</span> Required fields
                     </div>
+                    <div className="flex justify-end gap-4 pt-6">
+                      <Button onClick={nextStep}>Next Step</Button>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -1038,6 +1041,10 @@ const StudentAssessmentForm = () => {
                           {errors.knowledge}
                         </p>
                       )}
+                    </div>
+                    <div className="flex justify-end gap-4 pt-6">
+                      <Button variant="outline" onClick={prevStep}>Previous</Button>
+                      <Button onClick={nextStep}>Next Step</Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -1202,6 +1209,10 @@ const StudentAssessmentForm = () => {
                         />
                       </div>
                     </div>
+                    <div className="flex justify-end gap-4 pt-6">
+                      <Button variant="outline" onClick={prevStep}>Previous</Button>
+                      <Button onClick={handleSubmit}>Generate Plan</Button>
+                    </div>
                   </CardContent>
                 </Card>
               )}
@@ -1213,8 +1224,22 @@ const StudentAssessmentForm = () => {
                 id="learning-plan"
                 className="w-full max-w-6xl mx-auto shadow-lg animate-fade-in print-content"
               >
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Learning Plan for {name}</CardTitle>
+                  <div className="flex gap-2 no-print">
+                    <Button 
+                      variant="outline"
+                      onClick={handlePrint}
+                    >
+                      Print
+                    </Button>
+                    <Button 
+                      variant="outline"
+                      onClick={() => exportToPDF(learningPlan, name)}
+                    >
+                      Download PDF
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {/* Summary Section */}

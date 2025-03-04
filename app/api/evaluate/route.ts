@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import createParser from "pdf2json"
 import { openai } from '@ai-sdk/openai'
 import { generateText } from 'ai'
+import { logTokenUsage } from '@/utils/logTokenUsage'
+import { createClient } from "@/utils/supabase/server"
 
 const SYSTEM_PROMPT = `You are an expert educational evaluator with years of experience in assessing student assignments across various subjects and grade levels. Your task is to analyze the given student assignment and provide a comprehensive evaluation based on the following criteria:
 
@@ -49,6 +51,14 @@ Format your response as follows:
 
 export async function POST(request: Request) {
   try {
+    // Get current user from Supabase
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const formData = await request.formData()
     const file = formData.get("file") as File | null
     const title = formData.get("title") as string
@@ -159,7 +169,7 @@ ${assignmentContent}
 Please evaluate this assignment based on the criteria provided.`
 
     // Call OpenAI API for evaluation using AI SDK
-    const { text: aiResponse } = await generateText({
+    const { text: aiResponse, usage } = await generateText({
       model: openai('gpt-4o'),
       messages: [
         { role: "system", content: systemPrompt },
@@ -169,11 +179,21 @@ Please evaluate this assignment based on the criteria provided.`
       temperature: 0.7,
       providerOptions: {
         openai: {
-          // Enable structured outputs for consistent JSON responses
           structuredOutputs: true,
         }
       }
     })
+
+    // Log token usage
+    if (usage) {
+      await logTokenUsage(
+        'Evaluator',
+        'GPT-4o',
+        usage.promptTokens,
+        usage.completionTokens,
+        user?.email
+      );
+    }
 
     let evaluation
     try {

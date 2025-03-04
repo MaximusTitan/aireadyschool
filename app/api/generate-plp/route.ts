@@ -2,6 +2,8 @@ import { createOpenAI } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
+import { logTokenUsage } from '@/utils/logTokenUsage';
+import { createClient } from "@/utils/supabase/server";
 
 const openai = createOpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -84,14 +86,22 @@ export async function POST(req: Request) {
       throw new Error("OpenAI API key not configured");
     }
 
+    // Add auth check
+    const supabase = await createClient();
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const data = await req.json();
     
     if (!validateData(data)) {
       throw new Error("Invalid data format");
     }
 
-    const { object: plan } = await generateObject({
-      model: openai('gpt-4'),
+    const { object: plan, usage } = await generateObject({
+      model: openai('gpt-4o'),
       schema: LearningPlanSchema,
       schemaName: 'LearningPlan',
       schemaDescription: 'A personalized learning plan for a student',
@@ -130,6 +140,17 @@ export async function POST(req: Request) {
         }
       ]
     });
+
+    // Log token usage
+    if (usage) {
+      await logTokenUsage(
+        'Learning Plan Generator',
+        'GPT-4o',
+        usage.promptTokens,
+        usage.completionTokens,
+        user?.email
+      );
+    }
 
     return NextResponse.json(plan);
   } catch (error: any) {

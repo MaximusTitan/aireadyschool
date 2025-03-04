@@ -71,7 +71,7 @@ export function AssignmentHistory({
   }
   return (
     <>
-      <Card className="mt-8 mb-8 max-w-6xl mx-auto shadow-md">
+      <Card className="mt-8 mb-8 max-w-6xl mx-auto">
         <CardHeader className="border-b bg-muted/50">
           <CardTitle className="text-xl font-bold">
             Assignment History

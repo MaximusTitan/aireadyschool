@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/pagination"
 import { jsPDF } from "jspdf" // Added jsPDF import
 import { useDropzone } from "react-dropzone"
+import { Button } from "@/components/ui/button"
 
 interface StoryResponse {
   story: string
@@ -339,231 +340,236 @@ export default function GenerateStory() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-3 max-w-6xl mx-auto mb-12">
-        <Link href="/tools" className="hover:bg-gray-50 p-2 rounded-full transition-all">
-          <ChevronLeft className="text-gray-900" />
+    <div className="min-h-screen bg-backgroundApp dark:bg-neutral-900">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
+        <Link href="/tools">
+          <Button variant="outline" className="mb-2 border-neutral-500">
+            ← Back
+          </Button>
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">AI Story Generator</h1>
-      </div>
 
-      <div className="max-w-4xl mx-auto"></div>
-      <div className="mb-16">
-        <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-8">
-          <div>
-            <label className="block text-sm font-medium mb-2">Story Title *</label>
-            <input
-              name="title"
-              className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
-                  focus:ring-1 focus:ring-black focus:border-black transition-all"
-              maxLength={100}
-              required
-              placeholder="Enter a captivating title"
-            />
-            <p className="mt-1 text-sm text-gray-500">Maximum 100 characters</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium mb-2">
-              Description <span className="text-gray-500">(optional)</span>
-            </label>
-            <textarea
-              name="description"
-              className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
-                  focus:ring-1 focus:ring-black focus:border-black transition-all"
-              rows={4}
-              maxLength={500}
-              placeholder="Add some context or specific elements you'd like in your story"
-            />
-            <p className="mt-1 text-sm text-gray-500">Maximum 500 characters</p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Genre *</label>
-              <select
-                name="genre"
-                title="Genre"
-                className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
-                    focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
-                required
-              >
-                <option value="fantasy">Fantasy</option>
-                <option value="adventure">Adventure</option>
-                <option value="mystery">Mystery</option>
-                <option value="scifi">Science Fiction</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Age Group</label>
-              <select
-                name="ageGroup"
-                title="Age Group"
-                className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
-                    focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
-                required
-              >
-                <option value="children">Children</option>
-                <option value="young-adult">Young Adult</option>
-                <option value="adult">Adult</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-2">Story Tone</label>
-              <select
-                name="tone"
-                title="Story Tone"
-                className="w-full p-3 border border-gray-200 rounded-lg shadow-sm 
-                    focus:ring-1 focus:ring-black focus:border-black appearance-none bg-white"
-                required
-              >
-                <option value="engaging">Engaging</option>
-                <option value="humorous">Humorous</option>
-                <option value="dramatic">Dramatic</option>
-                <option value="educational">Educational</option>
-              </select>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-black hover:bg-gray-800 text-white p-4 rounded-lg 
-                font-medium transition-colors disabled:opacity-50 disabled:hover:bg-black"
-            disabled={loading}
-          >
-            {loading ? (
-              <span className="flex items-center justify-center gap-2">
-                <Spinner className="w-5 h-5" />
-                {currentStep === "story" ? "Crafting your story..." : "Creating illustration..."}
-              </span>
-            ) : (
-              "Generate Story"
-            )}
-          </button>
-        </form>
-      </div>
-
-      {error && (
-        <div className="max-w-2xl mx-auto">
-          <div className="p-4 bg-gray-50 border border-gray-200 text-gray-800 rounded-lg">{error}</div>
+        <div className="mb-8 space-y-2">
+          <h1 className="text-3xl font-bold text-rose-500">Story Generator</h1>
+          <p className="text-muted-foreground text-lg">
+            Create custom AI-generated stories with illustrations for your educational content.
+          </p>
         </div>
-      )}
 
-      {result && (
-        <div ref={resultRef} className="mt-16 space-y-12 animate-fadeIn max-w-4xl mx-auto print-content">
-          <div
-            {...getRootProps()}
-            className="aspect-w-16 aspect-h-9 max-h-[600px] overflow-hidden rounded-xl border border-gray-100 shadow-lg print:shadow-none print:border-0 cursor-pointer"
-          >
-            <input {...getInputProps()} />
-            {isDragActive ? (
-              <div className="flex items-center justify-center h-full bg-gray-100">
-                <p className="text-lg text-gray-600">Drop the image here ...</p>
-              </div>
-            ) : (
-              <img
-                src={uploadedImage || result.imageUrl || "/placeholder.svg"}
-                alt="Story illustration"
-                className="object-cover w-full h-full"
+        <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg p-6 md:p-8 bg-white dark:bg-neutral-800 shadow-sm">
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                Story Title *
+              </label>
+              <input
+                name="title"
+                className="w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-700 focus:ring-2 focus:ring-rose-500"
+                maxLength={100}
+                required
+                placeholder="Enter a captivating title"
               />
-            )}
-          </div>
-          <p className="text-center text-sm text-gray-500">Click or drag and drop to change the image</p>
+              <p className="text-sm text-neutral-500">Maximum 100 characters</p>
+            </div>
 
-          <article className="bg-white rounded-lg shadow-sm border border-gray-100 p-8 print:shadow-none print:border-0 print:p-0">
-            {isEditing ? (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                Description <span className="text-neutral-500">(optional)</span>
+              </label>
               <textarea
-                value={editedStory}
-                onChange={(e) => setEditedStory(e.target.value)}
-                className="w-full h-96 p-4 border border-gray-300 rounded-lg"
+                name="description"
+                className="w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-700 focus:ring-2 focus:ring-rose-500"
+                rows={4}
+                maxLength={500}
+                placeholder="Add some context or specific elements you'd like in your story"
               />
-            ) : (
-              <div className="prose prose-lg max-w-none dark:prose-invert">
-                <ReactMarkdown>{formatStoryAsMarkdown(result.story)}</ReactMarkdown>
-              </div>
-            )}
-          </article>
+              <p className="text-sm text-neutral-500">Maximum 500 characters</p>
+            </div>
 
-          <div className="flex justify-center mt-8 space-x-4 no-print">
-            {isEditing ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                  Genre *
+                </label>
+                <select
+                  name="genre"
+                  className="w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-700 focus:ring-2 focus:ring-rose-500"
+                  required
+                >
+                  <option value="fantasy">Fantasy</option>
+                  <option value="adventure">Adventure</option>
+                  <option value="mystery">Mystery</option>
+                  <option value="scifi">Science Fiction</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                  Age Group
+                </label>
+                <select
+                  name="ageGroup"
+                  className="w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-700 focus:ring-2 focus:ring-rose-500"
+                  required
+                >
+                  <option value="children">Children</option>
+                  <option value="young-adult">Young Adult</option>
+                  <option value="adult">Adult</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                  Story Tone
+                </label>
+                <select
+                  name="tone"
+                  className="w-full p-3 border border-neutral-200 dark:border-neutral-700 rounded-lg bg-white dark:bg-neutral-700 focus:ring-2 focus:ring-rose-500"
+                  required
+                >
+                  <option value="engaging">Engaging</option>
+                  <option value="humorous">Humorous</option>
+                  <option value="dramatic">Dramatic</option>
+                  <option value="educational">Educational</option>
+                </select>
+              </div>
+            </div>
+
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-neutral-800 hover:bg-neutral-900 text-white px-6 py-4 rounded-lg font-medium transition-all disabled:bg-neutral-200 disabled:text-neutral-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-lg"
+            >
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  <Spinner className="w-5 h-5" />
+                  {currentStep === "story" ? "Crafting your story..." : "Creating illustration..."}
+                </span>
+              ) : (
+                "Generate Story"
+              )}
+            </Button>
+          </form>
+        </div>
+
+        {error && (
+          <div className="max-w-2xl mx-auto">
+            <div className="p-4 bg-gray-50 border border-gray-200 text-gray-800 rounded-lg">{error}</div>
+          </div>
+        )}
+
+        {result && (
+          <div ref={resultRef} className="mt-16 space-y-12 animate-fadeIn max-w-4xl mx-auto print-content">
+            <div
+              {...getRootProps()}
+              className="aspect-w-16 aspect-h-9 max-h-[600px] overflow-hidden rounded-xl border border-gray-100 shadow-lg print:shadow-none print:border-0 cursor-pointer"
+            >
+              <input {...getInputProps()} />
+              {isDragActive ? (
+                <div className="flex items-center justify-center h-full bg-gray-100">
+                  <p className="text-lg text-gray-600">Drop the image here ...</p>
+                </div>
+              ) : (
+                <img
+                  src={uploadedImage || result.imageUrl || "/placeholder.svg"}
+                  alt="Story illustration"
+                  className="object-cover w-full h-full"
+                />
+              )}
+            </div>
+            <p className="text-center text-sm text-gray-500">Click or drag and drop to change the image</p>
+
+            <article className="bg-white rounded-lg shadow-sm border border-gray-100 p-8 print:shadow-none print:border-0 print:p-0">
+              {isEditing ? (
+                <textarea
+                  value={editedStory}
+                  onChange={(e) => setEditedStory(e.target.value)}
+                  className="w-full h-96 p-4 border border-gray-300 rounded-lg"
+                />
+              ) : (
+                <div className="prose prose-lg max-w-none dark:prose-invert">
+                  <ReactMarkdown>{formatStoryAsMarkdown(result.story)}</ReactMarkdown>
+                </div>
+              )}
+            </article>
+
+            <div className="flex justify-center mt-8 space-x-4 no-print">
+              {isEditing ? (
+                <button
+                  onClick={handleSaveEdit}
+                  className="inline-flex items-center px-6 py-3 text-sm font-medium 
+                      text-white bg-green-600 rounded-lg 
+                      hover:bg-green-700 transition-colors"
+                >
+                  Save Changes
+                </button>
+              ) : (
+                <button
+                  onClick={handleEditStory}
+                  className="inline-flex items-center px-6 py-3 text-sm font-medium 
+                      text-gray-700 bg-white border border-gray-300 rounded-lg 
+                      hover:bg-gray-50 transition-colors"
+                >
+                  Edit Story
+                </button>
+              )}
+              {/* Replace Print Story with PDF Download */}
               <button
-                onClick={handleSaveEdit}
-                className="inline-flex items-center px-6 py-3 text-sm font-medium 
-                    text-white bg-green-600 rounded-lg 
-                    hover:bg-green-700 transition-colors"
-              >
-                Save Changes
-              </button>
-            ) : (
-              <button
-                onClick={handleEditStory}
+                onClick={() => handleDownloadPdf()}
                 className="inline-flex items-center px-6 py-3 text-sm font-medium 
                     text-gray-700 bg-white border border-gray-300 rounded-lg 
                     hover:bg-gray-50 transition-colors"
               >
-                Edit Story
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Download PDF
               </button>
-            )}
-            {/* Replace Print Story with PDF Download */}
-            <button
-              onClick={() => handleDownloadPdf()}
-              className="inline-flex items-center px-6 py-3 text-sm font-medium 
-                  text-gray-700 bg-white border border-gray-300 rounded-lg 
-                  hover:bg-gray-50 transition-colors"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Download PDF
-            </button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {!result && !loading && (
-        <div className="max-w-2xl mx-auto mt-12 p-8 bg-gray-50 rounded-lg text-center border border-gray-100">
-          <p className="text-lg text-gray-600">Your story will appear here after generation</p>
-        </div>
-      )}
+        {!result && !loading && (
+          <div className="max-w-2xl mx-auto mt-12 p-8 bg-gray-50 rounded-lg text-center border border-gray-100">
+            <p className="text-lg text-gray-600">Your story will appear here after generation</p>
+          </div>
+        )}
 
-      {/* History section */}
-      <div className="mt-16 pt-16 border-t border-gray-200">
-        <h2 className="text-2xl font-semibold mb-6">Previous Stories</h2>
-        <StoryHistory stories={stories} onLoadStory={handleLoadStory} />
+        {/* History section */}
+        <div className="mt-16 pt-16 border-t border-gray-200">
+          <h2 className="text-2xl font-semibold mb-6">Previous Stories</h2>
+          <StoryHistory stories={stories} onLoadStory={handleLoadStory} />
 
-        <div className="mt-8">
-          <Pagination>
-            <PaginationContent>
-              <PaginationItem>
-                <PaginationPrevious
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-
-              {[...Array(totalPages)].map((_, i) => (
-                <PaginationItem key={i + 1}>
-                  <PaginationLink
-                    onClick={() => handlePageChange(i + 1)}
-                    isActive={currentPage === i + 1}
-                    className="cursor-pointer"
-                  >
-                    {i + 1}
-                  </PaginationLink>
+          <div className="mt-8">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    className={currentPage === 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
                 </PaginationItem>
-              ))}
 
-              <PaginationItem>
-                <PaginationNext
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
-                />
-              </PaginationItem>
-            </PaginationContent>
-          </Pagination>
+                {[...Array(totalPages)].map((_, i) => (
+                  <PaginationItem key={i + 1}>
+                    <PaginationLink
+                      onClick={() => handlePageChange(i + 1)}
+                      isActive={currentPage === i + 1}
+                      className="cursor-pointer"
+                    >
+                      {i + 1}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    className={currentPage === totalPages ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </div>
         </div>
       </div>
     </div>

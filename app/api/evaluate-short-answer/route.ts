@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
+import { logTokenUsage } from '@/utils/logTokenUsage';
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
   try {
+    // Get current user from Supabase
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const { questions } = await req.json();
     if (!questions || !Array.isArray(questions)) {
       throw new Error("Invalid payload");
@@ -21,12 +31,23 @@ ${questions.map((q: any, index: number) =>
    Student Answer: "${q.userAnswer}"
   `).join("\n")}
 `;
-    const { text } = await generateText({
+    const { text, usage } = await generateText({
       model: openai("gpt-4o"),
       prompt,
       temperature: 0,
       maxTokens: 500,
     });
+
+    // Log token usage
+    if (usage) {
+      await logTokenUsage(
+        'Assessment Evaluator - Short Answer', 
+        'GPT-4o', 
+        usage.promptTokens, 
+        usage.completionTokens, 
+        user?.email
+      );
+    }
 
     // Expecting a JSON array in the response.
     const jsonMatch = text.match(/\[[\s\S]*\]/);

@@ -49,7 +49,7 @@ export const AssignmentForm: React.FC<{ isLoading: boolean }> = ({
         </p>
       </div>
 
-      <Card className="shadow-lg border-2">
+      <Card className="border-2">
         <CardContent className="p-6 space-y-8">
           <div className="space-y-6">
             {/* Country and Board Selection */}
@@ -239,6 +239,7 @@ export const AssignmentForm: React.FC<{ isLoading: boolean }> = ({
                       type="number"
                       min="1"
                       max="365"
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                       placeholder="Enter number of days"
                       className="h-11 bg-white"
                     />

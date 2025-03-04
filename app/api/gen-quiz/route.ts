@@ -1,8 +1,18 @@
 import { openai } from '@ai-sdk/openai';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { logTokenUsage } from '@/utils/logTokenUsage';
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
+  // Get current user from Supabase
+  const supabase = await createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const { subject, difficulty } = await req.json();
 
   if (!subject?.trim() || !difficulty?.trim()) {
@@ -46,6 +56,17 @@ The response must follow the exact schema structure provided.`,
       temperature: 0.7,
       maxTokens: 500,
     });
+
+    // Log token usage
+    if (result.usage) {
+      await logTokenUsage(
+        'Quiz Generator - Agent',
+        'GPT-4o',
+        result.usage.promptTokens,
+        result.usage.completionTokens,
+        user?.email
+      );
+    }
 
     // Validate the number of options after generation
     if (result.object.options.length !== 4) {

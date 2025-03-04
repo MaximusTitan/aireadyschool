@@ -178,12 +178,12 @@ export default function Page() {
 
       if (data.images?.[0]) {
         setGeneratedImages((prev) => [
-          ...prev,
           {
             url: data.images[0].url,
             prompt: params.prompt,
             aspectRatio: params.imageSize,
           },
+          ...prev,
         ]);
         setCredits(data.remainingCredits);
       }
@@ -249,7 +249,7 @@ export default function Page() {
           prompt: prompt,
           aspectRatio: settings.image_size,
         }));
-        setGeneratedImages((prev) => [...prev, ...newImages]);
+        setGeneratedImages((prev) => [...newImages, ...prev]);
         setCredits(data.remainingCredits);
         toast({
           title: "Success!",

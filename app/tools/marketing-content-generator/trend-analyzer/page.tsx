@@ -58,7 +58,7 @@ export default function Page() {
           </p>
         </div>
 
-        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
+        <div className="mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="topic">Education Topic</Label>

@@ -376,16 +376,22 @@ export default function Home() {
             {!assessment ? (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Document Selection */}
-                {/*
                 <div className="mb-4">
                   <Select
-                    value={formData.selectedDocument || ""}
-                    onValueChange={(value) => handleDocumentSelect(value)}
+                    value={formData.selectedDocument || "_none"}
+                    onValueChange={(value) => {
+                      if (value === "_none") {
+                        handleReset();
+                      } else {
+                        handleDocumentSelect(value);
+                      }
+                    }}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a document" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="_none">None (Input manually)</SelectItem>
                       {documentFiles.map((doc) => (
                         <SelectItem key={doc.id} value={doc.id}>
                           {doc.subject} - Grade {doc.grade}
@@ -394,117 +400,128 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
-                */}
 
-                {/* If a document is selected, auto-fill board, grade, and subject and disable manual changes.
-                  Additionally, display the selected values as text for clarity. */}
-                {isDocumentSelected ? (
-                  <>
-                    <div className="grid md:grid-cols-1 gap-8">
-                      <BoardSelection
-                        value={formData.board}
-                        onChange={handleBoardChange}
-                        disabled
-                      />
-                      <p className="mt-1 text-sm text-gray-500">
-                        Selected Board: {formData.board}
-                      </p>
-                    </div>
-                    <div className="grid md:grid-cols-2 gap-8">
-                      <ClassSelection
-                        value={formData.classLevel}
-                        onChange={handleGradeChange}
-                        disabled
-                      />
-                      <p className="mt-1 text-sm text-gray-500">
-                        Selected Grade: {formData.classLevel}
-                      </p>
-                      <SubjectSelection
-                        value={formData.subject}
-                        onChange={handleSubjectChange}
-                        disabled
-                      />
-                      <p className="mt-1 text-sm text-gray-500">
-                        Selected Subject: {formData.subject}
-                      </p>
-                    </div>
-                    <div>
-                      <AssessmentTypeSelection
-                        value={formData.assessmentType}
-                        onChange={(value) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            assessmentType: value,
-                          }))
-                        }
-                      />
-                    </div>
-                  </>
-                ) : (
-                  // Otherwise, allow manual selection.
-                  <>
-                    <div className="grid md:grid-cols-1 gap-8">
-                      <BoardSelection
-                        value={formData.board}
-                        onChange={(value) =>
-                          setFormData({ ...formData, board: value })
-                        }
-                      />
-                    </div>
-                    <div className="grid md:grid-cols-3 gap-8">
-                      <ClassSelection
-                        value={formData.classLevel}
-                        onChange={(value) =>
-                          setFormData({ ...formData, classLevel: value })
-                        }
-                      />
-                      <SubjectSelection
-                        value={formData.subject}
-                        onChange={(value) =>
-                          setFormData({ ...formData, subject: value })
-                        }
-                      />
-                      <AssessmentTypeSelection
-                        value={formData.assessmentType}
-                        onChange={(value) =>
-                          setFormData({ ...formData, assessmentType: value })
-                        }
-                      />
-                    </div>
-                  </>
-                )}
+                {/* OR Separator */}
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-300"></div>
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 text-neutral-500 bg-white font-medium">OR</span>
+                  </div>
+                </div>
 
-                {/* Topic Input */}
-                <TopicInput
-                  value={formData.topic}
-                  onChange={(value) =>
-                    setFormData({ ...formData, topic: value })
-                  }
-                  disabled={isDocumentSelected}
-                />
+                {/* Manual Input Section */}
+                <div className="mt-8 space-y-4">
+                  <h3 className="text-lg font-semibold mb-4">Option 2: Fill details</h3>
+                  {isDocumentSelected ? (
+                    <>
+                      <div className="grid md:grid-cols-1 gap-8">
+                        <BoardSelection
+                          value={formData.board}
+                          onChange={handleBoardChange}
+                          disabled
+                        />
+                        <p className="mt-1 text-sm text-gray-500">
+                          Selected Board: {formData.board}
+                        </p>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-8">
+                        <ClassSelection
+                          value={formData.classLevel}
+                          onChange={handleGradeChange}
+                          disabled
+                        />
+                        <p className="mt-1 text-sm text-gray-500">
+                          Selected Grade: {formData.classLevel}
+                        </p>
+                        <SubjectSelection
+                          value={formData.subject}
+                          onChange={handleSubjectChange}
+                          disabled
+                        />
+                        <p className="mt-1 text-sm text-gray-500">
+                          Selected Subject: {formData.subject}
+                        </p>
+                      </div>
+                      <div>
+                        <AssessmentTypeSelection
+                          value={formData.assessmentType}
+                          onChange={(value) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              assessmentType: value,
+                            }))
+                          }
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    // Otherwise, allow manual selection.
+                    <>
+                      <div className="grid md:grid-cols-1 gap-8">
+                        <BoardSelection
+                          value={formData.board}
+                          onChange={(value) =>
+                            setFormData({ ...formData, board: value })
+                          }
+                        />
+                      </div>
+                      <div className="grid md:grid-cols-3 gap-8">
+                        <ClassSelection
+                          value={formData.classLevel}
+                          onChange={(value) =>
+                            setFormData({ ...formData, classLevel: value })
+                          }
+                        />
+                        <SubjectSelection
+                          value={formData.subject}
+                          onChange={(value) =>
+                            setFormData({ ...formData, subject: value })
+                          }
+                        />
+                        <AssessmentTypeSelection
+                          value={formData.assessmentType}
+                          onChange={(value) =>
+                            setFormData({ ...formData, assessmentType: value })
+                          }
+                        />
+                      </div>
+                    </>
+                  )}
 
-                {/* Learning Outcomes */}
-                <LearningOutcomesInput
-                  value={formData.learningOutcomes}
-                  onChange={(value) =>
-                    setFormData({ ...formData, learningOutcomes: value })
-                  }
-                />
-
-                {/* Third Row - Difficulty and Question Count */}
-                <div className="grid md:grid-cols-2 gap-8">
-                  <DifficultySelection
-                    value={formData.difficulty}
+                  {/* Topic Input */}
+                  <TopicInput
+                    value={formData.topic}
                     onChange={(value) =>
-                      setFormData({ ...formData, difficulty: value })
+                      setFormData({ ...formData, topic: value })
+                    }
+                    disabled={isDocumentSelected}
+                  />
+
+                  {/* Learning Outcomes */}
+                  <LearningOutcomesInput
+                    value={formData.learningOutcomes}
+                    onChange={(value) =>
+                      setFormData({ ...formData, learningOutcomes: value })
                     }
                   />
-                  <QuestionCount
-                    value={formData.questionCount}
-                    onChange={(value) =>
-                      setFormData({ ...formData, questionCount: value })
-                    }
-                  />
+
+                  {/* Third Row - Difficulty and Question Count */}
+                  <div className="grid md:grid-cols-2 gap-8">
+                    <DifficultySelection
+                      value={formData.difficulty}
+                      onChange={(value) =>
+                        setFormData({ ...formData, difficulty: value })
+                      }
+                    />
+                    <QuestionCount
+                      value={formData.questionCount}
+                      onChange={(value) =>
+                        setFormData({ ...formData, questionCount: value })
+                      }
+                    />
+                  </div>
                 </div>
 
                 {/* Generate Button */}

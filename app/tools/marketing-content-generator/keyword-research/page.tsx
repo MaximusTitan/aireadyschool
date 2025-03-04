@@ -54,8 +54,7 @@ export default function Page() {
       <div className="container mx-auto px-4 max-w-6xl">
         {" "}
         <div className="space-y-6 pb-8">
-          <div className="px-4">
-            <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border">
+            <div className="mx-auto bg-white p-6 rounded-lg border">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="topic">Education Topic</Label>
@@ -141,7 +140,6 @@ export default function Page() {
               )}
             </div>
           </div>
-        </div>
       </div>
     </div>
   );

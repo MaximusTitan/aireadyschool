@@ -60,10 +60,9 @@ export default function Page() {
         title="Video Script Generator"
         description="Create compelling video scripts for your educational content, promotional materials, and school announcements."
       />
-      <div className="container mx-auto px-4 max-w-6xl">
+      <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <div className="space-y-6 min-h-screen pb-8">
-          <div className="px-4">
-            <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg border">
+            <div className="mx-auto bg-white p-6 rounded-lg border">
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="videoType">Video Type</Label>
@@ -161,7 +160,6 @@ export default function Page() {
             </div>
           </div>
         </div>
-      </div>
     </div>
   );
 }

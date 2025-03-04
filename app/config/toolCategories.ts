@@ -27,7 +27,8 @@ import {
   Mail,
   TrendingUp,
   Search as SearchIcon,
-  Hammer
+  Hammer,
+  AudioLines
 } from "lucide-react";
 
 interface Tool {
@@ -161,6 +162,12 @@ export const categories: CategoryTools = {
         route: "/canvas",
         icon: CanvasIcon
       },
+      {
+        title: "Text to Speech",
+        description: "Generate speech from text",
+        route: "/tools/tts",
+        icon: AudioLines
+      }
     ],
     Tech: [
       {

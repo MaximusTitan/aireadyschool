@@ -251,7 +251,7 @@ export default function YoutubeThumbnailGenerator() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white p-6">
+    <div className="min-h-screen bg-backgroundApp">
       <div className="container mx-auto py-8 px-4 max-w-5xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">

@@ -58,7 +58,7 @@ export default function Page() {
         description="Create engaging newsletters to keep your school community informed and connected with automated content generation."
       />
       <div className="container mx-auto px-4 max-w-6xl">
-        <div className="max-w-4xl mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
+        <div className="mx-auto bg-white dark:bg-neutral-800 p-6 rounded-lg border dark:border-neutral-700">
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="newsletterType">Newsletter Type</Label>

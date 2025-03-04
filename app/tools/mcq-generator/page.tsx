@@ -92,7 +92,6 @@ export default function Home() {
 
   // When the user selects a document, update formData accordingly.
   const handleDocumentSelect = (docId: string) => {
-    setIsDocumentSelected(true);
     const selectedDoc = documentFiles.find((doc) => doc.id === docId);
     if (selectedDoc) {
       setFormData((prevFormData) => ({
@@ -103,11 +102,13 @@ export default function Home() {
         topic: selectedDoc.file_url, //topic of a selectedDoc is just the file_url 
         selectedDocument: docId,
       }));
+      setIsDocumentSelected(true); 
       console.log("Updated form data:", {
         board: selectedDoc.education_board,
         classLevel: selectedDoc.grade,
         subject: selectedDoc.subject,
         topic: selectedDoc.file_url, //topic of a selectedDoc is just the file_url
+        selectedDocument: docId,
       });
     }
   };
@@ -175,15 +176,18 @@ export default function Home() {
     try {
       let submissionData: any = { ...formData };
       let apiRoute = "/api/generate-assessment";
+
       if (formData.selectedDocument) {
         apiRoute = "/api/rag-assessment";
-        const selectedDoc = documentFiles.find((doc) => doc.id === formData.selectedDocument);
+        const selectedDoc = documentFiles.find(
+          (doc) => doc.id === formData.selectedDocument
+        );
         if (selectedDoc && selectedDoc.file_url) {
           submissionData.topic = selectedDoc.file_url;
           submissionData.board = selectedDoc.education_board;
           submissionData.subject = selectedDoc.subject;
         } else {
-          setError("Selected document not found or missing topic.");
+          setError("Selected document not found or missing file URL.");
           setIsLoading(false);
           return;
         }
@@ -194,6 +198,7 @@ export default function Home() {
         formData.board === "CAIE" ? "claude-3-5-sonnet-20240620" : "gpt-4";
       console.log("Selected model:", submissionData.model);
       console.log("Using API route:", apiRoute);
+      console.log("Submission data:", submissionData);
 
       const response = await fetch(apiRoute, {
         method: "POST",
@@ -371,6 +376,7 @@ export default function Home() {
             {!assessment ? (
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Document Selection */}
+                {/*
                 <div className="mb-4">
                   <Select
                     value={formData.selectedDocument || ""}
@@ -388,6 +394,7 @@ export default function Home() {
                     </SelectContent>
                   </Select>
                 </div>
+                */}
 
                 {/* If a document is selected, auto-fill board, grade, and subject and disable manual changes.
                   Additionally, display the selected values as text for clarity. */}

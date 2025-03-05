@@ -247,7 +247,6 @@ export default function Home() {
         </Card>
         
         <div className="w-80 space-y-4">
-          {/*
           {fetchedFiles.length > 0 && (
             <Card className="sticky top-4">
               <CardHeader>
@@ -273,8 +272,7 @@ export default function Home() {
               </CardContent>
             </Card>
           )}
-          */}
-          
+
           {files.length > 0 && (
             <Card>
               <CardHeader>

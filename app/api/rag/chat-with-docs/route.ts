@@ -34,11 +34,32 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    const { message, resource_id } = await request.json();
+    const { message, selectedDocs} = await request.json();
+
+    console.log("Message: ", message);
+    console.log("Resources: ", selectedDocs);
 
     if (!message) {
       return NextResponse.json({ error: 'Message is required' }, { status: 400 });
     }
+
+    if (!selectedDocs || selectedDocs.length === 0) {
+      return NextResponse.json({ error: 'No document selected' }, { status: 400 });
+    }
+
+    // Fetch the resource_id from your documents table by matching file_name with the first selected document
+    const fileName = selectedDocs[0]; // adjust if you need to support multiple docs
+    const { data: docData, error: docError } = await supabase
+      .from('resources') // ensure this is your correct table name
+      .select('id')
+      .eq('file_name', fileName)
+      .single();
+
+    if (docError || !docData) {
+      return NextResponse.json({ error: 'Document not found' }, { status: 404 });
+    }
+    const resource_id = docData.id;
+    console.log("Resource ID: ", resource_id);
 
     // Generate vector embedding for the message
     const messageEmbedding = await getEmbedding(message);

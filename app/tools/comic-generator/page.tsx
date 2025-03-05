@@ -9,9 +9,7 @@ import { useRouter } from "next/navigation";
 import {
   X,
   Maximize2,
-  FileJson,
   FileText,
-  FileIcon as FilePresentation,
   ChevronLeft,
 } from "lucide-react";
 import Loader from "@/components/ui/loader";
@@ -20,6 +18,15 @@ import jsPDF from "jspdf";
 import pptxgen from "pptxgenjs";
 import localFont from "next/font/local";
 import Link from "next/link";
+import { ComicForm, ComicFormData } from "@/components/comic-form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Switch } from "@/components/ui/switch";
+import { Toaster } from "@/components/ui/toaster";
+import { DebugPanel } from "@/components/debug-panel";
+import ComicPanelLayout from "@/components/comic-panel-layout";
+import { saveComic } from '@/utils/supabase/comics';
+import { useToast } from '@/components/ui/use-toast';
+import html2canvas from 'html2canvas';
 
 // Initialize your custom font
 const comicNeue = localFont({
@@ -37,12 +44,20 @@ export default function ComicGenerator() {
   const [imageData, setImageData] = useState<{
     urls: string[];
     descriptions: string[];
-  }>({ urls: [], descriptions: [] });
+    dialogues: string[];
+  }>({ urls: [], descriptions: [], dialogues: [] });
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loadedImages, setLoadedImages] = useState<boolean[]>([]);
+  const [requestedPanels, setRequestedPanels] = useState<number>(8);
+  const [comicStyleFromForm, setComicStyleFromForm] = useState<string>("Cartoon");
+  const [activeTab, setActiveTab] = useState("advanced");
+  const [useOpenAI, setUseOpenAI] = useState(false);
+  const aiProvider = useOpenAI ? 'openai' : 'groq';
+  const { toast } = useToast();
+  const [currentPage, setCurrentPage] = useState(0);
 
   // Set prompt from query string if available
   useEffect(() => {
@@ -72,62 +87,77 @@ export default function ComicGenerator() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault?.(); // Allow programmatic calls without event
-    setImageData({ urls: [], descriptions: [] });
+  const handleSubmitWithPrompt = async (submittedPrompt: string, provider: string = aiProvider) => {
+    setImageData({ urls: [], descriptions: [], dialogues: [] });
     setLoadedImages([]);
     setLoading(true);
 
     try {
-      // Generate prompts based on the input
+      const actualRequestedPanels = Number(requestedPanels) || 8;
+      
       const promptResponse = await fetch("/api/prompt-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt: submittedPrompt, 
+          provider,
+          numPanels: actualRequestedPanels + 1
+        }),
       });
+      
       const promptData = await promptResponse.json();
       if (!promptResponse.ok) throw new Error(promptData.message);
 
-      // Generate images based on the prompts
       const imageResponse = await fetch("/api/image-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompts: promptData.prompts }),
       });
+      
       const imageGenData = await imageResponse.json();
       if (!imageResponse.ok) throw new Error(imageGenData.message);
 
-      // Pre-load all images in parallel
-      const preloadPromises: Promise<HTMLImageElement>[] =
-        imageGenData.imageUrls.map((url: string) => loadImage(url));
+      const preloadPromises = imageGenData.imageUrls.map((url: string) => loadImage(url));
       await Promise.all(preloadPromises);
 
-      // Save generated data to state
       setImageData({
         urls: imageGenData.imageUrls,
         descriptions: promptData.prompts,
+        dialogues: promptData.dialogues || promptData.prompts,
       });
       setLoadedImages(new Array(imageGenData.imageUrls.length).fill(true));
 
-      // -------------------------------
-      // SUPABASE SAVE LOGIC
-      // -------------------------------
-      const { error } = await supabase.from("comics").insert([
-        {
-          prompt,
-          image_urls: imageGenData.imageUrls,
-          descriptions: promptData.prompts,
-        },
-      ]);
-      if (error) {
-        console.error("Error saving comic record:", error);
-      }
-      // -------------------------------
+      // Save the comic
+      await saveComic({
+        prompt: submittedPrompt,
+        image_urls: imageGenData.imageUrls,
+        descriptions: promptData.prompts,
+        dialogues: promptData.dialogues || promptData.prompts,
+        panel_count: Number(requestedPanels),
+        comic_style: comicStyleFromForm,
+        title: promptData.title || submittedPrompt,
+      });
+
+      toast({
+        title: "Comic saved successfully",
+        description: "You can find it in your saved comics",
+      });
+
     } catch (error) {
-      console.error("Error generating comic:", error);
+      console.error("Error:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save comic. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleSubmitWithPrompt(prompt, aiProvider);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -146,70 +176,123 @@ export default function ComicGenerator() {
     return `${sanitizedPrompt}.${extension}`;
   };
 
-  const downloadJSON = () => {
-    const data = {
-      images: imageData.urls.map((url, index) => ({
-        url,
-        description: imageData.descriptions[index],
-      })),
-    };
-    const blob = new Blob([JSON.stringify(data, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = getFileName("json");
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const downloadPDF = async () => {
-    const pdf = new jsPDF({
-      orientation: "landscape",
-      unit: "px",
-      format: [1024, 576],
-    });
+    if (!containerRef.current) return;
 
-    const pageWidth = 1024;
-    const pageHeight = 576;
-    const margin = 20;
-    const imageWidth = pageWidth - 2 * margin;
-    const imageHeight = pageHeight - 3 * margin; // Leave space for text at the bottom
+    try {
+      setLoading(true);
 
-    for (let i = 0; i < imageData.urls.length; i++) {
-      if (i > 0) {
-        pdf.addPage([1024, 576], "landscape");
+      const pdf = new jsPDF({
+        orientation: "landscape",
+        unit: "px",
+        format: [1280, 720],
+      });
+
+      // Get the comic container element
+      const comicElement = containerRef.current.querySelector('.max-w-6xl') as HTMLElement;
+      if (!comicElement) {
+        throw new Error('Comic container not found');
       }
 
-      // Add image
-      const img = await loadImage(imageData.urls[i]);
-      pdf.addImage(
-        img,
-        "JPEG",
-        margin,
-        margin,
-        imageWidth,
-        imageHeight,
-        undefined,
-        "FAST"
-      );
+      // Function to capture a specific element
+      const captureElement = async (element: HTMLElement) => {
+        return await html2canvas(element, {
+          scale: 2,
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: '#ffffff',
+          logging: true, // Enable logging for debugging
+          foreignObjectRendering: true,
+          removeContainer: false,
+          imageTimeout: 30000, // Increase timeout for image loading
+          onclone: (clonedDoc) => {
+            // Ensure all images are loaded in cloned document
+            const images = clonedDoc.getElementsByTagName('img');
+            Array.from(images).forEach(img => {
+              img.crossOrigin = 'anonymous';
+              // Force image to be visible
+              img.style.opacity = '1';
+              img.style.display = 'block';
+            });
+          }
+        });
+      };
 
-      // Add description text
-      pdf.setFontSize(12);
-      const splitText = pdf.splitTextToSize(
-        imageData.descriptions[i],
-        imageWidth
-      );
-      pdf.text(splitText, margin, pageHeight - margin, {
-        align: "left",
-        baseline: "bottom",
+      // Function to add page to PDF
+      const addPageToPDF = async (pageElement: HTMLElement, pageNumber: number) => {
+        try {
+          if (pageNumber > 0) {
+            pdf.addPage([1280, 720], 'landscape');
+          }
+
+          const canvas = await captureElement(pageElement);
+          const imageData = canvas.toDataURL('image/jpeg', 1.0);
+
+          pdf.addImage({
+            imageData,
+            format: 'JPEG',
+            x: 0,
+            y: 0,
+            width: 1280,
+            height: 720,
+            compression: 'FAST',
+            rotation: 0
+          });
+
+          return true;
+        } catch (error) {
+          console.error(`Error capturing page ${pageNumber}:`, error);
+          return false;
+        }
+      };
+
+      // Save current page state
+      const currentPageBackup = currentPage;
+
+      // Get all pages
+      const totalPages = Math.ceil((imageData.urls.length - 1) / 4);
+      let successfulPages = 0;
+
+      // Add title page
+      await addPageToPDF(comicElement, 0);
+
+      // Add each content page
+      for (let i = 0; i < totalPages; i++) {
+        setCurrentPage(i);
+        // Wait for page transition and rendering
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        if (await addPageToPDF(comicElement, i + 1)) {
+          successfulPages++;
+        }
+      }
+
+      // Restore original page
+      setCurrentPage(currentPageBackup);
+
+      if (successfulPages === 0) {
+        throw new Error('Failed to capture any pages');
+      }
+
+      // Save the PDF
+      const filename = `${prompt.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_comic.pdf`;
+      pdf.save(filename);
+
+      toast({
+        title: "PDF Generated Successfully",
+        description: `Saved ${successfulPages + 1} pages to ${filename}`,
       });
-    }
 
-    pdf.save(getFileName("pdf"));
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: "Error",
+        description: "Failed to generate PDF. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const loadImage = (url: string): Promise<HTMLImageElement> => {
@@ -221,33 +304,19 @@ export default function ComicGenerator() {
     });
   };
 
-  const downloadPPT = () => {
-    const pptx = new pptxgen();
-    pptx.layout = "LAYOUT_WIDE";
-    pptx.defineLayout({ name: "COMIC_LAYOUT", width: 10.24, height: 5.76 });
-    pptx.layout = "COMIC_LAYOUT";
+  const handleAdvancedFormSubmit = async (formData: ComicFormData, provider: string) => {
+    const generatedPrompt = buildPromptFromFormData(formData);
+    setComicStyleFromForm(formData.comicStyle);
+    setRequestedPanels(Number(formData.numPanels));
+    await handleSubmitWithPrompt(generatedPrompt, provider);
+  };
 
-    imageData.urls.forEach((url, index) => {
-      const slide = pptx.addSlide();
-      slide.addImage({ path: url, x: 0, y: 0, w: "100%", h: "85%" });
-      slide.addText(imageData.descriptions[index], {
-        x: 0,
-        y: "85%",
-        w: "100%",
-        h: "15%",
-        valign: "middle",
-        align: "center",
-        fontSize: 14,
-      });
-    });
-
-    pptx.writeFile({ fileName: getFileName("pptx") });
+  const buildPromptFromFormData = (data: ComicFormData): string => {
+    return `Create a ${data.numPanels}-panel ${data.comicStyle} comic titled "${data.title}" featuring ${data.mainCharacters} set in ${data.setting}. The dialogue should be ${data.dialogueTone.toLowerCase()} with a ${data.endingStyle.toLowerCase()}. ${data.additionalDetails}`;
   };
 
   return (
-    <div
-      className={`min-h-screen bg-backgroundApp text-foreground ${comicNeue.variable}`}
-    >
+    <div className={`min-h-screen bg-backgroundApp text-foreground ${comicNeue.variable}`}>
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">
@@ -263,31 +332,60 @@ export default function ComicGenerator() {
           </p>
         </div>
 
-        <div className="max-w-5xl space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Textarea
-                placeholder="Enter your comic idea here..."
-                value={prompt}
-                onChange={handleTextareaChange}
-                onKeyDown={handleKeyDown}
-                className="w-full resize-none px-4 py-2 text-base leading-normal h-[calc(6em+16px)]"
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="mb-4 w-full max-w-md">
+            <TabsTrigger value="simple" className="w-1/2">Simple Mode</TabsTrigger>
+            <TabsTrigger value="advanced" className="w-1/2">Advanced Mode</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="simple" className="max-w-5xl space-y-4">
+            <div className="flex justify-end items-center space-x-2 mb-4">
+              <span className="text-sm text-muted-foreground">
+                {useOpenAI ? "Using: OpenAI" : "Using: Groq"}
+              </span>
+              <Switch
+                id="ai-model-simple"
+                checked={useOpenAI}
+                onCheckedChange={setUseOpenAI}
               />
             </div>
-            <div className="flex flex-col items-end gap-2">
-              <Button
-                type="submit"
-                className="w-fit max-w-md flex items-center gap-2"
-                disabled={loading || !prompt.trim()}
-              >
-                Generate Comic
-              </Button>
-              <p className="text-xs text-muted-foreground">
-                Press Enter to send, Shift + Enter for new line
-              </p>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="relative">
+                <Textarea
+                  placeholder="Enter your comic idea here..."
+                  value={prompt}
+                  onChange={handleTextareaChange}
+                  onKeyDown={handleKeyDown}
+                  className="w-full resize-none px-4 py-2 text-base leading-normal h-[calc(6em+16px)]"
+                />
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Button
+                  type="submit"
+                  className="w-fit max-w-md flex items-center gap-2"
+                  disabled={loading || !prompt.trim()}
+                >
+                  Generate Comic
+                </Button>
+                <p className="text-xs text-muted-foreground">
+                  Press Enter to send, Shift + Enter for new line
+                </p>
+              </div>
+            </form>
+          </TabsContent>
+          
+          <TabsContent value="advanced" className="max-w-5xl">
+            <div className="p-6 border rounded-lg bg-card">
+              <h2 className="text-xl font-medium mb-4">Advanced Comic Settings</h2>
+              <ComicForm 
+                onSubmit={handleAdvancedFormSubmit} 
+                isLoading={loading} 
+                initialPrompt={prompt}
+              />
             </div>
-          </form>
-        </div>
+          </TabsContent>
+        </Tabs>
 
         {loading && <Loader />}
 
@@ -306,27 +404,12 @@ export default function ComicGenerator() {
                   </Button>
                   <Button
                     variant="ghost"
-                    onClick={downloadJSON}
-                    className="flex items-center gap-2"
-                  >
-                    <FileJson className="h-5 w-5" />
-                    <span>Download JSON</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
                     onClick={downloadPDF}
                     className="flex items-center gap-2"
+                    disabled={loading}
                   >
                     <FileText className="h-5 w-5" />
-                    <span>Download PDF</span>
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={downloadPPT}
-                    className="flex items-center gap-2"
-                  >
-                    <FilePresentation className="h-5 w-5" />
-                    <span>Download PPT</span>
+                    <span>{loading ? 'Generating PDF...' : 'Download PDF'}</span>
                   </Button>
                 </div>
                 <div className="text-foreground">
@@ -336,50 +419,24 @@ export default function ComicGenerator() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-8">
-              <div className="max-w-5xl mx-auto space-y-8">
-                {imageData.urls.map((url, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col md:flex-row gap-8 items-stretch bg-white rounded-lg shadow-lg overflow-hidden"
-                  >
-                    <div className="w-full md:w-1/2 relative">
-                      <div className="aspect-[16/9] relative">
-                        {!loadedImages[index] && (
-                          <div className="absolute inset-0 flex items-center justify-center bg-muted">
-                            <Loader />
-                          </div>
-                        )}
-                        <Image
-                          src={url}
-                          alt={`Comic panel ${index + 1}`}
-                          fill
-                          className={cn(
-                            "object-contain",
-                            !loadedImages[index] && "opacity-0"
-                          )}
-                          sizes="(min-width: 1280px) 640px, (min-width: 768px) 50vw, 100vw"
-                          priority={index < 2}
-                          onLoad={() => {
-                            const newLoadedImages = [...loadedImages];
-                            newLoadedImages[index] = true;
-                            setLoadedImages(newLoadedImages);
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div className="w-full md:w-1/2 p-8 flex items-center">
-                      {index === 0 ? (
-                        <h1 className="text-4xl leading-relaxed text-foreground font-comic">
-                          {imageData.descriptions[index]}
-                        </h1>
-                      ) : (
-                        <p className="text-2xl leading-relaxed text-foreground font-comic">
-                          {imageData.descriptions[index]}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                ))}
+              <div className="max-w-6xl mx-auto">
+                <ComicPanelLayout 
+                  images={imageData.urls}
+                  descriptions={imageData.dialogues}
+                  panelCount={Number(requestedPanels)}
+                  comicStyle={comicStyleFromForm}
+                />
+                
+                {/* Add debug panel in development */}
+                <DebugPanel 
+                  data={{
+                    panelCount: requestedPanels,
+                    comicStyle: comicStyleFromForm,
+                    imageCount: imageData.urls.length,
+                    descriptionCount: imageData.descriptions.length
+                  }} 
+                  title="Comic Settings" 
+                />
               </div>
             </div>
           </div>
@@ -404,12 +461,22 @@ export default function ComicGenerator() {
                 onClick={() => router.push("/credits")}
                 className="bg-primary text-primary-foreground"
               >
-                Buy Credits
+                Recharge Credits
               </Button>
             </div>
           </div>
         )}
+        <Toaster />
       </div>
     </div>
   );
 }
+
+// Add utility function to calculate panel distribution (if not imported)
+const calculatePanelDistribution = (totalImages: number) => {
+  const contentPanels = totalImages - 1; // Subtract 1 for title
+  const panelsPerPage = 4;
+  const totalPages = Math.ceil(contentPanels / panelsPerPage);
+  return { totalPanels: contentPanels, panelsPerPage, totalPages };
+};
+

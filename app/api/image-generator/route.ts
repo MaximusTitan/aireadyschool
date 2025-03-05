@@ -10,6 +10,21 @@ interface ImageResult {
   images: Array<{ url: string }>; // Adjusted to match expected structure
 }
 
+// Add retry logic
+async function retryFetch(operation: () => Promise<any>, maxAttempts = 3, delay = 2000): Promise<any> {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      if (attempt === maxAttempts) throw error;
+      console.log(`Attempt ${attempt} failed, retrying in ${delay}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      // Increase delay for next attempt
+      delay *= 1.5;
+    }
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const { prompts } = await request.json(); // Updated to handle `prompts` as an array
@@ -22,29 +37,35 @@ export async function POST(request: Request) {
     const generatedImages = await Promise.all(
       prompts.map(async (prompt) => {
         try {
-          const hardcodedMessage = "Generate an anime-style comic effect image on the following prompt: "; // Define your hardcoded message
-          const result: ImageResult = await fal.subscribe("fal-ai/flux/schnell", {
-            input: { prompt: hardcodedMessage + prompt, 
-            image_size: "landscape_16_9", 
-            }, // Concatenate hardcoded message with the prompt
-            logs: true,
-            onQueueUpdate: (update) => {
-              if (update.status === "IN_PROGRESS") {
-                update.logs.map((log) => log.message).forEach(console.log);
-              }
-            },
+          return await retryFetch(async () => {
+            // Fixed subscription configuration
+            const result: ImageResult = await fal.subscribe("fal-ai/fast-sdxl", {
+              input: {
+                prompt: `high quality, comic book style art, detailed illustration, professional comic art style, ${prompt}`,
+                image_size: "landscape_16_9",
+                num_inference_steps: 30,
+                guidance_scale: 7.5,
+                style_preset: "comic-book",
+                seed: Math.floor(Math.random() * 1000000),
+              },
+              pollInterval: 1000, // 1 second
+              timeout: 30000,     // 30 seconds
+              logs: true,
+              onQueueUpdate: (update) => {
+                if (update.status === "IN_PROGRESS") {
+                  console.log("Generation in progress:", update.logs);
+                }
+              },
+            });
+
+            if (!result?.images?.[0]?.url) {
+              throw new Error("No image URL in response");
+            }
+
+            return result.images[0].url;
           });
-
-          // Make sure result contains images
-          if (!result || !result.images || result.images.length === 0) {
-            throw new Error("No images generated for prompt: " + prompt);
-          }
-
-          // Return the generated image URL
-          return result.images[0].url;
-
-        } catch (innerError) {
-          console.error(`Error generating image for prompt "${prompt}":`, innerError);
+        } catch (error) {
+          console.error(`Failed to generate image after retries:`, error);
           return null; // Handle errors gracefully by returning null for this specific prompt
         }
       })
@@ -64,7 +85,11 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Error generating images:", error);
     return NextResponse.json(
-      { message: "Internal Server Error", error: error instanceof Error ? error.message : "Unknown error" },
+      { 
+        error: "Failed to generate images",
+        details: error instanceof Error ? error.message : "Unknown error",
+        suggestion: "Please try again in a few moments"
+      },
       { status: 500 }
     );
   }

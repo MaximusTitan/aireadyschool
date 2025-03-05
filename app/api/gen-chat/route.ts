@@ -294,7 +294,7 @@ export async function POST(request: Request) {
         if (usage) {
           await logTokenUsage(
             'Learning Buddy',
-            'GPT-4o',
+            'Claude 3.5 Sonnet',
             usage.promptTokens,
             usage.completionTokens,
             user.email || undefined

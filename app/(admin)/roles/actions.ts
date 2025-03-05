@@ -1,3 +1,5 @@
+// Admin Account Management - Signup and Update User 
+
 'use server'
 
 import { createClient } from "@supabase/supabase-js";
@@ -56,6 +58,17 @@ export async function createUserAction(data: {
       });
 
     if (userError) throw userError;
+
+    // Initialize tokens
+    const { error: tokenError } = await supabase
+      .from("tokens")
+      .insert({
+        user_id: result.data.user.id,
+        input_tokens: 250000,
+        output_tokens: 50000,
+      });
+
+    if (tokenError) throw tokenError;
 
     revalidatePath(ROLES_PAGE_PATH);
     return { success: true, data: result.data };

@@ -1,3 +1,5 @@
+// School Admin - Teacher and Student Signup
+
 'use server'
 
 import { createClient } from '@supabase/supabase-js'
@@ -87,6 +89,17 @@ export async function createTeacher(params: CreateTeacherParams) {
 
     if (userError) throw userError;
 
+    // Initialize tokens
+    const { error: tokenError } = await supabase
+      .from("tokens")
+      .insert({
+        user_id: authData.user.id,
+        input_tokens: 250000,
+        output_tokens: 50000,
+      });
+
+    if (tokenError) throw tokenError;
+
     // Create teacher record and get the generated id
     const { data: teacherData, error: teacherError } = await supabase
       .from("teachers")
@@ -158,6 +171,17 @@ export async function createStudent(params: CreateStudentParams) {
     });
 
     if (userError) throw userError;
+
+    // Initialize tokens
+    const { error: tokenError } = await supabase
+      .from("tokens")
+      .insert({
+        user_id: authData.user.id,
+        input_tokens: 250000,
+        output_tokens: 50000,
+      });
+
+    if (tokenError) throw tokenError;
 
     // Create student record
     const { error: studentError } = await supabase

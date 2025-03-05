@@ -306,7 +306,7 @@ export async function POST(req: Request) {
         if (usage) {
           await logTokenUsage(
             'Lesson Content Generator',
-            'GPT-4o',
+            'Claude 3.5 Sonnet',
             usage.promptTokens,
             usage.completionTokens,
             user?.email

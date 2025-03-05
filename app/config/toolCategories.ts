@@ -27,7 +27,8 @@ import {
   Mail,
   TrendingUp,
   Search as SearchIcon,
-  Hammer
+  Hammer,
+  AudioLines
 } from "lucide-react";
 
 interface Tool {
@@ -105,7 +106,7 @@ export const categories: CategoryTools = {
       {
         title: "Chat with Docs",
         description: "Powerful RAG-based document chat system",
-        route: "/tools/chat-with-docs",
+        route: "/tools/rag",
         icon: MessageSquare,
         isHot: true
       },
@@ -161,6 +162,12 @@ export const categories: CategoryTools = {
         route: "/canvas",
         icon: CanvasIcon
       },
+      {
+        title: "Text to Speech",
+        description: "Generate speech from text",
+        route: "/tools/tts",
+        icon: AudioLines
+      }
     ],
     Tech: [
       {
@@ -234,7 +241,7 @@ export const categories: CategoryTools = {
       {
         title: "Chat with Docs",
         description: "Document chat system",
-        route: "/tools/chat-with-docs",
+        route: "/tools/rag",
         icon: MessageSquare,
         isHot: true
       },
@@ -309,7 +316,7 @@ export const categories: CategoryTools = {
       {
         title: "Chat with Docs",
         description: "Document chat system",
-        route: "/tools/chat-with-docs",
+        route: "/tools/rag",
         icon: MessageSquare,
         isHot: true
       },

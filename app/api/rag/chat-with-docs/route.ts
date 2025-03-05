@@ -89,7 +89,7 @@ export async function POST(request: Request) {
       console.log(`Score for chunk "${match.chunk_text.slice(0,30)}...": cosineSim=${cosineSim.toFixed(3)}, textBonus=${textBonus}, combinedScore=${combinedScore.toFixed(3)}`);
       return { chunk_text: match.chunk_text, score: combinedScore };
     })
-    .filter((match) => match !== null && match.score > 0.3) // Filter out low scores
+    .filter((match) => match !== null) // Filter out low scores
     .sort((a, b) => {
       if (a === null) return 1; // Treat null as less than any valid match
       if (b === null) return -1; // Treat null as less than any valid match

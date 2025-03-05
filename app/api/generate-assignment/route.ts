@@ -1,32 +1,35 @@
-import OpenAI from "openai";
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js"; // Import Supabase client
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY!,
-});
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
+import { createClient } from "@/utils/supabase/server";
+import { logTokenUsage } from '@/utils/logTokenUsage';
 
 // Initialize Supabase admin client using new env variable names
-const supabase = createClient(
+const supabase = createSupabaseClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_KEY!
 );
 
 export async function POST(req: Request) {
-  if (!openai.apiKey) {
-    return NextResponse.json(
-      { error: "OpenAI API key not found" },
-      { status: 500 }
-    );
-  }
-
   try {
+    // Get authenticated user
+    const supabaseAuth = await createClient()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAuth.auth.getUser()
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
     const {
       prompt,
       email,
-      country,           // Used in prompt but not saved
-      board,            // Used in prompt but not saved
-      subject,          // Used in prompt but not saved
+      country,
+      board,
+      subject,
       gradeLevel,
       assignmentType,
       textInput,
@@ -42,38 +45,39 @@ export async function POST(req: Request) {
       );
     }
 
-    const response = await openai.chat.completions.create({
-      model: "gpt-4",  // Fixed typo in model name
-      messages: [
-        {
-          role: "system",
-          content: `
-            You are an assignment generator for ${country}'s ${board} education board.
-            Please create a ${subject} assignment with the following structure:
-            - A concise title for the assignment, followed by "---" on a new line
-            - The assignment content, including clear instructions, questions, or tasks
-            - Make sure the content is appropriate for grade ${gradeLevel}
-            Ensure the content is factual and avoid hallucination.
-          `,
-        },
-        {
-          role: "user",
-          content: prompt,
-        },
-      ],
+    const systemPrompt = `
+      You are an assignment generator for ${country}'s ${board} education board.
+      Please create a ${subject} assignment with the following structure:
+      - A concise title for the assignment, followed by "---" on a new line
+      - The assignment content, including clear instructions, questions, or tasks
+      - Make sure the content is appropriate for grade ${gradeLevel}
+      Ensure the content is factual and avoid hallucination.
+    `;
+
+    const { text, usage } = await generateText({
+      model: openai('gpt-4o'),
+      prompt: `${systemPrompt}\n\n${prompt}`,
+      temperature: 0.7,
+      maxTokens: 2000,
     });
 
-    const generatedContent = response.choices[0].message.content;
-    if (!generatedContent) {
-      throw new Error("Failed to generate content");
+    // Log token usage
+    if (usage) {
+      await logTokenUsage(
+        'Assignment Generator',
+        'GPT-4o',
+        usage.promptTokens,
+        usage.completionTokens,
+        user.email
+      );
     }
 
-    const [title, content] = generatedContent.split("---").map((s) => s.trim());
+    const [title, content] = text.split("---").map((s) => s.trim());
     if (!title || !content) {
       throw new Error("Generated content is not in the expected format");
     }
 
-    // Save only the fields that exist in the database schema
+    // Save to database
     await supabase.from("assignment_history").insert([
       {
         email,
@@ -89,22 +93,16 @@ export async function POST(req: Request) {
       },
     ]);
 
-    return NextResponse.json({
-      title,
-      content,
-    });
+    return NextResponse.json({ title, content });
   } catch (error) {
     console.error("Error:", error);
-    if (error instanceof OpenAI.APIError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status || 500 }
-      );
-    } else {
-      return NextResponse.json(
-        { error: "An unexpected error occurred" },
-        { status: 500 }
-      );
-    }
+    return NextResponse.json(
+      { 
+        error: "Failed to generate assignment",
+        details: error instanceof Error ? error.message : "An unknown error occurred",
+        stack: process.env.NODE_ENV === "development" && error instanceof Error ? error.stack : undefined,
+      },
+      { status: 500 }
+    );
   }
 }

@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server"
-import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { createClient } from "@/utils/supabase/server"
@@ -7,6 +6,7 @@ import { logTokenUsage } from "@/utils/logTokenUsage"
 import fs from "fs/promises";
 import { WebPDFLoader } from "@langchain/community/document_loaders/web/pdf";
 import { anthropic } from "@ai-sdk/anthropic"
+import { generateText } from "ai"
 
 const supabase = createSupabaseClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_KEY!)
 
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
 
     try {
       const { text, usage } = await generateText({
-        model: model,
+        model: anthropic('claude-3-haiku-20240307'),
         messages: [
           { role: "system", content: JSON.stringify(docs) },
           { role: "user", content: prompt }

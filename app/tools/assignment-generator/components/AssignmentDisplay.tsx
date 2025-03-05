@@ -20,7 +20,7 @@ export const AssignmentDisplay: React.FC<AssignmentDisplayProps> = ({
 }) => {
   if (isLoading) {
     return (
-      <Card className="mt-8 p-6 max-w-6xl mx-auto animate-pulse shadow-md">
+      <Card className="mt-8 p-6 max-w-6xl mx-auto animate-pulse">
         <CardHeader className="space-y-4">
           <Skeleton className="h-8 w-3/4" />
         </CardHeader>
@@ -38,7 +38,7 @@ export const AssignmentDisplay: React.FC<AssignmentDisplayProps> = ({
   }
 
   return (
-    <Card className="mt-8 p-6 mb-8 max-w-6xl mx-auto transition-all duration-300 ease-in-out shadow-md hover:shadow-lg">
+    <Card className="mt-8 p-6 mb-8 max-w-6xl mx-auto transition-all duration-300 ease-in-out hover:shadow-lg">
       <CardHeader className="pb-4 border-b">
         <CardTitle className="text-2xl font-bold text-primary">{assignment.title}</CardTitle>
       </CardHeader>

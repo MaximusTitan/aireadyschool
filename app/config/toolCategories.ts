@@ -106,7 +106,7 @@ export const categories: CategoryTools = {
       {
         title: "Chat with Docs",
         description: "Powerful RAG-based document chat system",
-        route: "/tools/chat-with-docs",
+        route: "/tools/rag",
         icon: MessageSquare,
         isHot: true
       },
@@ -241,7 +241,7 @@ export const categories: CategoryTools = {
       {
         title: "Chat with Docs",
         description: "Document chat system",
-        route: "/tools/chat-with-docs",
+        route: "/tools/rag",
         icon: MessageSquare,
         isHot: true
       },
@@ -316,7 +316,7 @@ export const categories: CategoryTools = {
       {
         title: "Chat with Docs",
         description: "Document chat system",
-        route: "/tools/chat-with-docs",
+        route: "/tools/rag",
         icon: MessageSquare,
         isHot: true
       },

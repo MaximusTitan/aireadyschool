@@ -49,7 +49,7 @@ export default function Home() {
         const fileNames = data.files.map((doc: { file_name: string }) => doc.file_name);
         const uniqueFileNames = Array.from(new Set(fileNames));
         setFetchedFiles(uniqueFileNames as string[]);
-        setSelectedDocs(uniqueFileNames as string[]); // Set all documents as selected by default
+        setSelectedDocs([]); // Set all documents as selected by default
       } else {
         throw new Error(data.error);
       }
@@ -245,7 +245,9 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+        
         <div className="w-80 space-y-4">
+          {/*
           {fetchedFiles.length > 0 && (
             <Card className="sticky top-4">
               <CardHeader>
@@ -271,6 +273,8 @@ export default function Home() {
               </CardContent>
             </Card>
           )}
+          */}
+          
           {files.length > 0 && (
             <Card>
               <CardHeader>

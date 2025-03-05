@@ -1,9 +1,8 @@
-import OpenAI from "openai"
 import { NextResponse } from "next/server"
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-})
+import { openai } from '@ai-sdk/openai';
+import { generateText } from 'ai';
+import { logTokenUsage } from '@/utils/logTokenUsage';
+import { createClient } from "@/utils/supabase/server";
 
 export async function POST(req: Request) {
   if (!process.env.OPENAI_API_KEY) {
@@ -24,6 +23,14 @@ export async function POST(req: Request) {
       availableDays,
       availableStudyTimePerDay,
     } = body
+
+    // Get current user from Supabase
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     const prompt = `Create a detailed study plan for a ${grade} grade student in ${country} following the ${board} curriculum for the subject ${subject}. The plan should help achieve the following learning goal: ${learningGoal}. The syllabus/topics to cover are: ${syllabus}. Areas needing improvement: ${areasOfImprovement}. The plan should span ${availableDays} days, with ${availableStudyTimePerDay} hours available for study each day.
 
@@ -58,13 +65,24 @@ export async function POST(req: Request) {
 
     Respond ONLY with the JSON array, nothing else.`
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      max_tokens: 2000,
-    })
+    // Generate text using GPT-4o
+    const { text: studyPlanString, usage } = await generateText({
+      model: openai('gpt-4o'),
+      prompt: prompt,
+      temperature: 0.7,
+      maxTokens: 2000,
+    });
 
-    const studyPlanString = completion.choices[0].message.content
+    // Log token usage
+    if (usage) {
+      await logTokenUsage(
+        'StudyPlanner', 
+        'GPT-4o', 
+        usage.promptTokens, 
+        usage.completionTokens, 
+        user?.email
+      );
+    }
 
     if (!studyPlanString) {
       throw new Error("No study plan generated")

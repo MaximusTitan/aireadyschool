@@ -150,7 +150,7 @@ You can use various tools to enhance the learning experience:
 - Create concept visualizations
 - Generate mind maps
 
-Always provide clear explanations and encourage active learning.`;
+Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
   } else {
     return `${basePrompt}
 ${userDetailsPrompt}
@@ -162,7 +162,7 @@ ${userDetailsPrompt}
 - अवधारणा विज़ुअलाइज़ेशन बनाएँ
 - माइंड मैप उत्पन्न करें
 
-हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें।`;
+हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
   }
 }
 
@@ -249,7 +249,7 @@ export async function POST(request: Request) {
       maxSteps: 5,
       tools,
       temperature: 0.5,
-      maxTokens: 500,
+      maxTokens: 100,
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',

@@ -1,3 +1,5 @@
+//Regular Signup and Login
+
 "use server";
 
 import { encodedRedirect } from "@/utils/utils";
@@ -50,6 +52,20 @@ export const signUpAction = async (formData: FormData) => {
   if (insertError) {
     console.error("Database insert error:", insertError);
     return encodedRedirect("error", "/sign-up", "Error creating user profile");
+  }
+
+  // Initialize tokens
+  const { error: tokenError } = await supabase
+    .from("tokens")
+    .insert({
+      user_id: signUpData.user!.id,
+      input_tokens: 250000,
+      output_tokens: 50000,
+    });
+
+  if (tokenError) {
+    console.error("Token initialization error:", tokenError);
+    return encodedRedirect("error", "/sign-up", "Error initializing user tokens");
   }
 
   return encodedRedirect(
@@ -105,6 +121,20 @@ export const schoolSignUpAction = async (formData: FormData, site_id: string) =>
   if (insertError) {
     console.error("Database insert error:", insertError);
     return encodedRedirect("error", "/sign-up", "Error creating user profile");
+  }
+
+  // Initialize tokens
+  const { error: tokenError } = await supabase
+    .from("tokens")
+    .insert({
+      user_id: signUpData.user!.id,
+      input_tokens: 250000,
+      output_tokens: 50000,
+    });
+
+  if (tokenError) {
+    console.error("Token initialization error:", tokenError);
+    return encodedRedirect("error", "/sign-up", "Error initializing user tokens");
   }
 
   return encodedRedirect(

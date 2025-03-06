@@ -49,6 +49,19 @@ interface BulkCreateStudentParams {
   }[];
 }
 
+interface BulkCreateTeacherParams {
+  teachers: {
+    name: string;
+    email: string;
+    password: string;
+    schoolId: string;
+    boardId: string;
+    gradeId: string;
+    sectionId: string;
+    subjectId: string;
+  }[];
+}
+
 export async function createTeacher(params: CreateTeacherParams) {
   const { name, email, password, schoolId, boardId, gradeId, sectionId, subjectId } = params;
 
@@ -212,6 +225,19 @@ export async function createBulkStudents(params: BulkCreateStudentParams) {
     return { success: true };
   } catch (error) {
     console.error("Error in bulk creation:", error);
+    return { success: false, error };
+  }
+}
+
+export async function createBulkTeachers(params: BulkCreateTeacherParams) {
+  try {
+    for (const teacher of params.teachers) {
+      const result = await createTeacher(teacher);
+      if (!result.success) throw result.error;
+    }
+    return { success: true };
+  } catch (error) {
+    console.error("Error in bulk teacher creation:", error);
     return { success: false, error };
   }
 }

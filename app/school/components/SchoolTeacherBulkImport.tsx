@@ -183,10 +183,15 @@ export default function SchoolTeacherBulkImport({
 
     const newTeachers = editedTeachers.map((teacher) => ({
       ...teacher,
-      Password: bulkPassword,
+      Password: bulkPassword,  
     }));
     setEditedTeachers(newTeachers);
     setBulkPassword("");
+    
+    toast({
+      title: "Success",
+      description: `Password applied to all ${newTeachers.length} teachers`,
+    });
   };
 
   const saveChanges = () => {
@@ -396,6 +401,7 @@ export default function SchoolTeacherBulkImport({
                             onChange={(e) =>
                               handleEdit(index, "Name", e.target.value)
                             }
+                            className="min-w-[150px]"
                           />
                         ) : (
                           teacher.Name
@@ -409,6 +415,7 @@ export default function SchoolTeacherBulkImport({
                             onChange={(e) =>
                               handleEdit(index, "Email", e.target.value)
                             }
+                            className="min-w-[200px]"
                           />
                         ) : (
                           teacher.Email
@@ -422,6 +429,7 @@ export default function SchoolTeacherBulkImport({
                             onChange={(e) =>
                               handleEdit(index, "Password", e.target.value)
                             }
+                            className="min-w-[150px]"
                           />
                         ) : showPasswords ? (
                           teacher.Password

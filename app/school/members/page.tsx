@@ -6,19 +6,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, School, UserPlus, Users, UserPlus2 } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import TeachersList from "../components/TeachersList";
 import StudentsList from "../components/StudentsList";
-import SchoolTeacherForm from "../components/SchoolTeacherForm";
-import SchoolStudentForm from "../components/SchoolStudentForm";
 import { Badge } from "@/components/ui/badge";
+import Link from "next/link";
 
 export default function MembersPage() {
   const [userSiteId, setUserSiteId] = useState<string | null>(null);
@@ -124,47 +115,12 @@ export default function MembersPage() {
             )}
           </div>
           
-          <Dialog open={addModalOpen} onOpenChange={setAddModalOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-1" />
-                Add Member
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-8xl">
-              <DialogHeader>
-                <DialogTitle>Add New Member</DialogTitle>
-                <DialogDescription>
-                  Add a new teacher or student to your school.
-                </DialogDescription>
-              </DialogHeader>
-              
-              <Tabs defaultValue="teacher" className="w-full">
-                <TabsList className="grid w-full grid-cols-2 mb-4">
-                  <TabsTrigger value="teacher">Teacher</TabsTrigger>
-                  <TabsTrigger value="student">Student</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="teacher" className="p-1">
-                  {userSiteId && (
-                    <SchoolTeacherForm
-                      schoolId={userSiteId}
-                      onSuccess={handleAddSuccess}
-                    />
-                  )}
-                </TabsContent>
-                
-                <TabsContent value="student" className="p-1">
-                  {userSiteId && (
-                    <SchoolStudentForm
-                      schoolId={userSiteId}
-                      onSuccess={handleAddSuccess}
-                    />
-                  )}
-                </TabsContent>
-              </Tabs>
-            </DialogContent>
-          </Dialog>
+          <Button size="sm" asChild>
+            <Link href="/school/members/add">
+              <Plus className="h-4 w-4 mr-1" />
+              Add Member
+            </Link>
+          </Button>
         </div>
 
         {isLoading ? (

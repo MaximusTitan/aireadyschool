@@ -103,9 +103,10 @@ export default function SchoolsPage() {
               name,
               address,
               contact_info,
-              boards (
+              boards!inner (
                 id,
                 name,
+                school_id,
                 grades (
                   id,
                   name,
@@ -122,6 +123,7 @@ export default function SchoolsPage() {
             `
             )
             .eq("site_id", userSiteId)
+            .eq("boards.school_id", userSiteId)
             .single();
 
           if (error) throw error;

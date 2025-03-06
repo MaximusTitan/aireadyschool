@@ -34,10 +34,23 @@ export default function GradePage({
     const fetchGrade = async () => {
       setIsLoading(true);
       try {
+        // Get the current user and school ID
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+
+        const { data: userData } = await supabase
+          .from("users")
+          .select("site_id")
+          .eq("user_id", user.id)
+          .single();
+        
+        if (!userData?.site_id) return;
+
         const { data: boardData } = await supabase
           .from("boards")
           .select("id")
           .eq("name", decodedBoardName)
+          .eq("school_id", userData.site_id)
           .single();
 
         if (boardData) {

@@ -86,6 +86,12 @@ export async function POST(request: Request) {
       return dotProduct / (magnitudeA * magnitudeB);
     };
 
+    // Define an interface for the match type
+    interface ScoredMatch {
+      chunk_text: string;
+      score: number;
+    }
+
     // Compute similarity scores for all document chunks
     const scoredMatches = matches
       .map(match => {
@@ -100,7 +106,7 @@ export async function POST(request: Request) {
         const textBonus = match.chunk_text.toLowerCase().includes(message.toLowerCase()) ? 0.2 : 0;
         return { chunk_text: match.chunk_text, score: cosineSim + textBonus };
       })
-      .filter(match => match !== null)
+      .filter((match): match is ScoredMatch => match !== null)  // Type predicate to ensure non-null
       .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 

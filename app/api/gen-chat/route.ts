@@ -1,7 +1,7 @@
 import { anthropic } from '@ai-sdk/anthropic';
 // import { openai } from '@ai-sdk/openai';
 import { streamText, smoothStream, Message, CreateMessage } from 'ai';
-import { tools } from '@/app/tools/gen-chat/tools';
+import { tools } from '@/app/tools/gen-chat/utils/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -123,7 +123,7 @@ Student Profile:
 - Grade: ${userDetails.grade}
 - Interests: ${userDetails.subjects?.join(', ')}
 
-Adapt your teaching style according to this student's profile.
+Adapt your teaching style according to this student's profile. Give short replies whenever possible.
 `;
       } else {
         userDetailsPrompt = `
@@ -133,7 +133,7 @@ Adapt your teaching style according to this student's profile.
 - कक्षा: ${userDetails.grade}
 - रुचियाँ: ${userDetails.subjects?.join(', ')}
 
-इस छात्र की प्रोफ़ाइल के अनुसार अपनी शिक्षण शैली को अपनाएं।
+इस छात्र की प्रोफ़ाइल के अनुसार अपनी शिक्षण शैली को अपनाएं। छोटे उत्तर दें जब भी संभव हो.
 `;
       }
     }
@@ -249,7 +249,7 @@ export async function POST(request: Request) {
       maxSteps: 5,
       tools,
       temperature: 0.5,
-      maxTokens: 100,
+      maxTokens: 500,
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',

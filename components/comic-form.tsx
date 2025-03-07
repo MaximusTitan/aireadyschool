@@ -305,23 +305,6 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
 
         {/* Right column */}
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="comicStyle">Comic Style</Label>
-            <Select
-              value={formData.comicStyle}
-              onValueChange={(value) => handleSelectChange("comicStyle", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select comic style" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Cartoon">Cartoon</SelectItem>
-                <SelectItem value="Manga">Manga</SelectItem>
-                <SelectItem value="Classic">Classic</SelectItem>
-                <SelectItem value="3D">3D</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
 
           <div className="space-y-2">
             <Label htmlFor="dialogueTone">Dialogue Tone</Label>

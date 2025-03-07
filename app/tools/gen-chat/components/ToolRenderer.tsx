@@ -1,9 +1,9 @@
 import { useRef } from "react";
-import { SimulationWrapper } from "./SimulationWrapper";
-import { MathProblem } from "./math-problem";
-import { QuizCard } from "./quiz-card";
-import { MindMapViewer } from "./mind-map-viewer";
-import { VideoGenerator } from "./video-generator";
+import { SimulationWrapper } from "./tools/SimulationWrapper";
+import { MathProblem } from "./tools/math-problem";
+import { QuizCard } from "./tools/quiz-card";
+import { MindMapViewer } from "./tools/mind-map-viewer";
+import { VideoGenerator } from "./tools/video-generator";
 
 type ToolRendererProps = {
   invocation: any;

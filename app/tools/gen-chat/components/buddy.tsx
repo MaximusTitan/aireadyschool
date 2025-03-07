@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
-import { useAudioSettings } from "@/app/hooks/useAudioSettings";
-import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
+import { useAudioSettings } from "@/app/tools/gen-chat/hooks/useAudioSettings";
+import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 
 const GIF_URLS = {
   constant:
@@ -31,7 +31,7 @@ export function BuddyPanel({ messages, isLoading }: BuddyPanelProps) {
 
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
   const [isTalking, setIsTalking] = useState(false);
-  const { isAudioEnabled, toggleAudio } = useAudioSettings();
+  const { isAudioEnabled, toggleAudio, stopAudio } = useAudioSettings();
   const { language } = useLanguageSettings();
 
   useEffect(() => {
@@ -64,6 +64,10 @@ export function BuddyPanel({ messages, isLoading }: BuddyPanelProps) {
     return GIF_URLS.constant;
   };
 
+  const handleAudioButtonClick = () => {
+    toggleAudio();
+  };
+
   return (
     <div className="relative p-4 flex flex-col items-center">
       <img
@@ -73,7 +77,7 @@ export function BuddyPanel({ messages, isLoading }: BuddyPanelProps) {
       />
       <div className="mt-2">
         <button
-          onClick={toggleAudio}
+          onClick={handleAudioButtonClick}
           className="flex items-center gap-2 px-3 py-2 rounded-full bg-white hover:bg-gray-50 transition-colors border border-gray-200"
           title={isAudioEnabled ? "Disable audio" : "Enable audio"}
         >

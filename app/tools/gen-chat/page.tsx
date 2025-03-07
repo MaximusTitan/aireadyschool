@@ -5,13 +5,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useRef, useState, useCallback, useEffect } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ChatArea } from "./components/chat-area";
-import { useChatThread } from "@/app/hooks/useChatThread";
+import { useChatThread } from "@/app/tools/gen-chat/hooks/useChatThread";
 import { ThreadList } from "./components/thread-list";
 import { useRouter } from "next/navigation";
 import { Message } from "ai";
 import { ChatMessage } from "@/types/chat";
-import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
-import { useTools } from "@/app/hooks/useTools";
+import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
+import { useTools } from "@/app/tools/gen-chat/hooks/useTools";
 
 export default function Page() {
   const router = useRouter();

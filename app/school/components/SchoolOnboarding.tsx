@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -47,6 +47,8 @@ type SchoolFormValues = z.infer<typeof schoolFormSchema>;
 
 export default function SchoolOnboarding() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [lastAddedBoardIndex, setLastAddedBoardIndex] = useState<number | null>(null);
+  const boardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const supabase = createClient();
 
   const form = useForm<SchoolFormValues>({
@@ -61,6 +63,20 @@ export default function SchoolOnboarding() {
       boards: [{ name: "", subjects: [], grades: [] }],
     },
   });
+
+  // Effect to scroll to newly added board
+  useEffect(() => {
+    if (lastAddedBoardIndex !== null && boardRefs.current[lastAddedBoardIndex]) {
+      // Small timeout to ensure the DOM has updated
+      setTimeout(() => {
+        boardRefs.current[lastAddedBoardIndex]?.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+        setLastAddedBoardIndex(null);
+      }, 100);
+    }
+  }, [lastAddedBoardIndex, form.watch("boards")]);
 
   const onSubmit = async (data: SchoolFormValues) => {
     setIsSubmitting(true);
@@ -239,10 +255,13 @@ export default function SchoolOnboarding() {
                     size="sm"
                     onClick={() => {
                       const currentBoards = form.getValues("boards");
+                      const newIndex = currentBoards.length;
                       form.setValue("boards", [
                         ...currentBoards,
                         { name: "", subjects: [], grades: [] },
                       ]);
+                      // Set the last added board index to trigger scrolling
+                      setLastAddedBoardIndex(newIndex);
                     }}
                   >
                     <Plus className="h-4 w-4 mr-2" />
@@ -254,6 +273,7 @@ export default function SchoolOnboarding() {
                   <div
                     key={boardIndex}
                     className="border rounded-lg p-4 space-y-4"
+                    ref={(el) => (boardRefs.current[boardIndex] = el)}
                   >
                     <div className="flex items-center gap-2">
                       <FormField
@@ -326,7 +346,18 @@ export default function SchoolOnboarding() {
                           <FormControl>
                             <div className="space-y-2">
                               <GradePatternSelector
-                                onSelect={(grades) => field.onChange(grades)}
+                                onSelect={(grades) => {
+                                  // Merge new grades with existing ones instead of replacing
+                                  const existingGrades = field.value || [];
+                                  const existingGradeNames = existingGrades.map(g => g.name);
+                                  
+                                  // Filter out grades that already exist
+                                  const newGrades = grades.filter(
+                                    g => !existingGradeNames.includes(g.name)
+                                  );
+                                  
+                                  field.onChange([...existingGrades, ...newGrades]);
+                                }}
                               />
                               <GradeEditor
                                 grades={field.value}

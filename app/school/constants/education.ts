@@ -4,6 +4,7 @@ export const COMMON_SUBJECTS = {
     'Mathematics',
     'Science',
     'Social Studies',
+    'EVS',
     'Physical Education',
     'Art',
     'Music',
@@ -16,12 +17,13 @@ export const COMMON_SUBJECTS = {
     'Biology',
     'History',
     'Geography',
-    'Computer Science',
+    'Computer',
     'Physical Education',
   ],
   'Languages': [
     'Hindi',
     'French',
+    'Sanskrit',
     'Spanish',
     'German',
     'Chinese',
@@ -49,4 +51,5 @@ export const COMMON_BOARDS = [
   'State Board',
   'IB',
   'Cambridge (IGCSE)',
+  'CAIE'
 ];

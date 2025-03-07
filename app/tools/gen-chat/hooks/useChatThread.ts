@@ -185,6 +185,7 @@ export function useChatThread(initialThreadId?: string) {
         role: msg.role as Message['role'],
         content: msg.content,
         createdAt: new Date(msg.created_at),
+        fromHistory: true, 
         toolCalls: msg.tool_outputs?.length ? msg.tool_outputs.map((tool: any) => ({
           id: tool.tool_call_id,
           tool: tool.tool_name,

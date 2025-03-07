@@ -1,7 +1,7 @@
 import { ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, KeyboardEvent } from "react";
-import { useLanguageSettings } from "@/app/hooks/useLanguageSettings";
+import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 import { cn } from "@/lib/utils"; // Add this import for the cn utility
 
 const AVAILABLE_COMMANDS = [

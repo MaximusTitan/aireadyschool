@@ -20,6 +20,7 @@ export interface ChatMessage extends Omit<Message, 'role'> {
   content: string;
   createdAt?: Date;
   toolCalls?: ToolCall[];
+  fromHistory?: boolean; 
 }
 
 export interface ThreadMessage extends ChatMessage {

@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 import { Bot, User, Volume2, VolumeX } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { CommandInput } from "./command-input";
-import { useNowPlaying } from "@/app/hooks/useNowPlaying";
-import { useAudioSettings } from "@/app/hooks/useAudioSettings";
+import { useNowPlaying } from "@/app/tools/gen-chat/hooks/useNowPlaying";
+import { useAudioSettings } from "@/app/tools/gen-chat/hooks/useAudioSettings";
 import { ChatAreaProps } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { ToolRenderer } from "./ToolRenderer";
@@ -39,7 +39,12 @@ export const ChatArea = ({
   const [isTalking, setIsTalking] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const { stop: stopAudio, play: playAudio } = useNowPlaying();
-  const { isAudioEnabled, toggleAudio } = useAudioSettings();
+  const { 
+    isAudioEnabled, 
+    toggleAudio, 
+    hasUserInteracted,
+    markUserInteraction 
+  } = useAudioSettings();
   const toolsContentRef = useRef<HTMLDivElement>(null);
 
   const toolInvocations = messages.flatMap(
@@ -68,6 +73,26 @@ export const ChatArea = ({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Add event listeners to capture user interaction with the page
+  useEffect(() => {
+    const handleUserInteraction = () => {
+      markUserInteraction();
+    };
+    
+    // Common user interaction events
+    const events = ['click', 'keydown', 'touchstart', 'mousedown'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { once: true });
+    });
+    
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction);
+      });
+    };
+  }, [markUserInteraction]);
+
   // Handle text-to-speech
   const handleTTS = async (messageId: string, text: string) => {
     try {
@@ -92,7 +117,10 @@ export const ChatArea = ({
       if (audioBlob.size === 0)
         throw new Error("Empty audio response received");
 
-      await playAudio(audioBlob, "audio/mp3");
+      // Only play if user has interacted with the page
+      if (hasUserInteracted) {
+        await playAudio(audioBlob, "audio/mp3");
+      }
       setPlayingMessageId(null);
     } catch (error) {
       console.error("TTS error:", error);
@@ -100,29 +128,32 @@ export const ChatArea = ({
     }
   };
 
-  // Auto-play messages
+  // Watch for loading state changes to trigger TTS only when a new message is received during loading
   useEffect(() => {
-    const playMessages = async () => {
-      if (!isAudioEnabled || isLoading || playingMessageId) return;
-
-      for (const message of messages) {
-        if (
-          message.role === "assistant" &&
-          !message.hasBeenPlayed &&
-          typeof message.content === "string"
-        ) {
-          message.hasBeenPlayed = true;
-          await handleTTS(message.id, message.content);
-          break;
-        }
+    // If we were loading and now we're not, and audio is enabled, read the last assistant message
+    if (!isLoading && messages.length > 0 && isAudioEnabled && hasUserInteracted) {
+      const lastMessage = messages[messages.length - 1];
+      if (
+        lastMessage.role === "assistant" && 
+        typeof lastMessage.content === "string" &&
+        !lastMessage.fromHistory &&  // Don't read messages from history
+        !playingMessageId // Not already playing something
+      ) {
+        handleTTS(lastMessage.id, lastMessage.content);
       }
-    };
-
-    playMessages();
-  }, [messages, isAudioEnabled, isLoading, playingMessageId]);
+    }
+  }, [isLoading, messages, isAudioEnabled, hasUserInteracted]);
 
   const handleVideoComplete = (toolCallId: string, videoUrl: string) => {
     setGeneratedVideos({ ...generatedVideos, [toolCallId]: videoUrl });
+  };
+
+  const handleAudioToggle = () => {
+    if (isAudioEnabled && playingMessageId) {
+      stopAudio();
+      setPlayingMessageId(null);
+    }
+    toggleAudio();
   };
 
   const renderMessage = (message: any) => (
@@ -178,7 +209,7 @@ export const ChatArea = ({
           <Button
             variant="ghost"
             size="sm"
-            onClick={toggleAudio}
+            onClick={handleAudioToggle}
             className="h-8 w-8 p-0"
             aria-label={isAudioEnabled ? "Disable audio" : "Enable audio"}
           >

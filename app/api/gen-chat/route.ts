@@ -1,7 +1,7 @@
 import { anthropic } from '@ai-sdk/anthropic';
 // import { openai } from '@ai-sdk/openai';
 import { streamText, smoothStream, Message, CreateMessage } from 'ai';
-import { tools } from '@/app/tools/gen-chat/tools';
+import { tools } from '@/app/tools/gen-chat/utils/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -249,7 +249,7 @@ export async function POST(request: Request) {
       maxSteps: 5,
       tools,
       temperature: 0.5,
-      maxTokens: 250,
+      maxTokens: 500,
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',

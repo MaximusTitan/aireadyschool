@@ -85,63 +85,8 @@ function getSystemPrompt(messages: any[], userRole?: string, language: Language 
   const subject = detectSubject(messages);
   const basePrompt = prompts[language][subject];
   
-  const userDetailsMessage = messages.find(m => 
-    m.toolCalls?.some((t: any) => t.tool === 'collectUserDetails' && t.state === 'result')
-  );
-  
-  // Only process user details for students
-  let userDetailsPrompt;
-  
-  if (language === 'english') {
-    userDetailsPrompt = `
-I haven't collected the student's details yet. Start by asking about:
-- Name of the student
-- Age and grade level
-- Subjects they're interested in
-Use the collectUserDetails tool to store this information.
-`;
-  } else {
-    userDetailsPrompt = `
-मैंने अभी तक छात्र का विवरण एकत्र नहीं किया है। निम्न के बारे में पूछकर प्रारंभ करें:
-- छात्र का नाम
-- आयु और कक्षा का स्तर
-- वे किन विषयों में रुचि रखते हैं
-इस जानकारी को स्टोर करने के लिए collectUserDetails टूल का उपयोग करें।
-`;
-  }
-
-  if (userDetailsMessage) {
-    const toolCall = userDetailsMessage.toolCalls.find((t: any) => t.tool === 'collectUserDetails');
-    const userDetails: UserDetails = toolCall.result;
-    
-    if (userDetails.age) {
-      if (language === 'english') {
-        userDetailsPrompt = `
-Student Profile:
-- Name: ${userDetails.name}
-- Age: ${userDetails.age}
-- Grade: ${userDetails.grade}
-- Interests: ${userDetails.subjects?.join(', ')}
-
-Adapt your teaching style according to this student's profile. Give short replies whenever possible.
-`;
-      } else {
-        userDetailsPrompt = `
-छात्र प्रोफ़ाइल:
-- नाम: ${userDetails.name}
-- आयु: ${userDetails.age}
-- कक्षा: ${userDetails.grade}
-- रुचियाँ: ${userDetails.subjects?.join(', ')}
-
-इस छात्र की प्रोफ़ाइल के अनुसार अपनी शिक्षण शैली को अपनाएं। छोटे उत्तर दें जब भी संभव हो.
-`;
-      }
-    }
-  }
-  
   if (language === 'english') {
     return `${basePrompt}
-${userDetailsPrompt}
 
 You can use various tools to enhance the learning experience:
 - Generate interactive math problems
@@ -153,7 +98,6 @@ You can use various tools to enhance the learning experience:
 Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
   } else {
     return `${basePrompt}
-${userDetailsPrompt}
 
 आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
 - इंटरैक्टिव गणित समस्याएँ उत्पन्न करें

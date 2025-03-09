@@ -40,12 +40,24 @@ CREATE TABLE user_subscriptions (
   razorpay_order_id TEXT,
   razorpay_signature TEXT,
   status TEXT NOT NULL CHECK (status IN ('active', 'cancelled', 'expired')),
-  start_date TIMESTAMP WITH TIME ZONE NOT NULL,
-  end_date TIMESTAMP WITH TIME ZONE NOT NULL,
   meta_data JSONB,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Add razorpay_subscription_id column to user_subscriptions table
+ALTER TABLE user_subscriptions 
+ADD COLUMN razorpay_subscription_id TEXT;
+
+-- Create index for faster lookups by subscription ID
+CREATE INDEX idx_user_subscriptions_razorpay_subscription_id 
+ON user_subscriptions(razorpay_subscription_id);
+
+-- Update the status CHECK constraint to include 'pending' and 'halted' statuses
+ALTER TABLE user_subscriptions
+DROP CONSTRAINT user_subscriptions_status_check,
+ADD CONSTRAINT user_subscriptions_status_check 
+CHECK (status IN ('active', 'cancelled', 'expired', 'pending', 'halted'));
 
 -- Create index on user_id for faster lookups
 CREATE INDEX idx_user_subscriptions_user_id ON user_subscriptions(user_id);

@@ -17,14 +17,33 @@ const razorpay = new Razorpay({
   key_secret: RAZORPAY_TEST_KEY,
 });
 
-// Define Razorpay order options type explicitly
+// Define IMap type from Razorpay SDK
+interface IMap<T> {
+  [key: string]: T | null;
+}
+
+// Define Razorpay order options type explicitly matching Razorpay's expected types
 interface RazorpayOrderOptions {
-  amount: number | string;
+  amount: number;
   currency: string;
   receipt?: string;
-  notes?: Record<string, string | number | boolean | undefined>;
+  notes?: IMap<string | number>;
   payment_capture?: 0 | 1;
-  [key: string]: any; // For any other properties that might be needed
+}
+
+// Define RazorpayOrder interface
+interface RazorpayOrder {
+  id: string;
+  entity: string;
+  amount: number;
+  amount_paid: number;
+  amount_due: number;
+  currency: string;
+  receipt: string;
+  status: string;
+  attempts: number;
+  notes: Record<string, any>;
+  created_at: number;
 }
 
 // Subscription plan data
@@ -51,7 +70,7 @@ const subscriptionPlans = {
 
 export async function POST(request: NextRequest) {
   try {
-    const { planId } = await request.json();
+    const { planId, subscriptionId } = await request.json();
     const payment_capture = 1;
 
     // Get plan details
@@ -59,6 +78,12 @@ export async function POST(request: NextRequest) {
     
     if (!plan) {
       return new Response(JSON.stringify({ error: "Invalid subscription plan" }), {
+        status: 400,
+      });
+    }
+
+    if (!subscriptionId) {
+      return new Response(JSON.stringify({ error: "Subscription ID is required" }), {
         status: 400,
       });
     }
@@ -73,27 +98,54 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // Safely access user metadata
+    const userMetadata = user.user_metadata || {};
+    const userRole = userMetadata.role || "Unknown";
+
     const amount = plan.price;
     const currency = "INR";
     
+    // Create notes object with proper typing
+    const notes: IMap<string | number> = {
+      planId: planId,
+      planType: plan.type,
+      userId: user.id,
+      userEmail: user.email || "",
+      userRole: userRole,
+      subscription_id: subscriptionId
+    };
+    
     // Create order options with proper typing
     const options: RazorpayOrderOptions = {
-      amount: amount.toString(),
+      amount: Number(amount),
       currency,
       receipt: shortidGenerate(),
       payment_capture,
-      notes: {
-        planId: planId,
-        planType: plan.type,
-        userId: user.id,
-        userEmail: user.email || "",
-        userRole: user.user_metadata.role || "Unknown",
-        subscription_id: "sub_Q4Bs57xSJdZvOY"
-      },
+      notes
     };
 
-    // @ts-ignore - Razorpay types might not align perfectly, but this works with their API
-    const order = await razorpay.orders.create(options);
+    // Create order with proper type casting
+    const order = await razorpay.orders.create(options as any) as unknown as RazorpayOrder;
+
+    // Update the subscription record to include order information
+    const { error: updateError } = await supabase
+      .from("user_subscriptions")
+      .update({
+        razorpay_order_id: order.id,
+        meta_data: {
+          userEmail: user.email,
+          userRole: userRole,
+          razorpay_order: order
+        }
+      })
+      .eq("razorpay_subscription_id", subscriptionId)
+      .eq("user_id", user.id);
+
+    if (updateError) {
+      console.error("Error updating subscription with order info:", updateError);
+      // Continue even if update fails - webhook will handle this
+    }
+
     return new Response(JSON.stringify(order), { status: 200 });
   } catch (error) {
     console.error("Error creating Razorpay order:", error);

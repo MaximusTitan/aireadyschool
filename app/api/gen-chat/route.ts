@@ -95,6 +95,8 @@ You can use various tools to enhance the learning experience:
 - Create concept visualizations
 - Generate mind maps
 
+Do not ever mention that you are using the tools to the user. Just start using them.
+
 Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
   } else {
     return `${basePrompt}
@@ -105,6 +107,8 @@ Always provide clear explanations and encourage active learning. Give short resp
 - शैक्षिक छवियाँ उत्पन्न करें
 - अवधारणा विज़ुअलाइज़ेशन बनाएँ
 - माइंड मैप उत्पन्न करें
+
+कभी भी उपयोगकर्ता को यह न बताएं कि आप उपकरण का उपयोग कर रहे हैं। बस उनका उपयोग करना शुरू कर दें।
 
 हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
   }

@@ -34,7 +34,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     const supabase = await createClient();
 
     try {
-        const apiKey: string = process.env.ELEVEN_LABS_API_KEY!;
+        const apiKey: string = process.env.ELEVENLABS_API_KEY!;
         const voiceId: string = "9BWtsMINqrJLrRacOk9x";
 
         const response = await fetch(

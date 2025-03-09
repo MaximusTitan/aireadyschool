@@ -75,7 +75,7 @@ export function ThreadList({
             <Button
               variant="ghost"
               size="icon"
-              className="opacity-0 group-hover:opacity-100 transition-opacity"
+              className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
               onClick={(e) => {
                 e.stopPropagation();
                 onDeleteThread(thread.id);

@@ -7,8 +7,9 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+
 interface AddContentDropdownProps {
-    onUpload: (file: File, type: string) => Promise<void>
+    onUpload: (file: File, type: string) => void
   }
   
   export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
@@ -22,10 +23,13 @@ interface AddContentDropdownProps {
       setIsUploadOpen(true)
     }
   
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, type: string) => {
       const file = e.target.files?.[0]
+      console.log("File selected:", file)
+      
       if (file) {
-        setSelectedFile(file)
+        console.log("Attempting upload with type:", type)
+        onUpload(file, type)
       }
     }
   
@@ -72,7 +76,7 @@ interface AddContentDropdownProps {
                   id="file"
                   type="file"
                   ref={fileInputRef}
-                  onChange={handleFileChange}
+                  onChange={(e) => handleFileChange(e, selectedType)}
                   accept={
                     
                        selectedType === "presentation"

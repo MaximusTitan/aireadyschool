@@ -271,53 +271,67 @@ export default function OutputContent() {
   }
 
   const handleFileUpload = async (file: File, type: string, sectionId: string) => {
-    if (!lessonPlan) return
+    if (!lessonPlan) {
+      console.error("No lesson plan available");
+      return;
+    }
     
     try {
-      // If user is not authenticated, show toast but don't redirect
+      // Debug logging
+      console.log("Upload attempt:", {
+        file,
+        type,
+        sectionId,
+        userEmail,
+        lessonPlanId: lessonPlan.id
+      });
+
       if (!userEmail) {
         toast({
           title: "Authentication Required",
           description: "Please sign in to upload files",
           variant: "destructive",
-        })
-        return
+        });
+        return;
       }
 
       toast({
         title: "Uploading...",
         description: `Uploading ${file.name}`,
-      })
+      });
 
-      // Create a user and lesson specific path for better organization
-      const fileName = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`
-      
-      // Create path structure: userEmail/lessonPlanId/fileName
-      // Replace special characters in email with underscores for valid path
-      const safeEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_')
-      const filePath = `${safeEmail}/${lessonPlan.id}/${fileName}`
+      // Create unique filename with timestamp
+      const timestamp = Date.now();
+      const fileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const safeEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+      const filePath = `${safeEmail}/${lessonPlan.id}/${fileName}`;
 
-      console.log(`Uploading file to path: ${filePath}`)
+      console.log("Uploading to path:", filePath);
 
-      // Upload file to Supabase Storage with user-specific path
-      const { error: uploadError } = await supabase.storage
+      // Upload to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
         .from("lesson-plan-materials")
         .upload(filePath, file, {
           cacheControl: '3600',
-          contentType: file.type
-        })
+          contentType: file.type,
+          upsert: false // Ensure we're not overwriting
+        });
 
       if (uploadError) {
-        console.error("Storage upload error:", uploadError)
-        throw uploadError
+        console.error("Storage upload error:", uploadError);
+        throw uploadError;
       }
 
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("lesson-plan-materials").getPublicUrl(filePath)
+      console.log("Upload successful:", uploadData);
 
-      // Save file info to database with user email association
+      // Get public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from("lesson-plan-materials")
+        .getPublicUrl(filePath);
+
+      console.log("Public URL generated:", publicUrl);
+
+      // Save to database
       const { data: fileData, error: dbError } = await supabase
         .from("uploaded_files")
         .insert({
@@ -326,43 +340,49 @@ export default function OutputContent() {
           file_name: file.name,
           file_type: type,
           file_url: publicUrl,
-          // The user_email relationship is maintained through the lesson_plan_id foreign key
         })
-        .select()
+        .select();
 
       if (dbError) {
-        console.error("Database error:", dbError)
-        throw dbError
+        console.error("Database error:", dbError);
+        throw dbError;
       }
 
-      // Update UI
+      console.log("Database entry created:", fileData);
+
+      // Update UI state
       const newFile = {
         id: fileData[0].id,
         name: file.name,
         type,
         url: publicUrl,
-      }
+      };
 
-      setUploadedFiles((prev) => ({
-        ...prev,
-        [sectionId]: [...(prev[sectionId] || []), newFile],
-      }))
+      setUploadedFiles((prev) => {
+        const updatedFiles = {
+          ...prev,
+          [sectionId]: [...(prev[sectionId] || []), newFile],
+        };
+        console.log("Updated files state:", updatedFiles);
+        return updatedFiles;
+      });
 
       toast({
         title: "Success",
         description: "File uploaded successfully",
-      })
+      });
+
     } catch (error) {
-      console.error("Upload error:", error)
+      console.error("Upload error:", error);
       toast({
         title: "Upload Failed",
         description: typeof error === 'object' && error !== null && 'message' in error ? 
           (error as { message: string }).message : 
           "Failed to upload file. Please try again.",
         variant: "destructive",
-      })
+      });
     }
-  }
+  };
 
   if (isAuthChecking) {
     return (

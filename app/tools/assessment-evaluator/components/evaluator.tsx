@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, AlertCircle, Info, Edit, Download } from "lucide-react"
+import { Loader2, AlertCircle, Info, Edit, Download } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip"
@@ -49,6 +49,7 @@ export function AssessmentEvaluator() {
   const [editedEvaluation, setEditedEvaluation] = useState<Evaluation | null>(null)
   const [fileUrl, setfileUrl] = useState("")
   const [extractedText, setExtractedText] = useState("")
+  const [isExtractingText, setIsExtractingText] = useState(false)
 
   const handleQuestionFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -60,6 +61,7 @@ export function AssessmentEvaluator() {
       // If it's a PDF file, try to extract text
       if (e.target.files[0].type === "application/pdf") {
         try {
+          setIsExtractingText(true)
           const formData = new FormData()
           formData.append("file", e.target.files[0])
 
@@ -79,6 +81,8 @@ export function AssessmentEvaluator() {
           }
         } catch (error) {
           console.error("Error extracting text from PDF:", error)
+        } finally {
+          setIsExtractingText(false)
         }
       }
     }
@@ -96,6 +100,7 @@ export function AssessmentEvaluator() {
       // If it's a PDF file, try to extract text
       if (e.target.files[0].type === "application/pdf") {
         try {
+          setIsExtractingText(true)
           const formData = new FormData();
           formData.append("file", e.target.files[0]);
   
@@ -134,6 +139,8 @@ export function AssessmentEvaluator() {
           }
         } catch (error) {
           console.error("Error extracting text from PDF:", error);
+        } finally {
+          setIsExtractingText(false)
         }
       }
     }
@@ -460,6 +467,12 @@ export function AssessmentEvaluator() {
                   "Evaluate Assessment"
                 )}
               </Button>
+              {isExtractingText && (
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <Loader2 className="h-5 w-5 animate-spin text-rose-500" />
+                  <p className="text-sm font-medium">Extracting Text...</p>
+                </div>
+              )}
             </form>
           </CardContent>
         </Card>

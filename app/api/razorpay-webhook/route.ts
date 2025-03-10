@@ -10,40 +10,117 @@ export async function POST(req: NextRequest) {
     // Parse the body content as JSON directly without verification
     const event = JSON.parse(rawBody);
     
+    // Log the received webhook payload for debugging
+    console.log('Received Razorpay webhook:', JSON.stringify(event, null, 2));
+    
     // Initialize Supabase client
     const supabase = await createClient();
     
-    // Get payload data
-    const payload = event.payload.subscription || event.payload.payment;
-    if (!payload) {
-      return new Response(JSON.stringify({ error: "Invalid payload structure" }), { 
-        status: 400 
-      });
+    // Extract data based on event type and structure
+    // The payload structure varies depending on the event type
+    let payload;
+    let paymentData;
+    
+    if (event.payload?.subscription?.entity) {
+      payload = event.payload.subscription.entity;
+    } else if (event.payload?.payment?.entity) {
+      paymentData = event.payload.payment.entity;
+      payload = event.payload.subscription?.entity || {};
+    } else if (event.payload?.entity) {
+      payload = event.payload.entity;
+    } else {
+      console.error("Unrecognized payload structure:", event);
+      return new Response(JSON.stringify({ error: "Invalid payload structure" }), { status: 400 });
     }
     
-    // Extract subscription or payment information
-    const paymentId = payload.payment_id || payload.id;
-    const subscriptionId = payload.subscription_id || payload.entity_id;
+    // Extract subscription or payment information with fallbacks
+    const paymentId = paymentData?.id || payload.payment_id || payload.id;
+    const subscriptionId = payload.id;
+    
+    // Extract notes - they can be in different locations depending on the event
     const notes = payload.notes || {};
-    const userId = notes.userId;
-    const amount = payload.amount || 0;
+    
+    // Log extracted info
+    console.log("Extracted data:", { 
+      event: event.event,
+      paymentId, 
+      subscriptionId,
+      notes,
+      status: payload.status 
+    });
+    
+    // Safely extract user ID from notes
+    const userId = notes.userId || notes.user_id;
+    
+    // For certain events, userId is required
+    const userIdRequiredEvents = [
+      'subscription.authenticated', 
+      'subscription.charged',
+      'subscription.payment.succeeded'
+    ];
+    
+    if (!userId && userIdRequiredEvents.includes(event.event)) {
+      console.error("Missing userId in webhook payload notes:", notes);
+      return new Response(JSON.stringify({ error: "Missing userId in notes" }), { status: 400 });
+    }
+    
+    // Extract amount - can be in different locations
+    const amount = parseFloat(paymentData?.amount || payload.amount) || 0;
     
     // Handle different subscription events
     switch (event.event) {
       case 'subscription.authenticated':
+        if (!subscriptionId || !userId) {
+          console.error("Missing required fields for subscription.authenticated", { subscriptionId, userId });
+          return new Response(JSON.stringify({ error: "Missing required fields" }), { status: 400 });
+        }
         // Subscription was authenticated - ensure record exists
         await ensureSubscriptionRecord(supabase, subscriptionId, userId, notes);
         console.log("Subscription authenticated:", subscriptionId);
         break;
         
       case 'subscription.activated':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.activated");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
         // Subscription is now active
         await updateSubscriptionStatus(supabase, subscriptionId, "active");
         console.log("Subscription activated:", subscriptionId);
         break;
         
       case 'subscription.charged':
+        if (!subscriptionId || !paymentId) {
+          console.error("Missing required fields for subscription.charged", { subscriptionId, paymentId });
+          return new Response(JSON.stringify({ error: "Missing required payment fields" }), { status: 400 });
+        }
+        
+        // For subscription.charged, the userId might be in the payment entity
+        const paymentUserId = userId || paymentData?.customer_id;
+        
+        if (!paymentUserId) {
+          console.error("Missing userId for payment tracking");
+          return new Response(JSON.stringify({ error: "Missing userId for payment" }), { status: 400 });
+        }
+        
+        // Payment was successful - ensure subscription is active and record payment
+        await updateSubscriptionStatus(supabase, subscriptionId, "active");
+        await recordPayment(
+          supabase,
+          paymentUserId,
+          subscriptionId,
+          paymentId,
+          amount,
+          "completed"
+        );
+        console.log("Payment successful for subscription:", subscriptionId);
+        break;
+        
       case 'subscription.payment.succeeded':
+        if (!subscriptionId || !paymentId || !userId) {
+          console.error("Missing required fields for payment tracking", { subscriptionId, paymentId, userId });
+          return new Response(JSON.stringify({ error: "Missing required payment fields" }), { status: 400 });
+        }
         // Payment was successful - ensure subscription is active and record payment
         await updateSubscriptionStatus(supabase, subscriptionId, "active");
         await recordPayment(
@@ -58,29 +135,83 @@ export async function POST(req: NextRequest) {
         break;
         
       case 'subscription.pending':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.pending");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
         // Payment is pending
         await updateSubscriptionStatus(supabase, subscriptionId, "pending");
         console.log("Subscription pending:", subscriptionId);
         break;
         
       case 'subscription.halted':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.halted");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
         // Subscription was halted due to payment failures
         await updateSubscriptionStatus(supabase, subscriptionId, "halted");
         console.log("Subscription halted:", subscriptionId);
         break;
         
       case 'subscription.cancelled':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.cancelled");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
         // Subscription was cancelled
         await updateSubscriptionStatus(supabase, subscriptionId, "cancelled");
         console.log("Subscription cancelled:", subscriptionId);
         break;
         
+      case 'subscription.paused':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.paused");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
+        // Subscription was paused - map to 'halted' status in our system
+        await updateSubscriptionStatus(supabase, subscriptionId, "halted");
+        console.log("Subscription paused:", subscriptionId);
+        break;
+        
+      case 'subscription.resumed':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.resumed");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
+        // Subscription was resumed - map to 'active' status in our system
+        await updateSubscriptionStatus(supabase, subscriptionId, "active");
+        console.log("Subscription resumed:", subscriptionId);
+        break;
+        
+      case 'subscription.completed':
+        if (!subscriptionId) {
+          console.error("Missing subscriptionId for subscription.completed");
+          return new Response(JSON.stringify({ error: "Missing subscriptionId" }), { status: 400 });
+        }
+        // Subscription was completed - map to 'expired' status in our system
+        await updateSubscriptionStatus(supabase, subscriptionId, "expired");
+        console.log("Subscription completed:", subscriptionId);
+        break;
+        
       case 'payment.failed':
+        // For failed payments, we need at least the payment ID
+        if (!paymentId) {
+          console.error("Missing paymentId for payment.failed");
+          return new Response(JSON.stringify({ error: "Missing paymentId" }), { status: 400 });
+        }
+        
+        const failedPaymentUserId = userId || paymentData?.customer_id;
+        if (!failedPaymentUserId) {
+          console.error("Missing userId for payment.failed");
+          return new Response(JSON.stringify({ error: "Missing userId for payment" }), { status: 400 });
+        }
+        
         // Payment failed
         await recordPayment(
           supabase,
-          userId,
-          subscriptionId,
+          failedPaymentUserId,
+          subscriptionId, // May be undefined for one-time payments
           paymentId,
           amount,
           "failed"
@@ -111,6 +242,11 @@ async function ensureSubscriptionRecord(
   notes: any
 ) {
   try {
+    // Validate required parameters
+    if (!razorpaySubscriptionId || !userId) {
+      throw new Error(`Missing required parameters: subscriptionId=${razorpaySubscriptionId}, userId=${userId}`);
+    }
+
     // Check if record already exists
     const { data: existingSubscription } = await supabase
       .from("user_subscriptions")
@@ -160,6 +296,11 @@ async function updateSubscriptionStatus(
   status: string
 ) {
   try {
+    // Validate required parameter
+    if (!razorpaySubscriptionId) {
+      throw new Error(`Cannot update subscription status: missing subscriptionId`);
+    }
+
     // First check if subscription exists
     const { data: existingSubscription } = await supabase
       .from("user_subscriptions")
@@ -205,33 +346,36 @@ async function updateSubscriptionStatus(
 async function recordPayment(
   supabase: any,
   userId: string,
-  subscriptionId: string,
+  subscriptionId: string | undefined,
   paymentId: string,
   amount: number,
   status: string
 ) {
   try {
     // Validate required parameters
-    if (!userId || !subscriptionId || !paymentId) {
-      console.error("Missing required payment parameters", { userId, subscriptionId, paymentId });
-      return { error: "Missing required payment parameters" };
+    if (!userId || !paymentId) {
+      console.error("Missing required payment parameters", { userId, paymentId });
+      throw new Error("Missing required payment parameters");
     }
 
-    // First get the subscription record from the database
-    const { data: subscriptionData, error: subscriptionError } = await supabase
-      .from("user_subscriptions")
-      .select("id")
-      .eq("razorpay_subscription_id", subscriptionId)
-      .maybeSingle();
-      
-    if (subscriptionError) {
-      console.error("Error finding subscription:", subscriptionError);
-      return { error: subscriptionError };
-    }
-    
-    if (!subscriptionData) {
-      console.error("No subscription found with ID:", subscriptionId);
-      return { error: "Subscription not found" };
+    let subscriptionRecordId = null;
+
+    // Only look up the subscription if we have a subscription ID
+    if (subscriptionId) {
+      // Get the subscription record from the database
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from("user_subscriptions")
+        .select("id")
+        .eq("razorpay_subscription_id", subscriptionId)
+        .maybeSingle();
+        
+      if (subscriptionError) {
+        console.error("Error finding subscription:", subscriptionError);
+      } else if (subscriptionData) {
+        subscriptionRecordId = subscriptionData.id;
+      } else {
+        console.log("No subscription found with ID:", subscriptionId);
+      }
     }
     
     // Check if payment already recorded to avoid duplicates
@@ -251,7 +395,7 @@ async function recordPayment(
       .from("payment_history")
       .insert({
         user_id: userId,
-        subscription_id: subscriptionData.id,
+        subscription_id: subscriptionRecordId, // May be null for one-time payments
         payment_id: paymentId,
         amount,
         currency: "INR",

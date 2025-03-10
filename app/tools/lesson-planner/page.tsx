@@ -1,9 +1,10 @@
-import DynamicLessonPlanner from "./components/dynamic-lesson-planner";
+import LessonPlanGenerator from "./components/lesson-plan-generator"
 
-export default function Home() {
+export default function LessonPlannerPage() {
   return (
-    <main className="min-h-screen bg-backgroundApp">
-      <DynamicLessonPlanner />
-    </main>
+    <div className="bg-backgroundApp min-h-screen">
+      <LessonPlanGenerator />
+    </div>
   );
 }
+

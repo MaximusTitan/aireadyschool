@@ -50,3 +50,45 @@ export async function saveComic(comicData: ComicData) {
     throw error;
   }
 }
+
+export async function getUserComics() {
+  const supabase = createClient();
+  
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      throw new Error('User not authenticated');
+    }
+
+    const { data, error } = await supabase
+      .from('comics')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching user comics:', error);
+    throw error;
+  }
+}
+
+export async function getComicById(id: string) {
+  const supabase = createClient();
+  
+  try {
+    const { data, error } = await supabase
+      .from('comics')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (error) throw error;
+    return data;
+  } catch (error) {
+    console.error('Error fetching comic:', error);
+    throw error;
+  }
+}

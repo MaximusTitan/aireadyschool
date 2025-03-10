@@ -11,6 +11,7 @@ import {
   Maximize2,
   FileText,
   ChevronLeft,
+  History,
 } from "lucide-react";
 import Loader from "@/components/ui/loader";
 import { cn } from "@/lib/utils";
@@ -24,9 +25,10 @@ import { Switch } from "@/components/ui/switch";
 import { Toaster } from "@/components/ui/toaster";
 import { DebugPanel } from "@/components/debug-panel";
 import ComicPanelLayout from "@/components/comic-panel-layout";
-import { saveComic } from '@/utils/supabase/comics';
+import { saveComic, getUserComics } from '@/utils/supabase/comics';
 import { useToast } from '@/components/ui/use-toast';
 import html2canvas from 'html2canvas';
+import { HistoryModal } from "@/components/history-modal";
 
 // Initialize your custom font
 const comicNeue = localFont({
@@ -58,6 +60,8 @@ export default function ComicGenerator() {
   const aiProvider = useOpenAI ? 'openai' : 'groq';
   const { toast } = useToast();
   const [currentPage, setCurrentPage] = useState(0);
+  const [showHistory, setShowHistory] = useState(false);
+  const [userComics, setUserComics] = useState<any[]>([]);
 
   // Set prompt from query string if available
   useEffect(() => {
@@ -315,6 +319,32 @@ export default function ComicGenerator() {
     return `Create a ${data.numPanels}-panel ${data.comicStyle} comic titled "${data.title}" featuring ${data.mainCharacters} set in ${data.setting}. The dialogue should be ${data.dialogueTone.toLowerCase()} with a ${data.endingStyle.toLowerCase()}. ${data.additionalDetails}`;
   };
 
+  const fetchUserComics = async () => {
+    try {
+      const comics = await getUserComics();
+      setUserComics(comics);
+    } catch (error) {
+      console.error('Error fetching comics:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load comic history",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleViewHistoricComic = (comic: any) => {
+    setShowHistory(false);
+    setComicStyleFromForm(comic.comic_style);
+    setRequestedPanels(comic.panel_count);
+    setImageData({
+      urls: comic.image_urls,
+      descriptions: comic.descriptions,
+      dialogues: comic.dialogues,
+    });
+    setPrompt(comic.prompt);
+  };
+
   return (
     <div className={`min-h-screen bg-backgroundApp text-foreground ${comicNeue.variable}`}>
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
@@ -333,11 +363,24 @@ export default function ComicGenerator() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="mb-4 w-full max-w-md">
-            <TabsTrigger value="simple" className="w-1/2">Simple Mode</TabsTrigger>
-            <TabsTrigger value="advanced" className="w-1/2">Advanced Mode</TabsTrigger>
-          </TabsList>
-          
+          <div className="flex justify-between items-center mb-4 max-w-5xl">
+            <TabsList className="w-fit">
+              <TabsTrigger value="simple">Simple Mode</TabsTrigger>
+              <TabsTrigger value="advanced">Advanced Mode</TabsTrigger>
+            </TabsList>
+            <Button
+              variant="outline"
+              onClick={() => {
+                fetchUserComics();
+                setShowHistory(true);
+              }}
+              className="flex items-center gap-2"
+            >
+              <History className="h-5 w-5" />
+              View History
+            </Button>
+          </div>
+
           <TabsContent value="simple" className="max-w-5xl space-y-4">
             <div className="flex justify-end items-center space-x-2 mb-4">
               <span className="text-sm text-muted-foreground">
@@ -466,6 +509,12 @@ export default function ComicGenerator() {
             </div>
           </div>
         )}
+        <HistoryModal
+          open={showHistory}
+          onOpenChange={setShowHistory}
+          comics={userComics}
+          onViewComic={handleViewHistoricComic}
+        />
         <Toaster />
       </div>
     </div>

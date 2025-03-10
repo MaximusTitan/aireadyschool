@@ -214,17 +214,6 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center justify-end space-x-2 mb-4">
-        <Label htmlFor="ai-model" className="text-sm">
-          {useOpenAI ? "Using: OpenAI" : "Using: Groq"}
-        </Label>
-        <Switch
-          id="ai-model"
-          checked={useOpenAI}
-          onCheckedChange={setUseOpenAI}
-        />
-      </div>
-      
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Left column */}
         <div className="space-y-4">

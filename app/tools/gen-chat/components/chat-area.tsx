@@ -46,117 +46,12 @@ export const ChatArea = ({
     markUserInteraction 
   } = useAudioSettings();
   const toolsContentRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourcesRef = useRef<AudioBufferSourceNode[]>([]);
-  const audioQueueRef = useRef<AudioBuffer[]>([]);
-  const isPlayingStreamRef = useRef<boolean>(false);
   const ttsControllerRef = useRef<AbortController | null>(null);
-  const webSocketRef = useRef<WebSocket | null>(null);
 
   const toolInvocations = messages.flatMap(
     (message) => message.toolInvocations || []
   );
 
-  // Initialize audio context
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    return () => {
-      stopStreamingAudio();
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-    };
-  }, []);
-
-  // Play the next audio buffer in the queue
-  const playNextInQueue = async () => {
-    if (!audioContextRef.current || !isPlayingStreamRef.current || audioQueueRef.current.length === 0) {
-      return;
-    }
-    
-    try {
-      const buffer = audioQueueRef.current.shift();
-      if (!buffer) return;
-      
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContextRef.current.destination);
-      
-      audioSourcesRef.current.push(source);
-      
-      source.onended = () => {
-        // Remove this source from the sources array
-        audioSourcesRef.current = audioSourcesRef.current.filter(s => s !== source);
-        
-        // Play next buffer if there's more in the queue
-        if (audioQueueRef.current.length > 0) {
-          playNextInQueue();
-        } else if (audioSourcesRef.current.length === 0) {
-          // If no more sources are playing and queue is empty, we're done
-          isPlayingStreamRef.current = false;
-          setPlayingMessageId(null);
-        }
-      };
-      
-      source.start(0);
-    } catch (err) {
-      console.error("Error playing audio chunk:", err);
-    }
-  };
-
-  // Process and play a new audio chunk
-  const processAudioChunk = async (base64Data: string) => {
-    if (!audioContextRef.current) return;
-    
-    try {
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      // Decode audio data with lower latency priority
-      const audioBuffer = await audioContextRef.current.decodeAudioData(bytes.buffer);
-      
-      // Add to queue
-      audioQueueRef.current.push(audioBuffer);
-      
-      // If we're not playing yet, start playing immediately
-      if (!isPlayingStreamRef.current) {
-        isPlayingStreamRef.current = true;
-        // Start playback immediately without delay
-        setTimeout(() => playNextInQueue(), 0);
-      }
-    } catch (err) {
-      console.error("Error processing audio chunk:", err);
-    }
-  };
-
-  // Stop streaming audio
-  const stopStreamingAudio = () => {
-    if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
-      webSocketRef.current.close();
-      webSocketRef.current = null;
-    }
-    
-    if (ttsControllerRef.current) {
-      ttsControllerRef.current.abort();
-      ttsControllerRef.current = null;
-    }
-    
-    if (!isPlayingStreamRef.current) return;
-    
-    isPlayingStreamRef.current = false;
-    audioSourcesRef.current.forEach(source => {
-      try { source.stop(); } catch (e) {}
-    });
-    audioSourcesRef.current = [];
-    audioQueueRef.current = [];
-    setPlayingMessageId(null);
-  };
 
   // Scroll tools panel to bottom when new tools are added
   useEffect(() => {
@@ -200,38 +95,18 @@ export const ChatArea = ({
     };
   }, [markUserInteraction]);
 
-  // Clean up audio resources when component unmounts or page changes
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      stopStreamingAudio();
-    };
 
-    // Handle page unload
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // Add visibility change event to stop audio when user switches tabs or minimizes
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        stopStreamingAudio();
-      }
-    });
-
-    return () => {
-      stopStreamingAudio();
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleBeforeUnload);
-    };
-  }, []);
 
   // Handle text-to-speech
   const handleTTS = async (messageId: string, text: string) => {
     try {
       if (playingMessageId === messageId) {
-        stopStreamingAudio();
+        stopAudio();
+        setPlayingMessageId(null);
         return;
       }
 
-      stopStreamingAudio();
+      stopAudio();
       setPlayingMessageId(messageId);
 
       if (!hasUserInteracted) {
@@ -239,9 +114,6 @@ export const ChatArea = ({
         setPlayingMessageId(null);
         return;
       }
-
-      // Extract only the first few sentences for immediate playback to reduce initial delay
-      const firstChunk = text.split('.').slice(0, 2).join('.') + '.';
       
       // Clean text for TTS
       const cleanText = text
@@ -258,50 +130,35 @@ export const ChatArea = ({
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          "Priority": "high" // Add priority header
         },
         body: JSON.stringify({ 
           text: cleanText,
-          priority: "high"  // Signal high priority for processing
         }),
         signal: ttsControllerRef.current.signal
       });
 
       if (!response.ok) throw new Error("TTS request failed");
       
-      if (!response.body) {
-        throw new Error("Response body is null");
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
       }
-
-      // Process the streaming response
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      // Read and process chunks
-      while (true) {
-        const { done, value } = await reader.read();
+      
+      if (data.type === 'audio' && data.content) {
+        // Create a Blob from the base64 audio
+        const binaryString = atob(data.content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
+        }
         
-        if (done) {
-          break;
-        }
-
-        // Process the chunk
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
-
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            
-            if (data.type === 'audio') {
-              // Process the audio chunk for immediate playback
-              await processAudioChunk(data.content);
-            }
-          } catch (e) {
-            console.error('Error parsing chunk:', e);
-          }
-        }
+        const blob = new Blob([bytes], { type: 'audio/mpeg' });
+        
+        // Play the audio using our existing audio player
+        await playAudio(blob, 'audio/mpeg');
       }
+      
     } catch (error: unknown) {
       if (error instanceof Error && error.name !== 'AbortError') {
         console.error("TTS error:", error);
@@ -332,7 +189,8 @@ export const ChatArea = ({
 
   const handleAudioToggle = () => {
     if (isAudioEnabled && playingMessageId) {
-      stopStreamingAudio();
+      stopAudio();
+      setPlayingMessageId(null);
     }
     toggleAudio();
   };

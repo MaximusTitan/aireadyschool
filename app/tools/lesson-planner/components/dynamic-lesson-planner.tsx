@@ -21,9 +21,20 @@ export default function DynamicLessonPlanner() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lessonPlans, setLessonPlans] = useState<any[]>([])
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
     fetchLessonPlans()
+    
+    // Get the user's email from Supabase auth
+    async function getUserEmail() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.email) {
+        setUserEmail(session.user.email)
+      }
+    }
+    
+    getUserEmail()
   }, [])
 
   const fetchLessonPlans = async () => {
@@ -64,7 +75,15 @@ export default function DynamicLessonPlanner() {
     try {
       const formData = new FormData(event.currentTarget)
       console.log("Submitting form data:", Object.fromEntries(formData))
-      const lessonPlan = await generateLessonPlan(formData)
+      
+      // Check if user is authenticated
+      if (!userEmail) {
+        toast.error("Please sign in to create a lesson plan")
+        router.push("/sign-in")
+        return
+      }
+      
+      const lessonPlan = await generateLessonPlan(formData, userEmail)
 
       if (!lessonPlan || !lessonPlan.plan_data) {
         throw new Error("Received empty or invalid lesson plan")

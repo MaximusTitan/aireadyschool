@@ -10,7 +10,6 @@ import { EditLessonContent } from "../components/edit-lesson-content"
 import { GenerateNotesDialog } from "../components/generate-notes-dialog"
 import { AddContentDropdown } from "../components/add-content-dropdown"
 import { useToast } from "@/components/ui/use-toast"
-import { useAuth } from "@/hooks/useAuth"
 
 interface ScheduleItem {
   type: string

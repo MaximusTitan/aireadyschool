@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Plus, Trash2, BookOpen } from "lucide-react"
 import { supabase } from "@/lib/supabase";
 import { format } from "date-fns"
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface LessonPlan {
     id: string
@@ -77,7 +78,7 @@ interface LessonPlan {
       
       // Set up real-time subscription to lesson_plans table
       // This ensures data remains fresh without manual refetching
-      let planSubscription;
+      let planSubscription: RealtimeChannel | undefined;
       
       if (userEmail) {
         planSubscription = supabase
@@ -109,11 +110,11 @@ interface LessonPlan {
       const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
         if (!isMounted) return;
         
-        const email = session?.user?.email;
+        const email = session?.user?.email || null;
         
         // Only update if email has changed
         if (email !== userEmail) {
-          setUserEmail(email || null);
+          setUserEmail(email);
           
           if (email) {
             fetchLessonPlans(email);
@@ -132,7 +133,7 @@ interface LessonPlan {
       };
     }, [userEmail]); // Add userEmail as a dependency
     
-    const fetchLessonPlans = async (email: string) => {
+    const fetchLessonPlans = async (email: string | undefined) => {
       if (!email) {
         console.warn("Cannot fetch lesson plans: No email provided");
         return;

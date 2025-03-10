@@ -60,58 +60,16 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData()
-    const file = formData.get("file") as File | null
-    const title = formData.get("title") as string
-    const description = formData.get("description") as string
-    const assignmentText = formData.get("assignmentText") as string
-    const gradeLevel = formData.get("gradeLevel") as string
-    const subject = formData.get("subject") as string
+    const questionPaperText = formData.get("questionPaperText") as string
+    const answerSheetText = formData.get("answerSheetText") as string
     const rubric = formData.get("rubric") as File | null
     const rubricTextInput = formData.get("rubricText") as string
-    const country = formData.get("country") as string
-    const board = formData.get("board") as string
 
-    if ((!file && !assignmentText) || !gradeLevel || !subject || !title || !description || !country || !board) {
+    if (!questionPaperText && !answerSheetText) {
       return NextResponse.json(
         { error: "Please fill in all required fields and provide an assignment (file or text)." },
         { status: 400 }
       )
-    }
-
-    // Read assignment content
-    let assignmentContent = ""
-    if (file) {
-      if (
-        file.type !== "application/pdf" &&
-        file.type !== "text/plain"
-      ) {
-        return NextResponse.json(
-          { error: "Invalid assignment file type. Please upload a PDF or TXT file." },
-          { status: 400 }
-        )
-      }
-
-      if (file.type === "application/pdf") {
-        const fileBuffer = Buffer.from(await file.arrayBuffer())
-        const parser = new createParser()
-        assignmentContent = await new Promise<string>((resolve, reject) => {
-          parser.on("pdfParser_dataReady", (pdfData) => {
-            resolve(
-              pdfData.Pages.map((page) =>
-                page.Texts.map((text) =>
-                  text.R.map((r) => decodeURIComponent(r.T)).join(" ")
-                ).join(" ")
-              ).join("\n")
-            )
-          })
-          parser.on("pdfParser_dataError", reject)
-          parser.parseBuffer(fileBuffer)
-        })
-      } else if (file.type === "text/plain") {
-        assignmentContent = await file.text()
-      }
-    } else {
-      assignmentContent = assignmentText
     }
 
     // Handle rubric
@@ -156,17 +114,13 @@ export async function POST(request: Request) {
     }
 
     // Prepare the prompt for the AI
-    const userPrompt = `Assignment Title: ${title}
-    Assignment Description: ${description}
-    Grade Level: ${gradeLevel}
-    Subject: ${subject}
-    Country: ${country}
-    Educational Board: ${board}
-
-    Student Assignment:
-    ${assignmentContent}
-
-    Please evaluate this assignment based on the criteria provided.`
+    const userPrompt = `Please evaluate the answers in the answer sheet based on the Question Paper provided.
+    Questoin Paper:
+    ${questionPaperText}
+    
+    Student's Answer Sheet:
+    ${answerSheetText}
+    `
 
     // Call OpenAI API for evaluation using AI SDK
     const { text: aiResponse, usage } = await generateText({

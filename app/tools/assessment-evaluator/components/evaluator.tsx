@@ -33,32 +33,28 @@ const isValidEvaluation = (data: any): data is Evaluation => {
   return data && typeof data === "object" && "contentUnderstanding" in data && "totalScore" in data
 }
 
-export function AssignmentEvaluator() {
+export function AssessmentEvaluator() {
   const [file, setFile] = useState<File | null>(null)
-  const [gradeLevel, setGradeLevel] = useState("")
-  const [subject, setSubject] = useState("")
   const [rubricFile, setRubricFile] = useState<File | null>(null)
   const [evaluation, setEvaluation] = useState<Evaluation | string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
-  const [assignmentText, setAssignmentText] = useState("")
+  const [answerSheetText, setAnswerSheetText] = useState("")
+  const [questionPaperText, setQuestionPaperText] = useState("")
   const [rubricText, setRubricText] = useState("")
   const [uploadProgress, setUploadProgress] = useState(0)
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState("")
   const [inputMethod, setInputMethod] = useState<"file" | "text" | null>(null)
   const [rubricInputMethod, setRubricInputMethod] = useState<"file" | "text" | null>(null)
-  const [country, setCountry] = useState("")
-  const [board, setBoard] = useState("")
   const [isEditing, setIsEditing] = useState(false)
   const [editedEvaluation, setEditedEvaluation] = useState<Evaluation | null>(null)
+  const [fileUrl, setfileUrl] = useState("")
   const [extractedText, setExtractedText] = useState("")
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleQuestionFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0])
       setInputMethod("file")
-      setAssignmentText("")
+      setQuestionPaperText("")
       setError("")
 
       // If it's a PDF file, try to extract text
@@ -67,15 +63,15 @@ export function AssignmentEvaluator() {
           const formData = new FormData()
           formData.append("file", e.target.files[0])
 
-          const response = await fetch("/api/evaluate/upload", {
+          const response = await fetch("/api/assessment-evaluator/upload", {
             method: "POST",
             body: formData,
           })
 
           if (response.ok) {
             const data = await response.json()
-            setExtractedText(data.extractedText)
-            console.log("Assignment Text: ",data.extractedText)
+            setQuestionPaperText(data.extractedText)
+            console.log("Question Paper Text: ",data.extractedText)
             // Optionally set this to assignmentText if you want to show it in the textarea
             //setAssignmentText(data.extractedText)
           } else {
@@ -87,27 +83,61 @@ export function AssignmentEvaluator() {
       }
     }
   }
-
-  const handleAssignmentTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setAssignmentText(e.target.value)
-    if (e.target.value) {
-      setInputMethod("text")
-      setFile(null)
-    } else {
-      setInputMethod(null)
+  
+  const handleAssessmentFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+      setInputMethod("file");
+      setAnswerSheetText("");
+      setError("");
+  
+      // If it's a PDF file, try to extract text
+      if (e.target.files[0].type === "application/pdf") {
+        try {
+          const formData = new FormData();
+          formData.append("file", e.target.files[0]);
+  
+          // First, upload the file to get a URL
+          const response = await fetch("/api/assessment-evaluator/fileurl", {
+            method: "POST",
+            body: formData,
+          });
+  
+          if (response.ok) {
+            const data = await response.json();
+            // Log the returned file URL directly
+            console.log("Assessment File URL: ", data.fileUrl);
+            // Update state if needed
+            setfileUrl(data.fileUrl);
+  
+            // Now, send the file URL to the OCR backend.
+            // Make sure to send the URL under the key "url" if your backend expects it.
+            const ocrResponse = await fetch("/api/assessment-evaluator/ocr", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ url: data.fileUrl }),
+            });
+  
+            if (ocrResponse.ok) {
+              const ocrData = await ocrResponse.json();
+              console.log("Extracted Text: ", ocrData.extractedText);
+              setAnswerSheetText(ocrData.extractedText);
+            } else {
+              console.error("Failed to extract text from OCR");
+            }
+          } else {
+            console.error("Failed to extract text from PDF");
+          }
+        } catch (error) {
+          console.error("Error extracting text from PDF:", error);
+        }
+      }
     }
-    setError("")
-  }
-
-  const clearFile = () => {
-    setFile(null)
-    setInputMethod(null)
-  }
-
-  const clearText = () => {
-    setAssignmentText("")
-    setInputMethod(null)
-  }
+  };  
 
   const handleRubricChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -141,7 +171,7 @@ export function AssignmentEvaluator() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    if ((!file && !assignmentText) || !gradeLevel || !subject || !country || !board) {
+    if (!file && !answerSheetText) {
       setError("Please provide an assignment (file or text), fill in all required fields.")
       return
     }
@@ -155,23 +185,15 @@ export function AssignmentEvaluator() {
     }, 1000)
 
     const formData = new FormData()
-    if (file) {
-      formData.append("file", file)
-    }
-    formData.append("title", title)
-    formData.append("description", description)
-    formData.append("assignmentText", assignmentText || extractedText) // Use extracted text if no manual text
-    formData.append("gradeLevel", gradeLevel)
-    formData.append("subject", subject)
+    formData.append("questionPaperText", questionPaperText)
+    formData.append("answerSheetText", answerSheetText || extractedText) // Use extracted text if no manual text
     if (rubricFile) {
       formData.append("rubric", rubricFile)
     }
     formData.append("rubricText", rubricText)
-    formData.append("country", country)
-    formData.append("board", board)
 
     try {
-      const response = await fetch("/api/evaluate", {
+      const response = await fetch("/api/assessment-evaluator", {
         method: "POST",
         body: formData,
       })
@@ -304,172 +326,38 @@ export function AssignmentEvaluator() {
         <Card className="shadow-lg border-2">
           <CardContent className="p-6 space-y-8">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Country and Board Selection */}
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label htmlFor="countrySelect" className="text-base font-semibold">
-                    Country
-                  </Label>
-                  <Select
-                    value={country}
-                    onValueChange={(value) => {
-                      setCountry(value)
-                      setBoard("")
-                    }}
-                  >
-                    <SelectTrigger className="w-full h-11 bg-white">
-                      <SelectValue placeholder="Select country..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {countries.map((country) => (
-                        <SelectItem key={country.value} value={country.value}>
-                          {country.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="boardSelect" className="text-base font-semibold">
-                    Educational Board
-                  </Label>
-                  <Select value={board} onValueChange={setBoard}>
-                    <SelectTrigger className="w-full h-11 bg-white">
-                      <SelectValue placeholder="Select board..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {country &&
-                        boardsByCountry[country]?.map((board) => (
-                          <SelectItem key={board.value} value={board.value}>
-                            {board.label}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
 
-              {/* Grade Level and Subject */}
-              <div className="grid md:grid-cols-2 gap-8">
-                <div className="space-y-2">
-                  <Label htmlFor="gradeLevel" className="text-base font-semibold">
-                    Grade Level
-                  </Label>
-                  <Select onValueChange={setGradeLevel} value={gradeLevel}>
-                    <SelectTrigger id="gradeLevel" className="w-full h-11 bg-white">
-                      <SelectValue placeholder="Select Grade Level" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[...Array(12)].map((_, i) => (
-                        <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          Grade {i + 1}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject" className="text-base font-semibold">
-                    Subject
-                  </Label>
-                  <Select onValueChange={setSubject} value={subject}>
-                    <SelectTrigger id="subject" className="w-full h-11 bg-white">
-                      <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject.value} value={subject.value}>
-                          {subject.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {/* Title and Description */}
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-base font-semibold">
-                    Assignment Title
-                  </Label>
-                  <Input
-                    id="title"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Enter assignment title"
-                    className="h-11 bg-white"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-base font-semibold">
-                    Assignment Description
-                  </Label>
-                  <textarea
-                    id="description"
-                    className="min-h-[100px] w-full p-4 border rounded-md resize-y bg-white"
-                    placeholder="Enter assignment description..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Assignment Input Section */}
-              <div className="space-y-4">
+              {/* Question Paper Input Section */}
                 <div className="space-y-2">
                   <Label htmlFor="file" className="text-base font-semibold">
-                    Assignment Submission
+                    Upload Question Paper
                   </Label>
                   <Input
                     id="file"
                     type="file"
                     accept="application/pdf,text/plain"
-                    onChange={handleFileChange}
+                    onChange={handleQuestionFileChange}
                     disabled={isLoading || inputMethod === "text"}
                     className={`h-11 bg-white cursor-${inputMethod === "text" ? "not-allowed" : "pointer"}`}
                   />
                 </div>
 
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <Separator className="w-full" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">Or paste text</span>
-                  </div>
-                </div>
-
-                <textarea
-                  className="w-full min-h-[150px] p-4 border rounded-md bg-white resize-y"
-                  placeholder="Enter assignment text here..."
-                  value={assignmentText}
-                  onChange={handleAssignmentTextChange}
-                  disabled={isLoading || inputMethod === "file"}
-                />
-              </div>
-
-              {extractedText && (
+              {/* Assessment Input Section */}
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label className="text-base font-semibold">Extracted Text from PDF</Label>
-                  <div className="p-4 border rounded-md bg-muted/30 max-h-[200px] overflow-y-auto">
-                    <p className="whitespace-pre-wrap">{extractedText}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setAssignmentText(extractedText)
-                      setInputMethod("text")
-                    }}
-                  >
-                    Use as Assignment Text
-                  </Button>
+                  <Label htmlFor="file" className="text-base font-semibold">
+                    Upload Answer Sheet
+                  </Label>
+                  <Input
+                    id="file"
+                    type="file"
+                    accept="application/pdf,text/plain"
+                    onChange={handleAssessmentFileChange}
+                    disabled={isLoading || inputMethod === "text"}
+                    className={`h-11 bg-white cursor-${inputMethod === "text" ? "not-allowed" : "pointer"}`}
+                  />
                 </div>
-              )}
+              </div>
 
               {/* Rubric Section */}
               <div className="space-y-4">
@@ -560,7 +448,7 @@ export function AssignmentEvaluator() {
 
               <Button
                 type="submit"
-                disabled={(!file && !assignmentText) || !gradeLevel || !subject || !country || !board || isLoading}
+                disabled={(!file && !questionPaperText && !answerSheetText) || isLoading}
                 className="w-fit h-10 text-base font-semibold bg-rose-500 hover:bg-rose-600"
               >
                 {isLoading ? (
@@ -569,7 +457,7 @@ export function AssignmentEvaluator() {
                     Evaluating...
                   </>
                 ) : (
-                  "Evaluate Assignment"
+                  "Evaluate Assessment"
                 )}
               </Button>
             </form>

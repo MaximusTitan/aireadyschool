@@ -213,6 +213,12 @@ export const categories: CategoryTools = {
         icon: ClipboardList
       },
       {
+        title: "Assessment Evaluator",
+        description: "Evaluate Asnwer Sheets",
+        route: "/tools/assessment-evaluator",
+        icon: CheckSquare
+      },
+      {
         title: "Evaluator",
         description: "Evaluate student answers",
         route: "/tools/evaluator",

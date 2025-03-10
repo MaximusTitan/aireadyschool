@@ -37,12 +37,10 @@ export async function POST(request: Request) {
     })
 
     // Generate images using Recraft V3
-    const result = await fal.subscribe("fal-ai/recraft-v3", {
+    const result = await fal.subscribe("fal-ai/flux/dev", {
       input: {
         prompt,
         image_size: imageSize || "square_hd",
-        style: style || "realistic_image" || "digital_illustration" || "vector_illustration",
-        colors: colors || []
       },
       logs: true
     })

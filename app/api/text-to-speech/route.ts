@@ -5,20 +5,18 @@ interface TextToSpeechRequest {
   text: string;
 }
 
-interface ElevenLabsError {
-  detail?: {
-    message?: string;
-    status?: string;
-  };
-  message?: string;
-}
+// Initialize ElevenLabs configuration directly from process.env
+const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
+const voiceId = 'Xb7hH8MSUJpSbSDYk0k2';
+const model = 'eleven_flash_v2_5';
+
+// Set the runtime to edge
+export const runtime = 'edge';
 
 export async function POST(request: NextRequest): Promise<Response | NextResponse> {
   try {
-    // Validate API key existence
-    const apiKey = process.env.ELEVEN_LABS_API_KEY;
-    if (!apiKey) {
-      throw new Error('ELEVEN_LABS_API_KEY is not configured in environment variables');
+    if (!ELEVENLABS_API_KEY) {
+      throw new Error('ELEVENLABS_API_KEY is not configured in environment variables');
     }
 
     // Parse and validate request body
@@ -31,47 +29,70 @@ export async function POST(request: NextRequest): Promise<Response | NextRespons
       );
     }
 
-    const response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/9BWtsMINqrJLrRacOk9x/stream', {
-      method: 'POST',
-      headers: {
-        'Accept': 'audio/mpeg',
-        'Content-Type': 'application/json',
-        'xi-api-key': apiKey,
-      },
-      body: JSON.stringify({
-        text,
-        voice_settings: {
-          stability: 0.5,
-          similarity_boost: 0.5,
-        },
-      }),
-    });
+    // Create a stream to pipe the audio data
+    const { readable, writable } = new TransformStream();
+    const writer = writable.getWriter();
 
-    // Handle API-specific errors
-    if (!response.ok) {
-      let errorMessage = response.statusText;
+    // Process in the background
+    (async () => {
       try {
-        const errorData: ElevenLabsError = await response.json();
-        errorMessage = errorData.detail?.message || errorData.message || errorMessage;
-      } catch {
-        // If error parsing fails, use default message
+        // Connect to ElevenLabs WebSocket API
+        // In edge runtime, we need to include the API key as a query parameter
+        const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream-input?model_id=${model}&xi-api-key=${encodeURIComponent(ELEVENLABS_API_KEY)}`;
+        
+        // Use native WebSocket in Edge runtime
+        const ws = new WebSocket(uri);
+        
+        // Set up connection handlers
+        ws.onopen = () => {
+          // Initialize the stream with voice settings
+          ws.send(JSON.stringify({
+            text: ' ',
+            voice_settings: {
+              stability: 0.5,
+              similarity_boost: 0.8,
+              use_speaker_boost: false,
+            },
+            generation_config: { chunk_length_schedule: [120, 160, 250, 290] },
+          }));
+          
+          // Send the actual text
+          ws.send(JSON.stringify({ text }));
+          
+          // End the text stream
+          ws.send(JSON.stringify({ text: '' }));
+        };
+        
+        // Process incoming audio chunks
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data['audio']) {
+              const audioBuffer = Buffer.from(data['audio'], 'base64');
+              writer.write(new Uint8Array(audioBuffer));
+            }
+          } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+          }
+        };
+        
+        // Handle errors
+        ws.onerror = (error) => {
+          console.error('WebSocket error:', error);
+          writer.abort(new Error('WebSocket error'));
+        };
+        
+        // Close the writer when the connection closes
+        ws.onclose = () => {
+          writer.close();
+        };
+      } catch (error) {
+        console.error('Error in WebSocket processing:', error);
+        writer.abort(error instanceof Error ? error : new Error('Unknown error'));
       }
+    })();
 
-      if (response.status === 401) {
-        throw new Error('Invalid or missing API key. Please check your ElevenLabs API key configuration.');
-      }
-
-      throw new Error(`ElevenLabs API error: ${errorMessage}`);
-    }
-
-    const audioBuffer = await response.arrayBuffer();
-    
-    // Validate audio buffer
-    if (!audioBuffer || audioBuffer.byteLength === 0) {
-      throw new Error('Received empty audio response from ElevenLabs');
-    }
-
-    return new Response(audioBuffer, {
+    return new Response(readable, {
       headers: {
         'Content-Type': 'audio/mpeg',
         'Cache-Control': 'no-cache, no-store, must-revalidate',

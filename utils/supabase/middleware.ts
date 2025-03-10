@@ -24,14 +24,15 @@ export const updateSession = async (request: NextRequest) => {
     // Fetch user session
     const { data: { user }, error } = await supabase.auth.getUser();
 
-    // Redirect disabled users
-    if (
-      user?.user_metadata?.status === "disabled" &&
-      !request.nextUrl.pathname.startsWith("/verification-waiting") &&
-      !request.nextUrl.pathname.startsWith("/sign-in")
-    ) {
-      return NextResponse.redirect(new URL("/verification-waiting", request.url));
+    if (request.method === "POST") {
+      return NextResponse.next(); // Skip any redirect for POST requests
     }
+    
+    // Redirect disabled users
+      if (user?.user_metadata?.status === "disabled" && !request.nextUrl.pathname.startsWith("/verification-waiting") && !request.nextUrl.pathname.startsWith("/sign-in")) {
+        return NextResponse.redirect(new URL("/verification-waiting", request.url));
+      }
+    
 
     // Define public routes (accessible without authentication)
     const publicRoutes = ["/portfolio/", "/sign-in", "/sign-up", "/verification-waiting", "/apps/", "/dat/"];

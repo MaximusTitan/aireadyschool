@@ -87,7 +87,6 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
     toolCallId: string,
     params: {
       prompt: string;
-      style: string;
       imageSize: string;
       numInferenceSteps: number;
       numImages: number;
@@ -213,12 +212,10 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
         break;
       case "image":
         const prompt = parts.slice(1, -1).join(" ");
-        const style = parts[parts.length - 1] || "realistic_image";
         baseMessage.content = `Generate an educational image about: ${prompt}`;
         baseMessage.toolCalls = [
           createToolCall("generateImage", {
             prompt,
-            style,
             imageSize: "square_hd",
             numInferenceSteps: 1,
             numImages: 1,

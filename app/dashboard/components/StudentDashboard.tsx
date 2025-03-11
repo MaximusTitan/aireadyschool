@@ -6,6 +6,7 @@ import SchoolInfo from "./SchoolInfo";
 import StatCard from "./StatCard";
 import DashboardCard from "./DashboardCard";
 import StudentClasses from "./StudentClasses";
+import AnnouncementList from "./AnnouncementList";
 
 interface School {
   id: string;
@@ -144,6 +145,9 @@ export default function StudentDashboard() {
         </DashboardCard>
       </div>
       
+      {/* New Announcement List section for realtime announcements */}
+      <AnnouncementList student={studentData} />
+
       <StudentClasses />
     </div>
   );

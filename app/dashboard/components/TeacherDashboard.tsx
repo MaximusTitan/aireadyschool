@@ -8,6 +8,7 @@ import TeacherClasses from "./TeacherClasses";
 import TeacherStudents from "./TeacherStudents";
 import Link from "next/link";
 import { BookOpen, ClipboardList, CheckSquare, Users, FileText } from "lucide-react";
+import AnnouncementSender from "./AnnouncementSender";
 
 // Define proper interfaces to match Supabase response
 interface School {
@@ -211,6 +212,9 @@ export default function TeacherDashboard() {
             <TeacherClasses />
             <TeacherStudents />
           </div>
+          
+          {/* New Announcement Sender section */}
+          <AnnouncementSender />
         </div>
         
         <div className="lg:col-span-1">

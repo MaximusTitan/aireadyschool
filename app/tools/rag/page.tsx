@@ -272,21 +272,23 @@ export default function Home() {
                 <CardTitle className="text-lg font-medium">Available Documents</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex flex-col gap-2">
-                  {fetchedFiles.map((fileName, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center p-2 rounded-lg border dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-                    >
-                      <Checkbox
-                        checked={selectedDocs.includes(fileName)}
-                        onCheckedChange={() => toggleDocumentSelection(fileName)}
-                        className="mr-2"
-                      />
-                      <FileText className="h-4 w-4 mr-2 text-neutral-500" />
-                      <span className="text-sm truncate" title={fileName}>{fileName}</span>
-                    </div>
-                  ))}
+                <div className="max-h-[400px] overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
+                  <div className="flex flex-col gap-2">
+                    {fetchedFiles.map((fileName, index) => (
+                      <div
+                        key={index}
+                        className="flex items-center p-2 rounded-lg border dark:border-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+                      >
+                        <Checkbox
+                          checked={selectedDocs.includes(fileName)}
+                          onCheckedChange={() => toggleDocumentSelection(fileName)}
+                          className="mr-2"
+                        />
+                        <FileText className="h-4 w-4 mr-2 text-neutral-500" />
+                        <span className="text-sm truncate" title={fileName}>{fileName}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </CardContent>
             </Card>

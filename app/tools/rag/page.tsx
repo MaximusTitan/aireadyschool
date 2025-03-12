@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { Checkbox } from "@/components/ui/checkbox";
 import { createClient } from "@/utils/supabase/client";
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
@@ -204,18 +206,19 @@ export default function Home() {
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               {chat.map((msg, i) => (
                 <div
-                  key={i}
-                  className={cn(
-                    "p-4 rounded-lg max-w-[80%]",
-                    msg.role === "user"
-                      ? "ml-auto bg-neutral-500 text-white"
-                      : msg.role === "assistant"
-                        ? "bg-neutral-100 dark:bg-neutral-800"
-                        : "bg-neutral-200 dark:bg-neutral-800 italic"
-                  )}
-                >
-                  {msg.content}
-                </div>
+                key={i}
+                className={cn(
+                  "p-4 rounded-lg max-w-[80%]",
+                  msg.role === "user"
+                    ? "ml-auto bg-neutral-500 text-white"
+                    : msg.role === "assistant"
+                    ? "bg-neutral-100 dark:bg-neutral-800"
+                    : "bg-neutral-200 dark:bg-neutral-800 italic"
+                )}
+                style={{ whiteSpace: 'normal', lineHeight: '1.8' }}
+              >
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{msg.content}</ReactMarkdown>
+              </div>      
               ))}
               {loading && (
                 <div className="flex items-center justify-center p-4">

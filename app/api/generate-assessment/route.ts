@@ -159,19 +159,20 @@ export async function PUT(req: Request) {
     if (questions) updateData.questions = questions
     if (answers) updateData.answers = answers
 
+    // Remove the user_email check to allow students to submit answers
     const { data, error } = await supabase
       .from("assessments")
       .update(updateData)
       .eq("id", id)
-      .eq("user_email", user.email)
       .select()
+      .single()
 
     if (error) {
       throw error
     }
 
-    if (!data || data.length === 0) {
-      throw new Error("No data returned after update")
+    if (!data) {
+      throw new Error("Assessment not found")
     }
 
     return NextResponse.json({ success: true, data })
@@ -181,7 +182,6 @@ export async function PUT(req: Request) {
       {
         error: "Failed to update assessment",
         details: error instanceof Error ? error.message : "An unknown error occurred",
-        stack: process.env.NODE_ENV === "development" && error instanceof Error ? error.stack : undefined,
       },
       { status: 500 },
     )

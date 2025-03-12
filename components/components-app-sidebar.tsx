@@ -94,6 +94,11 @@ export function AppSidebar() {
         url: "/learn-ai",
         icon: BrainCircuit,
       },
+      {
+        title: "Activities",
+        url: "/activities",
+        icon: Frame,
+      },
       // {
       //   title: "Games",
       //   url: "/games",
@@ -111,7 +116,8 @@ export function AppSidebar() {
               title: "Knowledge Base",
               url: "/knowledge-base",
               icon: LibraryBig,
-            },{
+            },
+            {
               title: "Schools",
               url: "/schools",
               icon: School,

@@ -24,6 +24,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import SavedAssessments from "./components/savedAssessments";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { format } from "date-fns";
+import { Calendar } from "@/components/ui/calendar";
 
 const supabase = createClient();
 
@@ -45,7 +55,21 @@ interface DocumentFile {
   grade: string;
   education_board: string;
   subject: string;
-  file_url: string;  //topic of a selectedDoc is just the file_url
+  file_url: string; //topic of a selectedDoc is just the file_url
+}
+
+interface Assignment {
+  grade_id: string;
+  section_id: string;
+  grade_name: string;
+  section_name: string;
+}
+
+interface Student {
+  id: string;
+  email: string;
+  grade_name: string;
+  section_name: string;
 }
 
 export default function Home() {
@@ -83,6 +107,17 @@ export default function Home() {
   >([]);
   const [documentFiles, setDocumentFiles] = useState<DocumentFile[]>([]);
   const [isDocumentSelected, setIsDocumentSelected] = useState(false);
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
+  const [selectedSection, setSelectedSection] = useState<string>("");
+  const [selectedStudent, setSelectedStudent] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [assignmentType, setAssignmentType] = useState<"class" | "student">(
+    "class"
+  );
+  const [teacherId, setTeacherId] = useState<string>("");
 
   // --- Handlers for updating form fields ---
   const handleBoardChange = (value: string) =>
@@ -101,10 +136,10 @@ export default function Home() {
         board: selectedDoc.education_board,
         classLevel: selectedDoc.grade,
         subject: selectedDoc.subject,
-        topic: selectedDoc.file_url, //topic of a selectedDoc is just the file_url 
+        topic: selectedDoc.file_url, //topic of a selectedDoc is just the file_url
         selectedDocument: docId,
       }));
-      setIsDocumentSelected(true); 
+      setIsDocumentSelected(true);
       console.log("Updated form data:", {
         board: selectedDoc.education_board,
         classLevel: selectedDoc.grade,
@@ -127,6 +162,17 @@ export default function Home() {
       } = await supabase.auth.getUser();
       if (userError) throw userError;
       if (!user) throw new Error("User not authenticated");
+
+      // Fetch teacher ID
+      const { data: teacherData } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (teacherData) {
+        setTeacherId(teacherData.id);
+      }
 
       await Promise.all([
         fetchSavedAssessments(user.email || ""),
@@ -163,6 +209,77 @@ export default function Home() {
     } catch (error) {
       console.error("Error fetching knowledge_base docs:", error);
       setError("Failed to fetch documents. Please try again.");
+    }
+  };
+
+  const fetchTeacherAssignments = async (teacherId: string) => {
+    try {
+      const { data: assignmentData } = await supabase
+        .from("teacher_assignments")
+        .select(
+          `
+          grade_id,
+          section_id,
+          grades (name),
+          sections (name)
+        `
+        )
+        .eq("teacher_id", teacherId);
+
+      if (assignmentData) {
+        const unique = Array.from(
+          new Map(
+            (assignmentData as any[]).map((item) => [
+              `${item.grade_id}-${item.section_id}`,
+              {
+                grade_id: item.grade_id,
+                section_id: item.section_id,
+                grade_name: item.grades?.name,
+                section_name: item.sections?.name,
+              },
+            ])
+          ).values()
+        );
+        setAssignments(unique);
+
+        // Fetch students
+        const { data: studentData } = await supabase.from("school_students")
+          .select(`
+            id,
+            user_id,
+            grade_id,
+            section_id
+          `);
+
+        if (studentData) {
+          const studentsWithEmail = await Promise.all(
+            studentData
+              .filter((stu: any) =>
+                unique.some(
+                  (a) =>
+                    a.grade_id === stu.grade_id &&
+                    a.section_id === stu.section_id
+                )
+              )
+              .map(async (stu: any) => {
+                const { data: userData } = await supabase
+                  .from("users")
+                  .select("email")
+                  .eq("user_id", stu.user_id)
+                  .single();
+                return {
+                  id: stu.id,
+                  email: userData?.email || "No email",
+                  grade_name: "",
+                  section_name: "",
+                };
+              })
+          );
+          setStudents(studentsWithEmail);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching teacher assignments:", error);
     }
   };
 
@@ -334,6 +451,53 @@ export default function Home() {
     }
   };
 
+  const handleAssignAssessment = async () => {
+    if (!assessmentId || !dueDate) return;
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) throw new Error("User not authenticated");
+
+      const { data: teacherData } = await supabase
+        .from("teachers")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!teacherData) throw new Error("Teacher not found");
+
+      const assignmentData = {
+        assessment_id: assessmentId,
+        teacher_id: teacherData.id,
+        due_date: dueDate.toISOString(),
+        ...(assignmentType === "class"
+          ? {
+              grade_id: JSON.parse(selectedClass).grade_id,
+              section_id: JSON.parse(selectedClass).section_id,
+              student_id: null,
+            }
+          : {
+              grade_id: selectedGrade,
+              section_id: selectedSection,
+              student_id: selectedStudent,
+            }),
+      };
+
+      const { error } = await supabase
+        .from("assigned_assessments")
+        .insert(assignmentData);
+
+      if (error) throw error;
+
+      alert("Assessment assigned successfully!");
+    } catch (error) {
+      console.error("Error assigning assessment:", error);
+      alert("Failed to assign assessment. Please try again.");
+    }
+  };
+
   const handleReset = () => {
     setAssessment(null);
     setAssessmentId(null);
@@ -393,7 +557,9 @@ export default function Home() {
                       <SelectValue placeholder="Select a document" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="_none">None (Input manually)</SelectItem>
+                      <SelectItem value="_none">
+                        None (Input manually)
+                      </SelectItem>
                       {documentFiles.map((doc) => (
                         <SelectItem key={doc.id} value={doc.id}>
                           {doc.subject} - Grade {doc.grade}
@@ -409,13 +575,17 @@ export default function Home() {
                     <div className="w-full border-t border-gray-300"></div>
                   </div>
                   <div className="relative flex justify-center text-sm">
-                    <span className="px-4 text-neutral-500 bg-white font-medium">OR</span>
+                    <span className="px-4 text-neutral-500 bg-white font-medium">
+                      OR
+                    </span>
                   </div>
                 </div>
 
                 {/* Manual Input Section */}
                 <div className="mt-8 space-y-4">
-                  <h3 className="text-lg font-semibold mb-4">Option 2: Fill details</h3>
+                  <h3 className="text-lg font-semibold mb-4">
+                    Option 2: Fill details
+                  </h3>
                   {isDocumentSelected ? (
                     <>
                       <div className="grid md:grid-cols-1 gap-8">
@@ -552,6 +722,157 @@ export default function Home() {
                   >
                     ← Back to Generator
                   </Button>
+
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="default"
+                        className="bg-rose-500 hover:bg-rose-600"
+                        onClick={() => {
+                          if (teacherId) {
+                            fetchTeacherAssignments(teacherId);
+                          } else {
+                            alert("Teacher ID not found. Please try again.");
+                          }
+                        }}
+                      >
+                        Assign Assessment
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[425px]">
+                      <DialogHeader>
+                        <DialogTitle>Assign Assessment</DialogTitle>
+                      </DialogHeader>
+
+                      <Tabs
+                        value={assignmentType}
+                        onValueChange={(val) =>
+                          setAssignmentType(val as "class" | "student")
+                        }
+                      >
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="class">Entire Class</TabsTrigger>
+                          <TabsTrigger value="student">
+                            Single Student
+                          </TabsTrigger>
+                        </TabsList>
+
+                        <TabsContent value="class" className="space-y-4">
+                          <select
+                            value={selectedClass}
+                            onChange={(e) => setSelectedClass(e.target.value)}
+                            className="w-full p-2 border rounded"
+                          >
+                            <option value="">Select Class</option>
+                            {assignments.map((assignment) => (
+                              <option
+                                key={`${assignment.grade_id}-${assignment.section_id}`}
+                                value={JSON.stringify(assignment)}
+                              >
+                                {assignment.grade_name} -{" "}
+                                {assignment.section_name}
+                              </option>
+                            ))}
+                          </select>
+                        </TabsContent>
+
+                        <TabsContent value="student" className="space-y-4">
+                          <select
+                            value={selectedGrade}
+                            onChange={(e) => {
+                              setSelectedGrade(e.target.value);
+                              setSelectedSection("");
+                              setSelectedStudent("");
+                            }}
+                            className="w-full p-2 border rounded"
+                          >
+                            <option value="">Select Grade</option>
+                            {Array.from(
+                              new Map(
+                                assignments.map((a) => [
+                                  a.grade_id,
+                                  {
+                                    grade_id: a.grade_id,
+                                    grade_name: a.grade_name,
+                                  },
+                                ])
+                              ).values()
+                            ).map((item) => (
+                              <option key={item.grade_id} value={item.grade_id}>
+                                {item.grade_name}
+                              </option>
+                            ))}
+                          </select>
+
+                          {selectedGrade && (
+                            <select
+                              value={selectedSection}
+                              onChange={(e) => {
+                                setSelectedSection(e.target.value);
+                                setSelectedStudent("");
+                              }}
+                              className="w-full p-2 border rounded"
+                            >
+                              <option value="">Select Section</option>
+                              {assignments
+                                .filter((a) => a.grade_id === selectedGrade)
+                                .map((a) => (
+                                  <option
+                                    key={a.section_id}
+                                    value={a.section_id}
+                                  >
+                                    {a.section_name}
+                                  </option>
+                                ))}
+                            </select>
+                          )}
+
+                          {selectedGrade && selectedSection && (
+                            <select
+                              value={selectedStudent}
+                              onChange={(e) =>
+                                setSelectedStudent(e.target.value)
+                              }
+                              className="w-full p-2 border rounded"
+                            >
+                              <option value="">Select Student</option>
+                              {students.map((student) => (
+                                <option key={student.id} value={student.id}>
+                                  {student.email}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </TabsContent>
+                      </Tabs>
+
+                      <div className="mt-4">
+                        <label className="block text-sm font-medium mb-2">
+                          Due Date
+                        </label>
+                        <Calendar
+                          mode="single"
+                          selected={dueDate}
+                          onSelect={setDueDate}
+                          className="rounded-md border"
+                          disabled={(date) => date < new Date()}
+                        />
+                      </div>
+
+                      <Button
+                        onClick={handleAssignAssessment}
+                        className="w-full mt-4"
+                        disabled={
+                          !dueDate ||
+                          (assignmentType === "class"
+                            ? !selectedClass
+                            : !selectedStudent)
+                        }
+                      >
+                        Assign
+                      </Button>
+                    </DialogContent>
+                  </Dialog>
                 </div>
                 <Assessment
                   assessment={assessment}

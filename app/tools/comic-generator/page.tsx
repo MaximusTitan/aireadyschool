@@ -97,7 +97,9 @@ export default function ComicGenerator() {
     setLoading(true);
 
     try {
+      // Ensure we're using the actual requested panel count from state
       const actualRequestedPanels = Number(requestedPanels) || 8;
+      console.log(`Generating comic with ${actualRequestedPanels} panels`);
       
       const promptResponse = await fetch("/api/prompt-generator", {
         method: "POST",
@@ -105,7 +107,7 @@ export default function ComicGenerator() {
         body: JSON.stringify({ 
           prompt: submittedPrompt, 
           provider,
-          numPanels: actualRequestedPanels + 1
+          numPanels: actualRequestedPanels + 1  // +1 for title panel
         }),
       });
       
@@ -309,9 +311,20 @@ export default function ComicGenerator() {
   };
 
   const handleAdvancedFormSubmit = async (formData: ComicFormData, provider: string) => {
-    const generatedPrompt = buildPromptFromFormData(formData);
+    // Ensure we capture the panel count from the form
+    const panelCount = Number(formData.numPanels);
+    
+    // Update state to store the requested panel count
+    setRequestedPanels(panelCount);
+    console.log(`Panel count selected: ${panelCount}`);
+    
+    // Set comic style from form
     setComicStyleFromForm(formData.comicStyle);
-    setRequestedPanels(Number(formData.numPanels));
+    
+    // Generate the prompt with the specified panel count
+    const generatedPrompt = buildPromptFromFormData(formData);
+    
+    // Submit for processing
     await handleSubmitWithPrompt(generatedPrompt, provider);
   };
 

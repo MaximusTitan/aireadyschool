@@ -167,6 +167,12 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
     const format = getFormatForPanelCount(panelCount);
     const structure = COMIC_FORMATS[format];
 
+    // Explicitly ensure panel count is updated in the form data
+    setFormData(prev => ({
+      ...prev,
+      numPanels: value
+    }));
+
     // Regenerate form data based on new panel count
     if (formData.title) {
       setAiLoading(true);

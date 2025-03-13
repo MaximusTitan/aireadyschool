@@ -99,6 +99,12 @@ export default function ComicPanelLayout({
   const panelsPerPage = 4;
   const totalPages = Math.ceil(contentPanels / panelsPerPage);
 
+  // Log panel info for debugging
+  useEffect(() => {
+    console.log(`ComicPanelLayout received: ${images.length} images, panelCount: ${panelCount}`);
+    console.log(`Content panels: ${contentPanels}, panels per page: ${panelsPerPage}, total pages: ${totalPages}`);
+  }, [images, panelCount, contentPanels, panelsPerPage, totalPages]);
+
   // Get content for current page
   const getPageContent = () => {
     if (!images || !descriptions) return { pageImages: [], pageDialogues: [] };
@@ -178,11 +184,11 @@ export default function ComicPanelLayout({
                 {pageDialogues[index] && (
                   <div className={`
                     absolute bottom-3 left-3 right-3 
-                    bg-white p-3 border-2 border-black 
+                    bg-white p-2 border-2 border-black 
                     ${styleConfig.speechBubbleStyle} 
                     text-center shadow-md
                   `}>
-                    <p className="font-comic leading-snug max-h-24 overflow-hidden">
+                    <p className="font-comic text-sm leading-tight max-h-20 overflow-hidden">
                       {pageDialogues[index]}
                     </p>
                   </div>

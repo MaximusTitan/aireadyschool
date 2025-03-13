@@ -38,15 +38,19 @@ export async function POST(request: Request) {
       prompts.map(async (prompt) => {
         try {
           return await retryFetch(async () => {
-            // Fixed subscription configuration
-            const result: ImageResult = await fal.subscribe("fal-ai/fast-sdxl", {
+            // Updated to use flux model with appropriate parameters
+            const result: ImageResult = await fal.subscribe("fal-ai/flux/dev", {
               input: {
                 prompt: `high quality, comic book style art, detailed illustration, professional comic art style, ${prompt}`,
-                image_size: "landscape_16_9",
+                negative_prompt: "blurry, bad anatomy, disfigured, poorly drawn face, mutation, mutated, extra limb, ugly, poorly drawn hands, text, out of frame, extra legs, signature, watermark, username, bad proportions, deformed, malformed limbs, missing arms, missing legs",
                 num_inference_steps: 30,
+                width: 768,
+                height: 512,
                 guidance_scale: 7.5,
                 style_preset: "comic-book",
                 seed: Math.floor(Math.random() * 1000000),
+                scheduler: "dpmpp_2m",
+                apply_watermark: false,
               },
               pollInterval: 1000, // 1 second
               timeout: 30000,     // 30 seconds

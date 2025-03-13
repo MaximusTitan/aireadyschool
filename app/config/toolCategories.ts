@@ -138,6 +138,18 @@ export const categories: CategoryTools = {
         icon: Video
       },
       {
+        title: "Video Editor",
+        description: "Edit videos",
+        route: "/tools/video-editor",
+        icon: Video
+      },
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
+      },
+      {
         title: "Presentation Generator",
         description: "Create presentations",
         route: "/tools/presentation",
@@ -271,6 +283,18 @@ export const categories: CategoryTools = {
         description: "Generate videos from images",
         route: "/tools/video-generator",
         icon: Video
+      },
+      {
+        title: "Video Editor",
+        description: "Edit videos",
+        route: "/tools/video-editor",
+        icon: Video
+      },
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
       },
       {
         title: "Presentation Generator",

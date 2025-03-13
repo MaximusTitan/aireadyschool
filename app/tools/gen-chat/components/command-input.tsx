@@ -38,14 +38,14 @@ const placeholders = {
     thinking: "Thinking...",
     prompt: "Type / for commands or ask a question...",
     viewOnly: "View only - you don't own this chat",
-    recording: "Recording... Click to stop"
+    recording: "Recording... Click to stop",
   },
   hindi: {
     thinking: "सोच रहा हूँ...",
     prompt: "कमांड के लिए / टाइप करें या प्रश्न पूछें...",
     viewOnly: "केवल देखें - यह चैट आपके स्वामित्व में नहीं है",
-    recording: "रिकॉर्डिंग... रोकने के लिए क्लिक करें"
-  }
+    recording: "रिकॉर्डिंग... रोकने के लिए क्लिक करें",
+  },
 };
 
 type CommandInputProps = {
@@ -117,20 +117,24 @@ export const CommandInput = ({
       };
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: "audio/wav",
+        });
         await processAudioToText(audioBlob);
-        
+
         // Stop all tracks in the stream to release the microphone
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach((track) => track.stop());
       };
 
       mediaRecorder.start();
       setIsRecording(true);
     } catch (error) {
       console.error("Error starting recording:", error);
-      alert(language === 'english' 
-        ? "Could not access microphone. Please check permissions." 
-        : "माइक्रोफ़ोन तक पहुंच नहीं सकता। कृपया अनुमतियां जांचें।");
+      alert(
+        language === "english"
+          ? "Could not access microphone. Please check permissions."
+          : "माइक्रोफ़ोन तक पहुंच नहीं सकता। कृपया अनुमतियां जांचें।"
+      );
     }
   };
 
@@ -152,70 +156,73 @@ export const CommandInput = ({
 
   const processAudioToText = async (audioBlob: Blob) => {
     try {
-      const apiKeyResponse = await fetch('/api/elevenlabs-key');
+      const apiKeyResponse = await fetch("/api/elevenlabs-key");
       if (!apiKeyResponse.ok) {
-        throw new Error('Failed to get ElevenLabs API key');
+        throw new Error("Failed to get ElevenLabs API key");
       }
       const { apiKey } = await apiKeyResponse.json();
-      
+
       if (!apiKey) {
-        throw new Error('ElevenLabs API key not found');
+        throw new Error("ElevenLabs API key not found");
       }
-      
+
       // Initialize client with API key from backend
       const client = new ElevenLabsClient({
-        apiKey
+        apiKey,
       });
-      
+
       const transcription = await client.speechToText.convert({
         file: audioBlob,
         model_id: "scribe_v1",
         tag_audio_events: true,
-        language_code: language === 'hindi' ? "hin" : "eng",
+        language_code: language === "hindi" ? "hin" : "eng",
       });
-      
+
       // Update the input field with the transcription
       if (transcription.text) {
         const transcribedText = transcription.text.trim();
         onInputChange(transcribedText);
-        
+
         // Focus the input after transcription
         inputRef.current?.focus();
-        
+
         // If we have text, submit the form automatically after a short delay
         if (transcribedText) {
           setTimeout(() => {
             if (formRef.current && !isLoading) {
               formRef.current.dispatchEvent(
-                new Event('submit', { cancelable: true, bubbles: true })
+                new Event("submit", { cancelable: true, bubbles: true })
               );
             }
-          }, 10); // Short delay to allow UI update
+          }, 5); // Short delay to allow UI update
         }
       }
     } catch (error) {
       console.error("Error processing speech to text:", error);
-      alert(language === 'english' 
-        ? "Failed to process speech. Please try again." 
-        : "भाषण को प्रोसेस करने में विफल। कृपया पुन: प्रयास करें।");
+      alert(
+        language === "english"
+          ? "Failed to process speech. Please try again."
+          : "भाषण को प्रोसेस करने में विफल। कृपया पुन: प्रयास करें।"
+      );
     } finally {
       setIsProcessingSpeech(false);
     }
   };
 
-  const currentPlaceholders = placeholders[language as keyof typeof placeholders] || placeholders.english;
-  
+  const currentPlaceholders =
+    placeholders[language as keyof typeof placeholders] || placeholders.english;
+
   // Determine if input should be disabled
   const isDisabled = isLoading || !isOwner;
-  
+
   // Determine appropriate placeholder text
   const placeholderText = isLoading
     ? currentPlaceholders.thinking
     : !isOwner
-    ? currentPlaceholders.viewOnly
-    : isRecording
-    ? currentPlaceholders.recording
-    : currentPlaceholders.prompt;
+      ? currentPlaceholders.viewOnly
+      : isRecording
+        ? currentPlaceholders.recording
+        : currentPlaceholders.prompt;
 
   return (
     <form
@@ -230,8 +237,8 @@ export const CommandInput = ({
           disabled={isDisabled || isProcessingSpeech}
           className={cn(
             "p-3 rounded-lg text-white",
-            isRecording 
-              ? "bg-rose-500 hover:bg-rose-600 animate-pulse" 
+            isRecording
+              ? "bg-rose-500 hover:bg-rose-600 animate-pulse"
               : "bg-neutral-800 hover:bg-neutral-700",
             "disabled:opacity-50 transition-colors"
           )}
@@ -242,7 +249,13 @@ export const CommandInput = ({
         <input
           ref={inputRef}
           type="text"
-          value={isProcessingSpeech ? (language === 'english' ? 'Processing speech...' : 'भाषण प्रसंस्करण...') : input}
+          value={
+            isProcessingSpeech
+              ? language === "english"
+                ? "Processing speech..."
+                : "भाषण प्रसंस्करण..."
+              : input
+          }
           onChange={handleInputChange}
           onKeyDown={handleKeyDown}
           placeholder={placeholderText}
@@ -303,11 +316,11 @@ export const CommandInput = ({
           </div>
         )}
       </div>
-      
+
       {!isOwner && (
         <div className="mt-2 text-xs text-center text-amber-600">
-          {language === "english" 
-            ? "You are viewing a chat that belongs to someone else" 
+          {language === "english"
+            ? "You are viewing a chat that belongs to someone else"
             : "आप किसी और के स्वामित्व वाली चैट देख रहे हैं"}
         </div>
       )}

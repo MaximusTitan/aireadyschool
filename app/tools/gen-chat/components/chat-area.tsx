@@ -48,6 +48,9 @@ export const ChatArea = ({
   const toolsContentRef = useRef<HTMLDivElement>(null);
   const ttsControllerRef = useRef<AbortController | null>(null);
 
+  // Add ref to track previous isLoading state
+  const prevIsLoadingRef = useRef(isLoading);
+
   const toolInvocations = messages.flatMap(
     (message) => message.toolInvocations || []
   );
@@ -165,10 +168,10 @@ export const ChatArea = ({
     }
   };
 
-  // Watch for loading state changes to trigger TTS only when a new message is received during loading
+  // Watch for loading state changes to trigger TTS only when finishing text generation.
   useEffect(() => {
-    // If we were loading and now we're not, and audio is enabled, read the last assistant message
     if (
+      prevIsLoadingRef.current &&
       !isLoading &&
       messages.length > 0 &&
       isAudioEnabled &&
@@ -183,6 +186,7 @@ export const ChatArea = ({
         handleTTS(lastMessage.id, lastMessage.content);
       }
     }
+    prevIsLoadingRef.current = isLoading;
   }, [isLoading, messages, isAudioEnabled, hasUserInteracted]);
 
   const handleVideoComplete = (toolCallId: string, videoUrl: string) => {

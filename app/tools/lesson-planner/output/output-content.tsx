@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { useState, useEffect, useCallback } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
@@ -524,39 +524,6 @@ export default function OutputContent() {
           </table>
         </div>
       </div>
-
-      <div className="border-t border-gray-200 pt-6 mt-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Teaching Aids</h3>
-          <Button variant="ghost" size="icon" onClick={() => handleEdit("teachingAids", day.teachingAids, day.day - 1)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        </div>
-        <ul className="list-disc pl-5 space-y-1">
-          {day.teachingAids.map((aid, index) => (
-            <li key={index} className="text-gray-600">
-              {aid}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6 mt-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold">Assignment</h3>
-          <Button variant="ghost" size="icon" onClick={() => handleEdit("assignment", day.assignment, day.day - 1)}>
-            <Edit className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="text-gray-600 mb-2">{day.assignment.description}</p>
-        <ul className="list-disc pl-5 space-y-1">
-          {day.assignment.tasks.map((task, index) => (
-            <li key={index} className="text-gray-600">
-              {task}
-            </li>
-          ))}
-        </ul>
-      </div>
     </div>
   )
 
@@ -715,13 +682,7 @@ export default function OutputContent() {
         yOffset += 2
       })
 
-      // Teaching Aids
-      checkNewPage()
-      addHeading("Teaching Aids:", 14)
-      day.teachingAids.forEach((aid) => {
-        checkNewPage()
-        addBulletPoint(aid)
-      })
+     
 
       // Assignment
       checkNewPage()

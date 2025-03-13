@@ -91,33 +91,63 @@ export default function ComicGenerator() {
     }
   };
 
-  const handleSubmitWithPrompt = async (submittedPrompt: string, provider: string = aiProvider) => {
+  const handleSubmitWithPrompt = async (
+    submittedPrompt: string, 
+    provider: string = aiProvider,
+    overridePanels?: number,  // Add parameter to override panel count
+    overrideStyle?: string    // Add parameter to override style
+  ) => {
     setImageData({ urls: [], descriptions: [], dialogues: [] });
     setLoadedImages([]);
     setLoading(true);
 
     try {
-      // Ensure we're using the actual requested panel count from state
-      const actualRequestedPanels = Number(requestedPanels) || 8;
-      console.log(`Generating comic with ${actualRequestedPanels} panels`);
+      // Use override parameters if provided, otherwise use state values
+      const actualRequestedPanels = overridePanels || Number(requestedPanels);
+      const actualComicStyle = overrideStyle || comicStyleFromForm;
       
+      // Additional validation
+      if (isNaN(actualRequestedPanels) || actualRequestedPanels <= 0) {
+        throw new Error("Invalid panel count. Please select a number of panels.");
+      }
+      
+      if (!actualComicStyle) {
+        throw new Error("Missing comic style. Please select a style.");
+      }
+      
+      // Log what we're actually using for generation
+      console.log(`GENERATING COMIC: ${actualRequestedPanels} panels, style: ${actualComicStyle}`);
+      
+      // Pass the actual values in API calls
       const promptResponse = await fetch("/api/prompt-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
           prompt: submittedPrompt, 
           provider,
-          numPanels: actualRequestedPanels + 1  // +1 for title panel
+          numPanels: actualRequestedPanels + 1,  // +1 for title panel
+          enforceCount: true 
         }),
       });
       
       const promptData = await promptResponse.json();
       if (!promptResponse.ok) throw new Error(promptData.message);
 
+      // Log scene descriptions and dialogues separately
+      console.log("Scene descriptions for image generation:", promptData.prompts);
+      console.log("Dialogues for speech bubbles (not used for images):", promptData.dialogues);
+
+      // Pass prompts and dialogues separately to the image generator API
+      // The API will only use prompts for image generation, but we still pass dialogues for reference
       const imageResponse = await fetch("/api/image-generator", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompts: promptData.prompts }),
+        body: JSON.stringify({ 
+          prompts: promptData.prompts,
+          dialogues: promptData.dialogues, // Still passed but won't be used for image generation
+          comicStyle: actualComicStyle,
+          panelCount: actualRequestedPanels
+        }),
       });
       
       const imageGenData = await imageResponse.json();
@@ -139,8 +169,8 @@ export default function ComicGenerator() {
         image_urls: imageGenData.imageUrls,
         descriptions: promptData.prompts,
         dialogues: promptData.dialogues || promptData.prompts,
-        panel_count: Number(requestedPanels),
-        comic_style: comicStyleFromForm,
+        panel_count: actualRequestedPanels,
+        comic_style: actualComicStyle,
         title: promptData.title || submittedPrompt,
       });
 
@@ -150,10 +180,10 @@ export default function ComicGenerator() {
       });
 
     } catch (error) {
-      console.error("Error:", error);
+      console.error("Error generating comic:", error);
       toast({
         title: "Error",
-        description: "Failed to save comic. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to generate comic. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -311,25 +341,56 @@ export default function ComicGenerator() {
   };
 
   const handleAdvancedFormSubmit = async (formData: ComicFormData, provider: string) => {
-    // Ensure we capture the panel count from the form
+    // Log the full form data for debugging
+    console.log("Advanced form submit - received data:", JSON.stringify(formData, null, 2));
+    
+    // Extract panel count and style from the submitted form data
     const panelCount = Number(formData.numPanels);
+    const comicStyle = formData.comicStyle;
     
-    // Update state to store the requested panel count
+    // Validate critical values
+    if (!panelCount || isNaN(panelCount)) {
+      toast({
+        title: "Invalid panel count",
+        description: "Please select a valid number of panels",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!comicStyle) {
+      toast({
+        title: "Missing style",
+        description: "Please select a comic style",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Update state for future reference (but don't depend on it for this request)
     setRequestedPanels(panelCount);
-    console.log(`Panel count selected: ${panelCount}`);
+    setComicStyleFromForm(comicStyle);
     
-    // Set comic style from form
-    setComicStyleFromForm(formData.comicStyle);
+    // Force log to verify the values
+    console.log(`Setting requested panels to: ${panelCount}`);
+    console.log(`Setting comic style to: ${comicStyle}`);
+    console.log(`Form data panels value: ${formData.numPanels}`);
     
     // Generate the prompt with the specified panel count
     const generatedPrompt = buildPromptFromFormData(formData);
     
-    // Submit for processing
-    await handleSubmitWithPrompt(generatedPrompt, provider);
+    // Submit for processing with the form data parameters directly
+    await handleSubmitWithPrompt(
+      generatedPrompt, 
+      provider,
+      panelCount,  // Pass panel count directly
+      comicStyle   // Pass comic style directly
+    );
   };
 
   const buildPromptFromFormData = (data: ComicFormData): string => {
-    return `Create a ${data.numPanels}-panel ${data.comicStyle} comic titled "${data.title}" featuring ${data.mainCharacters} set in ${data.setting}. The dialogue should be ${data.dialogueTone.toLowerCase()} with a ${data.endingStyle.toLowerCase()}. ${data.additionalDetails}`;
+    // Build a prompt string that includes all relevant form fields
+    return `Create a ${data.numPanels}-panel ${data.comicStyle.toLowerCase()} comic titled "${data.title}" featuring ${data.mainCharacters} set in ${data.setting}. The dialogue should be ${data.dialogueTone.toLowerCase()} with a ${data.endingStyle.toLowerCase()}. ${data.additionalDetails}`;
   };
 
   const fetchUserComics = async () => {
@@ -458,15 +519,7 @@ export default function ComicGenerator() {
                     <Maximize2 className="h-5 w-5" />
                     <span>Fullscreen</span>
                   </Button>
-                  <Button
-                    variant="ghost"
-                    onClick={downloadPDF}
-                    className="flex items-center gap-2"
-                    disabled={loading}
-                  >
-                    <FileText className="h-5 w-5" />
-                    <span>{loading ? 'Generating PDF...' : 'Download PDF'}</span>
-                  </Button>
+                  
                 </div>
                 <div className="text-foreground">
                   {imageData.urls.length} panels generated

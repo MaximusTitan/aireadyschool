@@ -5,6 +5,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getComicStyle } from "@/types/comic-styles";
 
 interface ComicPanelLayoutProps {
   images: string[];
@@ -12,38 +13,6 @@ interface ComicPanelLayoutProps {
   panelCount: number;
   comicStyle?: string;
 }
-
-// Style variations for different comic styles
-const COMIC_STYLE_CONFIG = {
-  Cartoon: {
-    speechBubbleStyle: "rounded-xl",
-    panelGap: 5,
-    borderWidth: 2,
-    fontFamily: "Comic Neue, sans-serif",
-    effectsEnabled: true,
-  },
-  Manga: {
-    speechBubbleStyle: "rounded-sm",
-    panelGap: 3,
-    borderWidth: 3,
-    fontFamily: "Manga, Comic Neue, sans-serif",
-    effectsEnabled: true,
-  },
-  Classic: {
-    speechBubbleStyle: "rounded-none",
-    panelGap: 8,
-    borderWidth: 1,
-    fontFamily: "Comic Neue, serif",
-    effectsEnabled: false,
-  },
-  "3D": {
-    speechBubbleStyle: "rounded-3xl",
-    panelGap: 6,
-    borderWidth: 4,
-    fontFamily: "Arial, sans-serif",
-    effectsEnabled: true,
-  },
-};
 
 // Panel layout grid for different panel counts
 const PANEL_LAYOUTS = {
@@ -76,7 +45,16 @@ export default function ComicPanelLayout({
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const styleConfig = COMIC_STYLE_CONFIG[comicStyle as keyof typeof COMIC_STYLE_CONFIG] || COMIC_STYLE_CONFIG.Cartoon;
+  
+  // Get style configuration from the comic styles
+  const styleConfig = getComicStyle(comicStyle).uiConfig;
+
+  // Log panel info for debugging
+  useEffect(() => {
+    console.log(`ComicPanelLayout received: ${images.length} images, panelCount: ${panelCount}`);
+    console.log(`Content panels: ${contentPanels}, panels per page: ${panelsPerPage}, total pages: ${totalPages}`);
+    console.log(`Comic style: ${comicStyle}`);
+  }, [images, panelCount, comicStyle]);
 
   // Set up container dimensions
   useEffect(() => {
@@ -99,12 +77,6 @@ export default function ComicPanelLayout({
   const panelsPerPage = 4;
   const totalPages = Math.ceil(contentPanels / panelsPerPage);
 
-  // Log panel info for debugging
-  useEffect(() => {
-    console.log(`ComicPanelLayout received: ${images.length} images, panelCount: ${panelCount}`);
-    console.log(`Content panels: ${contentPanels}, panels per page: ${panelsPerPage}, total pages: ${totalPages}`);
-  }, [images, panelCount, contentPanels, panelsPerPage, totalPages]);
-
   // Get content for current page
   const getPageContent = () => {
     if (!images || !descriptions) return { pageImages: [], pageDialogues: [] };
@@ -116,6 +88,11 @@ export default function ComicPanelLayout({
       pageImages: images.slice(startIdx, endIdx),
       pageDialogues: descriptions.slice(startIdx, endIdx),
     };
+  };
+
+  // Extract dialogue without effects notation for alt text
+  const cleanDialogue = (dialogue: string): string => {
+    return dialogue.replace(/\[.*?\]/g, '').trim();
   };
 
   // Navigation
@@ -156,6 +133,11 @@ export default function ComicPanelLayout({
           const panel = PANEL_LAYOUTS[4][index];
           if (!panel) return null;
 
+          // Get dialogue for this panel and make it readable
+          const dialogue = pageDialogues[index] || "";
+          const cleanedDialogue = cleanDialogue(dialogue);
+          const hasSoundEffects = dialogue.includes('[') && dialogue.includes(']');
+          
           return (
             <motion.div
               key={`panel-${currentPage}-${index}`}
@@ -170,26 +152,29 @@ export default function ComicPanelLayout({
                 height: `${panel.h}%`,
                 transform: `rotate(${panel.rotate}deg)`,
                 zIndex: panel.zIndex,
+                borderWidth: styleConfig.borderWidth,
               }}
             >
               <div className="relative w-full h-full">
                 <Image
                   src={imageUrl}
-                  alt={`Panel ${index + 1}`}
+                  alt={`Comic panel showing: ${cleanedDialogue}`}
                   fill
                   className="object-cover"
                   sizes={`${dimensions.width * (panel.w/100)}px`}
                   priority={index < 2}
                 />
-                {pageDialogues[index] && (
+                
+                {dialogue && (
                   <div className={`
                     absolute bottom-3 left-3 right-3 
                     bg-white p-2 border-2 border-black 
                     ${styleConfig.speechBubbleStyle} 
                     text-center shadow-md
+                    ${hasSoundEffects ? 'has-effects' : ''}
                   `}>
-                    <p className="font-comic text-sm leading-tight max-h-20 overflow-hidden">
-                      {pageDialogues[index]}
+                    <p className={`font-${styleConfig.fontFamily} text-sm leading-tight max-h-20 overflow-hidden`}>
+                      {dialogue}
                     </p>
                   </div>
                 )}

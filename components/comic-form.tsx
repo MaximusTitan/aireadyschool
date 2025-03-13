@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,10 +12,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { COMIC_FORMATS } from '@/types/comic';
+import { getComicStyleNames } from '@/types/comic-styles';
 
 interface ComicFormProps {
   onSubmit: (formData: ComicFormData, provider: string) => void;
@@ -38,21 +39,27 @@ const DEFAULT_FORM_DATA: ComicFormData = {
   title: "",
   mainCharacters: "",
   setting: "",
-  numPanels: "8", // Changed default to 8 panels
-  comicStyle: "Cartoon",
-  dialogueTone: "Funny",
-  endingStyle: "Happy Ending",
+  numPanels: "", // Empty default to force selection
+  comicStyle: "", // Empty default to force selection
+  dialogueTone: "",
+  endingStyle: "",
   additionalDetails: "",
 };
 
+// Get available comic styles
+const comicStyleOptions = getComicStyleNames();
+
 export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: ComicFormProps) {
   const [formData, setFormData] = useState<ComicFormData>(DEFAULT_FORM_DATA);
-  const [originalTitle, setOriginalTitle] = useState(""); // Store original title
   const [aiLoading, setAiLoading] = useState(false);
   const [useOpenAI, setUseOpenAI] = useState(false);
   const aiProvider = useOpenAI ? 'openai' : 'groq';
   const { toast } = useToast();
+  
+  // Add debug tracker for form changes
+  const [formUpdated, setFormUpdated] = useState(false);
 
+  // Set initial prompt if provided
   useEffect(() => {
     if (initialPrompt) {
       setFormData(prev => ({
@@ -62,35 +69,56 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
     }
   }, [initialPrompt]);
 
-  const handleInputChange = (
+  // Generic handler for all input changes
+  const handleInputChange = useCallback((
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    if (name === 'title') {
-      setOriginalTitle(value); // Store original title
-    }
+    console.log(`Form input changed: ${name} = ${value}`);
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    setFormUpdated(true);
+  }, []);
 
-  const handleSelectChange = (name: string, value: string) => {
+  // Handler for select components
+  const handleSelectChange = useCallback((name: string, value: string) => {
+    console.log(`Select changed: ${name} = ${value}`);
     setFormData((prev) => ({ ...prev, [name]: value }));
-  };
+    setFormUpdated(true);
+  }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Form submission handler
+  const handleSubmit = useCallback((e: React.FormEvent) => {
     e.preventDefault();
-    // Use original title in final submission
-    const finalFormData = {
-      ...formData,
-      title: originalTitle || formData.title
-    };
-    onSubmit(finalFormData, aiProvider);
-  };
-
-  const generateWithAI = async () => {
-    if (!formData.title.trim()) {
+    console.log("FORM SUBMISSION - Final form data:", formData);
+    // Verify panel count and style are set
+    if (!formData.numPanels) {
       toast({
-        title: "Title Required",
-        description: "Please enter a comic title first",
+        title: "Missing panel count",
+        description: "Please select the number of panels for your comic",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    if (!formData.comicStyle) {
+      toast({
+        title: "Missing comic style",
+        description: "Please select a style for your comic",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    onSubmit(formData, aiProvider);
+  }, [formData, onSubmit, aiProvider, toast]);
+
+  // Enhanced AI function - only for additional details field
+  const enhanceAdditionalDetails = async () => {
+    // Check that required fields are filled
+    if (!formData.title.trim() || !formData.mainCharacters.trim() || !formData.setting.trim()) {
+      toast({
+        title: "Required Fields Missing",
+        description: "Please fill in the title, characters, and setting before enhancing details.",
         variant: "destructive"
       });
       return;
@@ -99,56 +127,48 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
     setAiLoading(true);
 
     try {
-      const response = await fetch("/api/comic-form-generator", {
+      // Create a prompt that includes all the form fields to give AI context
+      const contextPrompt = `
+Title: ${formData.title}
+Main Characters: ${formData.mainCharacters}
+Setting: ${formData.setting}
+Number of Panels: ${formData.numPanels}
+Comic Style: ${formData.comicStyle}
+Dialogue Tone: ${formData.dialogueTone}
+Ending Style: ${formData.endingStyle}
+`;
+
+      const response = await fetch("/api/enhance-details", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
-          title: formData.title,
-          provider: aiProvider
+          context: contextPrompt,
+          provider: aiProvider,
+          currentDetails: formData.additionalDetails
         }),
       });
 
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || "Failed to generate suggestions");
+        throw new Error(data.error || "Failed to generate enhanced details");
       }
       
-      // Check if we have an error from our fallback response
-      if (data.error) {
-        toast({
-          title: "Warning",
-          description: "We had some issues processing your request, but we've provided some suggestions anyway.",
-          variant: "default"
-        });
-      }
-      
-      // Extract clean title from original form title
-      const cleanTitle = formData.title.replace(/^Create a.*titled\s*"([^"]+)".*$/i, '$1').trim();
-      
-      setFormData({
-        ...formData,
-        // Set clean title if it's a verbose generated title
-        title: formData.title.includes('panel') ? cleanTitle : formData.title,
-        mainCharacters: data.mainCharacters || "",
-        setting: data.setting || "",
-        numPanels: typeof data.numPanels === 'number' ? String(data.numPanels) : 
-                  typeof data.numPanels === 'string' ? data.numPanels : "8", // Default to 8
-        comicStyle: data.comicStyle || "Cartoon",
-        dialogueTone: data.dialogueTone || "Funny",
-        endingStyle: data.endingStyle || "Happy Ending",
-        additionalDetails: data.additionalDetails || "",
-      });
+      // Only update the additionalDetails field
+      setFormData(prev => ({
+        ...prev,
+        additionalDetails: data.enhancedDetails || prev.additionalDetails
+      }));
       
       toast({
-        title: "Form Generated",
-        description: "We've filled in the form with suggested details for your comic.",
+        title: "Details Enhanced",
+        description: "We've added more context and details based on your comic settings.",
       });
     } catch (error) {
-      console.error("Error generating AI suggestions:", error);
+      console.error("Error enhancing details with AI:", error);
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to generate suggestions",
+        description: error instanceof Error ? error.message : "Failed to enhance details",
         variant: "destructive"
       });
     } finally {
@@ -162,93 +182,43 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
          : 'detailed';
   };
 
-  const handlePanelCountChange = async (value: string) => {
+  const handlePanelCountChange = useCallback(async (value: string) => {
+    console.log(`Panel count changed to: ${value}`);
     const panelCount = Number(value);
-    const format = getFormatForPanelCount(panelCount);
-    const structure = COMIC_FORMATS[format];
-
-    // Explicitly ensure panel count is updated in the form data
+    
+    // Update panel count immediately in the form data
     setFormData(prev => ({
       ...prev,
       numPanels: value
     }));
+    setFormUpdated(true);
+    
+    // No need to call AI to update other fields based on panel count
+  }, []);
 
-    // Regenerate form data based on new panel count
-    if (formData.title) {
-      setAiLoading(true);
-      try {
-        const response = await fetch("/api/comic-form-generator", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ 
-            title: formData.title,
-            provider: aiProvider,
-            panelCount,
-            format
-          }),
-        });
-
-        const data = await response.json();
-        
-        setFormData(prev => ({
-          ...prev,
-          numPanels: value,
-          // Update other fields with new AI suggestions
-          mainCharacters: data.mainCharacters || prev.mainCharacters,
-          setting: data.setting || prev.setting,
-          dialogueTone: data.dialogueTone || prev.dialogueTone,
-          additionalDetails: [
-            prev.additionalDetails,
-            `Format: ${format} (${panelCount} panels)`,
-            `Structure: ${structure.structure.slice(0, panelCount).join(' → ')}`
-          ].filter(Boolean).join('\n')
-        }));
-
-      } catch (error) {
-        console.error("Error updating form:", error);
-      } finally {
-        setAiLoading(false);
-      }
-    } else {
-      // Just update panel count if no title yet
-      setFormData(prev => ({
-        ...prev,
-        numPanels: value
-      }));
+  // Log form data on changes for debugging
+  useEffect(() => {
+    if (formUpdated) {
+      console.log("Form data updated:", formData);
     }
-  };
+  }, [formData, formUpdated]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left column */}
         <div className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="title">Comic Title</Label>
-            <div className="flex gap-2">
-              <Input
-                id="title"
-                name="title"
-                placeholder="Battle of Titans: Batman vs Superman"
-                value={formData.title}
-                onChange={handleInputChange}
-                className="flex-1"
-              />
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={generateWithAI}
-                disabled={aiLoading || !formData.title.trim()}
-              >
-                {aiLoading ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating
-                  </>
-                ) : (
-                  "Generate with AI"
-                )}
-              </Button>
-            </div>
+            <Input
+              id="title"
+              name="title"
+              placeholder="Battle of Titans: Batman vs Superman"
+              value={formData.title}
+              onChange={handleInputChange}
+              required
+            />
           </div>
 
           <div className="space-y-2">
@@ -259,6 +229,7 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
               placeholder="Batman, Superman, Joker"
               value={formData.mainCharacters}
               onChange={handleInputChange}
+              required
             />
           </div>
 
@@ -270,14 +241,43 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
               placeholder="Gotham City, Space, Underwater"
               value={formData.setting}
               onChange={handleInputChange}
+              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="numPanels">Number of Panels</Label>
+            <Label htmlFor="comicStyle" className="flex items-center">
+              Comic Style <span className="text-red-500 ml-1">*</span>
+            </Label>
+            <Select
+              value={formData.comicStyle}
+              onValueChange={(value) => handleSelectChange("comicStyle", value)}
+              required
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select comic style" />
+              </SelectTrigger>
+              <SelectContent>
+                {comicStyleOptions.map((style) => (
+                  <SelectItem key={style} value={style}>
+                    {style}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Style affects both artwork generation and panel appearance
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="numPanels" className="flex items-center">
+              Number of Panels <span className="text-red-500 ml-1">*</span>
+            </Label>
             <Select
               value={formData.numPanels}
               onValueChange={handlePanelCountChange}
+              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select number of panels" />
@@ -298,14 +298,13 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
           </div>
         </div>
 
-        {/* Right column */}
         <div className="space-y-4">
-
           <div className="space-y-2">
             <Label htmlFor="dialogueTone">Dialogue Tone</Label>
             <Select
               value={formData.dialogueTone}
               onValueChange={(value) => handleSelectChange("dialogueTone", value)}
+              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select dialogue tone" />
@@ -323,6 +322,7 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
             <Select
               value={formData.endingStyle}
               onValueChange={(value) => handleSelectChange("endingStyle", value)}
+              required
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select ending style" />
@@ -336,21 +336,45 @@ export function ComicForm({ onSubmit, isLoading = false, initialPrompt = "" }: C
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="additionalDetails">Additional Details</Label>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="additionalDetails">Additional Details</Label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={enhanceAdditionalDetails}
+                disabled={aiLoading || !formData.title.trim() || !formData.mainCharacters.trim() || !formData.setting.trim()}
+                className="flex items-center gap-1"
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                <span>Enhance with AI</span>
+              </Button>
+            </div>
             <Textarea
               id="additionalDetails"
               name="additionalDetails"
               placeholder="Add any other details about your comic..."
               value={formData.additionalDetails}
               onChange={handleInputChange}
-              className="min-h-[80px]"
+              className="min-h-[120px]"
             />
+            <p className="text-xs text-muted-foreground">
+              Add story details, special effects, or character relationships
+            </p>
           </div>
         </div>
       </div>
 
       <div className="flex justify-end">
-        <Button type="submit" disabled={isLoading || !formData.title.trim()}>
+        <Button 
+          type="submit" 
+          size="lg"
+          disabled={isLoading || !formData.title.trim() || !formData.mainCharacters.trim() || !formData.setting.trim()}
+        >
           {isLoading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Generating Comic

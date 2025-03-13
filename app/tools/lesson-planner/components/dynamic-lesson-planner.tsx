@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import type React from "react"
 
@@ -9,12 +9,28 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { generateLessonPlan } from "../actions/generateLessonPlan"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner"
+
+const generateLessonPlan = async (formData: FormData, userEmail: string) => {
+  const response = await fetch("/api/generateLessonPlan", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ formData, userEmail }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to generate lesson plan");
+  }
+
+  return response.json();
+};
+
 
 export default function DynamicLessonPlanner() {
   const router = useRouter()

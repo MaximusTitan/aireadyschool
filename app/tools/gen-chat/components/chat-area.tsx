@@ -39,19 +39,21 @@ export const ChatArea = ({
   const [isTalking, setIsTalking] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const { stop: stopAudio, play: playAudio } = useNowPlaying();
-  const { 
-    isAudioEnabled, 
-    toggleAudio, 
+  const {
+    isAudioEnabled,
+    toggleAudio,
     hasUserInteracted,
-    markUserInteraction 
+    markUserInteraction,
   } = useAudioSettings();
   const toolsContentRef = useRef<HTMLDivElement>(null);
   const ttsControllerRef = useRef<AbortController | null>(null);
 
+  // Add ref to track previous isLoading state
+  const prevIsLoadingRef = useRef(isLoading);
+
   const toolInvocations = messages.flatMap(
     (message) => message.toolInvocations || []
   );
-
 
   // Scroll tools panel to bottom when new tools are added
   useEffect(() => {
@@ -80,22 +82,20 @@ export const ChatArea = ({
     const handleUserInteraction = () => {
       markUserInteraction();
     };
-    
+
     // Common user interaction events
-    const events = ['click', 'keydown', 'touchstart', 'mousedown'];
-    
-    events.forEach(event => {
+    const events = ["click", "keydown", "touchstart", "mousedown"];
+
+    events.forEach((event) => {
       document.addEventListener(event, handleUserInteraction, { once: true });
     });
-    
+
     return () => {
-      events.forEach(event => {
+      events.forEach((event) => {
         document.removeEventListener(event, handleUserInteraction);
       });
     };
   }, [markUserInteraction]);
-
-
 
   // Handle text-to-speech
   const handleTTS = async (messageId: string, text: string) => {
@@ -110,77 +110,83 @@ export const ChatArea = ({
       setPlayingMessageId(messageId);
 
       if (!hasUserInteracted) {
-        console.log("User has not interacted with the page yet, skipping audio playback");
+        console.log(
+          "User has not interacted with the page yet, skipping audio playback"
+        );
         setPlayingMessageId(null);
         return;
       }
-      
+
       // Clean text for TTS
       const cleanText = text
-        .replace(/\[.*?\]/g, '') // Remove markdown links
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-        .replace(/\*(.*?)\*/g, '$1') // Remove italic
-        .replace(/`(.*?)`/g, '$1') // Remove code blocks
+        .replace(/\[.*?\]/g, "") // Remove markdown links
+        .replace(/\*\*(.*?)\*\*/g, "$1") // Remove bold
+        .replace(/\*(.*?)\*/g, "$1") // Remove italic
+        .replace(/`(.*?)`/g, "$1") // Remove code blocks
         .trim();
 
       // Create a new abort controller for this request
       ttsControllerRef.current = new AbortController();
-      
+
       const response = await fetch(`/api/gen-chat-tts`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           text: cleanText,
         }),
-        signal: ttsControllerRef.current.signal
+        signal: ttsControllerRef.current.signal,
       });
 
       if (!response.ok) throw new Error("TTS request failed");
-      
+
       const data = await response.json();
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-      
-      if (data.type === 'audio' && data.content) {
+
+      if (data.type === "audio" && data.content) {
         // Create a Blob from the base64 audio
         const binaryString = atob(data.content);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        
-        const blob = new Blob([bytes], { type: 'audio/mpeg' });
-        
+
+        const blob = new Blob([bytes], { type: "audio/mpeg" });
+
         // Play the audio using our existing audio player
-        await playAudio(blob, 'audio/mpeg');
+        await playAudio(blob, "audio/mpeg");
       }
-      
     } catch (error: unknown) {
-      if (error instanceof Error && error.name !== 'AbortError') {
+      if (error instanceof Error && error.name !== "AbortError") {
         console.error("TTS error:", error);
       }
       setPlayingMessageId(null);
     }
   };
 
-  // Watch for loading state changes to trigger TTS only when a new message is received during loading
+  // Watch for loading state changes to trigger TTS only when finishing text generation.
   useEffect(() => {
-    // If we were loading and now we're not, and audio is enabled, read the last assistant message
-    if (!isLoading && messages.length > 0 && isAudioEnabled && hasUserInteracted) {
+    if (
+      prevIsLoadingRef.current &&
+      !isLoading &&
+      messages.length > 0 &&
+      isAudioEnabled &&
+      hasUserInteracted
+    ) {
       const lastMessage = messages[messages.length - 1];
       if (
-        lastMessage.role === "assistant" && 
+        lastMessage.role === "assistant" &&
         typeof lastMessage.content === "string" &&
-        !lastMessage.fromHistory &&  // Don't read messages from history
-        !playingMessageId // Not already playing something
+        !lastMessage.fromHistory
       ) {
         handleTTS(lastMessage.id, lastMessage.content);
       }
     }
+    prevIsLoadingRef.current = isLoading;
   }, [isLoading, messages, isAudioEnabled, hasUserInteracted]);
 
   const handleVideoComplete = (toolCallId: string, videoUrl: string) => {

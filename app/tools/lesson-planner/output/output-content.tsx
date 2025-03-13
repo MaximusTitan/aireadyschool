@@ -1,138 +1,140 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Edit, Download, Video, Layout, FileText, File } from "lucide-react"
-import { supabase } from "@/lib/supabase"
-import jsPDF from "jspdf"
-import { EditLessonContent } from "../components/edit-lesson-content"
-import { GenerateNotesDialog } from "../components/generate-notes-dialog"
-import { AddContentDropdown } from "../components/add-content-dropdown"
-import { useToast } from "@/components/ui/use-toast"
+import { useState, useEffect, useCallback } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Download } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import jsPDF from "jspdf";
+import { EditLessonContent } from "../components/edit-lesson-content";
+import { GenerateNotesDialog } from "../components/generate-notes-dialog";
+import { AddContentDropdown } from "../components/add-content-dropdown";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ScheduleItem {
-  type: string
-  title: string
-  content: string
-  timeAllocation: number
+  type: string;
+  title: string;
+  content: string;
+  timeAllocation: number;
 }
 
 interface Assignment {
-  description: string
-  tasks: string[]
+  description: string;
+  tasks: string[];
 }
 
 interface Day {
-  day: number
-  topicHeading: string
-  learningOutcomes: string[]
-  schedule: ScheduleItem[]
-  teachingAids: string[]
-  assignment: Assignment
+  day: number;
+  topicHeading: string;
+  learningOutcomes: string[];
+  schedule: ScheduleItem[];
+  teachingAids: string[];
+  assignment: Assignment;
 }
 
 interface Assessment {
-  topic: string
-  type: string
-  description: string
-  evaluationCriteria: string[]
+  topic: string;
+  type: string;
+  description: string;
+  evaluationCriteria: string[];
 }
 
 interface AssessmentPlan {
-  formativeAssessments: Assessment[]
-  summativeAssessments: Assessment[]
-  progressTrackingSuggestions: string[]
+  formativeAssessments: Assessment[];
+  summativeAssessments: Assessment[];
+  progressTrackingSuggestions: string[];
 }
 
 interface LessonPlan {
-  id: string
-  subject: string
-  chapter_topic: string
-  grade: string
-  board: string
-  class_duration: number
-  number_of_days: number
-  learning_objectives: string
+  id: string;
+  subject: string;
+  chapter_topic: string;
+  grade: string;
+  board: string;
+  class_duration: number;
+  number_of_days: number;
+  learning_objectives: string;
   plan_data: {
-    days: Day[]
-    assessmentPlan: AssessmentPlan
-  }
+    days: Day[];
+    assessmentPlan: AssessmentPlan;
+  };
 }
 
 interface EditContentState {
-  isOpen: boolean
-  type: string
-  data: any
-  dayIndex?: number
+  isOpen: boolean;
+  type: string;
+  data: any;
+  dayIndex?: number;
 }
 
 interface GeneratedNotes {
-  [key: string]: string
+  [key: string]: string;
 }
 
 interface UploadedFile {
-  id: string
-  name: string
-  type: string
-  url: string
+  id: string;
+  name: string;
+  type: string;
+  url: string;
 }
 
 export default function OutputContent() {
-  const router = useRouter()
-  const searchParams = useSearchParams()
-  const id = searchParams.get("id")
-  const [lessonPlan, setLessonPlan] = useState<LessonPlan | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [activeTab, setActiveTab] = useState("day-1")
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const id = searchParams.get("id");
+  const [lessonPlan, setLessonPlan] = useState<LessonPlan | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("day-1");
   const [editContent, setEditContent] = useState<EditContentState>({
     isOpen: false,
     type: "",
     data: null,
-  })
+  });
   const [generateNotesDialog, setGenerateNotesDialog] = useState<{
-    isOpen: boolean
-    activity: { title: string; content: string } | null
+    isOpen: boolean;
+    activity: { title: string; content: string } | null;
   }>({
     isOpen: false,
     activity: null,
-  })
-  const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({})
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: UploadedFile[] }>({})
-  const { toast } = useToast()
-  const [userEmail, setUserEmail] = useState<string | null>(null)
-  const [isAuthChecking, setIsAuthChecking] = useState(true)
+  });
+  const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: UploadedFile[] }>({});
+  const { toast } = useToast();
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   // Check authentication state directly in component
   useEffect(() => {
     async function checkAuth() {
       try {
-        const { data } = await supabase.auth.getSession()
-        const email = data.session?.user?.email || null
-        setUserEmail(email)
-        setIsAuthChecking(false)
+        const { data } = await supabase.auth.getSession();
+        const email = data.session?.user?.email || null;
+        setUserEmail(email);
+        setIsAuthChecking(false);
       } catch (error) {
-        console.error("Auth check error:", error)
-        setIsAuthChecking(false)
+        console.error("Auth check error:", error);
+        setIsAuthChecking(false);
       }
     }
-    
-    checkAuth()
-    
+
+    checkAuth();
+
     // Set up listener for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
-      setUserEmail(session?.user?.email || null)
-    })
-    
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_, session) => {
+      setUserEmail(session?.user?.email || null);
+    });
+
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const fetchLessonPlan = useCallback(async () => {
     if (!id) {
-      setError("No lesson plan ID provided")
-      return
+      setError("No lesson plan ID provided");
+      return;
     }
 
     try {
@@ -141,20 +143,20 @@ export default function OutputContent() {
         .from("lesson_plans")
         .select("*")
         .eq("id", id)
-        .single()
+        .single();
 
-      if (lessonPlanError) throw lessonPlanError
-      
+      if (lessonPlanError) throw lessonPlanError;
+
       // Set the lesson plan data immediately
       if (lessonPlanData) {
-        setLessonPlan(lessonPlanData as LessonPlan)
-        
+        setLessonPlan(lessonPlanData as LessonPlan);
+
         // Check ownership only for informational purposes, don't prevent viewing
         if (userEmail && lessonPlanData.user_email && lessonPlanData.user_email !== userEmail) {
-          console.warn("User viewing a lesson plan they don't own")
+          console.warn("User viewing a lesson plan they don't own");
         }
       } else {
-        setError("Lesson plan not found")
+        setError("Lesson plan not found");
       }
 
       // Rest of your fetch logic for notes and files remains the same
@@ -162,55 +164,55 @@ export default function OutputContent() {
         const { data: notesData, error: notesError } = await supabase
           .from("generated_notes")
           .select("*")
-          .eq("lesson_plan_id", id)
+          .eq("lesson_plan_id", id);
 
-        if (notesError) throw notesError
+        if (notesError) throw notesError;
         if (notesData) {
-          const notesObj: GeneratedNotes = {}
+          const notesObj: GeneratedNotes = {};
           notesData.forEach((note) => {
-            notesObj[note.activity_title] = note.content
-          })
-          setGeneratedNotes(notesObj)
+            notesObj[note.activity_title] = note.content;
+          });
+          setGeneratedNotes(notesObj);
         }
       } catch (notesError) {
-        console.warn("Error fetching generated notes:", notesError)
+        console.warn("Error fetching generated notes:", notesError);
       }
 
       try {
         const { data: filesData, error: filesError } = await supabase
           .from("uploaded_files")
           .select("*")
-          .eq("lesson_plan_id", id)
+          .eq("lesson_plan_id", id);
 
-        if (filesError) throw filesError
+        if (filesError) throw filesError;
         if (filesData) {
-          const filesObj: { [key: string]: UploadedFile[] } = {}
+          const filesObj: { [key: string]: UploadedFile[] } = {};
           filesData.forEach((file) => {
-            if (!filesObj[file.section_id]) filesObj[file.section_id] = []
+            if (!filesObj[file.section_id]) filesObj[file.section_id] = [];
             filesObj[file.section_id].push({
               id: file.id,
               name: file.file_name,
               type: file.file_type,
               url: file.file_url,
-            })
-          })
-          setUploadedFiles(filesObj)
+            });
+          });
+          setUploadedFiles(filesObj);
         }
       } catch (filesError) {
-        console.warn("Error fetching uploaded files:", filesError)
+        console.warn("Error fetching uploaded files:", filesError);
       }
     } catch (error) {
-      console.error("Error fetching lesson plan data:", error)
-      setError("Failed to fetch lesson plan data. Please try again.")
+      console.error("Error fetching lesson plan data:", error);
+      setError("Failed to fetch lesson plan data. Please try again.");
     }
-  }, [id, userEmail])
+  }, [id, userEmail]);
 
   // Fetch lesson plan when we have an ID, regardless of auth state
   useEffect(() => {
     if (id) {
-      fetchLessonPlan()
+      fetchLessonPlan();
     }
-  }, [id, fetchLessonPlan])
+  }, [id, fetchLessonPlan]);
 
   const handleEdit = (type: string, data: any, dayIndex?: number) => {
     setEditContent({
@@ -218,12 +220,12 @@ export default function OutputContent() {
       type,
       data,
       dayIndex,
-    })
-  }
+    });
+  };
 
   const handleSave = async () => {
-    await fetchLessonPlan()
-  }
+    await fetchLessonPlan();
+  };
 
   const handleGenerateNotes = (activityTitle: string, activityContent: string) => {
     setGenerateNotesDialog({
@@ -232,8 +234,8 @@ export default function OutputContent() {
         title: activityTitle,
         content: activityContent,
       },
-    })
-  }
+    });
+  };
 
   const handleNotesGenerated = async (notes: string) => {
     if (generateNotesDialog.activity && lessonPlan && userEmail) {
@@ -246,36 +248,36 @@ export default function OutputContent() {
             content: notes,
             // User association is maintained through lesson_plan_id foreign key
           })
-          .select()
+          .select();
 
-        if (error) throw error
+        if (error) throw error;
 
         setGeneratedNotes((prev) => ({
           ...prev,
           [generateNotesDialog.activity!.title]: notes,
-        }))
+        }));
 
         toast({
           title: "Success",
           description: "Notes saved successfully",
-        })
+        });
       } catch (error) {
-        console.error("Error saving generated notes:", error)
+        console.error("Error saving generated notes:", error);
         toast({
           title: "Error",
           description: "Failed to save notes. Please try again.",
           variant: "destructive",
-        })
+        });
       }
     }
-  }
+  };
 
   const handleFileUpload = async (file: File, type: string, sectionId: string) => {
     if (!lessonPlan) {
       console.error("No lesson plan available");
       return;
     }
-    
+
     try {
       // Debug logging
       console.log("Upload attempt:", {
@@ -283,7 +285,7 @@ export default function OutputContent() {
         type,
         sectionId,
         userEmail,
-        lessonPlanId: lessonPlan.id
+        lessonPlanId: lessonPlan.id,
       });
 
       if (!userEmail) {
@@ -302,8 +304,8 @@ export default function OutputContent() {
 
       // Create unique filename with timestamp
       const timestamp = Date.now();
-      const fileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
-      const safeEmail = userEmail.replace(/[^a-zA-Z0-9]/g, '_');
+      const fileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const safeEmail = userEmail.replace(/[^a-zA-Z0-9]/g, "_");
       const filePath = `${safeEmail}/${lessonPlan.id}/${fileName}`;
 
       console.log("Uploading to path:", filePath);
@@ -312,9 +314,9 @@ export default function OutputContent() {
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("lesson-plan-materials")
         .upload(filePath, file, {
-          cacheControl: '3600',
+          cacheControl: "3600",
           contentType: file.type,
-          upsert: false // Ensure we're not overwriting
+          upsert: false, // Ensure we're not overwriting
         });
 
       if (uploadError) {
@@ -325,9 +327,9 @@ export default function OutputContent() {
       console.log("Upload successful:", uploadData);
 
       // Get public URL
-      const { data: { publicUrl } } = supabase.storage
-        .from("lesson-plan-materials")
-        .getPublicUrl(filePath);
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("lesson-plan-materials").getPublicUrl(filePath);
 
       console.log("Public URL generated:", publicUrl);
 
@@ -371,17 +373,168 @@ export default function OutputContent() {
         title: "Success",
         description: "File uploaded successfully",
       });
-
     } catch (error) {
       console.error("Upload error:", error);
       toast({
         title: "Upload Failed",
-        description: typeof error === 'object' && error !== null && 'message' in error ? 
-          (error as { message: string }).message : 
-          "Failed to upload file. Please try again.",
+        description:
+          typeof error === "object" && error !== null && "message" in error
+            ? (error as { message: string }).message
+            : "Failed to upload file. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleDeleteFile = async (fileId: string, sectionId: string) => {
+    try {
+      const { error } = await supabase.from("uploaded_files").delete().eq("id", fileId);
+
+      if (error) throw error;
+
+      setUploadedFiles((prev) => {
+        const updatedFiles = { ...prev };
+        updatedFiles[sectionId] = updatedFiles[sectionId].filter((file) => file.id !== fileId);
+        return updatedFiles;
+      });
+
+      toast({
+        title: "Success",
+        description: "File deleted successfully",
+      });
+    } catch (error) {
+      console.error("Error deleting file:", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete file. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDownload = () => {
+    if (!lessonPlan) return;
+  
+    const doc = new jsPDF();
+    let yOffset = 20;
+  
+    // Helper functions for PDF generation
+    const addHeading = (text: string, size = 16) => {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(size);
+      doc.text(text, 20, yOffset);
+      yOffset += 10;
+    };
+  
+    const addText = (text: string, size = 12) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(size);
+      const lines = doc.splitTextToSize(text, 170);
+      doc.text(lines, 20, yOffset);
+      yOffset += (lines.length * size) / 2 + 5;
+    };
+  
+    const addBulletPoint = (text: string, indent = 20) => {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(12);
+      const lines = doc.splitTextToSize(text, 160);
+      doc.text("•", indent, yOffset);
+      doc.text(lines, indent + 5, yOffset);
+      yOffset += (lines.length * 12) / 2 + 5;
+    };
+  
+    const checkNewPage = () => {
+      if (yOffset > 270) {
+        doc.addPage();
+        yOffset = 20;
+      }
+    };
+  
+    // Title and Basic Information
+    addHeading(`${lessonPlan.subject} - ${lessonPlan.chapter_topic}`, 20);
+    addText(`Grade: ${lessonPlan.grade}`);
+    addText(`Board: ${lessonPlan.board}`);
+    addText(`Duration: ${lessonPlan.class_duration} minutes`);
+    addText(`Number of Days: ${lessonPlan.number_of_days}`);
+    if (lessonPlan.learning_objectives) {
+      addText(`Learning Objectives: ${lessonPlan.learning_objectives}`);
+    }
+    yOffset += 10;
+  
+    // Daily Plans
+    lessonPlan.plan_data.days.forEach((day, index) => {
+      checkNewPage();
+      addHeading(`Day ${day.day}: ${day.topicHeading}`, 16);
+  
+      // Learning Outcomes
+      addHeading("Learning Outcomes:", 14);
+      day.learningOutcomes.forEach((outcome) => {
+        checkNewPage();
+        addBulletPoint(outcome);
+      });
+      yOffset += 5;
+  
+      // Schedule
+      checkNewPage();
+      addHeading("Schedule:", 14);
+      day.schedule.forEach((item) => {
+        checkNewPage();
+        addText(`${item.title || item.type} (${item.timeAllocation} min):`);
+        addText(item.content);
+        yOffset += 2;
+      });
+  
+      yOffset += 10;
+    });
+  
+    // Assessment Plan
+    checkNewPage();
+    addHeading("Assessment Plan", 16);
+    yOffset += 5;
+  
+    // Formative Assessments
+    addHeading("Formative Assessments:", 14);
+    lessonPlan.plan_data.assessmentPlan.formativeAssessments.forEach((assessment) => {
+      checkNewPage();
+      addText(`${assessment.topic} (${assessment.type})`);
+      addText(assessment.description);
+      addText("Evaluation Criteria:");
+      assessment.evaluationCriteria.forEach((criteria) => {
+        checkNewPage();
+        addBulletPoint(criteria);
+      });
+      yOffset += 5;
+    });
+  
+    // Summative Assessments
+    checkNewPage();
+    addHeading("Summative Assessments:", 14);
+    lessonPlan.plan_data.assessmentPlan.summativeAssessments.forEach((assessment) => {
+      checkNewPage();
+      addText(`${assessment.topic} (${assessment.type})`);
+      addText(assessment.description);
+      addText("Evaluation Criteria:");
+      assessment.evaluationCriteria.forEach((criteria) => {
+        checkNewPage();
+        addBulletPoint(criteria);
+      });
+      yOffset += 5;
+    });
+  
+    // Progress Tracking
+    checkNewPage();
+    addHeading("Progress Tracking Suggestions:", 14);
+    lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.forEach((suggestion) => {
+      checkNewPage();
+      addBulletPoint(suggestion);
+    });
+  
+    // Save the PDF
+    const fileName = `${lessonPlan.subject}_${lessonPlan.chapter_topic}_Grade${lessonPlan.grade}.pdf`
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase();
+  
+    doc.save(fileName);
   };
 
   if (isAuthChecking) {
@@ -392,7 +545,7 @@ export default function OutputContent() {
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
-    )
+    );
   }
 
   if (error) {
@@ -404,7 +557,7 @@ export default function OutputContent() {
           Back to Home
         </Button>
       </div>
-    )
+    );
   }
 
   if (!lessonPlan) {
@@ -412,7 +565,7 @@ export default function OutputContent() {
       <div className="container mx-auto p-4">
         <h1 className="text-3xl font-bold mb-6">Loading...</h1>
       </div>
-    )
+    );
   }
 
   const renderDayContent = (day: Day) => (
@@ -504,14 +657,18 @@ export default function OutputContent() {
                             <a
                               href={file.url}
                               target="_blank"                              
-                              
-                              
                               rel="noopener noreferrer"
                               className="text-blue-600 hover:underline flex items-center gap-1"
                               title={file.name} // Show original filename on hover
                             >
                               {displayName}
                             </a>
+                            <button
+                              className="text-red-500 hover:text-red-600 text-sm ml-2"
+                              onClick={() => handleDeleteFile(file.id, `material-${day.day}-${index}`)}
+                            >
+                              Delete
+                            </button>
                           </div>
                         );
                       })}
@@ -525,7 +682,7 @@ export default function OutputContent() {
         </div>
       </div>
     </div>
-  )
+  );
 
   const renderAssessmentPlan = () => (
     <div className="space-y-6">
@@ -543,6 +700,12 @@ export default function OutputContent() {
                 <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
                   {file.type}: {file.name}
                 </a>
+                <button
+                  className="text-red-500 hover:text-red-600 text-sm ml-2"
+                  onClick={() => handleDeleteFile(file.id, "assessment-plan")}
+                >
+                  Delete
+                </button>
               </div>
             ))}
           </div>
@@ -608,143 +771,7 @@ export default function OutputContent() {
         </div>
       </div>
     </div>
-  )
-
-  const handleDownload = () => {
-    if (!lessonPlan) return
-
-    const doc = new jsPDF()
-    let yOffset = 20
-
-    // Helper functions for PDF generation
-    const addHeading = (text: string, size = 16) => {
-        doc.setFont("helvetica", "bold")
-        doc.setFontSize(size)
-        doc.text(text, 20, yOffset)
-        yOffset += 10
-      }
-
-    const addText = (text: string, size = 12) => {
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(size)
-      const lines = doc.splitTextToSize(text, 170)
-      doc.text(lines, 20, yOffset)
-      yOffset += (lines.length * size) / 2 + 5
-    }
-
-    const addBulletPoint = (text: string, indent = 20) => {
-      doc.setFont("helvetica", "normal")
-      doc.setFontSize(12)
-      const lines = doc.splitTextToSize(text, 160)
-      doc.text("•", indent, yOffset)
-      doc.text(lines, indent + 5, yOffset)
-      yOffset += (lines.length * 12) / 2 + 5
-    }
-
-    const checkNewPage = () => {
-      if (yOffset > 270) {
-        doc.addPage()
-        yOffset = 20
-      }
-    }
-
-    // Title and Basic Information
-    addHeading(`${lessonPlan.subject} - ${lessonPlan.chapter_topic}`, 20)
-    addText(`Grade: ${lessonPlan.grade}`)
-    addText(`Board: ${lessonPlan.board}`)
-    addText(`Duration: ${lessonPlan.class_duration} minutes`)
-    addText(`Number of Days: ${lessonPlan.number_of_days}`)
-    if (lessonPlan.learning_objectives) {
-      addText(`Learning Objectives: ${lessonPlan.learning_objectives}`)
-    }
-    yOffset += 10
-
-    // Daily Plans
-    lessonPlan.plan_data.days.forEach((day, index) => {
-      checkNewPage()
-      addHeading(`Day ${day.day}: ${day.topicHeading}`, 16)
-
-      // Learning Outcomes
-      addHeading("Learning Outcomes:", 14)
-      day.learningOutcomes.forEach((outcome) => {
-        checkNewPage()
-        addBulletPoint(outcome)
-      })
-      yOffset += 5
-
-      // Schedule
-      checkNewPage()
-      addHeading("Schedule:", 14)
-      day.schedule.forEach((item) => {
-        checkNewPage()
-        addText(`${item.title || item.type} (${item.timeAllocation} min):`)
-        addText(item.content)
-        yOffset += 2
-      })
-
-     
-
-      // Assignment
-      checkNewPage()
-      addHeading("Assignment:", 14)
-      addText(day.assignment.description)
-      day.assignment.tasks.forEach((task) => {
-        checkNewPage()
-        addBulletPoint(task)
-      })
-
-      yOffset += 10
-    })
-
-    // Assessment Plan
-    checkNewPage()
-    addHeading("Assessment Plan", 16)
-    yOffset += 5
-
-    // Formative Assessments
-    addHeading("Formative Assessments:", 14)
-    lessonPlan.plan_data.assessmentPlan.formativeAssessments.forEach((assessment) => {
-      checkNewPage()
-      addText(`${assessment.topic} (${assessment.type})`)
-      addText(assessment.description)
-      addText("Evaluation Criteria:")
-      assessment.evaluationCriteria.forEach((criteria) => {
-        checkNewPage()
-        addBulletPoint(criteria)
-      })
-      yOffset += 5
-    })
-
-    // Summative Assessments
-    checkNewPage()
-    addHeading("Summative Assessments:", 14)
-    lessonPlan.plan_data.assessmentPlan.summativeAssessments.forEach((assessment) => {
-      checkNewPage()
-      addText(`${assessment.topic} (${assessment.type})`)
-      addText(assessment.description)
-      addText("Evaluation Criteria:")
-      assessment.evaluationCriteria.forEach((criteria) => {
-        checkNewPage()
-        addBulletPoint(criteria)
-      })
-      yOffset += 5
-    })
-
-    // Progress Tracking
-    checkNewPage()
-    addHeading("Progress Tracking Suggestions:", 14)
-    lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.forEach((suggestion) => {
-      checkNewPage()
-      addBulletPoint(suggestion)
-    })
-
-    // Save the PDF
-    const fileName = `${lessonPlan.subject}_${lessonPlan.chapter_topic}_Grade${lessonPlan.grade}.pdf`
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase()
-
-    doc.save(fileName)
-  }
+  );
 
   return (
     <div className="min-h-screen bg-backgroundApp">
@@ -836,6 +863,6 @@ export default function OutputContent() {
         )}
       </div>
     </div>
-  )
+  );
 }
 

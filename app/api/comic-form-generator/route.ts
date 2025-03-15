@@ -51,6 +51,8 @@ export async function POST(request: Request) {
     // Extract JSON from the response
     try {
       const jsonResponse = extractJSON(result);
+      // Make sure the title is included in the response
+      jsonResponse.title = title;
       return NextResponse.json(jsonResponse, { status: 200 });
     } catch (error) {
       console.error("JSON extraction error:", error);
@@ -58,6 +60,7 @@ export async function POST(request: Request) {
       // If JSON extraction fails, try a more permissive approach
       // Return a simplified response with whatever we can salvage
       return NextResponse.json({
+        title: title,
         mainCharacters: title.includes(" vs ") ? title.split(" vs ").join(", ") : title,
         setting: "Comic book world",
         numPanels: "6",

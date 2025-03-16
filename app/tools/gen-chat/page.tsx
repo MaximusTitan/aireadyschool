@@ -38,6 +38,12 @@ export default function Page() {
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const chatRef = useRef<any>(null);
+  const [isTeachingMode, setIsTeachingMode] = useState(false);
+
+  // Add this function to handle teaching mode
+  const handleTeachingModeToggle = () => {
+    setIsTeachingMode(!isTeachingMode);
+  };
 
   // Initialize tools hook
   const tools = useTools({
@@ -55,7 +61,11 @@ export default function Page() {
       content: msg.content,
       createdAt: msg.createdAt,
     })),
-    body: { id: threadId, language },
+    body: {
+      id: threadId,
+      language,
+      teachingMode: isTeachingMode,
+    },
     onFinish: useCallback(
       async (message: Message) => {
         const messageToSave: ChatMessage = {
@@ -174,10 +184,15 @@ export default function Page() {
         return;
       }
 
+      // Create message content once
+      const messageContent = isTeachingMode
+        ? `Teach me about: ${input}`
+        : input;
+
       const userMessage: ChatMessage = {
         id: String(Date.now()),
         role: "user",
-        content: input,
+        content: messageContent,
         createdAt: new Date(),
       };
 
@@ -198,10 +213,17 @@ export default function Page() {
         } else if (input.startsWith("/")) {
           await processDirectCommand(input);
         } else {
-          await chatRef.current?.append(userMessage);
+          await chatRef.current?.append({
+            ...userMessage,
+            content: messageContent, // Use the same content
+          });
         }
 
         setInput("");
+        if (isTeachingMode) {
+          // Automatically switch to interactive mode after generating the lesson
+          setIsTeachingMode(false);
+        }
       } catch (error) {
         console.error("Message processing failed:", error);
       }
@@ -258,6 +280,8 @@ export default function Page() {
           setGeneratedVideos={tools.setGeneratedVideos}
           lastGeneratedImage={lastGeneratedImage}
           isOwner={isOwner}
+          isTeachingMode={isTeachingMode}
+          onTeachingModeToggle={handleTeachingModeToggle}
         />
       </div>
     </TooltipProvider>

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Bot, User, Volume2, VolumeX } from "lucide-react";
+import { Bot, User, Volume2, VolumeX, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { CommandInput } from "./command-input";
 import { useNowPlaying } from "@/app/tools/gen-chat/hooks/useNowPlaying";
@@ -33,6 +33,8 @@ export const ChatArea = ({
   setGeneratedVideos,
   lastGeneratedImage,
   isOwner = true,
+  isTeachingMode = false,
+  onTeachingModeToggle,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
@@ -265,7 +267,21 @@ export const ChatArea = ({
       {/* Chat Panel */}
       <div className="w-[50%] flex-shrink-0 flex flex-col h-full border-x">
         <div className="flex items-center justify-between flex-shrink-0 px-4 py-2 border-b bg-white sticky top-0 z-10">
-          <h2 className="text-lg font-semibold">Chat</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Chat</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onTeachingModeToggle}
+              className={cn(
+                "h-8 px-2",
+                isTeachingMode && "bg-rose-100 text-rose-700"
+              )}
+            >
+              <BookOpen size={16} className="mr-1" />
+              {isTeachingMode ? "Teaching" : "Interactive"}
+            </Button>
+          </div>
           <Button
             variant="ghost"
             size="sm"

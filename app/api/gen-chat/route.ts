@@ -13,7 +13,9 @@ import {
   SCIENCE_TEACHER_PROMPT_HINDI,
   MATH_TEACHER_PROMPT_HINDI,
   ENGLISH_TEACHER_PROMPT_HINDI,
-  GENERIC_TEACHER_PROMPT_HINDI
+  GENERIC_TEACHER_PROMPT_HINDI,
+  TEACHING_MODE_PROMPT,
+  TEACHING_MODE_PROMPT_HINDI,
 } from '@/app/utils/systemPrompt';
 
 export const runtime = 'edge';
@@ -75,10 +77,15 @@ interface ThreadMessage extends Message {
   }>;
 }
 
-function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english'): string {
+function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english', teachingMode = false): string {
   // For teachers, only use teacher buddy prompt
   if (userRole === 'Teacher') {
     return TEACHER_BUDDY_PROMPT;
+  }
+
+  // If in teaching mode, use teaching mode prompt
+  if (teachingMode) {
+    return language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI;
   }
 
   // For students, use existing subject-specific logic
@@ -156,7 +163,7 @@ export async function POST(request: Request) {
     // Get user role from metadata
     const userRole = user.user_metadata?.role;
 
-    const { messages, id: threadId, language = 'english' } = await request.json();
+    const { messages, id: threadId, language = 'english', teachingMode = false } = await request.json();
 
     // Add logging to debug language toggle
     console.log('Thread ID:', threadId);
@@ -190,14 +197,16 @@ export async function POST(request: Request) {
     }
 
     const result = streamText({
-      // model: openai('gpt-4o'),
       model: anthropic('claude-3-5-sonnet-20240620'),
-      system: getSystemPrompt(messages, userRole, language as Language),
+      system: teachingMode 
+        ? (language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI)
+        : getSystemPrompt(messages, userRole, language as Language),
       messages: messages as CreateMessage[],
       maxSteps: 5,
       tools,
-      temperature: 0.5,
-      maxTokens: 500,
+      // Adjust temperature and max tokens for teaching mode
+      temperature: teachingMode ? 0.3 : 0.5,
+      maxTokens: teachingMode ? 1500 : 500,
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',

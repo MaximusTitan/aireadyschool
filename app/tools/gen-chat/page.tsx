@@ -32,7 +32,9 @@ export default function Page() {
 
   // State management
   const [showCommands, setShowCommands] = useState(false);
-  const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(null);
+  const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(
+    null
+  );
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const chatRef = useRef<any>(null);

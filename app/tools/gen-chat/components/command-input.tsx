@@ -284,10 +284,21 @@ export const CommandInput = ({
               <button
                 key={cmd.command}
                 className="w-full px-4 py-3 text-left hover:bg-neutral-50 transition-colors group"
-                onClick={() => {
+                onClick={(e) => {
+                  e.preventDefault();
                   onInputChange(cmd.command + " ");
                   setShowCommands(false);
                   inputRef.current?.focus();
+                }}
+                onDoubleClick={(e) => {
+                  e.preventDefault();
+                  const command = cmd.examples[0];
+                  onInputChange(command);
+                  if (formRef.current) {
+                    formRef.current.dispatchEvent(
+                      new Event("submit", { cancelable: true, bubbles: true })
+                    );
+                  }
                 }}
               >
                 <div className="flex items-center justify-between">

@@ -201,6 +201,21 @@ export const ChatArea = ({
     toggleAudio();
   };
 
+  const handleExampleClick = async (examplePrompt: string) => {
+    onInputChange(examplePrompt);
+    // Allow state to update before submitting
+    setTimeout(() => {
+      const submitEvent = new Event("submit", {
+        cancelable: true,
+        bubbles: true,
+      });
+      const formElement = document.querySelector("form");
+      if (formElement) {
+        formElement.dispatchEvent(submitEvent);
+      }
+    }, 10);
+  };
+
   const renderMessage = (message: any) => (
     <div
       key={message.id}
@@ -263,9 +278,77 @@ export const ChatArea = ({
         </div>
         <div className="flex-1 p-4 overflow-hidden">
           <div className="h-full overflow-y-auto">
-            {messages
-              ?.filter((message: any) => !message.isHidden)
-              .map(renderMessage)}
+            {messages?.length > 0 ? (
+              messages
+                ?.filter((message: any) => !message.isHidden)
+                .map(renderMessage)
+            ) : (
+              <div className="flex flex-col h-full items-center justify-center text-center px-4">
+                <div className="text-3xl font-bold text-neutral-500 mb-4">
+                  Agent Buddy
+                </div>
+                <div className="text-neutral-400 max-w-md mb-8">
+                  <p>Welcome to your Personalized AI Tutor!</p>
+                  <p className="mt-2">
+                    Click on a prompt below to get started:
+                  </p>
+                </div>
+
+                <div className="grid gap-4 w-full max-w-lg">
+                  <button
+                    onClick={() =>
+                      handleExampleClick(
+                        "Hey buddy, I have an upcoming exam on Physics. Can you help me understand the concepts of force and motion better?"
+                      )
+                    }
+                    className="p-4 border rounded-lg hover:border-rose-300 hover:bg-rose-50 text-left transition-all"
+                  >
+                    <p className="font-medium text-neutral-800">
+                      Help with exam preparation
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      "Hey buddy, I have an upcoming exam on Physics. Can you
+                      help me understand the concepts of force and motion
+                      better?"
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      handleExampleClick(
+                        "I'd like to learn about machine learning. Can you create a mindmap to help me understand the key concepts?"
+                      )
+                    }
+                    className="p-4 border rounded-lg hover:border-rose-300 hover:bg-rose-50 text-left transition-all"
+                  >
+                    <p className="font-medium text-neutral-800">
+                      Learn with mindmaps
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      "I'd like to learn about machine learning. Can you create
+                      a mindmap to help me understand the key concepts?"
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      handleExampleClick(
+                        "Can you generate a helpful visualization to explain how photosynthesis works?"
+                      )
+                    }
+                    className="p-4 border rounded-lg hover:border-rose-300 hover:bg-rose-50 text-left transition-all"
+                  >
+                    <p className="font-medium text-neutral-800">
+                      Visual learning
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      "Can you generate a helpful visualization to explain how
+                      photosynthesis works?"
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
         </div>

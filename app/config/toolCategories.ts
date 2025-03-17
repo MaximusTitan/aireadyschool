@@ -28,7 +28,8 @@ import {
   TrendingUp,
   Search as SearchIcon,
   Hammer,
-  AudioLines
+  AudioLines,
+  ImagePlus
 } from "lucide-react";
 
 interface Tool {
@@ -132,10 +133,28 @@ export const categories: CategoryTools = {
         isHot: true
       },
       {
+        title: "Image Editor",
+        description: "Create and Edit images using AI",
+        route: "/tools/image-editing",
+        icon: ImagePlus
+      },
+      {
         title: "Video Generator",
         description: "Generate videos from images",
         route: "/tools/video-generator",
         icon: Video
+      },
+      {
+        title: "Video Editor",
+        description: "Edit videos",
+        route: "/tools/video-editor",
+        icon: Video
+      },
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
       },
       {
         title: "Presentation Generator",
@@ -267,10 +286,28 @@ export const categories: CategoryTools = {
         isHot: true
       },
       {
+        title: "Image Editor",
+        description: "Create and Edit images using AI",
+        route: "/tools/image-editing",
+        icon: ImagePlus
+      },
+      {
         title: "Video Generator",
         description: "Generate videos from images",
         route: "/tools/video-generator",
         icon: Video
+      },
+      {
+        title: "Video Editor",
+        description: "Edit videos",
+        route: "/tools/video-editor",
+        icon: Video
+      },
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
       },
       {
         title: "Presentation Generator",

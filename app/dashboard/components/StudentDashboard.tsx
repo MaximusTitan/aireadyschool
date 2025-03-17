@@ -6,6 +6,8 @@ import SchoolInfo from "./SchoolInfo";
 import StatCard from "./StatCard";
 import DashboardCard from "./DashboardCard";
 import StudentClasses from "./StudentClasses";
+import AnnouncementList from "./AnnouncementList";
+import StudentAssessments from "./StudentAssessments";
 
 interface School {
   id: string;
@@ -34,64 +36,66 @@ export default function StudentDashboard() {
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [school, setSchool] = useState<School | null>(null);
   const [userName, setUserName] = useState<string>("");
-  
+
   const supabase = createClient();
 
   useEffect(() => {
     async function loadData() {
       // Get current user
-      const { data: { user } } = await supabase.auth.getUser();
-      
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
       if (!user) {
         setLoading(false);
         return;
       }
-      
+
       // Get user name from metadata
       if (user.user_metadata?.name) {
         setUserName(user.user_metadata.name);
       }
-      
+
       // Get student data
       const { data: student } = await supabase
-        .from('school_students')
-        .select('*')
-        .eq('user_id', user.id)
+        .from("school_students")
+        .select("*")
+        .eq("user_id", user.id)
         .single();
-      
+
       setStudentData(student);
 
       if (student) {
         // Get school info
         const { data: schoolData } = await supabase
-          .from('schools')
-          .select('id, name, address, site_id')
-          .eq('site_id', student.school_id)
+          .from("schools")
+          .select("id, name, address, site_id")
+          .eq("site_id", student.school_id)
           .single();
 
         setSchool(schoolData);
-        
+
         // Get grade and section names
         const { data: gradeData } = await supabase
-          .from('grades')
-          .select('name')
-          .eq('id', student.grade_id)
+          .from("grades")
+          .select("name")
+          .eq("id", student.grade_id)
           .single();
-          
+
         const { data: sectionData } = await supabase
-          .from('sections')
-          .select('name')
-          .eq('id', student.section_id)
+          .from("sections")
+          .select("name")
+          .eq("id", student.section_id)
           .single();
-          
+
         if (gradeData && sectionData) {
           setStudentInfo({
             grade_name: gradeData.name,
-            section_name: sectionData.name
+            section_name: sectionData.name,
           });
         }
       }
-      
+
       setLoading(false);
     }
 
@@ -120,9 +124,11 @@ export default function StudentDashboard() {
           <p className="text-gray-500 mt-1">Ready for today's lessons?</p>
         </div>
       )}
-      
+
       <SchoolInfo school={school} userRole="student" size="small" />
-      
+
+      <StudentAssessments student={studentData} />
+
       <div className="mb-6">
         <DashboardCard title="Student Information">
           <div className="flex flex-wrap gap-4">
@@ -132,7 +138,9 @@ export default function StudentDashboard() {
             </div>
             <div className="bg-gray-50 p-3 rounded-md">
               <p className="text-xs text-gray-500">Section</p>
-              <p className="font-medium">{studentInfo?.section_name || "N/A"}</p>
+              <p className="font-medium">
+                {studentInfo?.section_name || "N/A"}
+              </p>
             </div>
             {studentData.roll_number && (
               <div className="bg-gray-50 p-3 rounded-md">
@@ -143,7 +151,8 @@ export default function StudentDashboard() {
           </div>
         </DashboardCard>
       </div>
-      
+
+      <AnnouncementList student={studentData} />
       <StudentClasses />
     </div>
   );

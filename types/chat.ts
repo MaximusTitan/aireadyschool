@@ -88,4 +88,7 @@ export type ChatAreaProps = {
   setGeneratedVideos: (videos: Record<string, string>) => void;
   lastGeneratedImage: string | null;
   isOwner?: boolean;
+  // Add these new properties
+  isTeachingMode?: boolean;
+  onTeachingModeToggle?: () => void;
 };

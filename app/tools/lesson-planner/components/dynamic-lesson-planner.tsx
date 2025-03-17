@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import type React from "react"
 
@@ -9,21 +9,48 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
-import { generateLessonPlan } from "../actions/generateLessonPlan"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { AlertCircle, Trash2 } from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner"
 
+const generateLessonPlan = async (formData: FormData, userEmail: string) => {
+  const response = await fetch("/api/generateLessonPlan", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ formData, userEmail }),
+  });
+
+  if (!response.ok) {
+    throw new Error("Failed to generate lesson plan");
+  }
+
+  return response.json();
+};
+
+
 export default function DynamicLessonPlanner() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [lessonPlans, setLessonPlans] = useState<any[]>([])
+  const [userEmail, setUserEmail] = useState<string | null>(null)
 
   useEffect(() => {
     fetchLessonPlans()
+    
+    // Get the user's email from Supabase auth
+    async function getUserEmail() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user?.email) {
+        setUserEmail(session.user.email)
+      }
+    }
+    
+    getUserEmail()
   }, [])
 
   const fetchLessonPlans = async () => {
@@ -64,7 +91,15 @@ export default function DynamicLessonPlanner() {
     try {
       const formData = new FormData(event.currentTarget)
       console.log("Submitting form data:", Object.fromEntries(formData))
-      const lessonPlan = await generateLessonPlan(formData)
+      
+      // Check if user is authenticated
+      if (!userEmail) {
+        toast.error("Please sign in to create a lesson plan")
+        router.push("/sign-in")
+        return
+      }
+      
+      const lessonPlan = await generateLessonPlan(formData, userEmail)
 
       if (!lessonPlan || !lessonPlan.plan_data) {
         throw new Error("Received empty or invalid lesson plan")

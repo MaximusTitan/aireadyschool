@@ -7,7 +7,6 @@ import { AppSidebar } from "@/components/components-app-sidebar";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/toaster";
 import { createClient } from "@/utils/supabase/client";
-import path from "path";
 
 export default function ClientLayout({
   children,
@@ -48,6 +47,10 @@ export default function ClientLayout({
     checkUserAndAssessment();
   }, []);
 
+  useEffect(() => {
+    document.documentElement.classList.remove("dark");
+  }, []);
+
   // Redirect to verification waiting page if status is disabled
   if (
     userStatus === "disabled" &&
@@ -78,6 +81,7 @@ export default function ClientLayout({
     pathname.startsWith("/connect-database") ||
     pathname.startsWith("/feedback") ||
     pathname.startsWith("/profile") ||
+    pathname.startsWith("/activities") ||
     pathname.startsWith("/knowledge-base") ||
     pathname.startsWith("/dat-submissions") ||
     (pathname.startsWith("/portfolio") &&

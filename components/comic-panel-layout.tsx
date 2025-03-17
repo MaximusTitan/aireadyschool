@@ -3,47 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { getComicStyle } from "@/types/comic-styles";
+import { exportComicToPDF } from "@/utils/comic-export-utils";
+import { useToast } from "@/components/ui/use-toast";
 
 interface ComicPanelLayoutProps {
   images: string[];
   descriptions: string[];
   panelCount: number;
   comicStyle?: string;
+  title?: string;
 }
-
-// Style variations for different comic styles
-const COMIC_STYLE_CONFIG = {
-  Cartoon: {
-    speechBubbleStyle: "rounded-xl",
-    panelGap: 5,
-    borderWidth: 2,
-    fontFamily: "Comic Neue, sans-serif",
-    effectsEnabled: true,
-  },
-  Manga: {
-    speechBubbleStyle: "rounded-sm",
-    panelGap: 3,
-    borderWidth: 3,
-    fontFamily: "Manga, Comic Neue, sans-serif",
-    effectsEnabled: true,
-  },
-  Classic: {
-    speechBubbleStyle: "rounded-none",
-    panelGap: 8,
-    borderWidth: 1,
-    fontFamily: "Comic Neue, serif",
-    effectsEnabled: false,
-  },
-  "3D": {
-    speechBubbleStyle: "rounded-3xl",
-    panelGap: 6,
-    borderWidth: 4,
-    fontFamily: "Arial, sans-serif",
-    effectsEnabled: true,
-  },
-};
 
 // Panel layout grid for different panel counts
 const PANEL_LAYOUTS = {
@@ -71,12 +43,24 @@ export default function ComicPanelLayout({
   images,
   descriptions,
   panelCount,
-  comicStyle = "Cartoon"
+  comicStyle = "Cartoon",
+  title = "Comic"
 }: ComicPanelLayoutProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const styleConfig = COMIC_STYLE_CONFIG[comicStyle as keyof typeof COMIC_STYLE_CONFIG] || COMIC_STYLE_CONFIG.Cartoon;
+  const [isDownloading, setIsDownloading] = useState(false);
+  const { toast } = useToast();
+  
+  // Get style configuration from the comic styles
+  const styleConfig = getComicStyle(comicStyle).uiConfig;
+
+  // Log panel info for debugging
+  useEffect(() => {
+    console.log(`ComicPanelLayout received: ${images.length} images, panelCount: ${panelCount}`);
+    console.log(`Content panels: ${contentPanels}, panels per page: ${panelsPerPage}, total pages: ${totalPages}`);
+    console.log(`Comic style: ${comicStyle}`);
+  }, [images, panelCount, comicStyle]);
 
   // Set up container dimensions
   useEffect(() => {
@@ -112,9 +96,55 @@ export default function ComicPanelLayout({
     };
   };
 
+  // Extract dialogue without effects notation for alt text
+  const cleanDialogue = (dialogue: string): string => {
+    return dialogue.replace(/\[.*?\]/g, '').trim();
+  };
+
+  // Remove sound effects from dialogue
+  const removeSoundEffects = (dialogue: string): string => {
+    return dialogue.replace(/\[.*?\]/g, '').trim();
+  };
+
   // Navigation
   const goToNextPage = () => currentPage < totalPages - 1 && setCurrentPage(p => p + 1);
   const goToPrevPage = () => currentPage > 0 && setCurrentPage(p => p - 1);
+  const goToPage = (pageIndex: number) => setCurrentPage(pageIndex);
+
+  // PDF Export
+  const handleDownload = async () => {
+    if (!containerRef.current) return;
+    
+    try {
+      setIsDownloading(true);
+      toast({
+        title: "Starting download...",
+        description: "Preparing your comic for download. Please wait.",
+      });
+      
+      await exportComicToPDF(
+        containerRef.current,
+        title,
+        goToPage,
+        totalPages,
+        currentPage
+      );
+      
+      toast({
+        title: "Download Complete",
+        description: "Your comic has been downloaded successfully!",
+      });
+    } catch (error) {
+      console.error("PDF download failed:", error);
+      toast({
+        title: "Download Failed",
+        description: "There was an error downloading your comic. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   // Early return if no content
   if (!images?.length) return <div className="p-8 text-center">No comic data available</div>;
@@ -123,16 +153,38 @@ export default function ComicPanelLayout({
 
   return (
     <div className="w-full flex flex-col items-center comic-container">
-      {/* Navigation */}
+      {/* Navigation and Download */}
       <div className="flex items-center justify-between w-full max-w-md mb-4 comic-navigation">
-        <Button onClick={goToPrevPage} disabled={currentPage === 0} variant="outline" size="lg">
+        <Button onClick={goToPrevPage} disabled={currentPage === 0 || isDownloading} variant="outline" size="lg">
           <ChevronLeft className="h-5 w-5" /> Previous
         </Button>
         <span className="text-sm font-medium">
           Page {currentPage + 1} of {totalPages}
         </span>
-        <Button onClick={goToNextPage} disabled={currentPage >= totalPages - 1} variant="outline" size="lg">
+        <Button onClick={goToNextPage} disabled={currentPage >= totalPages - 1 || isDownloading} variant="outline" size="lg">
           Next <ChevronRight className="h-5 w-5" />
+        </Button>
+      </div>
+
+      {/* Download button */}
+      <div className="mb-4 w-full max-w-md flex justify-center">
+        <Button 
+          onClick={handleDownload} 
+          disabled={isDownloading || !images.length}
+          variant="secondary"
+          className="gap-2"
+        >
+          {isDownloading ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-b-2 border-current"></div>
+              Preparing PDF...
+            </>
+          ) : (
+            <>
+              <Download className="h-5 w-5" /> 
+              Download Comic as PDF
+            </>
+          )}
         </Button>
       </div>
 
@@ -150,6 +202,12 @@ export default function ComicPanelLayout({
           const panel = PANEL_LAYOUTS[4][index];
           if (!panel) return null;
 
+          // Get dialogue for this panel and make it readable
+          const dialogue = pageDialogues[index] || "";
+          const cleanedDialogue = cleanDialogue(dialogue);
+          const dialogueWithoutSoundEffects = removeSoundEffects(dialogue);
+          const hasSoundEffects = dialogue.includes('[') && dialogue.includes(']');
+          
           return (
             <motion.div
               key={`panel-${currentPage}-${index}`}
@@ -164,26 +222,32 @@ export default function ComicPanelLayout({
                 height: `${panel.h}%`,
                 transform: `rotate(${panel.rotate}deg)`,
                 zIndex: panel.zIndex,
+                borderWidth: styleConfig.borderWidth,
               }}
             >
               <div className="relative w-full h-full">
                 <Image
                   src={imageUrl}
-                  alt={`Panel ${index + 1}`}
+                  alt={`Comic panel showing: ${cleanedDialogue}`}
                   fill
                   className="object-cover"
                   sizes={`${dimensions.width * (panel.w/100)}px`}
                   priority={index < 2}
                 />
-                {pageDialogues[index] && (
+                
+                {dialogueWithoutSoundEffects && (
                   <div className={`
                     absolute bottom-3 left-3 right-3 
-                    bg-white p-3 border-2 border-black 
+                    bg-white p-2 border-2 border-black 
                     ${styleConfig.speechBubbleStyle} 
                     text-center shadow-md
+                    max-h-[40%] flex flex-col justify-center
                   `}>
-                    <p className="font-comic leading-snug max-h-24 overflow-hidden">
-                      {pageDialogues[index]}
+                    <p className={`
+                      font-${styleConfig.fontFamily} text-sm leading-tight
+                      overflow-visible break-words whitespace-pre-wrap
+                    `}>
+                      {dialogueWithoutSoundEffects}
                     </p>
                   </div>
                 )}
@@ -199,9 +263,10 @@ export default function ComicPanelLayout({
           <button
             key={idx}
             onClick={() => setCurrentPage(idx)}
+            disabled={isDownloading}
             className={`w-3 h-3 rounded-full transition-colors ${
               idx === currentPage ? "bg-primary" : "bg-gray-300"
-            }`}
+            } ${isDownloading ? "opacity-50 cursor-not-allowed" : ""}`}
             aria-label={`Go to page ${idx + 1}`}
           />
         ))}

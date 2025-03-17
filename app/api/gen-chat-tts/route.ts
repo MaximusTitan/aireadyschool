@@ -4,7 +4,7 @@ import { ElevenLabsClient } from 'elevenlabs';
 
 // Setup constants directly from process.env
 const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-const voiceId = 'Xb7hH8MSUJpSbSDYk0k2';
+const voiceId = 'cgSgspJ2msm6clMCkdW9';
 const model = 'eleven_flash_v2_5'; // Using fast model for lower latency
 
 interface GenerateRequest {
@@ -75,137 +75,49 @@ export async function POST(request: NextRequest): Promise<Response> {
 
     // Parse request
     const { text = "Welcome to the text-to-speech service.", priority = "normal" }: GenerateRequest = await request.json().catch(() => ({}));
-    
-    // Initialize a ReadableStream for the process
-    const encoder = new TextEncoder();
-    
-    // Create a stream for the final output
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          // Check if the request was aborted
-          const isRequestAborted = () => {
-            return request.signal && request.signal.aborted;
-          };
 
-          // Break text into smaller chunks for faster initial processing
-          // This helps get the first audio chunk to the client faster
-          const textChunks = breakTextIntoChunks(text, 200); // Break into ~200 character chunks
-          
-          // Process the text with ElevenLabs WebSocket
-          const uri = `wss://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream-input?model_id=${model}`;
-          
-          await new Promise<void>((resolve, reject) => {
-            try {
-              // Create WebSocket connection
-              const ws = new WebSocket(uri);
-              
-              // Check for abort periodically
-              const abortChecker = setInterval(() => {
-                if (isRequestAborted()) {
-                  clearInterval(abortChecker);
-                  try {
-                    ws.close();
-                  } catch (e) {
-                    console.error("Error closing websocket on abort:", e);
-                  }
-                  reject(new Error('Request aborted'));
-                }
-              }, 100);
-              
-              ws.onopen = () => {
-                // Initialize the stream with optimized settings for lower latency
-                ws.send(JSON.stringify({
-                  text: ' ',
-                  voice_settings: {
-                    stability: 0.4, // Lower stability for faster generation
-                    similarity_boost: 0.75,
-                    use_speaker_boost: true, // Enable speaker boost
-                  },
-                  xi_api_key: ELEVENLABS_API_KEY, // Add API key in the first message
-                  generation_config: { 
-                    chunk_length_schedule: [50, 100, 150, 200], // Smaller initial chunks for faster playback
-                  },
-                }));
-                
-                // Send the first chunk immediately for faster response
-                ws.send(JSON.stringify({ text: textChunks[0] }));
-                
-                // Send the rest of text chunks after a small delay
-                setTimeout(() => {
-                  if (textChunks.length > 1) {
-                    const remainingText = textChunks.slice(1).join(" ");
-                    ws.send(JSON.stringify({ text: remainingText }));
-                  }
-                  // End the text stream
-                  ws.send(JSON.stringify({ text: '' }));
-                }, 50); // Small delay to prioritize first chunk
-              };
-              
-              // Process incoming audio chunks
-              ws.onmessage = (event) => {
-                try {
-                  if (isRequestAborted()) {
-                    clearInterval(abortChecker);
-                    ws.close();
-                    reject(new Error('Request aborted'));
-                    return;
-                  }
-                  
-                  const data = JSON.parse(event.data);
-                  if (data['audio']) {
-                    // Send the audio chunk to the client immediately
-                    controller.enqueue(encoder.encode(JSON.stringify({
-                      type: 'audio',
-                      content: data['audio'].trim()  // Base64 encoded audio data
-                    }) + '\n'));
-                  } else if (data['message']) {
-                    // Log any message from ElevenLabs
-                    console.log("ElevenLabs message:", data['message']);
-                  }
-                } catch (error) {
-                  console.error('Error processing WebSocket message:', error);
-                }
-              };
-              
-              // Handle errors
-              ws.onerror = (error) => {
-                clearInterval(abortChecker);
-                console.error('WebSocket error:', error);
-                reject(new Error('WebSocket error during audio generation'));
-              };
-              
-              // Resolve when connection closes
-              ws.onclose = () => {
-                clearInterval(abortChecker);
-                resolve();
-              };
-            } catch (error) {
-              reject(error);
-            }
-          });
-          
-          // End the stream
-          controller.close();
-        } catch (error) {
-          console.error('Stream processing error:', error);
-          controller.error(error);
-        }
-      },
-      cancel() {
-        console.log("Stream was canceled by the client");
+    // Initialize ElevenLabs client
+    const client = new ElevenLabsClient({
+      apiKey: ELEVENLABS_API_KEY,
+    });
+
+    try {
+      // Use the direct API method rather than WebSockets
+      const response = await client.textToSpeech.convert(voiceId, {
+        output_format: "mp3_44100_128",
+        model_id: model,
+        text,
+        voice_settings: {
+          stability: 0.4,
+          similarity_boost: 0.75,
+          use_speaker_boost: true,
+        },
+      });
+
+      // Convert Readable stream to Buffer
+      const chunks: Uint8Array[] = [];
+      for await (const chunk of response) {
+        chunks.push(new Uint8Array(chunk));
       }
-    });
-    
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Connection': 'keep-alive',
-        'X-Content-Type-Options': 'nosniff', // Prevent MIME sniffing
-        'X-Accel-Buffering': 'no', // Disable nginx buffering
-      },
-    });
+      const audioData = Buffer.concat(chunks);
+      
+      // Convert to base64 for safe transmission
+      const base64Audio = audioData.toString('base64');
+      
+      // Send the entire audio file as a single chunk
+      // This avoids decoding issues with chunked audio
+      return NextResponse.json({
+        type: 'audio',
+        content: base64Audio
+      });
+      
+    } catch (error) {
+      console.error("Error in TTS conversion:", error);
+      return NextResponse.json(
+        { error: error instanceof Error ? error.message : 'Error generating audio' },
+        { status: 500 }
+      );
+    }
   } catch (error) {
     console.error('Text-to-speech error:', error);
     return NextResponse.json(

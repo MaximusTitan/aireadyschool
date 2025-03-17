@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Bot, User, Volume2, VolumeX } from "lucide-react";
+import { Bot, User, Volume2, VolumeX, BookOpen } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { CommandInput } from "./command-input";
 import { useNowPlaying } from "@/app/tools/gen-chat/hooks/useNowPlaying";
@@ -33,130 +33,29 @@ export const ChatArea = ({
   setGeneratedVideos,
   lastGeneratedImage,
   isOwner = true,
+  isTeachingMode = false,
+  onTeachingModeToggle,
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
   const [isTalking, setIsTalking] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
   const { stop: stopAudio, play: playAudio } = useNowPlaying();
-  const { 
-    isAudioEnabled, 
-    toggleAudio, 
+  const {
+    isAudioEnabled,
+    toggleAudio,
     hasUserInteracted,
-    markUserInteraction 
+    markUserInteraction,
   } = useAudioSettings();
   const toolsContentRef = useRef<HTMLDivElement>(null);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioSourcesRef = useRef<AudioBufferSourceNode[]>([]);
-  const audioQueueRef = useRef<AudioBuffer[]>([]);
-  const isPlayingStreamRef = useRef<boolean>(false);
   const ttsControllerRef = useRef<AbortController | null>(null);
-  const webSocketRef = useRef<WebSocket | null>(null);
+
+  // Add ref to track previous isLoading state
+  const prevIsLoadingRef = useRef(isLoading);
 
   const toolInvocations = messages.flatMap(
     (message) => message.toolInvocations || []
   );
-
-  // Initialize audio context
-  useEffect(() => {
-    if (typeof window !== 'undefined' && !audioContextRef.current) {
-      audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-    }
-    return () => {
-      stopStreamingAudio();
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-        audioContextRef.current = null;
-      }
-    };
-  }, []);
-
-  // Play the next audio buffer in the queue
-  const playNextInQueue = async () => {
-    if (!audioContextRef.current || !isPlayingStreamRef.current || audioQueueRef.current.length === 0) {
-      return;
-    }
-    
-    try {
-      const buffer = audioQueueRef.current.shift();
-      if (!buffer) return;
-      
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContextRef.current.destination);
-      
-      audioSourcesRef.current.push(source);
-      
-      source.onended = () => {
-        // Remove this source from the sources array
-        audioSourcesRef.current = audioSourcesRef.current.filter(s => s !== source);
-        
-        // Play next buffer if there's more in the queue
-        if (audioQueueRef.current.length > 0) {
-          playNextInQueue();
-        } else if (audioSourcesRef.current.length === 0) {
-          // If no more sources are playing and queue is empty, we're done
-          isPlayingStreamRef.current = false;
-          setPlayingMessageId(null);
-        }
-      };
-      
-      source.start(0);
-    } catch (err) {
-      console.error("Error playing audio chunk:", err);
-    }
-  };
-
-  // Process and play a new audio chunk
-  const processAudioChunk = async (base64Data: string) => {
-    if (!audioContextRef.current) return;
-    
-    try {
-      const binaryString = atob(base64Data);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-      
-      // Decode audio data with lower latency priority
-      const audioBuffer = await audioContextRef.current.decodeAudioData(bytes.buffer);
-      
-      // Add to queue
-      audioQueueRef.current.push(audioBuffer);
-      
-      // If we're not playing yet, start playing immediately
-      if (!isPlayingStreamRef.current) {
-        isPlayingStreamRef.current = true;
-        // Start playback immediately without delay
-        setTimeout(() => playNextInQueue(), 0);
-      }
-    } catch (err) {
-      console.error("Error processing audio chunk:", err);
-    }
-  };
-
-  // Stop streaming audio
-  const stopStreamingAudio = () => {
-    if (webSocketRef.current && webSocketRef.current.readyState === WebSocket.OPEN) {
-      webSocketRef.current.close();
-      webSocketRef.current = null;
-    }
-    
-    if (ttsControllerRef.current) {
-      ttsControllerRef.current.abort();
-      ttsControllerRef.current = null;
-    }
-    
-    if (!isPlayingStreamRef.current) return;
-    
-    isPlayingStreamRef.current = false;
-    audioSourcesRef.current.forEach(source => {
-      try { source.stop(); } catch (e) {}
-    });
-    audioSourcesRef.current = [];
-    audioQueueRef.current = [];
-    setPlayingMessageId(null);
-  };
 
   // Scroll tools panel to bottom when new tools are added
   useEffect(() => {
@@ -185,145 +84,111 @@ export const ChatArea = ({
     const handleUserInteraction = () => {
       markUserInteraction();
     };
-    
+
     // Common user interaction events
-    const events = ['click', 'keydown', 'touchstart', 'mousedown'];
-    
-    events.forEach(event => {
+    const events = ["click", "keydown", "touchstart", "mousedown"];
+
+    events.forEach((event) => {
       document.addEventListener(event, handleUserInteraction, { once: true });
     });
-    
+
     return () => {
-      events.forEach(event => {
+      events.forEach((event) => {
         document.removeEventListener(event, handleUserInteraction);
       });
     };
   }, [markUserInteraction]);
 
-  // Clean up audio resources when component unmounts or page changes
-  useEffect(() => {
-    const handleBeforeUnload = () => {
-      stopStreamingAudio();
-    };
-
-    // Handle page unload
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    
-    // Add visibility change event to stop audio when user switches tabs or minimizes
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden') {
-        stopStreamingAudio();
-      }
-    });
-
-    return () => {
-      stopStreamingAudio();
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-      document.removeEventListener('visibilitychange', handleBeforeUnload);
-    };
-  }, []);
-
   // Handle text-to-speech
   const handleTTS = async (messageId: string, text: string) => {
     try {
       if (playingMessageId === messageId) {
-        stopStreamingAudio();
-        return;
-      }
-
-      stopStreamingAudio();
-      setPlayingMessageId(messageId);
-
-      if (!hasUserInteracted) {
-        console.log("User has not interacted with the page yet, skipping audio playback");
+        stopAudio();
         setPlayingMessageId(null);
         return;
       }
 
-      // Extract only the first few sentences for immediate playback to reduce initial delay
-      const firstChunk = text.split('.').slice(0, 2).join('.') + '.';
-      
+      stopAudio();
+      setPlayingMessageId(messageId);
+
+      if (!hasUserInteracted) {
+        console.log(
+          "User has not interacted with the page yet, skipping audio playback"
+        );
+        setPlayingMessageId(null);
+        return;
+      }
+
       // Clean text for TTS
       const cleanText = text
-        .replace(/\[.*?\]/g, '') // Remove markdown links
-        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold
-        .replace(/\*(.*?)\*/g, '$1') // Remove italic
-        .replace(/`(.*?)`/g, '$1') // Remove code blocks
+        .replace(/\[.*?\]/g, "") // Remove markdown links
+        .replace(/\*\*(.*?)\*\*/g, "$1") // Remove bold
+        .replace(/\*(.*?)\*/g, "$1") // Remove italic
+        .replace(/`(.*?)`/g, "$1") // Remove code blocks
         .trim();
 
       // Create a new abort controller for this request
       ttsControllerRef.current = new AbortController();
-      
+
       const response = await fetch(`/api/gen-chat-tts`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          "Priority": "high" // Add priority header
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           text: cleanText,
-          priority: "high"  // Signal high priority for processing
         }),
-        signal: ttsControllerRef.current.signal
+        signal: ttsControllerRef.current.signal,
       });
 
       if (!response.ok) throw new Error("TTS request failed");
-      
-      if (!response.body) {
-        throw new Error("Response body is null");
+
+      const data = await response.json();
+
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      // Process the streaming response
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-
-      // Read and process chunks
-      while (true) {
-        const { done, value } = await reader.read();
-        
-        if (done) {
-          break;
+      if (data.type === "audio" && data.content) {
+        // Create a Blob from the base64 audio
+        const binaryString = atob(data.content);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+          bytes[i] = binaryString.charCodeAt(i);
         }
 
-        // Process the chunk
-        const chunk = decoder.decode(value);
-        const lines = chunk.split('\n').filter(line => line.trim());
+        const blob = new Blob([bytes], { type: "audio/mpeg" });
 
-        for (const line of lines) {
-          try {
-            const data = JSON.parse(line);
-            
-            if (data.type === 'audio') {
-              // Process the audio chunk for immediate playback
-              await processAudioChunk(data.content);
-            }
-          } catch (e) {
-            console.error('Error parsing chunk:', e);
-          }
-        }
+        // Play the audio using our existing audio player
+        await playAudio(blob, "audio/mpeg");
       }
     } catch (error: unknown) {
-      if (error instanceof Error && error.name !== 'AbortError') {
+      if (error instanceof Error && error.name !== "AbortError") {
         console.error("TTS error:", error);
       }
       setPlayingMessageId(null);
     }
   };
 
-  // Watch for loading state changes to trigger TTS only when a new message is received during loading
+  // Watch for loading state changes to trigger TTS only when finishing text generation.
   useEffect(() => {
-    // If we were loading and now we're not, and audio is enabled, read the last assistant message
-    if (!isLoading && messages.length > 0 && isAudioEnabled && hasUserInteracted) {
+    if (
+      prevIsLoadingRef.current &&
+      !isLoading &&
+      messages.length > 0 &&
+      isAudioEnabled &&
+      hasUserInteracted
+    ) {
       const lastMessage = messages[messages.length - 1];
       if (
-        lastMessage.role === "assistant" && 
+        lastMessage.role === "assistant" &&
         typeof lastMessage.content === "string" &&
-        !lastMessage.fromHistory &&  // Don't read messages from history
-        !playingMessageId // Not already playing something
+        !lastMessage.fromHistory
       ) {
         handleTTS(lastMessage.id, lastMessage.content);
       }
     }
+    prevIsLoadingRef.current = isLoading;
   }, [isLoading, messages, isAudioEnabled, hasUserInteracted]);
 
   const handleVideoComplete = (toolCallId: string, videoUrl: string) => {
@@ -332,9 +197,25 @@ export const ChatArea = ({
 
   const handleAudioToggle = () => {
     if (isAudioEnabled && playingMessageId) {
-      stopStreamingAudio();
+      stopAudio();
+      setPlayingMessageId(null);
     }
     toggleAudio();
+  };
+
+  const handleExampleClick = async (examplePrompt: string) => {
+    onInputChange(examplePrompt);
+    // Allow state to update before submitting
+    setTimeout(() => {
+      const submitEvent = new Event("submit", {
+        cancelable: true,
+        bubbles: true,
+      });
+      const formElement = document.querySelector("form");
+      if (formElement) {
+        formElement.dispatchEvent(submitEvent);
+      }
+    }, 10);
   };
 
   const renderMessage = (message: any) => (
@@ -386,7 +267,21 @@ export const ChatArea = ({
       {/* Chat Panel */}
       <div className="w-[50%] flex-shrink-0 flex flex-col h-full border-x">
         <div className="flex items-center justify-between flex-shrink-0 px-4 py-2 border-b bg-white sticky top-0 z-10">
-          <h2 className="text-lg font-semibold">Chat</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-semibold">Chat</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={onTeachingModeToggle}
+              className={cn(
+                "h-8 px-2",
+                isTeachingMode && "bg-rose-100 text-rose-700"
+              )}
+            >
+              <BookOpen size={16} className="mr-1" />
+              {isTeachingMode ? "Teaching" : "Interactive"}
+            </Button>
+          </div>
           <Button
             variant="ghost"
             size="sm"
@@ -399,9 +294,77 @@ export const ChatArea = ({
         </div>
         <div className="flex-1 p-4 overflow-hidden">
           <div className="h-full overflow-y-auto">
-            {messages
-              ?.filter((message: any) => !message.isHidden)
-              .map(renderMessage)}
+            {messages?.length > 0 ? (
+              messages
+                ?.filter((message: any) => !message.isHidden)
+                .map(renderMessage)
+            ) : (
+              <div className="flex flex-col h-full items-center justify-center text-center px-4">
+                <div className="text-3xl font-bold text-neutral-500 mb-4">
+                  Agent Buddy
+                </div>
+                <div className="text-neutral-400 max-w-md mb-8">
+                  <p>Welcome to your Personalized AI Tutor!</p>
+                  <p className="mt-2">
+                    Click on a prompt below to get started:
+                  </p>
+                </div>
+
+                <div className="grid gap-4 w-full max-w-lg">
+                  <button
+                    onClick={() =>
+                      handleExampleClick(
+                        "Hey buddy, I have an upcoming exam on Physics. Can you help me understand the concepts of force and motion better?"
+                      )
+                    }
+                    className="p-4 border rounded-lg hover:border-rose-300 hover:bg-rose-50 text-left transition-all"
+                  >
+                    <p className="font-medium text-neutral-800">
+                      Help with exam preparation
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      "Hey buddy, I have an upcoming exam on Physics. Can you
+                      help me understand the concepts of force and motion
+                      better?"
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      handleExampleClick(
+                        "I'd like to learn about machine learning. Can you create a mindmap to help me understand the key concepts?"
+                      )
+                    }
+                    className="p-4 border rounded-lg hover:border-rose-300 hover:bg-rose-50 text-left transition-all"
+                  >
+                    <p className="font-medium text-neutral-800">
+                      Learn with mindmaps
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      "I'd like to learn about machine learning. Can you create
+                      a mindmap to help me understand the key concepts?"
+                    </p>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      handleExampleClick(
+                        "Can you generate a helpful visualization to explain how photosynthesis works?"
+                      )
+                    }
+                    className="p-4 border rounded-lg hover:border-rose-300 hover:bg-rose-50 text-left transition-all"
+                  >
+                    <p className="font-medium text-neutral-800">
+                      Visual learning
+                    </p>
+                    <p className="text-sm text-neutral-500">
+                      "Can you generate a helpful visualization to explain how
+                      photosynthesis works?"
+                    </p>
+                  </button>
+                </div>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
         </div>

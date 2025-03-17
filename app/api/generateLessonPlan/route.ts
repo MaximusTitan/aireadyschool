@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/client";
+import { createClient } from "@/utils/supabase/server";
+import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
-import { generateObject } from "ai";
+import { logTokenUsage } from '@/utils/logTokenUsage';
 import { z } from "zod";
 
 // Define the lesson plan schema
@@ -13,7 +14,7 @@ const lessonPlanSchema = z.object({
       learningOutcomes: z.array(z.string()),
       schedule: z.array(
         z.object({
-          type: z.enum(["introduction", "mainContent", "activity", "conclusion"]),
+          type: z.enum(["introduction", "mainContent", "activity", "conclusion", "review", "assessment"]),
           title: z.string(),
           content: z.string(),
           timeAllocation: z.number(),
@@ -56,94 +57,152 @@ const lessonPlanSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData();
-    const subject = formData.get("subject") as string;
-    const chapterTopic = formData.get("chapterTopic") as string;
-    const grade = formData.get("grade") as string;
-    const country = formData.get("country") as string;
-    const board = formData.get("board") as string;
-    const classDuration = formData.get("classDuration") as string;
-    const numberOfDays = Number.parseInt(formData.get("numberOfDays") as string, 10);
-    const learningObjectives = formData.get("learningObjectives") as string;
+    // Parse the request body
+    const {
+      subject,
+      grade,
+      chapterTopic,
+      board,
+      classDuration,
+      numberOfDays,
+      learningObjectives,
+      lessonObjectives,
+      additionalInstructions,
+      userEmail
+    } = await request.json();
 
     // Validate required fields
-    if (!subject || !chapterTopic || !grade || !country || !board || !classDuration || !numberOfDays) {
+    if (!subject || !grade || !chapterTopic || !board || !classDuration || !numberOfDays) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // ...existing logging code...
+    // Verify user is authenticated
+    const supabase = await createClient();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
-    const systemPrompt = `You are a professional curriculum developer. Create detailed lesson plans following this exact JSON structure. DO NOT include any comments or explanations in your response - return ONLY valid JSON:
-{
-  "days": [
-    {
-      "day": number,
-      "topicHeading": string,
-      "learningOutcomes": string[],
-      "schedule": [
-        {
-          "type": "introduction" | "mainContent" | "activity" | "conclusion",
-          "title": string,
-          "content": string,
-          "timeAllocation": number
-        }
-      ],
-      "teachingAids": string[],
-      "assignment": {
-        "description": string,
-        "tasks": string[]
-      }
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: "Unauthorized - authentication required" },
+        { status: 401 }
+      );
     }
-  ],
-  "assessmentPlan": {
-    "formativeAssessments": [
-      {
-        "topic": string,
-        "type": string,
-        "description": string,
-        "evaluationCriteria": string[]
-      }
-    ],
-    "summativeAssessments": [
-      {
-        "topic": string,
-        "type": string,
-        "description": string,
-        "evaluationCriteria": string[]
-      }
-    ],
-    "progressTrackingSuggestions": string[]
-  },
-  "remedialStrategies": [
-    {
-      "targetGroup": string,
-      "strategy": string,
-      "description": string
+
+    // Verify the email matches the authenticated user
+    if (user.email !== userEmail) {
+      return NextResponse.json(
+        { error: "Unauthorized - email mismatch" },
+        { status: 403 }
+      );
     }
-  ]
-}`;
 
-    const userPrompt = `Create a complete ${numberOfDays}-day lesson plan for teaching ${subject} - ${chapterTopic} for grade ${grade} in ${country} following the ${board} board curriculum. Each class is ${classDuration} minutes long.
+    console.log("Generating lesson plan for:", {
+      subject,
+      chapterTopic,
+      grade,
+      board,
+      classDuration,
+      numberOfDays,
+      learningObjectives,
+      userEmail,
+      lessonObjectives,
+      additionalInstructions: additionalInstructions || "Not provided",
+    });
 
-Learning objectives: ${learningObjectives || "To be determined based on the topic"}
+    // Create the user prompt
+    const prompt = `Create a complete ${numberOfDays}-day lesson plan for teaching ${subject} - ${chapterTopic} for grade ${grade} (${board} board). Each class is ${classDuration} minutes long.
+
+Lesson Objectives: ${lessonObjectives || "To be determined based on the topic"}
+Learning Objectives: ${learningObjectives || "To be determined based on the topic"}
+${additionalInstructions ? `Additional Instructions: ${additionalInstructions}` : ""}
 
 Include all days in the plan. Return ONLY a complete, valid JSON object with no comments or additional text.`;
 
-    // Use the structured output generator
-    const { object: generatedPlan } = await generateObject({
-      model: openai("gpt-4o", {
-        structuredOutputs: true,
-      }),
-      schemaName: "lessonPlan",
-      schemaDescription: "Detailed lesson plan as per provided prompt.",
-      schema: lessonPlanSchema,
-      prompt: userPrompt,
+    // Define the system prompt
+  // Construct system prompt
+  const systemPrompt = `You are a professional curriculum developer. Create detailed lesson plans following this exact JSON structure and the provided dynamic lesson plan structure. DO NOT include any comments or explanations in your response - return ONLY valid JSON:\n\n{
+    "days": [
+      {
+        "day": number,
+        "topicHeading": string,
+        "learningOutcomes": string[],
+        "schedule": [
+          {
+            "type": "introduction" | "mainContent" | "activity" | "conclusion" | "review" | "assessment",
+            "title": string,
+            "content": string,
+            "timeAllocation": number
+          }
+        ]
+      }
+    ],
+    "assessmentPlan": {
+      "formativeAssessments": [
+        {
+          "topic": string,
+          "type": string,
+          "description": string,
+          "evaluationCriteria": string[]
+        }
+      ],
+      "summativeAssessments": [
+        {
+          "topic": string,
+          "type": string,
+          "description": string,
+          "evaluationCriteria": string[]
+        }
+      ],
+      "progressTrackingSuggestions": string[]
+    }
+}\n\nIMPORTANT GUIDELINES:\n1. Provide EXTENSIVE and DETAILED content for each activity. Each activity's "content" field should contain at least 50-100 words with specific teaching instructions, examples, questions to ask students, and detailed explanations.\n2. For each activity, include step-by-step instructions that a teacher could follow directly.\n3. Include age-appropriate examples, analogies, and real-world connections in the content.\n4. Ensure learning outcomes are specific, measurable, and aligned with educational standards.\n5. Make assignments challenging but achievable, with clear instructions and expectations.\n6. Include a variety of assessment types (quizzes, projects, discussions, etc.)\n7. DO NOT include any comments or explanations outside the JSON structure.\n8. Return ONLY valid JSON with no additional text.`;
+
+   // Generate the lesson plan
+    const { text: rawResponse, usage } = await generateText({
+      model: openai("gpt-4o"),
+      system: systemPrompt,
+      prompt: prompt,
+      temperature: 0.7,
+      maxTokens: 4000
     });
 
-    const supabase = await createClient();
+    // Log token usage if available
+    if (usage) {
+      await logTokenUsage(
+        'Lesson Planner',
+        'GPT-4o',
+        usage.promptTokens,
+        usage.completionTokens,
+        user.email
+      );
+    }
+
+    // Process the response
+    let lessonPlan;
+    try {
+      // Extract JSON from the response
+      const jsonStartIndex = rawResponse.indexOf("{");
+      const jsonEndIndex = rawResponse.lastIndexOf("}");
+      
+      if (jsonStartIndex === -1 || jsonEndIndex === -1) {
+        throw new Error("Could not find valid JSON in the response");
+      }
+      
+      const jsonContent = rawResponse.slice(jsonStartIndex, jsonEndIndex + 1);
+      lessonPlan = JSON.parse(jsonContent);
+    } catch (parseError) {
+      console.error("Error parsing AI response. Original content:", rawResponse);
+      console.error("Parse error:", parseError);
+      return NextResponse.json(
+        { error: "Failed to parse lesson plan response" },
+        { status: 500 }
+      );
+    }
+
+    console.log("Storing lesson plan in Supabase");
+    // Store the lesson plan in the database
     const { data: insertedData, error: insertError } = await supabase
       .from("lesson_plans")
       .insert({
@@ -152,20 +211,36 @@ Include all days in the plan. Return ONLY a complete, valid JSON object with no 
         grade,
         board,
         class_duration: Number.parseInt(classDuration),
-        number_of_days: numberOfDays,
+        number_of_days: Number.parseInt(numberOfDays.toString()),
         learning_objectives: learningObjectives,
-        plan_data: generatedPlan,
+        lesson_objectives: lessonObjectives,
+        additional_instructions: additionalInstructions,
+        plan_data: lessonPlan,
+        user_email: userEmail,
       })
       .select();
 
-    if (insertError || !insertedData || insertedData.length === 0) {
-      const msg = insertError ? insertError.message : "Failed to retrieve inserted lesson plan data";
-      return NextResponse.json({ error: msg }, { status: 500 });
+    if (insertError) {
+      console.error("Error inserting lesson plan:", insertError);
+      return NextResponse.json(
+        { error: `Failed to save lesson plan: ${insertError.message}` },
+        { status: 500 }
+      );
     }
 
+    if (!insertedData || insertedData.length === 0) {
+      return NextResponse.json(
+        { error: "Failed to retrieve inserted lesson plan data" },
+        { status: 500 }
+      );
+    }
+
+    console.log("Lesson plan stored successfully");
     return NextResponse.json(insertedData[0]);
   } catch (error) {
+    console.error("Error generating lesson plan:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

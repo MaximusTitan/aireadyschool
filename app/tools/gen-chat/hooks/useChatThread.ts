@@ -25,6 +25,8 @@ export function useChatThread(initialThreadId?: string) {
   const [title, setTitle] = useState<string>('New Chat');
   const [threads, setThreads] = useState<Array<{id: string; title: string; created_at: string}>>([]);
   const [isOwner, setIsOwner] = useState<boolean>(true); // Add this state variable
+  const [shouldGenerateTitle, setShouldGenerateTitle] = useState(true);
+  const [messageCount, setMessageCount] = useState(0);
 
   const clearMessages = useCallback(() => {
     setCurrentMessages([]);
@@ -58,11 +60,57 @@ export function useChatThread(initialThreadId?: string) {
       setTitle('New Chat');
       setCurrentMessages([]);
       await loadThreads();
+      setMessageCount(0);
+      setShouldGenerateTitle(true);
       
       return data.id;
     } catch (error) {
       console.error('Failed to create thread:', error);
       throw error;
+    }
+  };
+
+  const generateTitleInBackground = async (activeThreadId: string) => {
+    try {
+      const { data: userMessages } = await supabase
+        .from('chat_messages')
+        .select('content')
+        .eq('thread_id', activeThreadId)
+        .eq('role', 'user')
+        .order('created_at', { ascending: true })
+        .limit(2);
+
+      if (userMessages && userMessages.length === 2) {
+        const response = await fetch('/api/chat/generate-title', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            messages: userMessages.map(m => ({ role: 'user', content: m.content })),
+            threadId: activeThreadId
+          })
+        });
+
+        if (response.ok) {
+          const { title: newTitle } = await response.json();
+          await supabase
+            .from('chat_threads')
+            .update({ title: newTitle })
+            .eq('id', activeThreadId);
+          
+          setTitle(newTitle);
+          setShouldGenerateTitle(false);
+          
+          setThreads(prevThreads => 
+            prevThreads.map(thread => 
+              thread.id === activeThreadId 
+                ? { ...thread, title: newTitle }
+                : thread
+            )
+          );
+        }
+      }
+    } catch (error) {
+      console.error('Failed to generate title:', error);
     }
   };
 
@@ -74,19 +122,6 @@ export function useChatThread(initialThreadId?: string) {
     }
 
     try {
-      // Verify thread exists first
-      const { data: threadExists } = await supabase
-        .from('chat_threads')
-        .select('id')
-        .eq('id', activeThreadId)
-        .single();
-
-      if (!threadExists) {
-        throw new Error('Thread no longer exists');
-      }
-
-      // Then proceed with message save
-      // First, insert the message
       const { data: messageData, error: messageError } = await supabase
         .from('chat_messages')
         .insert([{
@@ -99,7 +134,21 @@ export function useChatThread(initialThreadId?: string) {
 
       if (messageError) throw messageError;
 
-      // Then, if there are tool calls, insert them
+      // Check if title should be generated and do it in the background
+      if (shouldGenerateTitle && title === 'New Chat' && message.role === 'user') {
+        const { count: userMessageCount } = await supabase
+          .from('chat_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('thread_id', activeThreadId)
+          .eq('role', 'user');
+
+        if (userMessageCount === 2) {
+          // Generate title in the background without awaiting
+          generateTitleInBackground(activeThreadId);
+        }
+      }
+
+      // Handle tool calls if present
       if (message.toolCalls?.length) {
         const toolOutputs = message.toolCalls.map(tool => ({
           message_id: messageData.id,
@@ -120,10 +169,10 @@ export function useChatThread(initialThreadId?: string) {
         }
       }
 
+      setMessageCount(prev => prev + 1);
       return messageData;
     } catch (error: any) {
       console.error('Failed to save message:', error.message || error);
-      // Rethrow with more specific error
       if (error.message?.includes('foreign key constraint')) {
         throw new Error('Thread no longer exists');
       }
@@ -197,6 +246,8 @@ export function useChatThread(initialThreadId?: string) {
 
       setCurrentThreadId(threadId);
       setCurrentMessages(formattedMessages);
+      setMessageCount(formattedMessages.length);
+      setShouldGenerateTitle(false); // Don't generate title for loaded threads
 
       // Load thread details for title
       const { data: threadData } = await supabase

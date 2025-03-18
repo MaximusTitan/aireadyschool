@@ -65,7 +65,12 @@ export function ThreadList({
             onClick={() => onThreadSelect(thread.id)}
           >
             <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">{thread.title}</div>
+              <div
+                className="font-medium text-sm truncate"
+                title={thread.title}
+              >
+                {thread.title}
+              </div>
               <div className="text-xs text-gray-500">
                 {formatDistanceToNow(new Date(thread.created_at), {
                   addSuffix: true,

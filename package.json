@@ -101,6 +101,7 @@
     "langchain": "^0.3.19",
     "lodash": "^4.17.21",
     "lucide-react": "^0.436.0",
+    "lumaai": "^1.6.0",
     "mammoth": "^1.9.0",
     "marked": "^15.0.6",
     "mssql": "^11.0.1",

@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { categories } from "../config/toolCategories";
+import { categories } from "@/app/config/toolCategories";
 import Link from "next/link";
 
 // Utility function to find a tool by name across all categories and user types

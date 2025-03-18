@@ -81,7 +81,7 @@ export default function ClientLayout({
     pathname.startsWith("/connect-database") ||
     pathname.startsWith("/feedback") ||
     pathname.startsWith("/profile") ||
-    pathname.startsWith("/activities") ||
+    pathname.startsWith("/guide") ||
     pathname.startsWith("/knowledge-base") ||
     pathname.startsWith("/dat-submissions") ||
     (pathname.startsWith("/portfolio") &&

@@ -95,8 +95,8 @@ export function AppSidebar() {
         icon: BrainCircuit,
       },
       {
-        title: "Activities",
-        url: "/activities",
+        title: "Guide",
+        url: "/guide",
         icon: Frame,
       },
       // {

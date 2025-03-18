@@ -50,3 +50,48 @@ export const saveDocumentToDatabase = async (documentData: {
     return { data: null, error };
   }
 };
+
+export const loadDocumentFromDatabase = async (id: string) => {
+  const supabase = createClientComponentClient();
+
+  try {
+    // Get current session
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.user?.email) {
+      throw new Error('No authenticated user');
+    }
+
+    const { data, error } = await supabase
+      .from('document_generator')
+      .select('*')
+      .eq('id', id)
+      .eq('email', session.user.email)
+      .eq('is_deleted', false)
+      .single();
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error loading document:', error);
+    return { data: null, error };
+  }
+};
+
+export const getAllDocuments = async () => {
+  const supabase = createClientComponentClient();
+
+  try {
+    const { data, error } = await supabase
+      .from('document_generator')
+      .select('*')
+      .eq('is_deleted', false)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    return { data, error: null };
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+    return { data: null, error };
+  }
+};

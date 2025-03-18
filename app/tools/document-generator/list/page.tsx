@@ -21,12 +21,16 @@ import {
   Loader2 
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { getAllDocuments } from '@/lib/db';
 
 interface Document {
   id: string;
   title: string;
+  content: string;
   created_at: string;
   updated_at: string;
+  is_deleted: boolean;
+  email: string;
 }
 
 export default function DocumentList() {
@@ -35,26 +39,31 @@ export default function DocumentList() {
   const supabase = createClientComponentClient();
   const router = useRouter();
 
-  // Fetch documents
   useEffect(() => {
     const fetchDocuments = async () => {
       try {
+        setLoading(true);
+        
+        // Get current user's email
         const { data: { session } } = await supabase.auth.getSession();
         
         if (!session?.user?.email) {
-          toast.error("Please sign in to view your documents");
-          router.push('/login');
+          console.log('No authenticated user');
+          setDocuments([]);
           return;
         }
-        
+
+        // Fetch documents for the current user
         const { data, error } = await supabase
           .from('document_generator')
-          .select('id, title, created_at, updated_at')
+          .select('*')
+          .eq('is_deleted', false)
           .eq('email', session.user.email)
           .order('updated_at', { ascending: false });
-          
+
         if (error) throw error;
-        
+
+        console.log('Fetched documents:', data); // Debug log
         setDocuments(data || []);
       } catch (error) {
         console.error('Error fetching documents:', error);
@@ -63,36 +72,47 @@ export default function DocumentList() {
         setLoading(false);
       }
     };
-    
+
     fetchDocuments();
+
+    // Set up real-time subscription
+    const channel = supabase
+      .channel('document_changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'document_generator' 
+        }, 
+        () => {
+          fetchDocuments();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [supabase, router]);
 
-  // Create new document
   const createNewDocument = () => {
     router.push('/tools/document-generator');
   };
 
-  // Edit document
   const editDocument = (id: string) => {
-    router.push(`/tools/document-generator?id=${id}`);
+    router.push(`/tools/document-generator?id=${id}&mode=edit`);
   };
 
-  // Delete document
   const deleteDocument = async (id: string) => {
     try {
-      // Soft delete by setting is_deleted to true
       const { error } = await supabase
-        .from('document_generator')  // Updated table name
+        .from('document_generator')
         .update({ is_deleted: true })
         .eq('id', id);
         
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
-      // Update state to remove deleted document
       setDocuments(documents.filter(doc => doc.id !== id));
-      
       toast.success("Document deleted successfully");
     } catch (error) {
       console.error('Error deleting document:', error);
@@ -103,7 +123,16 @@ export default function DocumentList() {
   return (
     <div className="container mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Documents</h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">My Documents</h1>
+          <Button 
+            variant="outline"
+            onClick={() => router.push('/tools/document-generator')}
+            className="ml-4"
+          >
+            Back to Editor
+          </Button>
+        </div>
         <Button onClick={createNewDocument} className="flex items-center gap-2">
           <Plus size={16} />
           New Document
@@ -136,7 +165,7 @@ export default function DocumentList() {
               <TableRow key={doc.id}>
                 <TableCell 
                   className="font-medium cursor-pointer hover:text-primary"
-                  onClick={() => editDocument(doc.id)}
+                  onClick={() => router.push(`/tools/document-generator?id=${doc.id}&mode=view`)}
                 >
                   {doc.title || 'Untitled Document'}
                 </TableCell>
@@ -148,20 +177,31 @@ export default function DocumentList() {
                 </TableCell>
                 <TableCell className="text-right">
                   <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => editDocument(doc.id)}
-                    className="text-gray-500 hover:text-primary"
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => router.push(`/tools/document-generator?id=${doc.id}&mode=view`)}
+                    className="mr-2"
                   >
-                    <Edit size={16} />
+                    <FileText size={16} className="mr-2" />
+                    Open
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => editDocument(doc.id)}
+                    className="mr-2"
+                  >
+                    <Edit size={16} className="mr-2" />
+                    Edit
                   </Button>
                   <Button 
                     variant="ghost" 
-                    size="icon" 
+                    size="sm"
                     onClick={() => deleteDocument(doc.id)}
-                    className="text-gray-500 hover:text-destructive"
+                    className="text-destructive"
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={16} className="mr-2" />
+                    Delete
                   </Button>
                 </TableCell>
               </TableRow>

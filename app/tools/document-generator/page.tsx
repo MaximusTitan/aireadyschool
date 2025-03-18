@@ -48,6 +48,7 @@ import {
   Upload,
   Paintbrush,
   Save,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -69,6 +70,7 @@ import { useSearchParams } from "next/navigation";
 import { saveDocumentToDatabase } from "@/lib/db";
 import { Node } from "@tiptap/core";
 import { createClient } from "@/utils/supabase/client";
+import { useRouter } from "next/navigation"; // Add this import at the top
 
 // Create a custom fontSize extension based on TextStyle
 const FontSize = Extension.create({
@@ -176,6 +178,7 @@ const highlightColors = [
 ];
 
 const DocumentGeneratorContent = () => {
+  const router = useRouter(); // Add this near other hooks
   const [documentTitle, setDocumentTitle] = useState("Untitled Document");
   const [loading, setLoading] = useState(false);
   const [aiPromptVisible, setAiPromptVisible] = useState(false);
@@ -195,6 +198,7 @@ const DocumentGeneratorContent = () => {
   const [documentId, setDocumentId] = useState<string | null>(null);
   const supabase = createClient();
   const [exportingPdf, setExportingPdf] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -542,10 +546,27 @@ const DocumentGeneratorContent = () => {
     }
   };
 
+  // Add new state for tracking changes
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Modify the editor's onUpdate to track changes
+  useEffect(() => {
+    if (editor) {
+      editor.on('update', ({ editor }) => {
+        setHasUnsavedChanges(true);
+      });
+    }
+  }, [editor]);
+
   // Function to export document as PDF with improved formatting
   const exportAsPDF = async () => {
     if (!editor || !editorRef.current) {
       toast.error("Cannot export: editor not initialized");
+      return;
+    }
+
+    if (hasUnsavedChanges) {
+      toast.error("Please save your changes before exporting");
       return;
     }
 
@@ -784,6 +805,7 @@ const DocumentGeneratorContent = () => {
   useEffect(() => {
     const loadDocument = async () => {
       const id = searchParams.get("id");
+      const mode = searchParams.get("mode");
       if (!id || !editor) return;
 
       try {
@@ -801,6 +823,12 @@ const DocumentGeneratorContent = () => {
           setDocumentId(data.id);
           setDocumentTitle(data.title);
           editor.commands.setContent(data.content);
+          
+          // Set view mode if specified
+          if (mode === 'view') {
+            setIsViewMode(true);
+            editor.setEditable(false);
+          }
         }
       } catch (error) {
         console.error("Error loading document:", error);
@@ -859,6 +887,8 @@ const DocumentGeneratorContent = () => {
         setDocumentId(result.data.id);
       }
 
+      // Reset unsaved changes flag after successful save
+      setHasUnsavedChanges(false);
       toast.success("Document saved successfully!");
     } catch (error) {
       console.error("Error saving document:", error);
@@ -868,6 +898,19 @@ const DocumentGeneratorContent = () => {
     }
   };
 
+  // Add warning when leaving with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   if (!editor) {
     return null;
   }
@@ -876,33 +919,59 @@ const DocumentGeneratorContent = () => {
     <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
       {/* Document Header */}
       <div className="p-4 border-b bg-white flex items-center justify-between">
-        <input
-          type="text"
-          value={documentTitle}
-          onChange={(e) => setDocumentTitle(e.target.value)}
-          className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
-        />
+        <div className="flex-1">
+          <input
+            type="text"
+            value={documentTitle}
+            onChange={(e) => setDocumentTitle(e.target.value)}
+            className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
+            readOnly={isViewMode}
+          />
+        </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-4">
           <Button
-            variant="default"
-            className="flex items-center gap-1"
-            onClick={saveDocument}
-            disabled={isSaving}
+            variant="ghost"
+            onClick={() => router.push('/tools/document-generator/list')}
+            className="flex items-center gap-2"
           >
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Save size={16} />
-            )}
-            Save
+            <FileText size={16} />
+            My Documents
           </Button>
+
+          {!isViewMode ? (
+            <Button
+              variant="default"
+              className="flex items-center gap-1"
+              onClick={saveDocument}
+              disabled={isSaving}
+            >
+              {isSaving ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Save size={16} className={hasUnsavedChanges ? "text-yellow-500" : ""} />
+              )}
+              {hasUnsavedChanges ? "Save*" : "Save"}
+            </Button>
+          ) : (
+            <Button
+              variant="default"
+              onClick={() => {
+                router.push(`/tools/document-generator?id=${documentId}&mode=edit`);
+                setIsViewMode(false);
+                editor?.setEditable(true);
+              }}
+            >
+              <Edit size={16} className="mr-2" />
+              Edit Document
+            </Button>
+          )}
 
           <Button
             variant="outline"
             className="flex items-center gap-1"
             onClick={exportAsPDF}
-            disabled={exportingPdf}
+            disabled={exportingPdf || hasUnsavedChanges}
           >
             {exportingPdf ? (
               <Loader2 className="h-4 w-4 animate-spin" />

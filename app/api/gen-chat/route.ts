@@ -247,7 +247,13 @@ export async function POST(request: Request) {
         // Save tool outputs
         await saveToolOutputs(supabase, messageId, toolCallsWithResults);
       },
-      onFinish: async ({ usage }) => {
+      onFinish: async ({ usage, finishReason }) => {
+        // Handle potential stream errors in onFinish
+        if (finishReason === 'error') {
+          console.error('Stream finished with error:', { finishReason, usage });
+          throw new Error('Stream error occurred');
+        }
+        
         if (usage) {
           await logTokenUsage(
             'Learning Buddy',
@@ -255,14 +261,56 @@ export async function POST(request: Request) {
             usage.promptTokens,
             usage.completionTokens,
             user.email || undefined
-          );
+          ).catch(err => console.warn('Token logging failed:', err));
         }
       }
     });
 
-    return result.toDataStreamResponse();
+    try {
+      const response = result.toDataStreamResponse();
+      return new Response(response.body, {
+        status: response.status,
+        headers: response.headers,
+        statusText: response.statusText,
+      });
+    } catch (streamErr: any) {
+      console.error('Stream conversion error:', streamErr);
+      return Response.json({
+        error: 'Stream error',
+        details: streamErr.message,
+        code: 'STREAM_ERROR'
+      }, { status: 500 });
+    }
   } catch (err: any) {
     console.error('Error in POST /api/gen-chat:', err);
-    return Response.json({ error: err.message || 'An unknown error occurred.' }, { status: 500 });
+    
+    // Handle the specific error format from the example
+    if (err.messageId && typeof err.messageId === 'string') {
+      return Response.json({
+        error: 'Message processing error',
+        messageId: err.messageId,
+        details: err.message || 'Error processing message',
+        code: 'MESSAGE_ERROR'
+      }, { status: 400 });
+    }
+
+    // Handle finish reason errors
+    if (err.finishReason === 'error') {
+      return Response.json({
+        error: 'AI model error',
+        details: 'The AI model encountered an error during processing',
+        usage: err.usage || { promptTokens: 0, completionTokens: 0 },
+        code: 'MODEL_ERROR',
+        finishReason: err.finishReason
+      }, { status: 500 });
+    }
+
+    // Default error response
+    return Response.json({
+      error: 'Server error',
+      details: err.message || 'An unknown error occurred',
+      code: 'SERVER_ERROR',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    }, { status: 500 });
   }
 }

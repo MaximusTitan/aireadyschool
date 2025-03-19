@@ -113,31 +113,35 @@ export default function AppPage({
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
-      <div className="flex justify-between items-start mb-8">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold text-rose-500">{app.name}</h1>
-          <p className="text-muted-foreground text-lg">{app.description}</p>
+    <div className="container mx-auto py-16 px-4 max-w-5xl">
+      <div className="mb-16">
+        <div className="flex justify-between items-start gap-12">
+          <div className="space-y-4">
+            <h1 className="text-4xl font-bold text-rose-500">{app.name}</h1>
+            <p className="text-muted-foreground text-lg">{app.description}</p>
+          </div>
+          <Link
+            href="https://aireadyschool.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 hover:opacity-80 transition-opacity shrink-0"
+          >
+            <p className="text-base text-neutral-600 font-semibold">
+              Built with
+            </p>
+            <Image
+              src="/newLogo.png"
+              alt="AI Ready School Logo"
+              width={100}
+              height={37}
+              className="h-auto"
+            />
+          </Link>
         </div>
-        <Link
-          href="https://aireadyschool.com"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-3 hover:opacity-80 transition-opacity"
-        >
-          <p className="text-base text-neutral-600 font-semibold">Built with</p>
-          <Image
-            src="/newLogo.png"
-            alt="AI Ready School Logo"
-            width={100}
-            height={37}
-            className="h-auto"
-          />
-        </Link>
       </div>
 
       <Card className="shadow-lg border-2">
-        <CardContent className="p-6 space-y-6">
+        <CardContent className="p-8 space-y-8">
           <div className="space-y-2">
             <Label htmlFor="input" className="text-base font-semibold">
               Your Input

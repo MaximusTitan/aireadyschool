@@ -57,7 +57,7 @@ export const categories: CategoryTools = {
       {
         title: "AI Tutor",
         description: "Learn with AI tutor",
-        route: "/tools/gen-chat",
+        route: "/tools/buddy",
         icon: Atom
       },
       {

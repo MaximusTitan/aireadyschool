@@ -1,6 +1,5 @@
 import { useRef } from "react";
 import { SimulationWrapper } from "./tools/SimulationWrapper";
-import { MathProblem } from "./tools/math-problem";
 import { QuizCard } from "./tools/quiz-card";
 import { MindMapViewer } from "./tools/mind-map-viewer";
 import { VideoGenerator } from "./tools/video-generator";
@@ -14,7 +13,6 @@ type ToolRendererProps = {
   simulationCode: string | null;
   simulationCodeRef: React.MutableRefObject<string | null>;
   onSimulationCode: (code: string) => void;
-  handleAnswerSubmit: (data: any) => void;
   handleImageGeneration: (toolCallId: string, params: any) => void;
   handleVisualization: (subject: string, concept: string) => Promise<any>;
   generatedQuizzes: Record<string, any>;
@@ -35,7 +33,6 @@ export const ToolRenderer = ({
   simulationCode,
   simulationCodeRef,
   onSimulationCode,
-  handleAnswerSubmit,
   handleImageGeneration,
   handleVisualization,
   generatedQuizzes,
@@ -58,13 +55,6 @@ export const ToolRenderer = ({
   }
 
   switch (toolName) {
-    case "generateMathProblem":
-      return (
-        <div className="mb-4">
-          <MathProblem {...result} onAnswer={handleAnswerSubmit} />
-        </div>
-      );
-
     case "generateQuiz": {
       // Only generate if we don't have the quiz data and haven't started generating
       if (

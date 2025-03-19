@@ -1,6 +1,6 @@
 import { anthropic } from '@ai-sdk/anthropic';
 // import { openai } from '@ai-sdk/openai';
-import { streamText, smoothStream, Message, CreateMessage } from 'ai';
+import { streamText, smoothStream, Message, CreateMessage, APICallError } from 'ai';
 import { tools } from '@/app/tools/gen-chat/utils/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
@@ -96,7 +96,6 @@ function getSystemPrompt(messages: any[], userRole?: string, language: Language 
     return `${basePrompt}
 
 You can use various tools to enhance the learning experience:
-- Generate interactive math problems
 - Create quizzes
 - Generate educational images
 - Create concept visualizations
@@ -248,10 +247,11 @@ export async function POST(request: Request) {
         await saveToolOutputs(supabase, messageId, toolCallsWithResults);
       },
       onFinish: async ({ usage, finishReason }) => {
-        // Handle potential stream errors in onFinish
+        // Instead of throwing an error, log it and continue
         if (finishReason === 'error') {
           console.error('Stream finished with error:', { finishReason, usage });
-          throw new Error('Stream error occurred');
+          // Don't throw, just return
+          return;
         }
         
         if (usage) {
@@ -268,23 +268,60 @@ export async function POST(request: Request) {
 
     try {
       const response = result.toDataStreamResponse();
-      return new Response(response.body, {
+      
+      // ReadableStream doesn't have 'on' method, use a TransformStream instead
+      const transformStream = new TransformStream({
+        transform(chunk, controller) {
+          try {
+            controller.enqueue(chunk);
+          } catch (err) {
+            console.error('Stream transform error:', err);
+            controller.error(err);
+          }
+        }
+      });
+
+      return new Response(response.body?.pipeThrough(transformStream), {
         status: response.status,
-        headers: response.headers,
+        headers: {
+          ...response.headers,
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache',
+        },
         statusText: response.statusText,
       });
-    } catch (streamErr: any) {
+    } catch (streamErr) {
       console.error('Stream conversion error:', streamErr);
       return Response.json({
         error: 'Stream error',
-        details: streamErr.message,
-        code: 'STREAM_ERROR'
-      }, { status: 500 });
+        details: streamErr instanceof Error ? streamErr.message : 'Unknown stream error',
+        code: 'STREAM_ERROR',
+        recoverable: true,
+        message: 'Please try your request again.'
+      }, { 
+        status: 500,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
     }
   } catch (err: any) {
     console.error('Error in POST /api/gen-chat:', err);
     
-    // Handle the specific error format from the example
+    // Handle AI API Call errors
+    if (APICallError.isInstance(err)) {
+      return Response.json({
+        error: 'AI API Call Error',
+        details: err.message,
+        code: 'AI_API_ERROR',
+        statusCode: err.statusCode,
+        url: err.url,
+        isRetryable: err.isRetryable,
+        responseBody: err.responseBody,
+      }, { status: err.statusCode || 500 });
+    }
+
+    // Handle message processing errors
     if (err.messageId && typeof err.messageId === 'string') {
       return Response.json({
         error: 'Message processing error',

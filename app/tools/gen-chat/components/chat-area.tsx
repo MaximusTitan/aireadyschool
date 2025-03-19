@@ -21,7 +21,6 @@ export const ChatArea = ({
   pendingImageRequests,
   completedImages,
   pendingVisualizations,
-  handleAnswerSubmit,
   handleImageGeneration,
   handleVisualization,
   onSimulationCode,
@@ -397,7 +396,6 @@ export const ChatArea = ({
                 simulationCode={simulationCode}
                 simulationCodeRef={simulationCodeRef}
                 onSimulationCode={onSimulationCode}
-                handleAnswerSubmit={handleAnswerSubmit}
                 handleImageGeneration={handleImageGeneration}
                 handleVisualization={handleVisualization}
                 generatedQuizzes={generatedQuizzes}

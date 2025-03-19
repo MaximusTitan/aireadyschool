@@ -264,10 +264,6 @@ export default function Page() {
           pendingImageRequests={tools.pendingImageRequests}
           completedImages={tools.completedImages}
           pendingVisualizations={tools.pendingVisualizations}
-          handleAnswerSubmit={async (data) => {
-            const answer = await tools.handleAnswerSubmit(data);
-            processToolAnswer(answer);
-          }}
           handleQuizAnswer={async (data) => {
             const answer = await tools.handleQuizAnswer(data);
             processToolAnswer(answer);

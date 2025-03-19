@@ -35,13 +35,6 @@ export type ChatAreaProps = {
   pendingImageRequests: Set<string>;
   completedImages: Set<string>;
   pendingVisualizations: Set<string>;
-  handleAnswerSubmit: (data: {
-    studentAnswer: number;
-    correctAnswer: number;
-    question: string;
-    topic: string;
-    level: string;
-  }) => Promise<void>;
   handleImageGeneration: (
     toolCallId: string,
     params: {

@@ -61,27 +61,6 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
     };
   }, []);
 
-  // Handle math problem answer submission
-  const handleAnswerSubmit = useCallback(async (data: {
-    studentAnswer: number;
-    correctAnswer: number;
-    question: string;
-    topic: string;
-    level: string;
-  }) => {
-    return {
-      id: String(Date.now()),
-      role: "user" as const,
-      content: `Evaluate my answer: ${data.studentAnswer} for the question: "${data.question}"`,
-      toolCalls: [
-        {
-          tool: "evaluateAnswer",
-          parameters: data,
-        },
-      ],
-    };
-  }, []);
-
   // Handle image generation
   const handleImageGeneration = useCallback(async (
     toolCallId: string,
@@ -194,14 +173,6 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
     };
 
     switch (toolName) {
-      case "math":
-        const level = parts[1] || "easy";
-        const topic = parts[2] || "addition";
-        baseMessage.content = `Generate a ${level} ${topic} math problem`;
-        baseMessage.toolCalls = [
-          createToolCall("generateMathProblem", { level, topic }),
-        ];
-        break;
       case "quiz":
         const subject = parts[1] || "general";
         const difficulty = parts[2] || "easy";
@@ -274,7 +245,6 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
     generatedVideos,
     setGeneratedVideos,
     handleQuizAnswer,
-    handleAnswerSubmit,
     handleImageGeneration,
     handleQuizGeneration,
     handleVisualization,

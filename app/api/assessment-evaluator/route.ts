@@ -5,49 +5,28 @@ import { generateText } from 'ai'
 import { logTokenUsage } from '@/utils/logTokenUsage'
 import { createClient } from "@/utils/supabase/server"
 
-const SYSTEM_PROMPT = `You are an expert educational evaluator with years of experience in assessing student assignments across various subjects and grade levels. Your task is to analyze the given student assignment and provide a comprehensive evaluation based on the following criteria:
+const output_format = `Provide section headings as given in the question paper along with the marking scheme in parentheses (e.g., "Section A (Multiple Choice Questions - 20 x 1 = 20 marks)"). For each section, start with a line "Going through each question:" then list each question's evaluation on a separate line using this format:
 
-1. Content Understanding (0-25 points):
-   - Assess the student's grasp of the subject matter.
-   - Evaluate the depth and accuracy of information presented.
+If the answer is correct:
+"Answer: [student answer] ✓"
+If the answer is incorrect:
+"Answer: [student answer] X Correct Answer: [correct answer] ; Marks awarded: [awarded marks]/[total marks]"
 
-2. Critical Thinking (0-25 points):
-   - Analyze the student's ability to synthesize information and form logical arguments.
-   - Assess the presence of original insights or creative problem-solving approaches.
+After all questions in the section, include a summary line:
+"Section [Letter] score: [obtained marks]/[total marks]"
 
-3. Structure and Organization (0-20 points):
-   - Evaluate the logical flow and coherence of the assignment.
-   - Assess the use of appropriate transitions and the overall structure.
+Once all sections are scored, provide a final summary titled "Final Score Calculation:" with bullet points for each section's score and a total score line. For example:
 
-4. Language and Communication (0-20 points):
-   - Assess the clarity and effectiveness of the student's writing.
-   - Evaluate grammar, vocabulary, and style appropriate for the grade level.
+Final Score Calculation:
+- Section A: 20/20
+- Section B: 10/10
+- Section C: 18/18
+- Section D: 20/20
+- Section E: 12/12
+Total score: 80/80
 
-5. Research and Citation (0-10 points):
-   - Evaluate the quality and relevance of sources used (if applicable).
-   - Assess proper citation and referencing practices.
+Ensure the output follows this format exactly, including proper symbols and spacing.`;
 
-For each criterion, provide a score and a brief explanation justifying the score. After evaluating all criteria, sum up the scores to give a total out of 100 points.
-
-Additionally, provide:
-1. A brief summary of the assignment's strengths (2-3 sentences).
-2. Areas for improvement (2-3 specific suggestions).
-3. An overall comment on the student's performance (3-4 sentences).
-
-Your evaluation should be constructive, encouraging, and aimed at helping the student improve their academic skills. Tailor your language and expectations to the appropriate grade level of the student.
-
-Format your response as follows:
-{
-  "contentUnderstanding": { "score": X, "comment": "..." },
-  "criticalThinking": { "score": X, "comment": "..." },
-  "structureAndOrganization": { "score": X, "comment": "..." },
-  "languageAndCommunication": { "score": X, "comment": "..." },
-  "researchAndCitation": { "score": X, "comment": "..." },
-  "totalScore": X,
-  "strengths": "...",
-  "areasForImprovement": "...",
-  "overallComment": "..."
-}`
 
 export async function POST(request: Request) {
   try {
@@ -71,7 +50,31 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+    const SYSTEM_PROMPT = `You are an expert educational evaluator with years of experience assessing student assignments across various subjects and grade levels. Your task is to evaluate the provided student answer sheet against the question paper. For each section, perform the following:
 
+1. **Display the Section Heading:**  
+   Use the section title and marking scheme exactly as provided (for example: "Section A (Multiple Choice Questions - 20 x 1 = 20 marks)").
+
+2. **Detailed Question-by-Question Breakdown:**  
+   - Start with a line reading "Going through each question:" for each section.
+   - For every question in the section, show the student's answer from ${answerSheetText} in the following format:  
+     - If correct:  
+       'Answer: [student answer] ✓'  
+     - If incorrect:  
+       'Answer: [student answer] X Correct Answer: [correct answer] ; Marks awarded: [awarded marks]/[total marks]'  
+   - Ensure you include any step markings for answers that are partially correct.
+
+3. **Section Score Summary:**  
+   After listing all questions in a section, provide a summary line with the section’s score (e.g., "Section A score: 20/20").
+
+4. **Final Score Calculation:**  
+   At the end, include a "Final Score Calculation" section with bullet points for each section showing the marks obtained by total marks (for example:  
+   - Section A: 20/20  
+   - Section B: 10/10  
+   …  
+   Total score: 80/80)
+
+Your output should strictly follow the above structure. Do not include any extra titles or commentary outside of this format.`;
     // Handle rubric
     let systemPrompt = SYSTEM_PROMPT
     if (rubric || rubricTextInput) {
@@ -110,7 +113,7 @@ export async function POST(request: Request) {
         rubricContent = rubricTextInput
       }
 
-      systemPrompt = `You are an expert educational evaluator with the following rubric:\n${rubricContent}\n\nYour task is to analyze the given student assignment and provide a comprehensive evaluation based on the provided rubric. Provide output in Markdown format. Do not reply any title.`
+      systemPrompt = `You are an expert educational evaluator with the following rubric:\n${rubricContent}\n\nYour task is to analyze the given student assignment and provide a comprehensive evaluation based on the provided rubric. Provide output in Markdown format and refer ${output_format}. Do not reply any title.`
     }
 
     // Prepare the prompt for the AI

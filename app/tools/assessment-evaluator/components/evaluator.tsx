@@ -410,7 +410,7 @@ export function AssessmentEvaluator() {
 
                 <div className="space-y-2">
                   <Label htmlFor="rubricText" className="text-base font-semibold">
-                    Rubric Text
+                    Rubric Text (Optional)
                   </Label>
                   <div className="flex gap-2 items-start">
                     <div className="relative flex-1">
@@ -455,7 +455,7 @@ export function AssessmentEvaluator() {
 
               <Button
                 type="submit"
-                disabled={(!file && !questionPaperText && !answerSheetText) || isLoading}
+                disabled={(!questionPaperText || !answerSheetText) || isLoading}
                 className="w-fit h-10 text-base font-semibold bg-rose-500 hover:bg-rose-600"
               >
                 {isLoading ? (

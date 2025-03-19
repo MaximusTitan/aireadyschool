@@ -98,7 +98,8 @@ function isAPICallError(error: unknown): error is APICallError {
   return APICallError.isInstance(error);
 }
 
-function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english', teachingMode = false): string {
+// Updated getSystemPrompt to receive an optional studentDetails parameter
+function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english', teachingMode = false, studentDetails?: any): string {
   // For teachers, only use teacher buddy prompt
   if (userRole === 'Teacher') {
     return TEACHER_BUDDY_PROMPT;
@@ -113,6 +114,45 @@ function getSystemPrompt(messages: any[], userRole?: string, language: Language 
   const subject = detectSubject(messages);
   const basePrompt = prompts[language][subject];
   
+  // For Student, append context if student details exist
+  if (userRole === 'Student' && studentDetails) {
+    const detailsContext = `
+Student Details:
+- Name: ${studentDetails.name || 'N/A'}
+- Grade: ${studentDetails.grade || 'N/A'}
+- Board: ${studentDetails.board || 'N/A'}
+- Country: ${studentDetails.country || 'N/A'}`;
+    if (language === 'english') {
+      return `${basePrompt}
+${detailsContext}
+
+You can use various tools to enhance the learning experience:
+- Create quizzes
+- Generate educational images
+- Create concept visualizations
+- Generate mind maps
+
+Do not ever mention that you are using the tools to the user. Just start using them. After explaining the concept, you should ask the student to take an assessment to reinforce their learning.
+
+Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
+    } else {
+      return `${basePrompt}
+${detailsContext}
+
+आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
+- इंटरैक्टिव गणित समस्याएँ उत्पन्न करें
+- क्विज़ बनाएँ
+- शैक्षिक छवियाँ उत्पन्न करें
+- अवधारणा विज़ुअलाइज़ेशन बनाएँ
+- माइंड मैप उत्पन्न करें
+
+कभी भी उपयोगकर्ता को यह न बताएं कि आप उपकरण का उपयोग कर रहे हैं। बस उनका उपयोग करना शुरू कर दें। अवधारित कोण के बाद, आपको छात्र से अभ्यास लेने के लिए कहना चाहिए ताकि उनके सीखने को मजबूत किया जा सके।
+
+हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
+    }
+  }
+
+  // Default prompt without student details
   if (language === 'english') {
     return `${basePrompt}
 
@@ -190,6 +230,8 @@ export async function POST(request: Request) {
       return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
     }
 
+    const userName = user.user_metadata?.name; 
+
     // Get user role from metadata
     const userRole = user.user_metadata?.role;
 
@@ -199,6 +241,22 @@ export async function POST(request: Request) {
     console.log('Thread ID:', threadId);
     console.log('User ID:', user.id);
     console.log('Language selected:', language);
+
+    // Fetch student details if role is Student
+    let studentDetails = null;
+    if (userRole === 'Student') {
+      const { data, error: detailsError } = await supabase
+        .from('student_details')
+        .select('grade, board, country')
+        .eq('id', user.id)
+        .single();
+      if (!detailsError && data) {
+        studentDetails = { ...data, name: userName };
+        console.log('Student details found:', studentDetails);
+      } else {
+        studentDetails = { name: userName }; 
+      }
+    }
 
     // Verify thread belongs to user
     if (threadId) {
@@ -248,7 +306,7 @@ export async function POST(request: Request) {
       model: anthropic('claude-3-7-sonnet-20250219'),
       system: teachingMode 
         ? (language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI)
-        : getSystemPrompt(cleanMessages, userRole, language as Language),
+        : getSystemPrompt(cleanMessages, userRole, language as Language, teachingMode, studentDetails),
       messages: cleanMessages as CreateMessage[],
       maxSteps: 5,
       tools,

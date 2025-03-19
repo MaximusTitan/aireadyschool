@@ -278,6 +278,11 @@ export default function Page() {
           isOwner={isOwner}
           isTeachingMode={isTeachingMode}
           onTeachingModeToggle={handleTeachingModeToggle}
+          // Add these new props
+          generatedAssessments={tools.generatedAssessments}
+          pendingAssessments={tools.pendingAssessments}
+          handleAssessmentGeneration={tools.handleAssessmentGeneration}
+          assessmentIds={tools.assessmentIds}
         />
       </div>
     </TooltipProvider>

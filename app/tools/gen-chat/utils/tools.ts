@@ -130,6 +130,24 @@ export const videoGeneratorTool = createTool({
   },
 });
 
+export const assessmentGeneratorTool = createTool({
+  description: 'Generate an educational assessment',
+  parameters: z.object({
+    subject: z.string().describe('The subject area'),
+    topic: z.string().describe('The specific topic'),
+    assessmentType: z.enum(['mcq', 'truefalse', 'shortanswer']).describe('Type of assessment'),
+    difficulty: z.enum(['easy', 'medium', 'hard']).describe('The difficulty level'),
+    questionCount: z.number().min(1).max(10).default(5).describe('Number of questions'),
+    learningOutcomes: z.array(z.string()).describe('Learning outcomes to test'),
+  }),
+  execute: async function(params) {
+    return {
+      ...params,
+      pending: true,
+    };
+  },
+});
+
 export const tools = {
   evaluateAnswer: evaluateAnswerTool,
   generateQuiz: quizTool,
@@ -138,4 +156,5 @@ export const tools = {
   generateMindMap: mindMapTool,
   evaluateQuizAnswer: quizAnswerEvaluationTool,
   generateVideo: videoGeneratorTool,
+  generateAssessment: assessmentGeneratorTool,
 };

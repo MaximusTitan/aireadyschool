@@ -11,6 +11,11 @@ interface UseToolsProps {
   setLastGeneratedImage: (url: string | null) => void;
 }
 
+type AssessmentData = {
+  assessment: any[];
+  id: number;  // Add this to store the database ID
+};
+
 export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseToolsProps) {
   const [pendingImageRequests] = useState(() => new Set<string>());
   const [completedImages] = useState(() => new Set<string>());
@@ -22,6 +27,10 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
   const [generatedQuizzes, setGeneratedQuizzes] = useState<Record<string, any>>({});
   const [generatedVideos, setGeneratedVideos] = useState<Record<string, string>>({});
   
+  const [generatedAssessments, setGeneratedAssessments] = useState<Record<string, any>>({});
+  const [pendingAssessments] = useState(() => new Set<string>());
+  const [assessmentIds, setAssessmentIds] = useState<Record<string, number>>({});
+
   // Create a tool call object
   const createToolCall = (tool: string, parameters: Record<string, any>): ToolCall => ({
     id: String(Date.now()),
@@ -160,6 +169,70 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
     }
   }, []);
 
+  // Handle assessment generation
+  const handleAssessmentGeneration = useCallback(async (
+    toolCallId: string,
+    params: {
+      subject: string;
+      topic: string;
+      assessmentType: 'mcq' | 'truefalse' | 'shortanswer';
+      difficulty: string;
+      questionCount: number;
+      learningOutcomes: string[];
+    }
+  ) => {
+    if (pendingAssessments.has(toolCallId)) return;
+
+    pendingAssessments.add(toolCallId);
+    try {
+      const response = await fetch("/api/generate-assessment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...params,
+          country: "Global", 
+          board: "General", 
+          classLevel: "High School", 
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate assessment");
+
+      const data: AssessmentData = await response.json();
+      
+      // Store the database ID mapped to the toolCallId
+      setAssessmentIds(prev => ({
+        ...prev,
+        [toolCallId]: data.id
+      }));
+
+      // Transform the assessment data to match our component's expected format
+      const transformedQuestions = data.assessment.map((q: any) => ({
+        question: q.question,
+        type: params.assessmentType,
+        options: q.options || null,
+        correctAnswer: params.assessmentType === 'mcq' ? 
+          Number(q.correctAnswer) : 
+          params.assessmentType === 'truefalse' ? 
+            Boolean(q.correctAnswer) : 
+            q.correctAnswer
+      }));
+
+      setGeneratedAssessments((prev) => ({ 
+        ...prev, 
+        [toolCallId]: transformedQuestions 
+      }));
+    } catch (error) {
+      console.error("Assessment generation failed:", error);
+      setGeneratedAssessments((prev) => ({
+        ...prev,
+        [toolCallId]: { error: "Failed to generate assessment" },
+      }));
+    } finally {
+      pendingAssessments.delete(toolCallId);
+    }
+  }, [pendingAssessments]);
+
   // Handle direct commands processing
   const handleDirectCommand = useCallback(async (command: string) => {
     const parts = command.slice(1).split(" ");
@@ -222,6 +295,21 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
           }),
         ];
         break;
+      case "assess":
+        const [assessSubject, assessTopic, type = "mcq", assessDifficulty = "medium"] = parts.slice(1);
+        const questionCount = 5;
+        baseMessage.content = `Generate a ${assessDifficulty} ${type} assessment about ${assessTopic} in ${assessSubject}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateAssessment", {
+            subject: assessSubject,
+            topic: assessTopic,
+            assessmentType: type,
+            difficulty: assessDifficulty,
+            questionCount,
+            learningOutcomes: [`Understand ${assessTopic} in ${assessSubject}`],
+          }),
+        ];
+        break;
       default:
         baseMessage.content = `Unknown command: ${command}`;
         baseMessage.toolCalls = [];
@@ -244,10 +332,14 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
     generatedQuizzes,
     generatedVideos,
     setGeneratedVideos,
+    generatedAssessments,
+    pendingAssessments,
+    assessmentIds,
     handleQuizAnswer,
     handleImageGeneration,
     handleQuizGeneration,
     handleVisualization,
+    handleAssessmentGeneration,
     handleDirectCommand,
     handleVideoComplete,
     createToolCall

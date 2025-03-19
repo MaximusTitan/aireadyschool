@@ -34,6 +34,10 @@ export const ChatArea = ({
   isOwner = true,
   isTeachingMode = false,
   onTeachingModeToggle,
+  generatedAssessments,
+  pendingAssessments,
+  handleAssessmentGeneration,
+  assessmentIds, // Add this line
 }: ChatAreaProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
@@ -405,6 +409,10 @@ export const ChatArea = ({
                 generatedVideos={generatedVideos}
                 handleVideoComplete={handleVideoComplete}
                 lastGeneratedImage={lastGeneratedImage}
+                generatedAssessments={generatedAssessments}
+                pendingAssessments={pendingAssessments}
+                handleAssessmentGeneration={handleAssessmentGeneration}
+                assessmentIds={assessmentIds} // Add this line
               />
             ))}
           </div>

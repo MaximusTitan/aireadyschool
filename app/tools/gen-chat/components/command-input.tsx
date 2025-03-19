@@ -7,11 +7,6 @@ import { ElevenLabsClient } from "elevenlabs";
 
 const AVAILABLE_COMMANDS = [
   {
-    command: "/math",
-    description: "Generate math problems",
-    examples: ["/math easy addition", "/math medium multiplication"],
-  },
-  {
     command: "/quiz",
     description: "Create interactive quizzes",
     examples: ["/quiz science easy", "/quiz history medium"],

@@ -20,6 +20,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export default function Profile() {
   const router = useRouter();
@@ -31,6 +38,9 @@ export default function Profile() {
     email: "",
     fullName: "",
     role: "",
+    grade: "",
+    board: "",
+    country: "",
   });
   const [passwords, setPasswords] = useState({
     password: "",
@@ -56,10 +66,24 @@ export default function Profile() {
         return;
       }
 
+      // Get student details if role is Student
+      let studentDetails = null;
+      if (user.user_metadata?.role === "Student") {
+        const { data: details } = await supabase
+          .from("student_details")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+        studentDetails = details;
+      }
+
       setUserData({
         email: user.email || "",
         fullName: user.user_metadata?.name || "",
         role: user.user_metadata?.role || "User",
+        grade: studentDetails?.grade || "",
+        board: studentDetails?.board || "",
+        country: studentDetails?.country || "",
       });
     } catch (error) {
       toast.error("Error loading user data");
@@ -79,11 +103,25 @@ export default function Profile() {
     setUpdating(true);
 
     try {
-      const { data, error } = await supabase.auth.updateUser({
+      // Update auth profile
+      const { error: profileError } = await supabase.auth.updateUser({
         data: { name: userData.fullName },
       });
+      if (profileError) throw profileError;
 
-      if (error) throw error;
+      // Update student details if role is Student
+      if (userData.role === "Student") {
+        const { error: studentError } = await supabase
+          .from("student_details")
+          .upsert({
+            id: (await supabase.auth.getUser()).data.user?.id,
+            grade: userData.grade,
+            board: userData.board,
+            country: userData.country,
+          });
+        if (studentError) throw studentError;
+      }
+
       toast.success("Profile updated successfully");
     } catch (error) {
       toast.error("Error updating profile");
@@ -121,6 +159,63 @@ export default function Profile() {
     } finally {
       setChangingPassword(false);
     }
+  };
+
+  const renderStudentFields = () => {
+    if (userData.role !== "Student") return null;
+
+    return (
+      <>
+        <div className="space-y-2">
+          <Label htmlFor="grade">Grade</Label>
+          <Select
+            value={userData.grade}
+            onValueChange={(value) =>
+              setUserData({ ...userData, grade: value })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select grade" />
+            </SelectTrigger>
+            <SelectContent>
+              {["6th", "7th", "8th", "9th", "10th", "11th", "12th"].map(
+                (grade) => (
+                  <SelectItem key={grade} value={grade}>
+                    {grade}
+                  </SelectItem>
+                )
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="board">Education Board</Label>
+          <Input
+            id="board"
+            value={userData.board}
+            onChange={(e) =>
+              setUserData({ ...userData, board: e.target.value })
+            }
+            placeholder="e.g., CBSE, ICSE, IB"
+            className="bg-white"
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="country">Country</Label>
+          <Input
+            id="country"
+            value={userData.country}
+            onChange={(e) =>
+              setUserData({ ...userData, country: e.target.value })
+            }
+            placeholder="Your country"
+            className="bg-white"
+          />
+        </div>
+      </>
+    );
   };
 
   if (loading) {
@@ -180,6 +275,8 @@ export default function Profile() {
                     className="bg-neutral-100"
                   />
                 </div>
+
+                {renderStudentFields()}
 
                 <Button
                   type="submit"

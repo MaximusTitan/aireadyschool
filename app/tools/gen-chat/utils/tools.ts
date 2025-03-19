@@ -1,70 +1,6 @@
 import { tool as createTool } from 'ai';
 import { z } from 'zod';
 
-export const mathProblemTool = createTool({
-  description: 'Generate a dynamic math problem',
-  parameters: z.object({
-    level: z.string().describe('The difficulty level: easy, medium, or hard'),
-    topic: z.string().describe('Math topic like addition, multiplication, etc.'),
-  }),
-  execute: async function ({ level, topic }) {
-    let question, answer, hint;
-    
-    // Generate dynamic math problems based on level and topic
-    if (topic === 'addition') {
-      if (level === 'easy') {
-        const num1 = Math.floor(Math.random() * 10);
-        const num2 = Math.floor(Math.random() * 10);
-        question = `What is ${num1} + ${num2}?`;
-        answer = num1 + num2;
-        hint = "Try counting with your fingers!";
-      } else if (level === 'medium') {
-        const num1 = Math.floor(Math.random() * 50);
-        const num2 = Math.floor(Math.random() * 50);
-        question = `What is ${num1} + ${num2}?`;
-        answer = num1 + num2;
-        hint = "Break it down into tens and ones!";
-      }
-    } else if (topic === 'multiplication') {
-      if (level === 'easy') {
-        const num1 = Math.floor(Math.random() * 10);
-        const num2 = Math.floor(Math.random() * 10);
-        question = `What is ${num1} × ${num2}?`;
-        answer = num1 * num2;
-        hint = "Try adding the number multiple times!";
-      } else if (level === 'medium') {
-        const num1 = Math.floor(Math.random() * 12);
-        const num2 = Math.floor(Math.random() * 12);
-        question = `What is ${num1} × ${num2}?`;
-        answer = num1 * num2;
-        hint = "Break it down into smaller multiplications!";
-      }
-    } else if (topic === 'subtraction') {
-      if (level === 'easy') {
-        const num2 = Math.floor(Math.random() * 10);
-        const num1 = num2 + Math.floor(Math.random() * 10); // Ensure positive result
-        question = `What is ${num1} - ${num2}?`;
-        answer = num1 - num2;
-        hint = "Count backwards!";
-      } else if (level === 'medium') {
-        const num2 = Math.floor(Math.random() * 50);
-        const num1 = num2 + Math.floor(Math.random() * 50); // Ensure positive result
-        question = `What is ${num1} - ${num2}?`;
-        answer = num1 - num2;
-        hint = "Break it down into tens and ones!";
-      }
-    }
-    
-    if (!question || answer === undefined) {
-      question = "What is 2 + 2?";
-      answer = 4;
-      hint = "Use your fingers to count!";
-    }
-    
-    return { question, hint, answer, level, topic };
-  },
-});
-
 export const evaluateAnswerTool = createTool({
   description: 'Evaluate a student answer and provide feedback',
   parameters: z.object({
@@ -194,8 +130,25 @@ export const videoGeneratorTool = createTool({
   },
 });
 
+export const assessmentGeneratorTool = createTool({
+  description: 'Generate an educational assessment',
+  parameters: z.object({
+    subject: z.string().describe('The subject area'),
+    topic: z.string().describe('The specific topic'),
+    assessmentType: z.enum(['mcq', 'truefalse', 'shortanswer']).describe('Type of assessment'),
+    difficulty: z.enum(['easy', 'medium', 'hard']).describe('The difficulty level'),
+    questionCount: z.number().min(1).max(10).default(5).describe('Number of questions'),
+    learningOutcomes: z.array(z.string()).describe('Learning outcomes to test'),
+  }),
+  execute: async function(params) {
+    return {
+      ...params,
+      pending: true,
+    };
+  },
+});
+
 export const tools = {
-  generateMathProblem: mathProblemTool,
   evaluateAnswer: evaluateAnswerTool,
   generateQuiz: quizTool,
   generateImage: imageGeneratorTool,
@@ -203,4 +156,5 @@ export const tools = {
   generateMindMap: mindMapTool,
   evaluateQuizAnswer: quizAnswerEvaluationTool,
   generateVideo: videoGeneratorTool,
+  generateAssessment: assessmentGeneratorTool,
 };

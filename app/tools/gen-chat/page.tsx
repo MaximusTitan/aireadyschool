@@ -264,10 +264,6 @@ export default function Page() {
           pendingImageRequests={tools.pendingImageRequests}
           completedImages={tools.completedImages}
           pendingVisualizations={tools.pendingVisualizations}
-          handleAnswerSubmit={async (data) => {
-            const answer = await tools.handleAnswerSubmit(data);
-            processToolAnswer(answer);
-          }}
           handleQuizAnswer={async (data) => {
             const answer = await tools.handleQuizAnswer(data);
             processToolAnswer(answer);
@@ -282,6 +278,11 @@ export default function Page() {
           isOwner={isOwner}
           isTeachingMode={isTeachingMode}
           onTeachingModeToggle={handleTeachingModeToggle}
+          // Add these new props
+          generatedAssessments={tools.generatedAssessments}
+          pendingAssessments={tools.pendingAssessments}
+          handleAssessmentGeneration={tools.handleAssessmentGeneration}
+          assessmentIds={tools.assessmentIds}
         />
       </div>
     </TooltipProvider>

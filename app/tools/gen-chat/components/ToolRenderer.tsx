@@ -1,9 +1,9 @@
 import { useRef } from "react";
 import { SimulationWrapper } from "./tools/SimulationWrapper";
-import { MathProblem } from "./tools/math-problem";
 import { QuizCard } from "./tools/quiz-card";
 import { MindMapViewer } from "./tools/mind-map-viewer";
 import { VideoGenerator } from "./tools/video-generator";
+import { AssessmentCard } from "./tools/assessment-card";
 
 type ToolRendererProps = {
   invocation: any;
@@ -14,7 +14,6 @@ type ToolRendererProps = {
   simulationCode: string | null;
   simulationCodeRef: React.MutableRefObject<string | null>;
   onSimulationCode: (code: string) => void;
-  handleAnswerSubmit: (data: any) => void;
   handleImageGeneration: (toolCallId: string, params: any) => void;
   handleVisualization: (subject: string, concept: string) => Promise<any>;
   generatedQuizzes: Record<string, any>;
@@ -24,6 +23,10 @@ type ToolRendererProps = {
   generatedVideos: Record<string, string>;
   handleVideoComplete: (toolCallId: string, videoUrl: string) => void;
   lastGeneratedImage: string | null;
+  generatedAssessments: Record<string, any>;
+  pendingAssessments: Set<string>;
+  handleAssessmentGeneration: (toolCallId: string, params: any) => void;
+  assessmentIds: Record<string, number>;
 };
 
 export const ToolRenderer = ({
@@ -35,7 +38,6 @@ export const ToolRenderer = ({
   simulationCode,
   simulationCodeRef,
   onSimulationCode,
-  handleAnswerSubmit,
   handleImageGeneration,
   handleVisualization,
   generatedQuizzes,
@@ -45,6 +47,10 @@ export const ToolRenderer = ({
   generatedVideos,
   handleVideoComplete,
   lastGeneratedImage,
+  generatedAssessments,
+  pendingAssessments,
+  handleAssessmentGeneration,
+  assessmentIds,
 }: ToolRendererProps) => {
   const { toolName, toolCallId, state, result } = invocation;
 
@@ -58,13 +64,6 @@ export const ToolRenderer = ({
   }
 
   switch (toolName) {
-    case "generateMathProblem":
-      return (
-        <div className="mb-4">
-          <MathProblem {...result} onAnswer={handleAnswerSubmit} />
-        </div>
-      );
-
     case "generateQuiz": {
       // Only generate if we don't have the quiz data and haven't started generating
       if (
@@ -224,6 +223,66 @@ export const ToolRenderer = ({
             onComplete={handleVideoComplete}
             prompt={result.prompt}
             initialImage={imageSource}
+          />
+        </div>
+      );
+    }
+
+    case "generateAssessment": {
+      if (
+        !generatedAssessments[toolCallId] &&
+        result.pending &&
+        !pendingAssessments.has(toolCallId)
+      ) {
+        handleAssessmentGeneration(toolCallId, {
+          subject: result.subject,
+          topic: result.topic,
+          assessmentType: result.assessmentType,
+          difficulty: result.difficulty,
+          questionCount: result.questionCount,
+          learningOutcomes: result.learningOutcomes,
+        });
+      }
+
+      if (!generatedAssessments[toolCallId]) {
+        return (
+          <div className="mb-4">
+            <div className="animate-pulse">
+              <div className="h-24 bg-neutral-100 rounded" />
+              <div className="text-xs text-neutral-500 mt-2">
+                Generating assessment...
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const assessment = generatedAssessments[toolCallId];
+
+      return (
+        <div className="mb-4">
+          <AssessmentCard
+            subject={result.subject}
+            topic={result.topic}
+            difficulty={result.difficulty}
+            questions={assessment}
+            onSubmit={(answers) => {
+              // Use the stored database ID instead of toolCallId
+              const assessmentId = assessmentIds[toolCallId];
+              if (!assessmentId) {
+                console.error("Assessment ID not found");
+                return;
+              }
+
+              fetch("/api/generate-assessment", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: assessmentId,
+                  answers,
+                }),
+              });
+            }}
           />
         </div>
       );

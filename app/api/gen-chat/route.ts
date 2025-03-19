@@ -1,6 +1,6 @@
 import { anthropic } from '@ai-sdk/anthropic';
 // import { openai } from '@ai-sdk/openai';
-import { streamText, smoothStream, Message, CreateMessage } from 'ai';
+import { streamText, smoothStream, Message, CreateMessage, APICallError } from 'ai';
 import { tools } from '@/app/tools/gen-chat/utils/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
@@ -96,7 +96,6 @@ function getSystemPrompt(messages: any[], userRole?: string, language: Language 
     return `${basePrompt}
 
 You can use various tools to enhance the learning experience:
-- Generate interactive math problems
 - Create quizzes
 - Generate educational images
 - Create concept visualizations
@@ -196,7 +195,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const result = streamText({
+    const streamHandler = streamText({
       model: anthropic('claude-3-5-sonnet-20240620'),
       system: teachingMode 
         ? (language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI)
@@ -248,43 +247,162 @@ export async function POST(request: Request) {
         await saveToolOutputs(supabase, messageId, toolCallsWithResults);
       },
       onFinish: async ({ usage, finishReason }) => {
-        // Handle potential stream errors in onFinish
+        // Enhanced error handling for finish events
         if (finishReason === 'error') {
           console.error('Stream finished with error:', { finishReason, usage });
-          throw new Error('Stream error occurred');
+          
+          // Throw a specific error that we can catch and handle
+          throw new Error(JSON.stringify({
+            type: 'STREAM_FINISH_ERROR',
+            usage,
+            finishReason,
+            timestamp: new Date().toISOString()
+          }));
         }
         
         if (usage) {
           await logTokenUsage(
             'Learning Buddy',
             'Claude 3.5 Sonnet',
-            usage.promptTokens,
-            usage.completionTokens,
+            usage.promptTokens || 0,
+            usage.completionTokens || 0,
             user.email || undefined
-          ).catch(err => console.warn('Token logging failed:', err));
+          ).catch(err => {
+            console.warn('Token logging failed:', err);
+            // Don't throw, just log the error
+          });
         }
       }
     });
 
     try {
-      const response = result.toDataStreamResponse();
-      return new Response(response.body, {
+      const response = streamHandler.toDataStreamResponse();
+      
+      // Enhanced transform stream with retry logic
+      const transformStream = new TransformStream({
+        transform(chunk, controller) {
+          try {
+            if (chunk.type === 'error') {
+              console.error('Stream chunk error:', chunk.error);
+              
+              // Check if error is recoverable
+              if (chunk.error?.isRetryable) {
+                console.log('Attempting to recover from error...');
+                // Enqueue an error message to the client
+                controller.enqueue({
+                  type: 'text',
+                  text: '\n[An error occurred, but we are trying to recover...]\n'
+                });
+                return;
+              }
+              
+              controller.error(chunk.error);
+              return;
+            }
+            
+            controller.enqueue(chunk);
+          } catch (err) {
+            console.error('Transform error:', err);
+            controller.error(err);
+          }
+        }
+      });
+
+      // Add error handling for the response stream
+      const stream = response.body?.pipeThrough(transformStream);
+      
+      if (!stream) {
+        throw new Error('No response stream available');
+      }
+
+      return new Response(stream, {
         status: response.status,
-        headers: response.headers,
+        headers: {
+          ...response.headers,
+          'Connection': 'keep-alive',
+          'Cache-Control': 'no-cache',
+        },
         statusText: response.statusText,
       });
-    } catch (streamErr: any) {
-      console.error('Stream conversion error:', streamErr);
+    } catch (streamErr: unknown) {
+      console.error('Detailed stream error:', {
+        error: streamErr,
+        message: streamErr instanceof Error ? streamErr.message : String(streamErr),
+        type: streamErr instanceof Error ? streamErr.constructor.name : typeof streamErr,
+        stack: streamErr instanceof Error ? streamErr.stack : undefined
+      });
+
+      // Handle stream finish errors
+      if (isStreamFinishError(streamErr)) {
+        try {
+          const errorData = JSON.parse(streamErr.message) as StreamFinishError;
+          return Response.json({
+            error: 'AI Stream Error',
+            details: 'The AI stream ended unexpectedly',
+            code: 'STREAM_FINISH_ERROR',
+            usage: errorData.usage,
+            timestamp: errorData.timestamp,
+            recoverable: true
+          }, { status: 500 });
+        } catch (parseErr) {
+          console.error('Error parsing stream finish error:', parseErr);
+        }
+      }
+
+      // Classify stream errors
+      if (isTypeError(streamErr)) {
+        return Response.json({
+          error: 'Stream processing error',
+          details: streamErr.message,
+          code: 'STREAM_TYPE_ERROR',
+          recoverable: false
+        }, { status: 500 });
+      }
+      
+      if (isAPICallError(streamErr)) {
+        return Response.json({
+          error: 'AI API error during streaming',
+          details: streamErr.message,
+          code: 'STREAM_AI_ERROR',
+          statusCode: streamErr.statusCode,
+          recoverable: streamErr.isRetryable
+        }, { status: streamErr.statusCode || 500 });
+      }
+
       return Response.json({
         error: 'Stream error',
-        details: streamErr.message,
-        code: 'STREAM_ERROR'
+        details: streamErr instanceof Error ? streamErr.message : String(streamErr),
+        code: 'STREAM_ERROR',
+        recoverable: true,
+        message: 'Please try your request again.'
       }, { status: 500 });
     }
   } catch (err: any) {
-    console.error('Error in POST /api/gen-chat:', err);
+    console.error('General error in POST /api/gen-chat:', err);
     
-    // Handle the specific error format from the example
+    // Enhanced error classification
+    if (err instanceof TypeError) {
+      return Response.json({
+        error: 'Invalid request or parameters',
+        details: err.message,
+        code: 'TYPE_ERROR'
+      }, { status: 400 });
+    }
+
+    // Handle AI API Call errors
+    if (APICallError.isInstance(err)) {
+      return Response.json({
+        error: 'AI API Call Error',
+        details: err.message,
+        code: 'AI_API_ERROR',
+        statusCode: err.statusCode,
+        url: err.url,
+        isRetryable: err.isRetryable,
+        responseBody: err.responseBody,
+      }, { status: err.statusCode || 500 });
+    }
+
+    // Handle message processing errors
     if (err.messageId && typeof err.messageId === 'string') {
       return Response.json({
         error: 'Message processing error',
@@ -313,4 +431,25 @@ export async function POST(request: Request) {
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     }, { status: 500 });
   }
+}
+
+// Add these types at the top of the file after the imports
+interface StreamFinishError {
+  type: 'STREAM_FINISH_ERROR';
+  usage: { promptTokens: number; completionTokens: number; totalTokens: number };
+  finishReason: string;
+  timestamp: string;
+}
+
+// Add type guards
+function isStreamFinishError(error: unknown): error is { message: string } {
+  return error instanceof Error && error.message.includes('STREAM_FINISH_ERROR');
+}
+
+function isTypeError(error: unknown): error is TypeError {
+  return error instanceof TypeError;
+}
+
+function isAPICallError(error: unknown): error is APICallError {
+  return APICallError.isInstance(error);
 }

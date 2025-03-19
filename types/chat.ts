@@ -35,13 +35,6 @@ export type ChatAreaProps = {
   pendingImageRequests: Set<string>;
   completedImages: Set<string>;
   pendingVisualizations: Set<string>;
-  handleAnswerSubmit: (data: {
-    studentAnswer: number;
-    correctAnswer: number;
-    question: string;
-    topic: string;
-    level: string;
-  }) => Promise<void>;
   handleImageGeneration: (
     toolCallId: string,
     params: {
@@ -88,7 +81,21 @@ export type ChatAreaProps = {
   setGeneratedVideos: (videos: Record<string, string>) => void;
   lastGeneratedImage: string | null;
   isOwner?: boolean;
-  // Add these new properties
   isTeachingMode?: boolean;
   onTeachingModeToggle?: () => void;
+  // Add these new properties for assessments
+  generatedAssessments: Record<string, any>;
+  pendingAssessments: Set<string>;
+  handleAssessmentGeneration: (
+    toolCallId: string,
+    params: {
+      subject: string;
+      topic: string;
+      assessmentType: 'mcq' | 'truefalse' | 'shortanswer';
+      difficulty: string;
+      questionCount: number;
+      learningOutcomes: string[];
+    }
+  ) => Promise<void>;
+  assessmentIds: Record<string, number>;
 };

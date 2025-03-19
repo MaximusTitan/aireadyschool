@@ -98,7 +98,9 @@ export default function OutputContent() {
     activity: null,
   });
   const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({});
-  const [uploadedFiles, setUploadedFiles] = useState<{ [key: string]: UploadedFile[] }>({});
+  const [uploadedFiles, setUploadedFiles] = useState<{
+    [key: string]: UploadedFile[];
+  }>({});
   const { toast } = useToast();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
@@ -152,7 +154,11 @@ export default function OutputContent() {
         setLessonPlan(lessonPlanData as LessonPlan);
 
         // Check ownership only for informational purposes, don't prevent viewing
-        if (userEmail && lessonPlanData.user_email && lessonPlanData.user_email !== userEmail) {
+        if (
+          userEmail &&
+          lessonPlanData.user_email &&
+          lessonPlanData.user_email !== userEmail
+        ) {
           console.warn("User viewing a lesson plan they don't own");
         }
       } else {
@@ -227,7 +233,10 @@ export default function OutputContent() {
     await fetchLessonPlan();
   };
 
-  const handleGenerateNotes = (activityTitle: string, activityContent: string) => {
+  const handleGenerateNotes = (
+    activityTitle: string,
+    activityContent: string
+  ) => {
     setGenerateNotesDialog({
       isOpen: true,
       activity: {
@@ -272,7 +281,11 @@ export default function OutputContent() {
     }
   };
 
-  const handleFileUpload = async (file: File, type: string, sectionId: string) => {
+  const handleFileUpload = async (
+    file: File,
+    type: string,
+    sectionId: string
+  ) => {
     if (!lessonPlan) {
       console.error("No lesson plan available");
       return;
@@ -388,13 +401,18 @@ export default function OutputContent() {
 
   const handleDeleteFile = async (fileId: string, sectionId: string) => {
     try {
-      const { error } = await supabase.from("uploaded_files").delete().eq("id", fileId);
+      const { error } = await supabase
+        .from("uploaded_files")
+        .delete()
+        .eq("id", fileId);
 
       if (error) throw error;
 
       setUploadedFiles((prev) => {
         const updatedFiles = { ...prev };
-        updatedFiles[sectionId] = updatedFiles[sectionId].filter((file) => file.id !== fileId);
+        updatedFiles[sectionId] = updatedFiles[sectionId].filter(
+          (file) => file.id !== fileId
+        );
         return updatedFiles;
       });
 
@@ -414,10 +432,10 @@ export default function OutputContent() {
 
   const handleDownload = () => {
     if (!lessonPlan) return;
-  
+
     const doc = new jsPDF();
     let yOffset = 20;
-  
+
     // Helper functions for PDF generation
     const addHeading = (text: string, size = 16) => {
       doc.setFont("helvetica", "bold");
@@ -425,7 +443,7 @@ export default function OutputContent() {
       doc.text(text, 20, yOffset);
       yOffset += 10;
     };
-  
+
     const addText = (text: string, size = 12) => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(size);
@@ -433,7 +451,7 @@ export default function OutputContent() {
       doc.text(lines, 20, yOffset);
       yOffset += (lines.length * size) / 2 + 5;
     };
-  
+
     const addBulletPoint = (text: string, indent = 20) => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(12);
@@ -442,14 +460,14 @@ export default function OutputContent() {
       doc.text(lines, indent + 5, yOffset);
       yOffset += (lines.length * 12) / 2 + 5;
     };
-  
+
     const checkNewPage = () => {
       if (yOffset > 270) {
         doc.addPage();
         yOffset = 20;
       }
     };
-  
+
     // Title and Basic Information
     addHeading(`${lessonPlan.subject} - ${lessonPlan.chapter_topic}`, 20);
     addText(`Grade: ${lessonPlan.grade}`);
@@ -460,12 +478,12 @@ export default function OutputContent() {
       addText(`Learning Objectives: ${lessonPlan.learning_objectives}`);
     }
     yOffset += 10;
-  
+
     // Daily Plans
     lessonPlan.plan_data.days.forEach((day, index) => {
       checkNewPage();
       addHeading(`Day ${day.day}: ${day.topicHeading}`, 16);
-  
+
       // Learning Outcomes
       addHeading("Learning Outcomes:", 14);
       day.learningOutcomes.forEach((outcome) => {
@@ -473,7 +491,7 @@ export default function OutputContent() {
         addBulletPoint(outcome);
       });
       yOffset += 5;
-  
+
       // Schedule
       checkNewPage();
       addHeading("Schedule:", 14);
@@ -483,57 +501,64 @@ export default function OutputContent() {
         addText(item.content);
         yOffset += 2;
       });
-  
+
       yOffset += 10;
     });
-  
+
     // Assessment Plan
     checkNewPage();
     addHeading("Assessment Plan", 16);
     yOffset += 5;
-  
+
     // Formative Assessments
     addHeading("Formative Assessments:", 14);
-    lessonPlan.plan_data.assessmentPlan.formativeAssessments.forEach((assessment) => {
-      checkNewPage();
-      addText(`${assessment.topic} (${assessment.type})`);
-      addText(assessment.description);
-      addText("Evaluation Criteria:");
-      assessment.evaluationCriteria.forEach((criteria) => {
+    lessonPlan.plan_data.assessmentPlan.formativeAssessments.forEach(
+      (assessment) => {
         checkNewPage();
-        addBulletPoint(criteria);
-      });
-      yOffset += 5;
-    });
-  
+        addText(`${assessment.topic} (${assessment.type})`);
+        addText(assessment.description);
+        addText("Evaluation Criteria:");
+        assessment.evaluationCriteria.forEach((criteria) => {
+          checkNewPage();
+          addBulletPoint(criteria);
+        });
+        yOffset += 5;
+      }
+    );
+
     // Summative Assessments
     checkNewPage();
     addHeading("Summative Assessments:", 14);
-    lessonPlan.plan_data.assessmentPlan.summativeAssessments.forEach((assessment) => {
-      checkNewPage();
-      addText(`${assessment.topic} (${assessment.type})`);
-      addText(assessment.description);
-      addText("Evaluation Criteria:");
-      assessment.evaluationCriteria.forEach((criteria) => {
+    lessonPlan.plan_data.assessmentPlan.summativeAssessments.forEach(
+      (assessment) => {
         checkNewPage();
-        addBulletPoint(criteria);
-      });
-      yOffset += 5;
-    });
-  
+        addText(`${assessment.topic} (${assessment.type})`);
+        addText(assessment.description);
+        addText("Evaluation Criteria:");
+        assessment.evaluationCriteria.forEach((criteria) => {
+          checkNewPage();
+          addBulletPoint(criteria);
+        });
+        yOffset += 5;
+      }
+    );
+
     // Progress Tracking
     checkNewPage();
     addHeading("Progress Tracking Suggestions:", 14);
-    lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.forEach((suggestion) => {
-      checkNewPage();
-      addBulletPoint(suggestion);
-    });
-  
+    lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.forEach(
+      (suggestion) => {
+        checkNewPage();
+        addBulletPoint(suggestion);
+      }
+    );
+
     // Save the PDF
-    const fileName = `${lessonPlan.subject}_${lessonPlan.chapter_topic}_Grade${lessonPlan.grade}.pdf`
-      .replace(/[^a-z0-9]/gi, "_")
-      .toLowerCase();
-  
+    const fileName =
+      `${lessonPlan.subject}_${lessonPlan.chapter_topic}_Grade${lessonPlan.grade}.pdf`
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase();
+
     doc.save(fileName);
   };
 
@@ -598,7 +623,9 @@ export default function OutputContent() {
         <h3 className="text-lg font-semibold mb-4">Lesson Objectives</h3>
         <ul className="space-y-2">
           {day.schedule
-            .filter((item) => item.type === "mainContent" || item.type === "activity")
+            .filter(
+              (item) => item.type === "mainContent" || item.type === "activity"
+            )
             .slice(0, 2)
             .map((item, index) => (
               <li key={index} className="flex items-start">
@@ -617,63 +644,94 @@ export default function OutputContent() {
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-24">Duration</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">Activities</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-64">Materials</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-24">
+                  Duration
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                  Activities
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-64">
+                  Materials
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {day.schedule.map((item, index) => (
                 <tr key={index}>
                   <td className="px-4 py-4 text-sm text-gray-500">
-                    {String(item.timeAllocation).padStart(2, "0")}:{String(0).padStart(2, "0")}
+                    {String(item.timeAllocation).padStart(2, "0")}:
+                    {String(0).padStart(2, "0")}
                   </td>
                   <td className="px-4 py-4">
-                    <div className="font-medium text-gray-900">{item.title || item.type}</div>
-                    <div className="mt-1 text-sm text-gray-500">{item.content}</div>
+                    <div className="font-medium text-gray-900">
+                      {item.title || item.type}
+                    </div>
+                    <div className="mt-1 text-sm text-gray-500">
+                      {item.content}
+                    </div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="text-sm">
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-medium">Lesson Content</div>
                         <AddContentDropdown
-                          onUpload={(file, type) => handleFileUpload(file, type, `material-${day.day}-${index}`)}
+                          onUpload={(file, type) =>
+                            handleFileUpload(
+                              file,
+                              type,
+                              `material-${day.day}-${index}`
+                            )
+                          }
                         />
                       </div>
                       <div className="text-gray-500">{item.title}</div>
                       <button
                         className="text-rose-500 hover:text-rose-600 text-sm mt-1 flex items-center gap-1"
-                        onClick={() => handleGenerateNotes(item.title, item.content)}
-                        aria-label={generatedNotes[item.title] ? "View generated notes" : "Generate notes"}
+                        onClick={() =>
+                          handleGenerateNotes(item.title, item.content)
+                        }
+                        aria-label={
+                          generatedNotes[item.title]
+                            ? "View generated notes"
+                            : "Generate notes"
+                        }
                       >
-                        {generatedNotes[item.title] ? "See the content" : "Generate"}
+                        {generatedNotes[item.title]
+                          ? "See the content"
+                          : "Generate"}
                       </button>
-                      {uploadedFiles[`material-${day.day}-${index}`]?.map((file, fileIndex) => {
-                        // Generate standardized file name based on type and count
-                        const displayName = `${file.type}_${fileIndex + 1}`;
-                        
-                        return (
-                          <div key={file.id} className="mt-2 text-sm">
-                            <a
-                              href={file.url}
-                              target="_blank"                              
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline flex items-center gap-1"
-                              title={file.name} // Show original filename on hover
-                            >
-                              {displayName}
-                            </a>
-                            <button
-                              className="text-red-500 hover:text-red-600 text-sm ml-2"
-                              onClick={() => handleDeleteFile(file.id, `material-${day.day}-${index}`)}
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        );
-                      })}
+                      {uploadedFiles[`material-${day.day}-${index}`]?.map(
+                        (file, fileIndex) => {
+                          // Generate standardized file name based on type and count
+                          const displayName = `${file.type}_${fileIndex + 1}`;
+
+                          return (
+                            <div key={file.id} className="mt-2 text-sm">
+                              <a
+                                href={file.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:underline flex items-center gap-1"
+                                title={file.name} // Show original filename on hover
+                              >
+                                {displayName}
+                              </a>
+                              <button
+                                className="text-red-500 hover:text-red-600 text-sm ml-2"
+                                onClick={() =>
+                                  handleDeleteFile(
+                                    file.id,
+                                    `material-${day.day}-${index}`
+                                  )
+                                }
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          );
+                        }
+                      )}
                     </div>
-                    
                   </td>
                 </tr>
               ))}
@@ -688,7 +746,11 @@ export default function OutputContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Assessment Plan</h2>
-        <AddContentDropdown onUpload={(file, type) => handleFileUpload(file, type, "assessment-plan")} />
+        <AddContentDropdown
+          onUpload={(file, type) =>
+            handleFileUpload(file, type, "assessment-plan")
+          }
+        />
       </div>
 
       {uploadedFiles["assessment-plan"]?.length > 0 && (
@@ -697,7 +759,12 @@ export default function OutputContent() {
           <div className="space-y-2">
             {uploadedFiles["assessment-plan"].map((file) => (
               <div key={file.id} className="flex items-center gap-2">
-                <a href={file.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-blue-600 hover:underline"
+                >
                   {file.type}: {file.name}
                 </a>
                 <button
@@ -716,57 +783,71 @@ export default function OutputContent() {
         <div>
           <h3 className="font-semibold mb-4">Formative Assessments</h3>
           <div className="space-y-4">
-            {lessonPlan.plan_data.assessmentPlan.formativeAssessments.map((assessment, index) => (
-              <div key={index} className="border-b pb-4">
-                <div className="font-medium mb-2">{assessment.topic}</div>
-                <p className="text-gray-600 mb-2">{assessment.description}</p>
-                <div className="text-sm text-gray-500">Type: {assessment.type}</div>
-                <div className="mt-2">
-                  <div className="font-medium text-sm mb-1">Evaluation Criteria:</div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {assessment.evaluationCriteria.map((criteria, idx) => (
-                      <li key={idx} className="text-gray-600">
-                        {criteria}
-                      </li>
-                    ))}
-                  </ul>
+            {lessonPlan.plan_data.assessmentPlan.formativeAssessments.map(
+              (assessment, index) => (
+                <div key={index} className="border-b pb-4">
+                  <div className="font-medium mb-2">{assessment.topic}</div>
+                  <p className="text-gray-600 mb-2">{assessment.description}</p>
+                  <div className="text-sm text-gray-500">
+                    Type: {assessment.type}
+                  </div>
+                  <div className="mt-2">
+                    <div className="font-medium text-sm mb-1">
+                      Evaluation Criteria:
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {assessment.evaluationCriteria.map((criteria, idx) => (
+                        <li key={idx} className="text-gray-600">
+                          {criteria}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         </div>
 
         <div>
           <h3 className="font-semibold mb-4">Summative Assessments</h3>
           <div className="space-y-4">
-            {lessonPlan.plan_data.assessmentPlan.summativeAssessments.map((assessment, index) => (
-              <div key={index} className="border-b pb-4">
-                <div className="font-medium mb-2">{assessment.topic}</div>
-                <p className="text-gray-600 mb-2">{assessment.description}</p>
-                <div className="text-sm text-gray-500">Type: {assessment.type}</div>
-                <div className="mt-2">
-                  <div className="font-medium text-sm mb-1">Evaluation Criteria:</div>
-                  <ul className="list-disc pl-5 space-y-1">
-                    {assessment.evaluationCriteria.map((criteria, idx) => (
-                      <li key={idx} className="text-gray-600">
-                        {criteria}
-                      </li>
-                    ))}
-                  </ul>
+            {lessonPlan.plan_data.assessmentPlan.summativeAssessments.map(
+              (assessment, index) => (
+                <div key={index} className="border-b pb-4">
+                  <div className="font-medium mb-2">{assessment.topic}</div>
+                  <p className="text-gray-600 mb-2">{assessment.description}</p>
+                  <div className="text-sm text-gray-500">
+                    Type: {assessment.type}
+                  </div>
+                  <div className="mt-2">
+                    <div className="font-medium text-sm mb-1">
+                      Evaluation Criteria:
+                    </div>
+                    <ul className="list-disc pl-5 space-y-1">
+                      {assessment.evaluationCriteria.map((criteria, idx) => (
+                        <li key={idx} className="text-gray-600">
+                          {criteria}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
-              </div>
-            ))}
+              )
+            )}
           </div>
         </div>
 
         <div>
           <h3 className="font-semibold mb-2">Progress Tracking Suggestions</h3>
           <ul className="list-disc pl-5 space-y-1">
-            {lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.map((suggestion, index) => (
-              <li key={index} className="text-gray-600">
-                {suggestion}
-              </li>
-            ))}
+            {lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.map(
+              (suggestion, index) => (
+                <li key={index} className="text-gray-600">
+                  {suggestion}
+                </li>
+              )
+            )}
           </ul>
         </div>
       </div>
@@ -776,7 +857,11 @@ export default function OutputContent() {
   return (
     <div className="min-h-screen bg-backgroundApp">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
-        <Button variant="outline" className="mb-6" onClick={() => router.push("/tools/lesson-planner")}>
+        <Button
+          variant="outline"
+          className="mb-6"
+          onClick={() => router.push("/tools/lesson-planner")}
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
@@ -784,9 +869,12 @@ export default function OutputContent() {
         {lessonPlan && (
           <>
             <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-800">Lesson Plan: {lessonPlan.chapter_topic}</h1>
+              <h1 className="text-3xl font-bold text-gray-800">
+                Lesson Plan: {lessonPlan.chapter_topic}
+              </h1>
               <p className="text-gray-600 mt-2">
-                {lessonPlan.grade} Grade | {lessonPlan.board} | {lessonPlan.number_of_days} Sessions -{" "}
+                {lessonPlan.grade} Grade | {lessonPlan.board} |{" "}
+                {lessonPlan.number_of_days} Sessions -{" "}
                 {lessonPlan.class_duration} Minutes Each
               </p>
             </div>
@@ -803,7 +891,8 @@ export default function OutputContent() {
                     <div className="flex">
                       <div className="w-1 bg-rose-500 mr-4"></div>
                       <div>
-                        <span className="font-medium">Session {day.day}</span>: {day.topicHeading}
+                        <span className="font-medium">Session {day.day}</span>:{" "}
+                        {day.topicHeading}
                       </div>
                     </div>
                   </div>
@@ -824,7 +913,11 @@ export default function OutputContent() {
 
             <div className="bg-white rounded-lg border p-6">
               {activeTab.startsWith("day-") &&
-                renderDayContent(lessonPlan.plan_data.days[Number.parseInt(activeTab.split("-")[1]) - 1])}
+                renderDayContent(
+                  lessonPlan.plan_data.days[
+                    Number.parseInt(activeTab.split("-")[1]) - 1
+                  ]
+                )}
               {activeTab === "assessment" && renderAssessmentPlan()}
             </div>
 
@@ -846,9 +939,13 @@ export default function OutputContent() {
         {generateNotesDialog.activity && (
           <GenerateNotesDialog
             isOpen={generateNotesDialog.isOpen}
-            onClose={() => setGenerateNotesDialog({ isOpen: false, activity: null })}
+            onClose={() =>
+              setGenerateNotesDialog({ isOpen: false, activity: null })
+            }
             activity={generateNotesDialog.activity}
-            storedNotes={generatedNotes[generateNotesDialog.activity.title] || null}
+            storedNotes={
+              generatedNotes[generateNotesDialog.activity.title] || null
+            }
             onNotesGenerated={handleNotesGenerated}
           />
         )}
@@ -865,4 +962,3 @@ export default function OutputContent() {
     </div>
   );
 }
-

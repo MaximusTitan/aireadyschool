@@ -1,7 +1,7 @@
 import { anthropic } from '@ai-sdk/anthropic';
 // import { openai } from '@ai-sdk/openai';
 import { streamText, smoothStream, Message, CreateMessage } from 'ai';
-import { tools } from '@/app/tools/buddy/utils/tools';
+import { tools } from '@/app/tools/gen-chat/utils/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
 import {

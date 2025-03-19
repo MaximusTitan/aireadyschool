@@ -3,7 +3,7 @@ import { Trash2, Plus, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { BuddyPanel } from "./buddy";
-import { useLanguageSettings } from "@/app/tools/buddy/hooks/useLanguageSettings";
+import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 
 interface ThreadListProps {
   threads: Array<{

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Volume2, VolumeX } from "lucide-react";
-import { useAudioSettings } from "@/app/tools/buddy/hooks/useAudioSettings";
-import { useLanguageSettings } from "@/app/tools/buddy/hooks/useLanguageSettings";
+import { useAudioSettings } from "@/app/tools/gen-chat/hooks/useAudioSettings";
+import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 
 const GIF_URLS = {
   constant:

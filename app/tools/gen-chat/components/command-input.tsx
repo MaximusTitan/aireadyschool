@@ -1,7 +1,7 @@
 import { ArrowUpIcon, MicIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState, useRef, KeyboardEvent } from "react";
-import { useLanguageSettings } from "@/app/tools/buddy/hooks/useLanguageSettings";
+import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 import { cn } from "@/lib/utils";
 import { ElevenLabsClient } from "elevenlabs";
 

@@ -3,8 +3,6 @@ import { useState, useEffect } from "react";
 import { use } from "react";
 import ReactMarkdown from "react-markdown";
 import { getApp } from "@/app/actions/apps";
-import { openai } from "@/utils/openai";
-import { generateText } from "ai";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -57,13 +55,25 @@ export default function AppPage({
     setError(null);
     setLoading(true);
     try {
-      const { text } = await generateText({
-        model: openai("gpt-4o"),
-        prompt: app.flow.inputPrompt.replace("{input}", input),
+      const response = await fetch("/api/app-openai", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          prompt: app.flow.inputPrompt.replace("{input}", input),
+        }),
       });
-      setResult(text);
+
+      if (!response.ok) {
+        throw new Error("Failed to generate response");
+      }
+
+      const data = await response.json();
+      setResult(data.text);
     } catch (error) {
-      setError("Failed to process request. Please try again.");
+      console.error("Failed to generate text: ", error);
+      setError("Failed to generate response");
       setResult("");
     } finally {
       setLoading(false);

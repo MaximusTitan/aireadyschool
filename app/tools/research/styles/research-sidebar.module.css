@@ -1,0 +1,39 @@
+.sidebar {
+  @apply w-64 bg-background border-r h-full flex flex-col;
+}
+
+.header {
+  @apply flex justify-between items-center p-3 border-b;
+}
+
+.searchContainer {
+  @apply p-3 border-b;
+}
+
+.searchInput {
+  @apply relative;
+}
+
+.searchIcon {
+  @apply absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground;
+}
+
+.searchField {
+  @apply pl-8;
+}
+
+.groupHeading {
+  @apply text-xs font-medium text-muted-foreground mb-2;
+}
+
+.researchItem {
+  @apply w-full justify-start text-left font-normal h-auto py-2;
+}
+
+.researchTitle {
+  @apply line-clamp-1 text-sm;
+}
+
+.researchTimestamp {
+  @apply text-xs text-muted-foreground mt-1;
+}

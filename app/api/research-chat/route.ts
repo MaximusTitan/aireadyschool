@@ -95,7 +95,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Empty message content" }, { status: 400 })
     }
 
+    // Extract the conversation history for context
+    let conversationContext = ""
+    if (messages.length > 1) {
+      conversationContext = messages
+        .slice(Math.max(0, messages.length - 6)) // Get the latest 5 exchanges for context
+        .map((msg: any) => `${msg.role}: ${msg.content}`)
+        .join("\n\n")
+    }
+
     console.log("Processing chat request:", currentMessage)
+    console.log(`With ${messages.length-1} previous messages in chat history`)
 
     // Perform web search
     const searchResponse = await performWebSearch(currentMessage)
@@ -122,17 +132,20 @@ const prompt = `You are an AI assistant helping with questions about the followi
 ${initialContent}
 
 Chat history:
-${messages.map((msg: any) => `${msg.role}: ${msg.content}`).join("\n")}
+${conversationContext}
 
-User's question: "${currentMessage}"
+User's latest question: "${currentMessage}"
 
 Here are some relevant web search results:
 
 ${searchContext}
 
-${isSimple ? "Provide a concise and direct answer to the user's question. Keep your response under 50 words if possible." : "Please provide a helpful and informative response based on the research content, chat history, and the web search results. ."}
+${isSimple ? "Provide a concise and direct answer to the user's question. Keep your response under 50 words if possible." : "Please provide a helpful and informative response based on the research content, chat history, and the web search results. Maintain continuity with your previous responses."}
 
 Critically important:
+- Refer to earlier parts of the conversation when relevant
+- Acknowledge information already provided in the conversation
+- Don't repeat explanations already given in prior messages
 - ALL citations in the text must be hyperlinks to the corresponding reference
 - In the References section, format each reference as follows:
 <p id="ref1">[1] , "<a href="https://www.example.com/article-url" target="_blank" rel="noopener noreferrer">Title of the Article</a>," Journal Name, vol. X, no. Y, pp. ZZ-ZZ, Year.</p>

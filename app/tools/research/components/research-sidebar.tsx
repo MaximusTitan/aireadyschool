@@ -1,149 +1,138 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { PlusCircle, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, AlertCircle } from "lucide-react";
-import { format } from "date-fns";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ResearchEntry } from "../types";
+import { createClient } from "@/utils/supabase/client";
+import { ChatInterface } from "./chat-interface";
 
 interface ResearchSidebarProps {
   onNewChat: () => void;
   onSelectResearch: (research: ResearchEntry) => void;
+  onSubmitQuery: (query: string) => Promise<void>;
+  userEmail: string | null;
+  isLoading: boolean;
+  researchHistory: ResearchEntry[];
+  setResearchHistory: React.Dispatch<React.SetStateAction<ResearchEntry[]>>;
+  selectedResearch?: ResearchEntry; // Add this prop
 }
 
 export function ResearchSidebar({
   onNewChat,
   onSelectResearch,
+  onSubmitQuery,
+  userEmail,
+  isLoading,
+  researchHistory,
+  setResearchHistory,
+  selectedResearch,
 }: ResearchSidebarProps) {
-  const [researches, setResearches] = useState<ResearchEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(true); // Start with chat by default
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
 
-  useEffect(() => {
-    fetchResearchHistory();
-  }, []);
-
-  const fetchResearchHistory = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const response = await fetch(`/api/research-chat-history`);
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(
-          errorData.error || `HTTP error! status: ${response.status}`
-        );
-      }
-      const data = await response.json();
-      if (!data.chatHistory) {
-        throw new Error("Chat history data is missing from the response");
-      }
-      setResearches(data.chatHistory);
-    } catch (err) {
-      console.error("Error fetching research history:", err);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "An unexpected error occurred while fetching research history"
-      );
-    } finally {
-      setLoading(false);
-    }
+  // Handle search change
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(e.target.value);
   };
 
-  const groupResearchesByDate = (researches: ResearchEntry[]) => {
-    const groups: { [key: string]: ResearchEntry[] } = {
-      Today: [],
-      Yesterday: [],
-      "Previous 7 Days": [],
-      Older: [],
-    };
-
-    const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    const weekAgo = new Date(now);
-    weekAgo.setDate(weekAgo.getDate() - 7);
-
-    researches.forEach((research) => {
-      const date = new Date(research.timestamp);
-      if (format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd")) {
-        groups.Today.push(research);
-      } else if (
-        format(date, "yyyy-MM-dd") === format(yesterday, "yyyy-MM-dd")
-      ) {
-        groups.Yesterday.push(research);
-      } else if (date > weekAgo) {
-        groups["Previous 7 Days"].push(research);
-      } else {
-        groups.Older.push(research);
-      }
-    });
-
-    return groups;
-  };
-
-  const groupedResearches = groupResearchesByDate(researches);
+  // Filter research history based on search query
+  const filteredHistory = searchQuery
+    ? researchHistory.filter((item) =>
+        item.prompt.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : researchHistory;
 
   return (
-    <aside className="w-40 bg-gray-50 border-r flex flex-col min-h-screen max-h-screen overflow-hidden">
-      <div className="p-2 border-b shrink-0">
-        <Button
+    <div className="flex flex-col h-full">
+      {/* Header with buttons */}
+      <div className="p-4 border-b">
+        <Button 
           onClick={onNewChat}
-          className="w-full flex items-center gap-1 text-xs"
+          className="w-full flex items-center justify-center gap-2 mb-2 bg-rose-600 hover:bg-rose-700 text-white"
         >
-          <PlusCircle className="h-3 w-3" />
-          New Research
+          <PlusCircle className="h-4 w-4" /> New Research
+        </Button>
+        
+        <div className="relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search history..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={handleSearchChange}
+          />
+        </div>
+      </div>
+
+      {/* Toggle between history and chat */}
+      <div className="flex border-b">
+        <Button 
+          variant="ghost"
+          className={`flex-1 rounded-none transition-colors ${!showChat ? "bg-gray-100 border-b-2 border-rose-500 text-gray-900 font-medium" : ""}`}
+          onClick={() => setShowChat(false)}
+        >
+          History
+        </Button>
+        <Button 
+          variant="ghost"
+          className={`flex-1 rounded-none transition-colors ${showChat ? "bg-gray-100 border-b-2 border-rose-500 text-gray-900 font-medium" : ""}`}
+          onClick={() => setShowChat(true)}
+        >
+          Chat
         </Button>
       </div>
-      <div className="flex-1 overflow-y-auto scrollbar-hide">
-        {error && (
-          <Alert variant="destructive" className="m-2">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>{error}</AlertDescription>
-            <Button onClick={fetchResearchHistory} className="mt-2 text-xs">
-              Retry
-            </Button>
-          </Alert>
-        )}
-        {loading ? (
-          <div className="p-4 text-gray-500 text-sm">Loading...</div>
-        ) : (
-          <div className="p-4 space-y-6">
-            {Object.entries(groupedResearches).map(([group, items]) => {
-              if (items.length === 0) return null;
-              return (
-                <div key={group}>
-                  <h3 className="text-sm font-medium text-gray-500 mb-2">
-                    {group}
-                  </h3>
-                  <div className="space-y-2">
-                    {items.map((research) => (
-                      <button
-                        key={research.id}
-                        onClick={() => onSelectResearch(research)}
-                        className="w-full text-left p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                      >
-                        <p className="text-xs font-medium truncate">
-                          {research.prompt}
-                        </p>
-                        <p className="text-[10px] text-gray-500">
-                          {format(
-                            new Date(research.timestamp),
-                            "MMM d, h:mm a"
-                          )}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
+
+      {/* Content area - either chat or history list */}
+      <div className="flex-1 overflow-hidden">
+        {showChat ? (
+          // Chat interface when in chat mode
+          <div className="h-full">
+            <ChatInterface
+              selectedResearch={selectedResearch}
+              onSubmitQuery={onSubmitQuery}
+              isLoading={isLoading}
+            />
           </div>
+        ) : (
+          // History list when in history mode
+          <ScrollArea className="h-full">
+            <div className="p-4 space-y-4">
+              {isHistoryLoading ? (
+                <div className="space-y-3">
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-14 w-full rounded-md" />
+                  ))}
+                </div>
+              ) : filteredHistory.length > 0 ? (
+                filteredHistory.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={() => onSelectResearch(item)}
+                    className={`p-3 rounded-md cursor-pointer hover:bg-gray-100 transition-colors ${
+                      selectedResearch?.id === item.id ? "bg-gray-100 border-l-4 border-rose-500" : ""
+                    }`}
+                  >
+                    <h4 className="font-medium truncate">{item.prompt}</h4>
+                    <p className="text-sm text-gray-500 truncate">
+                      {new Date(item.timestamp).toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  {searchQuery ? "No matching items found" : "No research history yet"}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         )}
       </div>
-    </aside>
+    </div>
   );
 }

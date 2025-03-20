@@ -1,6 +1,7 @@
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, ExternalHyperlink } from "docx"
 import FileSaver from "file-saver"
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import { jsPDF } from 'jspdf';
 
 const generateTitle = async (content: string): Promise<string> => {
   if (!process.env.G_API_KEY) {
@@ -27,78 +28,36 @@ Title:`
   }
 }
 
-export const downloadAsPDF = async (content: string) => {
-  const printWindow = window.open("", "_blank")
-  if (printWindow) {
-    const titleMatch = content.match(/^# (.+)$/m)
-    const title = titleMatch ? titleMatch[1] : ""
-
-    printWindow.document.write(`
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/2.0.3/marked.min.js"></script>
-  <style>
-    @page {
-      margin: 0;
-    }
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      max-width: 800px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    h1 {
-      color: #000000;
-      text-align: center;
-      font-size: 28px;
-      margin-bottom: 20px;
-    }
-    h2, h3, h4, h5, h6 {
-      color: #000000;
-    }
-    a {
-      color: #2c5282;
-      text-decoration: underline;
-    }
-    @media print {
-      body {
-        max-width: none;
-      }
-      @page {
-        margin: 0;
-        size: auto;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div id="content"></div>
-  <script>
-    function removeExtraIndex(content) {
-      const lines = content.split('\\n');
-      const titleLine = lines.find(line => line.startsWith('# '));
-      const contentWithoutTitle = lines.filter(line => !line.startsWith('# ')).join('\\n');
-      return titleLine ? \`\${titleLine}\\n\\n\${contentWithoutTitle}\` : content;
-    }
-    document.getElementById('content').innerHTML = marked.parse(removeExtraIndex(\`${content.replace(/`/g, "\\`")}\`));
-    setTimeout(() => {
-      window.print();
-      window.close();
-    }, 1000);
-  </script>
-</body>
-</html>
-`)
-    printWindow.document.close()
-  } else {
-    console.error("Failed to open print window")
-    throw new Error("Unable to open print window. Please check your browser settings.")
-  }
+export async function downloadAsPDF(content: string): Promise<void> {
+  const pdf = new jsPDF();
+  
+  // Set up PDF
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(12);
+  
+  // Add title
+  pdf.setFontSize(16);
+  pdf.setFont('helvetica', 'bold');
+  const title = content.split('\n')[0].replace('#', '').trim();
+  pdf.text(title, 20, 20);
+  
+  // Add content
+  pdf.setFontSize(12);
+  pdf.setFont('helvetica', 'normal');
+  
+  // Remove markdown formatting for PDF
+  const cleanContent = content
+    .replace(/^#+ /gm, '') // Remove headings
+    .replace(/\*\*/g, '')  // Remove bold
+    .replace(/\*/g, '')    // Remove italics
+    .replace(/\`\`\`[\s\S]*?\`\`\`/g, '') // Remove code blocks
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)'); // Convert links
+  
+  const splitText = pdf.splitTextToSize(cleanContent, 170);
+  pdf.text(splitText, 20, 30);
+  
+  // Save the PDF
+  pdf.save(`research-${new Date().toISOString().split('T')[0]}.pdf`);
 }
 
 // Rest of the code remains the same until the DOC export function...

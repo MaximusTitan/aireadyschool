@@ -127,7 +127,7 @@ Your output should strictly follow the above structure. Do not include any extra
 
     // Call OpenAI API for evaluation using AI SDK
     const { text: aiResponse, usage } = await generateText({
-      model: anthropic('claude-3-5-sonnet-20240620'),
+      model: anthropic('claude-3-7-sonnet-20250219'),
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

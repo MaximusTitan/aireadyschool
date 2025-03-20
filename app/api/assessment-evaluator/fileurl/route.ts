@@ -5,6 +5,8 @@ import formidable from "formidable";
 import { createMistral } from "@ai-sdk/mistral";
 import { generateText } from "ai";
 import fs from "fs";
+import path from "path";
+import os from "os";
 import { createClient as createSupabaseClient } from "@supabase/supabase-js"; // Import Supabase client
 
 const SYSTEM_PROMPT = `You are an OCR (Optical Character Recognition) specialist that extracts text from images and documents.
@@ -24,6 +26,12 @@ function createClient() {
   return createSupabaseClient(supabaseUrl, serviceRoleKey);
 }
 
+// Create a temporary uploads directory (e.g., /tmp/uploads)
+const tempUploadsDir = path.join(os.tmpdir(), "uploads");
+if (!fs.existsSync(tempUploadsDir)) {
+  fs.mkdirSync(tempUploadsDir);
+}
+
 export async function POST(request: Request) {
   // Read raw body and create a Readable stream
   const bodyBuffer = Buffer.from(await request.arrayBuffer());
@@ -35,7 +43,7 @@ export async function POST(request: Request) {
 
   return new Promise<Response>((resolve) => {
     const form = formidable({
-      uploadDir: "./uploads",
+      uploadDir: tempUploadsDir, // Use the temporary uploads directory
       keepExtensions: true,
       maxFileSize: 10 * 1024 * 1024, // 10MB limit
       multiples: false,
@@ -83,9 +91,9 @@ export async function POST(request: Request) {
           .getPublicUrl(`uploads/${originalFilename}`);
 
         const fileUrl = publicUrlData.publicUrl;
-        console.log("File URL", fileUrl)
+        console.log("File URL", fileUrl);
 
-        // Return the extracted text
+        // Return the extracted file URL
         resolve(NextResponse.json({ fileUrl: fileUrl }));
       } catch (error: any) {
         resolve(

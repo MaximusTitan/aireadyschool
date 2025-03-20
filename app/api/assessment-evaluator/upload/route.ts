@@ -2,7 +2,15 @@ import { IncomingMessage } from "http";
 import { Readable } from "stream";
 import formidable from "formidable";
 import fs from "fs";
+import path from "path";
+import os from "os";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
+
+// Create a temporary uploads directory (e.g., /tmp/uploads on Unix)
+const tempUploadsDir = path.join(os.tmpdir(), "uploads");
+if (!fs.existsSync(tempUploadsDir)) {
+  fs.mkdirSync(tempUploadsDir);
+}
 
 export const config = {
   runtime: "nodejs", // Ensure full Node.js environment
@@ -24,10 +32,10 @@ export async function POST(request: Request) {
 
   return new Promise<Response>((resolve) => {
     const form = formidable({
-      uploadDir: "./uploads",      // Set upload directory
-      keepExtensions: true,        // Keep file extensions
-      maxFileSize: 10 * 1024 * 1024, // 10MB limit
-      multiples: false,            // Only allow one file
+      uploadDir: tempUploadsDir,      // Use the temporary uploads directory
+      keepExtensions: true,           // Keep file extensions
+      maxFileSize: 10 * 1024 * 1024,    // 10MB limit
+      multiples: false,               // Only allow one file
     });
 
     form.parse(nodeReq, async (err, fields, files) => {
@@ -66,7 +74,7 @@ export async function POST(request: Request) {
         if (fs.existsSync(filePath)) {
           fs.unlinkSync(filePath);
         }
-      }      
+      }
     });
   });
 }

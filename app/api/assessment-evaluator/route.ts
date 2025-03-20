@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import createParser from "pdf2json"
-import { openai } from '@ai-sdk/openai'
+import { anthropic } from '@ai-sdk/anthropic'
 import { generateText } from 'ai'
 import { logTokenUsage } from '@/utils/logTokenUsage'
 import { createClient } from "@/utils/supabase/server"
@@ -127,7 +127,7 @@ Your output should strictly follow the above structure. Do not include any extra
 
     // Call OpenAI API for evaluation using AI SDK
     const { text: aiResponse, usage } = await generateText({
-      model: openai('gpt-4o'),
+      model: anthropic('claude-3-5-sonnet-20240620'),
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }

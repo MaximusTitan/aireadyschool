@@ -77,7 +77,29 @@ interface ThreadMessage extends Message {
   }>;
 }
 
-function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english', teachingMode = false): string {
+// Error interfaces
+interface StreamFinishError {
+  type: 'STREAM_FINISH_ERROR';
+  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
+  finishReason: string;
+  timestamp: string;
+}
+
+// Type guards
+function isStreamFinishError(error: unknown): error is Error {
+  return error instanceof Error && error.message.includes('STREAM_FINISH_ERROR');
+}
+
+function isTypeError(error: unknown): error is TypeError {
+  return error instanceof TypeError;
+}
+
+function isAPICallError(error: unknown): error is APICallError {
+  return APICallError.isInstance(error);
+}
+
+// Updated getSystemPrompt to receive an optional studentDetails parameter
+function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english', teachingMode = false, studentDetails?: any): string {
   // For teachers, only use teacher buddy prompt
   if (userRole === 'Teacher') {
     return TEACHER_BUDDY_PROMPT;
@@ -92,6 +114,45 @@ function getSystemPrompt(messages: any[], userRole?: string, language: Language 
   const subject = detectSubject(messages);
   const basePrompt = prompts[language][subject];
   
+  // For Student, append context if student details exist
+  if (userRole === 'Student' && studentDetails) {
+    const detailsContext = `
+Student Details:
+- Name: ${studentDetails.name || 'N/A'}
+- Grade: ${studentDetails.grade || 'N/A'}
+- Board: ${studentDetails.board || 'N/A'}
+- Country: ${studentDetails.country || 'N/A'}`;
+    if (language === 'english') {
+      return `${basePrompt}
+${detailsContext}
+
+You can use various tools to enhance the learning experience:
+- Create quizzes
+- Generate educational images
+- Create concept visualizations
+- Generate mind maps
+
+Do not ever mention that you are using the tools to the user. Just start using them. After explaining the concept, you should ask the student to take an assessment to reinforce their learning.
+
+Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
+    } else {
+      return `${basePrompt}
+${detailsContext}
+
+आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
+- इंटरैक्टिव गणित समस्याएँ उत्पन्न करें
+- क्विज़ बनाएँ
+- शैक्षिक छवियाँ उत्पन्न करें
+- अवधारणा विज़ुअलाइज़ेशन बनाएँ
+- माइंड मैप उत्पन्न करें
+
+कभी भी उपयोगकर्ता को यह न बताएं कि आप उपकरण का उपयोग कर रहे हैं। बस उनका उपयोग करना शुरू कर दें। अवधारित कोण के बाद, आपको छात्र से अभ्यास लेने के लिए कहना चाहिए ताकि उनके सीखने को मजबूत किया जा सके।
+
+हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
+    }
+  }
+
+  // Default prompt without student details
   if (language === 'english') {
     return `${basePrompt}
 
@@ -131,33 +192,45 @@ async function saveToolOutputs(
     state?: string;
   }>
 ) {
-  const outputs = toolCalls.map(call => ({
-    message_id: messageId,
-    tool_name: call.tool,
-    tool_call_id: call.id,
-    parameters: call.parameters,
-    result: call.result,
-    state: call.state || 'pending'
-  }));
+  try {
+    const outputs = toolCalls.map(call => ({
+      message_id: messageId,
+      tool_name: call.tool,
+      tool_call_id: call.id,
+      parameters: call.parameters,
+      result: call.result,
+      state: call.state || 'pending'
+    }));
 
-  const { error } = await supabase
-    .from('tool_outputs')
-    .insert(outputs);
+    const { error } = await supabase
+      .from('tool_outputs')
+      .insert(outputs);
 
-  if (error) {
-    console.error('Error saving tool outputs:', error);
-    throw error;
+    if (error) {
+      console.error('Error saving tool outputs:', error);
+      throw error;
+    }
+  } catch (err) {
+    console.error('Failed to save tool outputs:', err);
+    // Don't throw here, just log the error so the stream can continue
   }
 }
 
 export async function POST(request: Request) {
+  let controller: AbortController | null = null;
+  
   try {
+    controller = new AbortController();
+    const signal = controller.signal;
+    
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
 
     if (error || !user) {
       return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
     }
+
+    const userName = user.user_metadata?.name; 
 
     // Get user role from metadata
     const userRole = user.user_metadata?.role;
@@ -168,6 +241,22 @@ export async function POST(request: Request) {
     console.log('Thread ID:', threadId);
     console.log('User ID:', user.id);
     console.log('Language selected:', language);
+
+    // Fetch student details if role is Student
+    let studentDetails = null;
+    if (userRole === 'Student') {
+      const { data, error: detailsError } = await supabase
+        .from('student_details')
+        .select('grade, board, country')
+        .eq('id', user.id)
+        .single();
+      if (!detailsError && data) {
+        studentDetails = { ...data, name: userName };
+        console.log('Student details found:', studentDetails);
+      } else {
+        studentDetails = { name: userName }; 
+      }
+    }
 
     // Verify thread belongs to user
     if (threadId) {
@@ -195,12 +284,30 @@ export async function POST(request: Request) {
       }
     }
 
+    // Safety check for messages
+    if (!Array.isArray(messages) || messages.length === 0) {
+      return Response.json({ error: 'Invalid messages array' }, { status: 400 });
+    }
+
+    // Create a clean copy of messages to avoid potential issues
+    const cleanMessages = messages.map(m => ({
+      role: m.role,
+      content: m.content,
+      ...(m.name ? { name: m.name } : {}),
+      ...(m.toolCalls ? { toolCalls: m.toolCalls } : {}),
+      ...(m.toolCallId ? { toolCallId: m.toolCallId } : {})
+    }));
+
+    // Setup for controlled stream termination
+    let streamFinished = false;
+    let streamError: Error | null = null;
+
     const streamHandler = streamText({
-      model: anthropic('claude-3-5-sonnet-20240620'),
+      model: anthropic('claude-3-7-sonnet-20250219'),
       system: teachingMode 
         ? (language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI)
-        : getSystemPrompt(messages, userRole, language as Language),
-      messages: messages as CreateMessage[],
+        : getSystemPrompt(cleanMessages, userRole, language as Language, teachingMode, studentDetails),
+      messages: cleanMessages as CreateMessage[],
       maxSteps: 5,
       tools,
       // Adjust temperature and max tokens for teaching mode
@@ -213,114 +320,133 @@ export async function POST(request: Request) {
       onStepFinish: async ({ text, toolCalls, toolResults }) => {
         if (!toolCalls?.length) return;
 
-        // Generate a message ID for this step
-        const messageId = crypto.randomUUID();
+        try {
+          // Generate a message ID for this step
+          const messageId = crypto.randomUUID();
 
-        // Save the message first
-        const { error: messageError } = await supabase
-          .from('chat_messages')
-          .insert({
-            id: messageId,
-            thread_id: threadId,
-            role: 'assistant',
-            content: text
+          // Save the message first
+          const { error: messageError } = await supabase
+            .from('chat_messages')
+            .insert({
+              id: messageId,
+              thread_id: threadId,
+              role: 'assistant',
+              content: text
+            });
+
+          if (messageError) {
+            console.error('Error saving message:', messageError);
+            return;
+          }
+
+          // Map tool results to their corresponding calls
+          const toolCallsWithResults = toolCalls.map(call => {
+            const result = toolResults?.find(r => r.toolCallId === call.toolCallId);
+            return {
+              id: call.toolCallId,
+              tool: call.toolName,
+              parameters: call.args,
+              result: result?.result || undefined,
+              state: result ? 'result' : 'pending'
+            };
           });
 
-        if (messageError) {
-          console.error('Error saving message:', messageError);
-          return;
+          // Save tool outputs
+          await saveToolOutputs(supabase, messageId, toolCallsWithResults);
+        } catch (err) {
+          console.error('Error in onStepFinish:', err);
+          // Don't throw here to avoid breaking the stream
         }
-
-        // Map tool results to their corresponding calls
-        const toolCallsWithResults = toolCalls.map(call => {
-          const result = toolResults?.find(r => r.toolCallId === call.toolCallId);
-          return {
-            id: call.toolCallId,
-            tool: call.toolName,
-            parameters: call.args,
-            result: result?.result || undefined,
-            state: result ? 'result' : 'pending'
-          };
-        });
-
-        // Save tool outputs
-        await saveToolOutputs(supabase, messageId, toolCallsWithResults);
       },
+      // Replace the onFinish handler with this improved version:
       onFinish: async ({ usage, finishReason }) => {
-        // Enhanced error handling for finish events
-        if (finishReason === 'error') {
-          console.error('Stream finished with error:', { finishReason, usage });
-          
-          // Throw a specific error that we can catch and handle
-          throw new Error(JSON.stringify({
-            type: 'STREAM_FINISH_ERROR',
-            usage,
-            finishReason,
-            timestamp: new Date().toISOString()
-          }));
-        }
+        streamFinished = true;
         
-        if (usage) {
-          await logTokenUsage(
-            'Learning Buddy',
-            'Claude 3.5 Sonnet',
-            usage.promptTokens || 0,
-            usage.completionTokens || 0,
-            user.email || undefined
-          ).catch(err => {
-            console.warn('Token logging failed:', err);
-            // Don't throw, just log the error
-          });
+        try {
+          // Handle error finish reason
+          if (finishReason === 'error') {
+            console.error('Stream finished with error:', { finishReason, usage });
+            streamError = new Error(`STREAM_FINISH_ERROR: ${JSON.stringify({ 
+              type: 'STREAM_FINISH_ERROR', 
+              finishReason, 
+              usage: usage || { promptTokens: 0, completionTokens: 0 }, 
+              timestamp: new Date().toISOString() 
+            })}`);
+            // Don't throw here, just record the error
+          }
+        
+          if (usage) {
+            await logTokenUsage(
+              'Learning Buddy',
+              'Claude 3.5 Sonnet',
+              usage.promptTokens || 0,
+              usage.completionTokens || 0,
+              user.email || undefined
+            ).catch(err => {
+              console.warn('Token logging failed:', err);
+            });
+          }
+        } catch (err) {
+          console.error('Error in onFinish:', err);
+          // Don't rethrow, just log
         }
-      }
+      },
     });
 
     try {
       const response = streamHandler.toDataStreamResponse();
       
-      // Enhanced transform stream with retry logic
+      if (!response.body) {
+        throw new Error('No response stream available');
+      }
+      
+      // Enhanced transform stream with better error handling
       const transformStream = new TransformStream({
         transform(chunk, controller) {
           try {
             if (chunk.type === 'error') {
               console.error('Stream chunk error:', chunk.error);
               
-              // Check if error is recoverable
-              if (chunk.error?.isRetryable) {
-                console.log('Attempting to recover from error...');
-                // Enqueue an error message to the client
-                controller.enqueue({
-                  type: 'text',
-                  text: '\n[An error occurred, but we are trying to recover...]\n'
-                });
-                return;
-              }
+              // For any errors, try to handle them gracefully
+              controller.enqueue({
+                type: 'text',
+                text: '\n\nI apologize, but I encountered an issue while processing your request. Please try again or rephrase your question.\n\n'
+              });
               
-              controller.error(chunk.error);
+              // Instead of calling controller.error(), we'll try to continue the stream
               return;
             }
             
             controller.enqueue(chunk);
           } catch (err) {
             console.error('Transform error:', err);
-            controller.error(err);
+            // Don't call controller.error() here either
+            controller.enqueue({
+              type: 'text',
+              text: '\n\nSorry, there was an error processing part of this response.\n\n'
+            });
+          }
+        },
+        flush(controller) {
+          // Make sure the stream ends gracefully
+          try {
+            controller.terminate();
+          } catch (err) {
+            console.error('Error terminating controller:', err);
           }
         }
       });
 
-      // Add error handling for the response stream
-      const stream = response.body?.pipeThrough(transformStream);
-      
-      if (!stream) {
-        throw new Error('No response stream available');
-      }
+      const stream = response.body.pipeThrough(transformStream);
 
+      // Create a response with the transformed stream
       return new Response(stream, {
         status: response.status,
         headers: {
           ...response.headers,
           'Connection': 'keep-alive',
           'Cache-Control': 'no-cache',
+          'Content-Type': 'text/event-stream',
         },
         statusText: response.statusText,
       });
@@ -332,20 +458,42 @@ export async function POST(request: Request) {
         stack: streamErr instanceof Error ? streamErr.stack : undefined
       });
 
+      // Clean up the controller if there was an error
+      if (controller && !streamFinished) {
+        try {
+          controller.abort();
+        } catch (abortErr) {
+          console.error('Error aborting controller:', abortErr);
+        }
+      }
+
       // Handle stream finish errors
       if (isStreamFinishError(streamErr)) {
         try {
-          const errorData = JSON.parse(streamErr.message) as StreamFinishError;
-          return Response.json({
-            error: 'AI Stream Error',
-            details: 'The AI stream ended unexpectedly',
-            code: 'STREAM_FINISH_ERROR',
-            usage: errorData.usage,
-            timestamp: errorData.timestamp,
-            recoverable: true
-          }, { status: 500 });
+          const errorMessage = streamErr.message;
+          const jsonStartIndex = errorMessage.indexOf('{');
+          if (jsonStartIndex >= 0) {
+            const errorData = JSON.parse(errorMessage.substring(jsonStartIndex)) as StreamFinishError;
+            return Response.json({
+              error: 'AI Stream Error',
+              details: 'The AI stream ended unexpectedly',
+              code: 'STREAM_FINISH_ERROR',
+              usage: errorData.usage || { promptTokens: 0, completionTokens: 0 },
+              timestamp: errorData.timestamp || new Date().toISOString(),
+              finishReason: errorData.finishReason || 'error',
+              recoverable: true
+            }, { status: 500 });
+          }
         } catch (parseErr) {
           console.error('Error parsing stream finish error:', parseErr);
+          // Fallback for parsing errors
+          return Response.json({
+            error: 'AI Stream Error',
+            details: 'The AI stream ended unexpectedly (parsing error)',
+            code: 'STREAM_FINISH_ERROR',
+            message: streamErr.message,
+            recoverable: true
+          }, { status: 500 });
         }
       }
 
@@ -369,9 +517,20 @@ export async function POST(request: Request) {
         }, { status: streamErr.statusCode || 500 });
       }
 
+      // Handle reported streamError specifically
+      if (streamError) {
+        return Response.json({
+          error: 'AI Stream Error',
+          details: 'The AI stream reported an error during processing',
+          code: 'STREAM_REPORTED_ERROR',
+          message: streamError as any,
+          recoverable: true
+        }, { status: 500 });
+      }
+
       return Response.json({
         error: 'Stream error',
-        details: streamErr instanceof Error ? streamErr.message : String(streamErr),
+        details: streamErr instanceof Error ? (streamErr as any).message : String(streamErr), // modified line
         code: 'STREAM_ERROR',
         recoverable: true,
         message: 'Please try your request again.'
@@ -379,6 +538,15 @@ export async function POST(request: Request) {
     }
   } catch (err: any) {
     console.error('General error in POST /api/gen-chat:', err);
+    
+    // Clean up the controller if there was an error
+    if (controller) {
+      try {
+        controller.abort();
+      } catch (abortErr) {
+        console.error('Error aborting controller:', abortErr);
+      }
+    }
     
     // Enhanced error classification
     if (err instanceof TypeError) {
@@ -412,14 +580,25 @@ export async function POST(request: Request) {
       }, { status: 400 });
     }
 
-    // Handle finish reason errors
+    // Enhance finish reason error handling in the general catch block
     if (err.finishReason === 'error') {
       return Response.json({
         error: 'AI model error',
         details: 'The AI model encountered an error during processing',
-        usage: err.usage || { promptTokens: 0, completionTokens: 0 },
+        usage: err.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
         code: 'MODEL_ERROR',
-        finishReason: err.finishReason
+        finishReason: err.finishReason,
+        recoverable: true
+      }, { status: 500 });
+    }
+
+    // Handle connection reset errors
+    if (err.code === 'ECONNRESET') {
+      return Response.json({
+        error: 'Connection reset',
+        details: 'The connection was reset while streaming the response',
+        code: 'ECONNRESET',
+        recoverable: true
       }, { status: 500 });
     }
 
@@ -431,25 +610,4 @@ export async function POST(request: Request) {
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     }, { status: 500 });
   }
-}
-
-// Add these types at the top of the file after the imports
-interface StreamFinishError {
-  type: 'STREAM_FINISH_ERROR';
-  usage: { promptTokens: number; completionTokens: number; totalTokens: number };
-  finishReason: string;
-  timestamp: string;
-}
-
-// Add type guards
-function isStreamFinishError(error: unknown): error is { message: string } {
-  return error instanceof Error && error.message.includes('STREAM_FINISH_ERROR');
-}
-
-function isTypeError(error: unknown): error is TypeError {
-  return error instanceof TypeError;
-}
-
-function isAPICallError(error: unknown): error is APICallError {
-  return APICallError.isInstance(error);
 }

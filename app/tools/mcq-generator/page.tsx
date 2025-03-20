@@ -314,7 +314,7 @@ export default function Home() {
 
       // Add model to submissionData after determining the route
       submissionData.model =
-        formData.board === "CAIE" ? "claude-3-5-sonnet-20240620" : "gpt-4";
+        formData.board === "CAIE" ? "claude-3-7-sonnet-20250219" : "gpt-4o";
       console.log("Selected model:", submissionData.model);
       console.log("Using API route:", apiRoute);
       console.log("Submission data:", submissionData);

@@ -144,14 +144,27 @@ export default function TakeAssessment() {
 
       if (error) throw error;
 
+      // NEW: Update assessments table with student's answers
+      const putResponse = await fetch("/api/generate-assessment", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: assessment.id, answers: enhancedAnswers }),
+      });
+      if (!putResponse.ok) {
+        const errorData = await putResponse.json();
+        throw new Error(
+          errorData.error || "Failed to update assessment record"
+        );
+      }
+
       setUserAnswers(enhancedAnswers);
       setShowResults(true);
 
       // Show success message and redirect
       alert(`Assessment completed! Your score: ${Math.round(score)}%`);
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
+      // setTimeout(() => {
+      //   router.push("/dashboard");
+      // }, 2000);
     } catch (error) {
       console.error("Error submitting answers:", error);
       setError("Failed to submit answers");

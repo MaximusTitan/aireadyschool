@@ -19,10 +19,12 @@ interface CreateTeacherParams {
   email: string;
   password: string;
   schoolId: string;
-  boardId: string;
-  gradeId: string;
-  sectionId: string;
-  subjectId: string;
+  assignments: {
+    board_id: string;
+    grade_id: string;
+    section_id: string;
+    subject_id: string;
+  }[];
 }
 
 interface CreateStudentParams {
@@ -63,7 +65,7 @@ interface BulkCreateTeacherParams {
 }
 
 export async function createTeacher(params: CreateTeacherParams) {
-  const { name, email, password, schoolId, boardId, gradeId, sectionId, subjectId } = params;
+  const { name, email, password, schoolId, assignments } = params;
 
   try {
     // Create auth user with email confirmed
@@ -83,10 +85,6 @@ export async function createTeacher(params: CreateTeacherParams) {
         name,
         role: 'Teacher',
         school_id: schoolId,
-        board_id: boardId,
-        grade_id: gradeId,
-        section_id: sectionId,
-        subject_id: subjectId,
       },
     });
 
@@ -125,18 +123,21 @@ export async function createTeacher(params: CreateTeacherParams) {
 
     if (teacherError) throw teacherError;
 
-    // Create teacher assignment record
-    const { error: assignError } = await supabase
-      .from("teacher_assignments")
-      .insert({
-        teacher_id: teacherData.id,
-        board_id: boardId,
-        grade_id: gradeId,
-        section_id: sectionId,
-        subject_id: subjectId,
-      });
+    // Create teacher assignment records
+    for (const assignment of assignments) {
+      const { board_id, grade_id, section_id, subject_id } = assignment;
+      const { error: assignError } = await supabase
+        .from("teacher_assignments")
+        .insert({
+          teacher_id: teacherData.id,
+          board_id,
+          grade_id,
+          section_id,
+          subject_id,
+        });
 
-    if (assignError) throw assignError;
+      if (assignError) throw assignError;
+    }
 
     return { success: true };
   } catch (error) {
@@ -232,7 +233,20 @@ export async function createBulkStudents(params: BulkCreateStudentParams) {
 export async function createBulkTeachers(params: BulkCreateTeacherParams) {
   try {
     for (const teacher of params.teachers) {
-      const result = await createTeacher(teacher);
+      const result = await createTeacher({
+        name: teacher.name,
+        email: teacher.email,
+        password: teacher.password,
+        schoolId: teacher.schoolId,
+        assignments: [
+          {
+            board_id: teacher.boardId,
+            grade_id: teacher.gradeId,
+            section_id: teacher.sectionId,
+            subject_id: teacher.subjectId,
+          },
+        ],
+      });
       if (!result.success) throw result.error;
     }
     return { success: true };

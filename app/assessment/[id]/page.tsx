@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 interface Answer {
-  index: number; // Changed from questionIndex to match Assessment component
-  answer: string; // Changed from selectedAnswer to match Assessment component
+  index: number;
+  answer: string;
   isCorrect?: boolean;
 }
 
@@ -17,6 +17,14 @@ interface AssessmentQuestion {
   question: string;
   correctAnswer: string | number;
   options?: string[];
+}
+
+interface AssignedAssessment {
+  id: string;
+  assessment_id: string;
+  completed: boolean;
+  student_answers: Answer[] | null;
+  score: number | null;
 }
 
 export default function TakeAssessment() {
@@ -29,6 +37,9 @@ export default function TakeAssessment() {
   const [userAnswers, setUserAnswers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [assignedAssessment, setAssignedAssessment] =
+    useState<AssignedAssessment | null>(null);
 
   useEffect(() => {
     const fetchAssessment = async () => {
@@ -53,15 +64,23 @@ export default function TakeAssessment() {
         // Check if already completed
         const { data: assignedData, error: assignedError } = await supabase
           .from("assigned_assessments")
-          .select("completed")
+          .select("*") // Select all fields, not just completed
           .eq("id", assignedId)
           .single();
 
         if (assignedError) throw assignedError;
 
+        setAssignedAssessment(assignedData);
+
+        // If completed, set the state to show results instead of redirecting
         if (assignedData.completed) {
-          router.push("/dashboard");
-          return;
+          setIsCompleted(true);
+          setShowResults(true);
+
+          // Set user answers from stored data
+          if (assignedData.student_answers) {
+            setUserAnswers(assignedData.student_answers);
+          }
         }
 
         setAssessment(assessmentData);
@@ -159,29 +178,87 @@ export default function TakeAssessment() {
 
       setUserAnswers(enhancedAnswers);
       setShowResults(true);
+      setIsCompleted(true);
 
-      // Show success message and redirect
+      // Show success message but don't redirect automatically
       alert(`Assessment completed! Your score: ${Math.round(score)}%`);
-      // setTimeout(() => {
-      //   router.push("/dashboard");
-      // }, 2000);
     } catch (error) {
       console.error("Error submitting answers:", error);
       setError("Failed to submit answers");
     }
   };
 
-  if (loading) return <div>Loading assessment...</div>;
-  if (error) return <div>{error}</div>;
-  if (!assessment) return <div>Assessment not found</div>;
+  if (loading)
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+        </div>
+        <p className="text-center text-gray-500">Loading assessment...</p>
+      </div>
+    );
+
+  if (error)
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="bg-red-50 border border-red-200 p-6 rounded-lg">
+          <p className="text-red-600 text-center">{error}</p>
+          <div className="flex justify-center mt-4">
+            <Link href="/dashboard">
+              <Button>Return to Dashboard</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+
+  if (!assessment)
+    return (
+      <div className="container mx-auto py-8 px-4 max-w-4xl">
+        <div className="bg-amber-50 border border-amber-200 p-6 rounded-lg">
+          <p className="text-amber-600 text-center">Assessment not found</p>
+          <div className="flex justify-center mt-4">
+            <Link href="/dashboard">
+              <Button>Return to Dashboard</Button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
 
   return (
     <div className="container mx-auto py-8 px-4 max-w-4xl">
-      <Link href="/dashboard">
-        <Button variant="outline" className="mb-4">
-          ← Back to Dashboard
-        </Button>
-      </Link>
+      <div className="flex items-center justify-between mb-4">
+        <Link href="/dashboard">
+          <Button variant="outline" className="flex items-center gap-2">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M19 12H5M12 19l-7-7 7-7" />
+            </svg>
+            Back to Dashboard
+          </Button>
+        </Link>
+
+        {isCompleted &&
+          assignedAssessment &&
+          assignedAssessment.score !== null && (
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Score</div>
+              <div className="text-xl font-semibold">
+                {Math.round(assignedAssessment.score)}%
+              </div>
+            </div>
+          )}
+      </div>
 
       <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
         <Assessment
@@ -192,6 +269,7 @@ export default function TakeAssessment() {
           userAnswers={userAnswers}
           assessmentId={assessment.id}
           topic={assessment.topic}
+          readOnly={isCompleted} // Now we can use readOnly prop since it's defined
         />
       </div>
     </div>

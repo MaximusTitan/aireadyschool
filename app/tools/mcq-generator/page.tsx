@@ -563,7 +563,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-backgroundApp">
+    <div className="bg-backgroundApp min-h-screen">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">

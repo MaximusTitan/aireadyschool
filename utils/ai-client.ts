@@ -16,7 +16,7 @@ interface AIClientOptions {
 // Default models for each provider
 const DEFAULT_MODELS = {
   openai: 'gpt-4o',
-  groq: 'mixtral-8x7b-32768'
+  groq: 'llama-3.3-70b-versatile'
 };
 
 // Add improved JSON extraction to handle problematic responses

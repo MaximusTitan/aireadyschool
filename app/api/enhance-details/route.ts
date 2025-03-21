@@ -73,7 +73,7 @@ Be specific, creative, and detailed but concise (200 words or less). Return ONLY
           },
           { role: "user", content: prompt }
         ],
-        model: "mixtral-8x7b-32768",
+        model: "llama-3.3-70b-versatile",
         max_tokens: 500,
         temperature: 0.8,
       });

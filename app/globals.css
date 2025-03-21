@@ -3,6 +3,7 @@
 @tailwind utilities;
 
 @import url('../styles/comic-layout.css');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
   color-scheme: light;
@@ -43,6 +44,8 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    --font-sans: Inter, system-ui, -apple-system, sans-serif;
+    --font-display: Inter, system-ui, -apple-system, sans-serif;
   }
 
   .dark {
@@ -78,6 +81,20 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  html {
+    font-family: var(--font-sans);
+  }
+
+  /* Smooth scrolling */
+  .smooth-scroll {
+    scroll-behavior: smooth;
+  }
+
+  /* Glass effect base */
+  .glass {
+    @apply bg-white/80 dark:bg-neutral-900/80 backdrop-blur-sm border border-white/20 dark:border-neutral-800/20;
   }
 }
 
@@ -215,7 +232,22 @@ select {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* Enhanced scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
 
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-neutral-300 dark:bg-neutral-700 rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-neutral-400 dark:bg-neutral-600;
+}
 
 @layer base {
   * {
@@ -224,4 +256,119 @@ select {
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Button hover animations */
+.hover-scale {
+  @apply transition-transform duration-200 ease-out hover:scale-105;
+}
+
+/* Image hover effect */
+.image-hover {
+  @apply transition-all duration-300 ease-out;
+}
+
+.image-hover:hover {
+  @apply scale-[1.02] brightness-105;
+}
+
+/* Modal transition */
+.modal-enter {
+  @apply opacity-0 scale-95;
+}
+
+.modal-enter-active {
+  @apply opacity-100 scale-100 transition-all duration-300 ease-out;
+}
+
+.modal-exit {
+  @apply opacity-100 scale-100;
+}
+
+.modal-exit-active {
+  @apply opacity-0 scale-95 transition-all duration-200 ease-in;
+}
+
+/* AI Processing animation */
+@keyframes processing {
+  0% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+.processing-animation {
+  animation: processing 1.5s infinite;
+}
+
+/* Grid Layout Styles */
+.masonry-grid {
+  @apply grid;
+  grid-auto-flow: dense;
+  grid-auto-rows: auto;
+}
+
+.masonry-grid > div {
+  break-inside: avoid;
+  height: fit-content;
+}
+
+/* Remove container height constraints */
+.grid-container {
+  @apply w-full;
+  min-height: min-content;
+  height: auto;
+}
+
+/* Aspect ratio container styles */
+.aspect-portrait {
+  aspect-ratio: 3/4;
+}
+
+.aspect-landscape {
+  aspect-ratio: 4/3;
+}
+
+/* Image hover and transition effects */
+.image-scale {
+  @apply transition-all duration-300;
+}
+
+.group:hover .image-scale {
+  @apply scale-105;
+}
+
+/* Grid Layout Styles */
+.image-grid {
+  display: grid;
+  grid-auto-rows: min-content;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.image-item {
+  position: relative;
+  width: 100%;
+  height: auto;
+  min-height: 200px;
+}
+
+.image-item.portrait {
+  grid-row: span 2;
+}
+
+.image-item.landscape {
+  grid-row: span 1;
+}
+
+/* Container Styles */
+.expandable-section {
+  width: 100%;
+  height: auto;
+  min-height: min-content;
 }

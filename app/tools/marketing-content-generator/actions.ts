@@ -113,7 +113,7 @@ export async function generateMarketingPoster(options: {
 
   try {
     const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 25000) // 25 seconds timeout
+    const timeoutId = setTimeout(() => controller.abort(), 35000) // 25 seconds timeout
 
     const result = await generatePoster(options, controller.signal)
     clearTimeout(timeoutId)

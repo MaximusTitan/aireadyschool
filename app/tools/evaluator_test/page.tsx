@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@supabase/supabase-js";
+import React from "react";
+import { useSearchParams } from "next/navigation";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -292,7 +294,13 @@ function CircularProgress({ percentage }: { percentage: number }) {
   );
 }
 
-function QuestionCircle({ number, correct }: { number: number; correct: boolean }) {
+function QuestionCircle({
+  number,
+  correct,
+}: {
+  number: number;
+  correct: boolean;
+}) {
   return (
     <div
       className={`w-full aspect-square rounded-full flex items-center justify-center 
@@ -306,14 +314,17 @@ function QuestionCircle({ number, correct }: { number: number; correct: boolean 
 
 // Update the DetailedFeedbackItem component to handle sequential numbering
 function DetailedFeedbackItem({ question, index, feedback }: any) {
-  const feedbackData = typeof feedback === 'object' ? feedback : JSON.parse(feedback);
+  const feedbackData =
+    typeof feedback === "object" ? feedback : JSON.parse(feedback);
   const questionNumber = `Q${index + 1}`; // Use sequential numbering
-  
+
   // Helper function to format MCQ answer display
   const formatMCQAnswer = (answer: string, isCorrect: boolean) => {
     return (
       <div className="flex items-start">
-        <span className={`font-medium ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+        <span
+          className={`font-medium ${isCorrect ? "text-green-600" : "text-red-600"}`}
+        >
           "{answer}"
         </span>
       </div>
@@ -330,30 +341,38 @@ function DetailedFeedbackItem({ question, index, feedback }: any) {
         </div>
         <div className="flex-1 space-y-2">
           <p className="font-medium text-gray-800">{feedbackData.question}</p>
-          
+
           {/* Display options if MCQ */}
           {feedbackData.options && (
             <div className="mt-2 space-y-1">
               <p className="text-sm text-gray-600">Options:</p>
               <div className="grid grid-cols-1 gap-1 pl-4">
                 {feedbackData.options.map((option: string, idx: number) => (
-                  <div key={idx} className={`text-sm p-2 rounded ${
-                    idx === feedbackData.correctOptionIndex 
-                      ? "bg-green-100 text-green-800" 
-                      : idx === feedbackData.selectedOptionIndex && !feedbackData.isCorrect
-                        ? "bg-red-100 text-red-800"
-                        : "text-gray-600"
-                  }`}>
+                  <div
+                    key={idx}
+                    className={`text-sm p-2 rounded ${
+                      idx === feedbackData.correctOptionIndex
+                        ? "bg-green-100 text-green-800"
+                        : idx === feedbackData.selectedOptionIndex &&
+                            !feedbackData.isCorrect
+                          ? "bg-red-100 text-red-800"
+                          : "text-gray-600"
+                    }`}
+                  >
                     {idx + 1}. {option}
                     {idx === feedbackData.correctOptionIndex && " ✓"}
-                    {idx === feedbackData.selectedOptionIndex && !feedbackData.isCorrect && " ✗"}
+                    {idx === feedbackData.selectedOptionIndex &&
+                      !feedbackData.isCorrect &&
+                      " ✗"}
                   </div>
                 ))}
               </div>
             </div>
           )}
-          
-          <p className={`text-sm ${feedbackData.isCorrect ? "text-green-600" : "text-red-600"}`}>
+
+          <p
+            className={`text-sm ${feedbackData.isCorrect ? "text-green-600" : "text-red-600"}`}
+          >
             {feedbackData.explanation}
           </p>
         </div>
@@ -371,9 +390,10 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
 
   // Update the calculation of correct and incorrect answers
   const correctAnswers = Object.values(evaluation.detailed_feedback).filter(
-    (f: any) => typeof f === 'object' ? f.isCorrect : f.toString().includes("✅")
+    (f: any) =>
+      typeof f === "object" ? f.isCorrect : f.toString().includes("✅")
   ).length;
-  
+
   const totalQuestions = Object.keys(evaluation.detailed_feedback).length;
   const incorrectAnswers = totalQuestions - correctAnswers;
 
@@ -445,9 +465,11 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
                       <QuestionCircle
                         key={qId}
                         number={index + 1}
-                        correct={typeof feedback === 'string' ? 
-                          feedback.includes("✅") : 
-                          feedback.isCorrect}
+                        correct={
+                          typeof feedback === "string"
+                            ? feedback.includes("✅")
+                            : feedback.isCorrect
+                        }
                       />
                     )
                   )}
@@ -466,8 +488,8 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
           {Object.entries(evaluation.detailed_feedback)
             .sort((a, b) => {
               // Sort by question number
-              const aNum = parseInt(a[0].replace(/\D/g, ''));
-              const bNum = parseInt(b[0].replace(/\D/g, ''));
+              const aNum = parseInt(a[0].replace(/\D/g, ""));
+              const bNum = parseInt(b[0].replace(/\D/g, ""));
               return aNum - bNum;
             })
             .map(([_, feedback], index) => (
@@ -510,19 +532,40 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
   );
 }
 
+// Modify your component to use Suspense
 export default function EvaluatorDashboard() {
-  const [currentEvaluation, setCurrentEvaluation] = useState<any>(null);
-  const [evaluations, setEvaluations] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <EvaluatorContent />
+    </Suspense>
+  );
+}
+
+// Move the main component logic to a new component
+function EvaluatorContent() {
+  const searchParams = useSearchParams();
+  const assessment_id = searchParams.get("assessment_id") || "";
+  const student_email = searchParams.get("student_email") || "";
+
+  // Use query params to pre-populate state if available
   const [testData, setTestData] = useState({
-    assessment_id: "",
-    student_id: "",
+    assessment_id,
+    student_id: student_email,
     student_answers: {
       q1: "",
       q2: "",
     },
   });
+
+  const [formData, setFormData] = useState({
+    assessmentIds: [assessment_id || ""],
+    student_id: student_email || "",
+  });
+
+  const [currentEvaluation, setCurrentEvaluation] = useState<any>(null);
+  const [evaluations, setEvaluations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [assessmentDetails, setAssessmentDetails] = useState<{
     questions: Question[];
     answers: any;
@@ -531,13 +574,10 @@ export default function EvaluatorDashboard() {
     topic?: string;
   } | null>(null);
 
-  const [formData, setFormData] = useState({
-    assessmentIds: [""], // Array to store multiple assessment IDs
-    student_id: "",
-  });
-
   const [showHistory, setShowHistory] = useState(false);
   const [selectedEvaluation, setSelectedEvaluation] = useState<any>(null);
+  const [assignLoading, setAssignLoading] = useState(false);
+  const [assignSuccess, setAssignSuccess] = useState(false);
 
   useEffect(() => {
     fetchEvaluations();
@@ -598,23 +638,23 @@ export default function EvaluatorDashboard() {
   }
 
   const handleAddAssessmentId = () => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      assessmentIds: [...prev.assessmentIds, ""]
+      assessmentIds: [...prev.assessmentIds, ""],
     }));
   };
 
   const handleRemoveAssessmentId = (index: number) => {
     if (formData.assessmentIds.length > 1) {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
-        assessmentIds: prev.assessmentIds.filter((_, i) => i !== index)
+        assessmentIds: prev.assessmentIds.filter((_, i) => i !== index),
       }));
     }
   };
 
   const handleAssessmentIdChange = (index: number, value: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const newIds = [...prev.assessmentIds];
       newIds[index] = value;
       return { ...prev, assessmentIds: newIds };
@@ -626,21 +666,17 @@ export default function EvaluatorDashboard() {
     setError(null);
 
     try {
-      const validIds = formData.assessmentIds.filter(id => id.trim());
+      const validIds = formData.assessmentIds.filter((id) => id.trim());
       if (validIds.length === 0) {
         throw new Error("Please enter at least one assessment ID");
       }
 
-      const promises = validIds.map(id =>
-        supabase
-          .from("assessments")
-          .select("*")
-          .eq("id", id)
-          .single()
+      const promises = validIds.map((id) =>
+        supabase.from("assessments").select("*").eq("id", id).single()
       );
 
       const results = await Promise.all(promises);
-      
+
       let combinedQuestions: Question[] = [];
       let combinedAnswers: any[] = [];
       let subjects: string[] = [];
@@ -648,7 +684,9 @@ export default function EvaluatorDashboard() {
 
       results.forEach((result, index) => {
         if (result.error) {
-          throw new Error(`Error fetching assessment ${validIds[index]}: ${result.error.message}`);
+          throw new Error(
+            `Error fetching assessment ${validIds[index]}: ${result.error.message}`
+          );
         }
         if (!result.data) {
           throw new Error(`Assessment ${validIds[index]} not found`);
@@ -657,7 +695,7 @@ export default function EvaluatorDashboard() {
         // Add assessment ID to each question for tracking
         const questionsWithId = result.data.questions.map((q: Question) => ({
           ...q,
-          assessmentId: validIds[index]
+          assessmentId: validIds[index],
         }));
 
         combinedQuestions = [...combinedQuestions, ...questionsWithId];
@@ -704,7 +742,7 @@ export default function EvaluatorDashboard() {
       if (!response.ok) throw new Error(`Error: ${response.statusText}`);
 
       const result = await response.json();
-      
+
       setCurrentEvaluation({
         ...result,
         assessments: {
@@ -719,6 +757,52 @@ export default function EvaluatorDashboard() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleAssignToStudent(evaluationData: any) {
+    if (!evaluationData || !formData.assessmentIds[0]) {
+      setError("Missing assessment ID or evaluation data");
+      return;
+    }
+
+    setAssignLoading(true);
+    setError(null);
+
+    try {
+      // Get the student email from the form data
+      const studentEmail = formData.student_id;
+
+      if (!studentEmail) {
+        throw new Error("Student email is required");
+      }
+
+      // Update the assigned_assessments table with the evaluation data
+      const { data, error: updateError } = await supabase
+        .from("assigned_assessments")
+        .update({
+          evaluation: evaluationData,
+          score: evaluationData.score,
+          completed: true,
+        })
+        .eq("assessment_id", parseInt(formData.assessmentIds[0]))
+        .eq("student_email", studentEmail);
+
+      if (updateError) {
+        throw new Error(
+          `Failed to update assigned assessment: ${updateError.message}`
+        );
+      }
+
+      setAssignSuccess(true);
+      setTimeout(() => {
+        setAssignSuccess(false);
+      }, 3000);
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Assignment error:", err);
+    } finally {
+      setAssignLoading(false);
     }
   }
 
@@ -751,14 +835,47 @@ export default function EvaluatorDashboard() {
           <>
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">Evaluation Result</h3>
-              <GradientButton
-                onClick={() => setCurrentEvaluation(null)}
-                className="bg-gradient-to-r from-purple-500 to-pink-500"
-              >
-                Evaluate Another
-              </GradientButton>
+              <div className="flex space-x-3">
+                <button
+                  onClick={() => handleAssignToStudent(currentEvaluation)}
+                  disabled={assignLoading}
+                  className="px-6 py-3 font-semibold text-white rounded-xl transition-all
+                  bg-gradient-to-r from-blue-500 to-blue-600 
+                  hover:from-blue-600 hover:to-blue-700 
+                  focus:outline-none focus:ring-2 focus:ring-blue-500 
+                  disabled:opacity-70 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+                >
+                  {assignLoading ? "Assigning..." : "Assign to Student"}
+                </button>
+                <GradientButton
+                  onClick={() => setCurrentEvaluation(null)}
+                  className="bg-gradient-to-r from-purple-500 to-pink-500"
+                >
+                  Evaluate Another
+                </GradientButton>
+              </div>
             </div>
             {renderEvaluation(currentEvaluation)}
+
+            {/* Success Message */}
+            {assignSuccess && (
+              <div className="mt-4 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded animate-fade-in">
+                <div className="flex items-center">
+                  <svg
+                    className="h-5 w-5 mr-2"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  <p>Evaluation successfully assigned to student!</p>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -869,7 +986,7 @@ export default function EvaluatorDashboard() {
                 )}
               </div>
             ))}
-            
+
             <button
               onClick={handleAddAssessmentId}
               className="text-blue-600 hover:text-blue-800 font-medium"
@@ -883,7 +1000,7 @@ export default function EvaluatorDashboard() {
               type="text"
               value={formData.student_id}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData(prev => ({ ...prev, student_id: e.target.value }))
+                setFormData((prev) => ({ ...prev, student_id: e.target.value }))
               }
               required
               placeholder="Enter Student ID"
@@ -893,7 +1010,7 @@ export default function EvaluatorDashboard() {
           <GradientButton
             onClick={fetchAssessmentDetails}
             isLoading={loading}
-            disabled={formData.assessmentIds.every(id => !id)}
+            disabled={formData.assessmentIds.every((id) => !id)}
           >
             {loading ? "Fetching..." : "Fetch Assessments"}
           </GradientButton>

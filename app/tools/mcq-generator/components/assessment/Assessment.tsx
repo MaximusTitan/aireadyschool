@@ -59,6 +59,7 @@ export default function Assessment({
   const [isLoadingChat, setIsLoadingChat] = useState(false);
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const autoSaveTimeoutRef = useRef<number | null>(null);
 
   // Fetch the full assessment record if an assessmentId is provided.
   useEffect(() => {
@@ -156,11 +157,15 @@ export default function Assessment({
     }
     setAnswers(newAnswers);
 
-    // Save answer to DB immediately
+    // Save answer to DB
     if (assessmentId) {
-      (async () => {
-        try {
-          await fetch("/api/save-answer", {
+      if (assessmentType === "shortanswer") {
+        // Clear previous debounce timer
+        if (autoSaveTimeoutRef.current)
+          clearTimeout(autoSaveTimeoutRef.current);
+        // Set debounce timer to save after 1 second
+        autoSaveTimeoutRef.current = window.setTimeout(() => {
+          fetch("/api/save-answer", {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -168,11 +173,25 @@ export default function Assessment({
               questionIndex,
               answer: newAnswers[questionIndex],
             }),
-          });
-        } catch (error) {
-          console.error("Error saving answer:", error);
-        }
-      })();
+          }).catch((err) => console.error("Error saving answer:", err));
+        }, 3000);
+      } else {
+        (async () => {
+          try {
+            await fetch("/api/save-answer", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                assessmentId,
+                questionIndex,
+                answer: newAnswers[questionIndex],
+              }),
+            });
+          } catch (error) {
+            console.error("Error saving answer:", error);
+          }
+        })();
+      }
     }
   };
 

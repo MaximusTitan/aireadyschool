@@ -64,7 +64,7 @@ export default function TakeAssessment() {
         // Check if already completed
         const { data: assignedData, error: assignedError } = await supabase
           .from("assigned_assessments")
-          .select("*") // Select all fields, not just completed
+          .select("*")
           .eq("id", assignedId)
           .single();
 
@@ -72,15 +72,14 @@ export default function TakeAssessment() {
 
         setAssignedAssessment(assignedData);
 
-        // If completed, set the state to show results instead of redirecting
         if (assignedData.completed) {
           setIsCompleted(true);
           setShowResults(true);
-
-          // Set user answers from stored data
           if (assignedData.student_answers) {
             setUserAnswers(assignedData.student_answers);
           }
+        } else if (assessmentData.answers) {
+          setUserAnswers(assessmentData.answers);
         }
 
         setAssessment(assessmentData);

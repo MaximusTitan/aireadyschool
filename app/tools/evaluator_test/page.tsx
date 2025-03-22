@@ -309,6 +309,17 @@ function DetailedFeedbackItem({ question, index, feedback }: any) {
   const feedbackData = typeof feedback === 'object' ? feedback : JSON.parse(feedback);
   const questionNumber = `Q${index + 1}`; // Use sequential numbering
   
+  // Helper function to format MCQ answer display
+  const formatMCQAnswer = (answer: string, isCorrect: boolean) => {
+    return (
+      <div className="flex items-start">
+        <span className={`font-medium ${isCorrect ? "text-green-600" : "text-red-600"}`}>
+          "{answer}"
+        </span>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 border-b last:border-b-0">
       <div className="flex items-start gap-4">
@@ -320,21 +331,27 @@ function DetailedFeedbackItem({ question, index, feedback }: any) {
         <div className="flex-1 space-y-2">
           <p className="font-medium text-gray-800">{feedbackData.question}</p>
           
-          <div className="space-y-1">
-            <p className="text-sm space-y-1">
-              <span className="font-medium text-gray-600">Your Answer: </span>
-              <span className={feedbackData.isCorrect ? "text-green-600" : "text-red-600"}>
-                {feedbackData.studentAnswer}
-              </span>
-            </p>
-            
-            {!feedbackData.isCorrect && (
-              <p className="text-sm">
-                <span className="font-medium text-gray-600">Correct Answer: </span>
-                <span className="text-green-600">{feedbackData.correctAnswer}</span>
-              </p>
-            )}
-          </div>
+          {/* Display options if MCQ */}
+          {feedbackData.options && (
+            <div className="mt-2 space-y-1">
+              <p className="text-sm text-gray-600">Options:</p>
+              <div className="grid grid-cols-1 gap-1 pl-4">
+                {feedbackData.options.map((option: string, idx: number) => (
+                  <div key={idx} className={`text-sm p-2 rounded ${
+                    idx === feedbackData.correctOptionIndex 
+                      ? "bg-green-100 text-green-800" 
+                      : idx === feedbackData.selectedOptionIndex && !feedbackData.isCorrect
+                        ? "bg-red-100 text-red-800"
+                        : "text-gray-600"
+                  }`}>
+                    {idx + 1}. {option}
+                    {idx === feedbackData.correctOptionIndex && " ✓"}
+                    {idx === feedbackData.selectedOptionIndex && !feedbackData.isCorrect && " ✗"}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           
           <p className={`text-sm ${feedbackData.isCorrect ? "text-green-600" : "text-red-600"}`}>
             {feedbackData.explanation}

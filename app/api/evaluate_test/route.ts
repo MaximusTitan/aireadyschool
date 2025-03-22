@@ -136,6 +136,9 @@ interface FeedbackItem {
   correctAnswer: string | undefined;
   isCorrect: boolean;
   explanation: string;
+  options?: { [key: string]: string } | string[]; // Add options
+  selectedOptionIndex?: number | string;  // Add selected index
+  correctOptionIndex?: number | string;   // Add correct index
 }
 
 async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Question[] }) {
@@ -148,9 +151,9 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
     const studentAnswer = studentAnswers[i];
     const questionNumber = `${i + 1}`;  // Simple sequential number
     
-    // Determine question type
+    // Update question type detection
     const questionType = question.questionType || 
-      (Array.isArray(question.options) ? 'FillBlanks' : 
+      (Array.isArray(question.options) ? 'MCQ' : // Changed from 'FillBlanks' to 'MCQ'
        typeof question.options === 'object' ? 'MCQ' :
        typeof question.correctAnswer === 'boolean' ? 'TrueFalse' :
        'Short Answer');
@@ -161,31 +164,28 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const isCorrect = studentAnswer === question.correctAnswer;
           score += isCorrect ? 5 : 0;
           
-          // Get the actual option text instead of numbers
-          let selectedOption = 'No answer';
-          let correctOption = '';
-          
-          if (typeof question.options === 'object') {
-            // Handle object format options
-            if (!Array.isArray(question.options)) {
-              selectedOption = question.options[studentAnswer] || 'No answer';
-              correctOption = question.options[question.correctAnswer];
-            } 
-            // Handle array format options
-            else {
-              selectedOption = studentAnswer !== undefined ? question.options[studentAnswer] : 'No answer';
-              correctOption = question.options[question.correctAnswer];
-            }
+          // Fixed options handling
+          let options: string[] = [];
+          if (Array.isArray(question.options)) {
+            options = question.options;
+          } else if (question.options) {
+            options = Object.values(question.options);
           }
+
+          const selectedOption = studentAnswer !== undefined ? options[studentAnswer] : 'No answer';
+          const correctOption = options[question.correctAnswer];
 
           feedback[questionNumber] = {
             question: question.question,
-            studentAnswer: selectedOption,
+            studentAnswer: selectedOption || 'No answer',
             correctAnswer: correctOption,
             isCorrect,
             explanation: isCorrect
               ? `✅ Correct! You selected "${selectedOption}"`
-              : `❌ Incorrect. You selected "${selectedOption}". The correct answer is "${correctOption}"`
+              : `❌ Incorrect. You selected "${selectedOption}". The correct answer is "${correctOption}"`,
+            options: options,
+            selectedOptionIndex: studentAnswer,
+            correctOptionIndex: question.correctAnswer
           };
           break;
         }

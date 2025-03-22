@@ -46,8 +46,8 @@ interface FormData {
   difficulty: string;
   questionCount: number;
   mixedQuestionCount: {
-    mcq: number,
-    shortanswer: number,
+    mcq: number;
+    shortanswer: number;
   };
   learningOutcomes: string[];
   selectedDocument?: string | null;
@@ -527,6 +527,7 @@ export default function Home() {
             grade_id: assignmentObj.grade_id,
             section_id: assignmentObj.section_id,
             student_id: student.id,
+            student_email: student.email, // newly added field
           });
           if (error) throw error;
         });
@@ -543,6 +544,8 @@ export default function Home() {
           grade_id: selectedGrade,
           section_id: selectedSection,
           student_id: selectedStudent,
+          student_email:
+            students.find((stu) => stu.id === selectedStudent)?.email || "", // newly added field
         };
         const { error } = await supabase
           .from("assigned_assessments")
@@ -792,7 +795,6 @@ export default function Home() {
                       />
                     )}
                   </div>
-
                 </div>
 
                 {/* Generate Button */}

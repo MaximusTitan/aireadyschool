@@ -99,31 +99,36 @@ function isAPICallError(error: unknown): error is APICallError {
 }
 
 // Updated getSystemPrompt to receive an optional studentDetails parameter
-function getSystemPrompt(messages: any[], userRole?: string, language: Language = 'english', teachingMode = false, studentDetails?: any): string {
+function getSystemPrompt(
+  messages: any[],
+  userRole?: string,
+  language: Language = 'english',
+  teachingMode = false,
+  studentDetails?: any,
+  assignedAssessment?: { evaluation: any; lesson_plan: any }
+): string {
+  let promptString = '';
   // For teachers, only use teacher buddy prompt
   if (userRole === 'Teacher') {
-    return TEACHER_BUDDY_PROMPT;
+    promptString = TEACHER_BUDDY_PROMPT;
   }
-
   // If in teaching mode, use teaching mode prompt
-  if (teachingMode) {
-    return language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI;
+  else if (teachingMode) {
+    promptString = language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI;
   }
-
-  // For students, use existing subject-specific logic
-  const subject = detectSubject(messages);
-  const basePrompt = prompts[language][subject];
-  
-  // For Student, append context if student details exist
-  if (userRole === 'Student' && studentDetails) {
+  // For students, use subject context and student details if available
+  else if (userRole === 'Student' && studentDetails) {
+    const subject = detectSubject(messages);
+    const basePrompt = prompts[language][subject];
     const detailsContext = `
 Student Details:
+Always greet student with their name and provide personalized learning experience.
 - Name: ${studentDetails.name || 'N/A'}
 - Grade: ${studentDetails.grade || 'N/A'}
 - Board: ${studentDetails.board || 'N/A'}
 - Country: ${studentDetails.country || 'N/A'}`;
-    if (language === 'english') {
-      return `${basePrompt}
+    promptString = language === 'english'
+      ? `${basePrompt}
 ${detailsContext}
 
 You can use various tools to enhance the learning experience:
@@ -134,9 +139,8 @@ You can use various tools to enhance the learning experience:
 
 Do not ever mention that you are using the tools to the user. Just start using them. After explaining the concept, you should ask the student to take an assessment to reinforce their learning.
 
-Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
-    } else {
-      return `${basePrompt}
+Always provide clear explanations and encourage active learning. Give short responses whenever possible.`
+      : `${basePrompt}
 ${detailsContext}
 
 आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
@@ -149,12 +153,13 @@ ${detailsContext}
 कभी भी उपयोगकर्ता को यह न बताएं कि आप उपकरण का उपयोग कर रहे हैं। बस उनका उपयोग करना शुरू कर दें। अवधारित कोण के बाद, आपको छात्र से अभ्यास लेने के लिए कहना चाहिए ताकि उनके सीखने को मजबूत किया जा सके।
 
 हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
-    }
   }
-
-  // Default prompt without student details
-  if (language === 'english') {
-    return `${basePrompt}
+  // Default prompt for other cases:
+  else {
+    const subject = detectSubject(messages);
+    const basePrompt = prompts[language][subject];
+    promptString = language === 'english'
+      ? `${basePrompt}
 
 You can use various tools to enhance the learning experience:
 - Create quizzes
@@ -164,9 +169,8 @@ You can use various tools to enhance the learning experience:
 
 Do not ever mention that you are using the tools to the user. Just start using them.
 
-Always provide clear explanations and encourage active learning. Give short responses whenever possible.`;
-  } else {
-    return `${basePrompt}
+Always provide clear explanations and encourage active learning. Give short responses whenever possible.`
+      : `${basePrompt}
 
 आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
 - इंटरैक्टिव गणित समस्याएँ उत्पन्न करें
@@ -179,6 +183,25 @@ Always provide clear explanations and encourage active learning. Give short resp
 
 हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
   }
+
+  // Append assigned assessment context if exists for Student users
+  if (userRole === 'Student' && assignedAssessment) {
+
+    const assessmentContext = language === 'english'
+      ? `
+
+Additional Context to continue the lesson:
+Evaluation: ${JSON.stringify(assignedAssessment.evaluation)}
+Lesson Plan: ${JSON.stringify(assignedAssessment.lesson_plan)}`
+      : `
+
+अतिरिक्त संदर्भ पाठ जारी रखने के लिए:
+Evaluation: ${JSON.stringify(assignedAssessment.evaluation)}
+Lesson Plan: ${JSON.stringify(assignedAssessment.lesson_plan)}`;
+    promptString += assessmentContext;
+  }
+
+  return promptString;
 }
 
 async function saveToolOutputs(
@@ -256,6 +279,19 @@ export async function POST(request: Request) {
       } else {
         studentDetails = { name: userName }; 
       }
+
+      const { data: assignedData, error: assignedError } = await supabase
+        .from('assigned_assessments')
+        .select('evaluation, lesson_plan')
+        .eq('student_email', user.email)
+        .order('assigned_at', { ascending: false })
+        .limit(1)
+        .single();
+      let assignedAssessment = null;
+      if (!assignedError && assignedData) {
+        assignedAssessment = assignedData;
+      }
+      studentDetails = { ...studentDetails, assignedAssessment };
     }
 
     // Verify thread belongs to user
@@ -306,7 +342,14 @@ export async function POST(request: Request) {
       model: anthropic('claude-3-7-sonnet-20250219'),
       system: teachingMode 
         ? (language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI)
-        : getSystemPrompt(cleanMessages, userRole, language as Language, teachingMode, studentDetails),
+        : getSystemPrompt(
+            cleanMessages, 
+            userRole, 
+            language as Language, 
+            teachingMode, 
+            studentDetails, 
+            studentDetails?.assignedAssessment ?? undefined // Fixed: ensure null is converted to undefined
+          ),
       messages: cleanMessages as CreateMessage[],
       maxSteps: 5,
       tools,

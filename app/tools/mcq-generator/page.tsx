@@ -72,8 +72,8 @@ interface Assignment {
 interface Student {
   id: string;
   email: string;
-  grade_name: string;
-  section_name: string;
+  grade_id: string;
+  section_id: string;
 }
 
 export default function Home() {
@@ -278,8 +278,8 @@ export default function Home() {
                 return {
                   id: stu.id,
                   email: userData?.email || "No email",
-                  grade_name: "",
-                  section_name: "",
+                  grade_id: stu.grade_id,
+                  section_id: stu.section_id,
                 };
               })
           );
@@ -467,6 +467,27 @@ export default function Home() {
     }
   };
 
+  // Update helper to return the inserted student assessment row
+  const insertStudentAssessment = async (studentEmail: string) => {
+    const newAssessmentData = {
+      class_level: formData.classLevel,
+      subject: formData.subject,
+      topic: formData.topic,
+      assessment_type: formData.assessmentType,
+      difficulty: formData.difficulty,
+      questions: assessment, // using current assessment state (array)
+      board: formData.board,
+      learning_outcomes: formData.learningOutcomes,
+      user_email: studentEmail,
+    };
+    const { data: insertedData, error: newAssessError } = await supabase
+      .from("assessments")
+      .insert(newAssessmentData)
+      .select();
+    if (newAssessError) throw newAssessError;
+    return insertedData[0]; // return the inserted student assessment row
+  };
+
   const handleAssignAssessment = async () => {
     if (!assessmentId || !dueDate) return;
 
@@ -481,33 +502,56 @@ export default function Home() {
         .select("id")
         .eq("user_id", user.id)
         .single();
-
       if (!teacherData) throw new Error("Teacher not found");
 
-      const assignmentData = {
-        assessment_id: assessmentId,
-        teacher_id: teacherData.id,
-        due_date: dueDate.toISOString(),
-        ...(assignmentType === "class"
-          ? {
-              grade_id: JSON.parse(selectedClass).grade_id,
-              section_id: JSON.parse(selectedClass).section_id,
-              student_id: null,
-            }
-          : {
-              grade_id: selectedGrade,
-              section_id: selectedSection,
-              student_id: selectedStudent,
-            }),
-      };
-
-      const { error } = await supabase
-        .from("assigned_assessments")
-        .insert(assignmentData);
-
-      if (error) throw error;
-
-      alert("Assessment assigned successfully!");
+      if (assignmentType === "class") {
+        const assignmentObj = JSON.parse(selectedClass);
+        const filteredStudents = students.filter(
+          (student) =>
+            student.grade_id === assignmentObj.grade_id &&
+            student.section_id === assignmentObj.section_id
+        );
+        if (filteredStudents.length === 0) {
+          alert("No students found for the selected class.");
+          return;
+        }
+        // For each student, create a new assessment copy and assign it
+        const inserts = filteredStudents.map(async (student) => {
+          const insertedAssessment = await insertStudentAssessment(
+            student.email
+          );
+          const { error } = await supabase.from("assigned_assessments").insert({
+            assessment_id: insertedAssessment.id, // use student's assessment id
+            teacher_id: teacherData.id,
+            due_date: dueDate.toISOString(),
+            grade_id: assignmentObj.grade_id,
+            section_id: assignmentObj.section_id,
+            student_id: student.id,
+          });
+          if (error) throw error;
+        });
+        await Promise.all(inserts);
+        alert("Assessment assigned to entire class successfully!");
+      } else {
+        const insertedAssessment = await insertStudentAssessment(
+          students.find((stu) => stu.id === selectedStudent)?.email || ""
+        );
+        const assignmentData = {
+          assessment_id: insertedAssessment.id, // use student's assessment id
+          teacher_id: teacherData.id,
+          due_date: dueDate.toISOString(),
+          grade_id: selectedGrade,
+          section_id: selectedSection,
+          student_id: selectedStudent,
+        };
+        const { error } = await supabase
+          .from("assigned_assessments")
+          .insert(assignmentData);
+        if (error) throw error;
+        alert("Assessment assigned to the student successfully!");
+      }
+      // Refresh user data so that saved assessments update in the UI
+      await fetchUserAndData();
     } catch (error) {
       console.error("Error assigning assessment:", error);
       alert("Failed to assign assessment. Please try again.");
@@ -539,7 +583,7 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-backgroundApp">
+    <div className="bg-backgroundApp min-h-screen">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
         <Link href="/tools">
           <Button variant="outline" className="mb-2 border-neutral-500">

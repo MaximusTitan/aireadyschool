@@ -23,6 +23,7 @@ interface AssignedAssessment {
     questions: any[];
     assessment_type: string;
     difficulty: string;
+    submitted: boolean;
   };
 }
 
@@ -46,7 +47,8 @@ export default function StudentAssessments({ student }: AssessmentProps) {
             topic,
             questions,
             assessment_type,
-            difficulty
+            difficulty,
+            submitted
           )
         `
         )
@@ -73,47 +75,58 @@ export default function StudentAssessments({ student }: AssessmentProps) {
         <p className="text-gray-500">No assessments assigned.</p>
       ) : (
         <div className="space-y-4">
-          {assessments.map((assessment) => (
-            <div
-              key={assessment.id}
-              className="border rounded-lg p-4 hover:border-rose-200 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <div>
-                  <h3 className="font-medium text-gray-800">
-                    {assessment.assessments.topic}
-                  </h3>
-                  <p className="text-sm text-gray-500">
-                    {assessment.assessments.subject} •{" "}
-                    {assessment.assessments.difficulty}
-                  </p>
+          {assessments.map((assessment) => {
+            let buttonText = "";
+            if (assessment.assessments.submitted) {
+              buttonText = "View Submitted Assessment";
+            } else if (assessment.completed) {
+              buttonText = "Continue Assessment";
+            } else {
+              buttonText = "Start Assessment";
+            }
+            return (
+              <div
+                key={assessment.id}
+                className="border rounded-lg p-4 hover:border-rose-200 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <div>
+                    <h3 className="font-medium text-gray-800">
+                      {assessment.assessments.topic}
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      {assessment.assessments.subject} •{" "}
+                      {assessment.assessments.difficulty}
+                    </p>
+                  </div>
+                  {assessment.completed ? (
+                    <div className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">
+                      Score: {assessment.score}%
+                    </div>
+                  ) : (
+                    <div className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">
+                      Due: {new Date(assessment.due_date).toLocaleDateString()}
+                    </div>
+                  )}
                 </div>
-                {assessment.completed ? (
-                  <div className="bg-green-100 text-green-800 text-sm px-3 py-1 rounded-full">
-                    Score: {assessment.score}%
-                  </div>
-                ) : (
-                  <div className="bg-yellow-100 text-yellow-800 text-sm px-3 py-1 rounded-full">
-                    Due: {new Date(assessment.due_date).toLocaleDateString()}
-                  </div>
+
+                {(!assessment.completed ||
+                  assessment.assessments.submitted) && (
+                  <Link
+                    href={`/assessment/${assessment.assessment_id}?assigned_id=${assessment.id}`}
+                    className="block w-full"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full mt-2 border-rose-200 hover:border-rose-300 hover:bg-rose-50"
+                    >
+                      {buttonText}
+                    </Button>
+                  </Link>
                 )}
               </div>
-
-              {!assessment.completed && (
-                <Link
-                  href={`/assessment/${assessment.assessment_id}?assigned_id=${assessment.id}`}
-                  className="block w-full"
-                >
-                  <Button
-                    variant="outline"
-                    className="w-full mt-2 border-rose-200 hover:border-rose-300 hover:bg-rose-50"
-                  >
-                    Start Assessment
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

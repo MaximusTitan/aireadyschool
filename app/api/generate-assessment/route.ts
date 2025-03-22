@@ -171,6 +171,7 @@ export async function PUT(req: Request) {
     }
 
     const { id, questions, answers, submitted } = await req.json()
+    const { id, questions, answers, submitted } = await req.json()
 
     const updateData: any = {}
     if (questions) updateData.questions = questions

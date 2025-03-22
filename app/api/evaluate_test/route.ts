@@ -25,7 +25,7 @@ interface Question {
 interface EvaluationResult {
   assessment_id: number;
   score: number;
-  feedback: Record<string, string>;
+  feedback: Record<string, FeedbackItem>;
   total_questions: number;
   correct_answers: number;
 }
@@ -130,14 +130,23 @@ export async function POST(req: Request) {
   }
 }
 
+interface FeedbackItem {
+  question: string;
+  studentAnswer: string;
+  correctAnswer: string | undefined;
+  isCorrect: boolean;
+  explanation: string;
+}
+
 async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Question[] }) {
   let score = 0;
-  let feedback: Record<string, string> = {};
+  let feedback: Record<string, FeedbackItem> = {};
   const questions = assessment.questions;
 
   for (let i = 0; i < questions.length; i++) {
     const question = questions[i];
     const studentAnswer = studentAnswers[i];
+    const questionNumber = `${i + 1}`;  // Simple sequential number
     
     // Determine question type
     const questionType = question.questionType || 
@@ -151,24 +160,40 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
         case 'MCQ': {
           const isCorrect = studentAnswer === question.correctAnswer;
           score += isCorrect ? 5 : 0;
-          const selectedOption = Array.isArray(question.options) 
-            ? question.options[Number(studentAnswer)] 
-            : question.options?.[String(studentAnswer)] || 'No answer';
-          const correctOption = Array.isArray(question.options)
-            ? question.options[Number(question.correctAnswer)]
+          
+          // Get the actual text values instead of option numbers
+          const selectedOption = typeof question.options === 'object' && !Array.isArray(question.options) 
+            ? question.options[String(studentAnswer)] || 'No answer'
+            : 'No answer';
+          const correctOption = Array.isArray(question.options) 
+            ? question.options[Number(question.correctAnswer)] 
             : question.options?.[String(question.correctAnswer)];
-          feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! Selected: ${selectedOption}`
-            : `Incorrect. Selected: ${selectedOption}. Correct: ${correctOption}`;
+
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: selectedOption,
+            correctAnswer: correctOption,
+            isCorrect,
+            explanation: isCorrect
+              ? `✅ Correct! You selected "${selectedOption}"`
+              : `❌ Incorrect. You selected "${selectedOption}". The correct answer is "${correctOption}"`
+          };
           break;
         }
 
         case 'TrueFalse': {
           const isCorrect = studentAnswer === question.correctAnswer;
           score += isCorrect ? 5 : 0;
-          feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! The statement is ${question.correctAnswer}`
-            : `Incorrect. You answered ${studentAnswer}, but the statement is ${question.correctAnswer}`;
+          
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: studentAnswer?.toString() || 'No answer',
+            correctAnswer: question.correctAnswer.toString(),
+            isCorrect,
+            explanation: isCorrect
+              ? `✅ Correct! The statement is ${question.correctAnswer}`
+              : `❌ Incorrect. You answered ${studentAnswer}, but the statement is ${question.correctAnswer}`
+          };
           break;
         }
 
@@ -179,16 +204,28 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const isCorrect = normalizedStudentAnswer === normalizedCorrectAnswer;
           
           score += isCorrect ? 5 : 0;
-          feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! Answer: ${correctAnswer}`
-            : `Incorrect. You wrote: "${studentAnswer || 'no answer'}". Correct answer: "${correctAnswer}"`;
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: studentAnswer || 'No answer',
+            correctAnswer: correctAnswer,
+            isCorrect,
+            explanation: isCorrect
+              ? `✅ Correct! Answer: "${correctAnswer}"`
+              : `❌ Incorrect. You wrote: "${studentAnswer || 'No answer'}". Correct answer: "${correctAnswer}"`
+          };
           break;
         }
 
         case 'Short Answer':
         case 'Descriptive': {
           if (!studentAnswer) {
-            feedback[`q${i + 1}`] = "No answer provided";
+            feedback[questionNumber] = {
+              question: question.question,
+              studentAnswer: 'No answer provided',
+              correctAnswer: question.correctAnswer || 'No correct answer',
+              isCorrect: false,
+              explanation: "No answer provided"
+            };
             continue;
           }
 
@@ -226,30 +263,54 @@ Grade this answer out of 5 points.`
             const questionScore = scoreMatch ? parseInt(scoreMatch[1]) : 0;
             
             score += questionScore;
-            feedback[`q${i + 1}`] = evaluation
-              .replace(/Score:\s*\d+\/5\n?/i, '')
-              .replace(/Feedback:\s*/i, '')
-              .trim();
+            feedback[questionNumber] = {
+              question: question.question,
+              studentAnswer: studentAnswer,
+              correctAnswer: question.correctAnswer || 'No correct answer',
+              isCorrect: questionScore === 5,
+              explanation: evaluation
+                .replace(/Score:\s*\d+\/5\n?/i, '')
+                .replace(/Feedback:\s*/i, '')
+                .trim()
+            };
 
             // Add checkmark for full marks
             if (questionScore === 5) {
-              feedback[`q${i + 1}`] = `✅ ${feedback[`q${i + 1}`]}`;
+              feedback[questionNumber].explanation = `✅ ${feedback[questionNumber].explanation}`;
             }
           } catch (error) {
             console.error(`GPT evaluation error for question ${i + 1}:`, error);
-            feedback[`q${i + 1}`] = "Error evaluating answer";
+            feedback[questionNumber] = {
+              question: question.question,
+              studentAnswer: 'Error',
+              correctAnswer: 'Error',
+              isCorrect: false,
+              explanation: "Error evaluating answer"
+            };
             score += 0;
           }
           break;
         }
 
         default:
-          feedback[`q${i + 1}`] = "Unknown question type";
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: 'Unknown',
+            correctAnswer: 'Unknown',
+            isCorrect: false,
+            explanation: "Unknown question type"
+          };
           break;
       }
     } catch (error) {
       console.error(`Error evaluating question ${i + 1}:`, error);
-      feedback[`q${i + 1}`] = "Error in evaluation";
+      feedback[questionNumber] = {
+        question: question.question,
+        studentAnswer: 'Error',
+        correctAnswer: 'Error',
+        isCorrect: false,
+        explanation: "Error in evaluation"
+      };
     }
   }
 
@@ -259,6 +320,6 @@ Grade this answer out of 5 points.`
     score: finalScore,
     feedback,
     totalQuestions: questions.length,
-    correctAnswers: Object.values(feedback).filter(f => f.includes('✅')).length
+    correctAnswers: Object.values(feedback).filter(f => f.isCorrect).length
   };
 }

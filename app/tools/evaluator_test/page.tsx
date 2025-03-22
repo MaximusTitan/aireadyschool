@@ -292,92 +292,71 @@ function CircularProgress({ percentage }: { percentage: number }) {
   );
 }
 
-function QuestionCircle({
-  number,
-  correct,
-}: {
-  number: number;
-  correct: boolean;
-}) {
+function QuestionCircle({ number, correct }: { number: number; correct: boolean }) {
   return (
     <div
       className={`w-full aspect-square rounded-full flex items-center justify-center 
         text-xs font-bold shadow-sm transition-all duration-300 
-        ${
-          correct
-            ? "bg-green-500 text-white hover:bg-green-600"
-            : "bg-red-500 text-white hover:bg-red-600"
-        }`}
+        ${correct ? "bg-green-500 text-white hover:bg-green-600" : "bg-red-500 text-white hover:bg-red-600"}`}
     >
       {number}
     </div>
   );
 }
 
+// Update the DetailedFeedbackItem component to handle sequential numbering
 function DetailedFeedbackItem({ question, index, feedback }: any) {
-  // Convert feedback to string if it's an object
-  const feedbackText =
-    typeof feedback === "object" ? JSON.stringify(feedback) : String(feedback);
-
-  const isCorrect = feedbackText.includes("✅");
-  const points = isCorrect ? "(5/5)" : "(0/5)";
-
-  // Remove any existing scoring information from feedback
-  const cleanFeedback = feedbackText
-    .replace(/\s*\([0-5]\/5\)(?=\s|$)/g, "") // Remove scores at the end
-    .replace("❌", "") // Remove X emoji
-    .trim();
-
+  const feedbackData = typeof feedback === 'object' ? feedback : JSON.parse(feedback);
+  const questionNumber = `Q${index + 1}`; // Use sequential numbering
+  
   return (
-    <div className="p-3 flex items-start border-b last:border-b-0">
-      <div className="w-12 text-center font-medium text-gray-700">
-        q{index + 1}
-      </div>
-      <div
-        className={`w-6 mx-2 flex items-center justify-center ${isCorrect ? "text-green-600" : "text-red-600"}`}
-      >
-        {isCorrect ? (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-              clipRule="evenodd"
-            />
-          </svg>
-        ) : (
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path
-              fillRule="evenodd"
-              d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-              clipRule="evenodd"
-            />
-          </svg>
-        )}
-      </div>
-      <div className="flex flex-1 justify-between items-start">
-        <div className="text-sm font-medium pr-4">{cleanFeedback}</div>
-        <div className="w-16 text-right flex-shrink-0">
-          <span
-            className={`text-sm font-semibold ${isCorrect ? "text-green-600" : "text-red-600"}`}
-          >
-            {points}
+    <div className="p-4 border-b last:border-b-0">
+      <div className="flex items-start gap-4">
+        <div className="w-12 h-12 flex-shrink-0 rounded-full bg-gray-100 flex items-center justify-center">
+          <span className="text-lg font-semibold text-gray-700">
+            {questionNumber}
           </span>
+        </div>
+        <div className="flex-1 space-y-2">
+          <p className="font-medium text-gray-800">{feedbackData.question}</p>
+          
+          <div className="space-y-1">
+            <p className="text-sm space-y-1">
+              <span className="font-medium text-gray-600">Your Answer: </span>
+              <span className={feedbackData.isCorrect ? "text-green-600" : "text-red-600"}>
+                {feedbackData.studentAnswer}
+              </span>
+            </p>
+            
+            {!feedbackData.isCorrect && (
+              <p className="text-sm">
+                <span className="font-medium text-gray-600">Correct Answer: </span>
+                <span className="text-green-600">{feedbackData.correctAnswer}</span>
+              </p>
+            )}
+          </div>
+          
+          <p className={`text-sm ${feedbackData.isCorrect ? "text-green-600" : "text-red-600"}`}>
+            {feedbackData.explanation}
+          </p>
         </div>
       </div>
     </div>
   );
 }
 
+// Update the EnhancedEvaluationView component's DetailedFeedback section
 function EnhancedEvaluationView({ evaluation, assessment }: any) {
   // Calculate actual percentage from the evaluation score
   const percentage = Math.round(
     (evaluation.score / evaluation.total_marks) * 100
   );
 
-  // Calculate correct and incorrect answers
+  // Update the calculation of correct and incorrect answers
   const correctAnswers = Object.values(evaluation.detailed_feedback).filter(
-    (f: any) => f.toString().includes("✅")
+    (f: any) => typeof f === 'object' ? f.isCorrect : f.toString().includes("✅")
   ).length;
+  
   const totalQuestions = Object.keys(evaluation.detailed_feedback).length;
   const incorrectAnswers = totalQuestions - correctAnswers;
 
@@ -445,11 +424,13 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
                 </div>
                 <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 mt-4">
                   {Object.entries(evaluation.detailed_feedback).map(
-                    ([qId, feedback]: any) => (
+                    ([qId, feedback]: any, index: number) => (
                       <QuestionCircle
                         key={qId}
-                        number={parseInt(qId.slice(1))}
-                        correct={feedback.toString().includes("✅")}
+                        number={index + 1}
+                        correct={typeof feedback === 'string' ? 
+                          feedback.includes("✅") : 
+                          feedback.isCorrect}
                       />
                     )
                   )}
@@ -465,16 +446,21 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
           Detailed Feedback
         </h2>
         <div className="divide-y">
-          {Object.entries(evaluation.detailed_feedback).map(
-            ([qId, feedback]: any) => (
+          {Object.entries(evaluation.detailed_feedback)
+            .sort((a, b) => {
+              // Sort by question number
+              const aNum = parseInt(a[0].replace(/\D/g, ''));
+              const bNum = parseInt(b[0].replace(/\D/g, ''));
+              return aNum - bNum;
+            })
+            .map(([_, feedback], index) => (
               <DetailedFeedbackItem
-                key={qId}
-                question={assessment.questions[parseInt(qId.slice(1)) - 1]}
-                index={parseInt(qId.slice(1)) - 1}
+                key={index}
+                question={assessment.questions[index]}
+                index={index}
                 feedback={feedback}
               />
-            )
-          )}
+            ))}
         </div>
       </div>
 

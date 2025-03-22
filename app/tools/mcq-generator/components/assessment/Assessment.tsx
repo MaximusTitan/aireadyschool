@@ -377,9 +377,7 @@ export default function Assessment({
           </div>
         </div>
       );
-      );
     } else {
-      let questionComponent;
       let questionComponent;
       switch (assessmentType) {
         case "mcq":
@@ -394,8 +392,6 @@ export default function Assessment({
             />
           );
           break;
-          );
-          break;
         case "truefalse":
           questionComponent = (
             <TrueFalseQuestion
@@ -408,8 +404,6 @@ export default function Assessment({
             />
           );
           break;
-          );
-          break;
         case "fillintheblank":
           questionComponent = (
             <FillInTheBlankQuestion
@@ -420,8 +414,6 @@ export default function Assessment({
               onChange={(answer) => handleAnswerChange(index, answer)}
               showResults={showResults}
             />
-          );
-          break;
           );
           break;
         case "shortanswer":
@@ -472,9 +464,8 @@ export default function Assessment({
           </div>
         </div>
       );
-      );
     }
-  }
+  }  
 
   const handleSaveResults = async () => {
     setIsSaving(true);

@@ -161,13 +161,22 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const isCorrect = studentAnswer === question.correctAnswer;
           score += isCorrect ? 5 : 0;
           
-          // Get the actual text values instead of option numbers
-          const selectedOption = typeof question.options === 'object' && !Array.isArray(question.options) 
-            ? question.options[String(studentAnswer)] || 'No answer'
-            : 'No answer';
-          const correctOption = Array.isArray(question.options) 
-            ? question.options[Number(question.correctAnswer)] 
-            : question.options?.[String(question.correctAnswer)];
+          // Get the actual option text instead of numbers
+          let selectedOption = 'No answer';
+          let correctOption = '';
+          
+          if (typeof question.options === 'object') {
+            // Handle object format options
+            if (!Array.isArray(question.options)) {
+              selectedOption = question.options[studentAnswer] || 'No answer';
+              correctOption = question.options[question.correctAnswer];
+            } 
+            // Handle array format options
+            else {
+              selectedOption = studentAnswer !== undefined ? question.options[studentAnswer] : 'No answer';
+              correctOption = question.options[question.correctAnswer];
+            }
+          }
 
           feedback[questionNumber] = {
             question: question.question,

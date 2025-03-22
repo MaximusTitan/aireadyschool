@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 interface FillInTheBlankQuestionProps {
   question: {
     question: string;
-    answer: string;
-    options: string[];
+    answer?: string; // Mark answer as optional if it might be undefined
+    options?: string[];
   };
   index: number;
   userAnswer: string | null;
@@ -48,6 +48,8 @@ export default function FillInTheBlankQuestion({
   };
 
   const questionParts = question.question.split("___");
+  // Use a safe fallback for answer
+  const correctAnswer = question.answer || "";
 
   return (
     <div>
@@ -70,7 +72,7 @@ export default function FillInTheBlankQuestion({
       </div>
       {!showResults && (
         <div className="flex flex-wrap gap-2 mb-4">
-          {question.options.map((option, optionIndex) => (
+          {(question.options || []).map((option, optionIndex) => (
             <Button
               key={optionIndex}
               variant="outline"
@@ -87,20 +89,21 @@ export default function FillInTheBlankQuestion({
         <>
           <div
             className={
-              userAnswer?.toLowerCase() === question.answer.toLowerCase()
+              userAnswer?.toLowerCase() === correctAnswer.toLowerCase()
                 ? "text-green-600"
                 : "text-red-600"
             }
           >
-            {userAnswer?.toLowerCase() === question.answer.toLowerCase()
+            {userAnswer?.toLowerCase() === correctAnswer.toLowerCase()
               ? "Correct!"
-              : `Incorrect. The correct answer is: ${question.answer}`}
+              : `Incorrect. The correct answer is: ${correctAnswer}`}
           </div>
-          {showResults && userAnswer?.toLowerCase() !== question.answer.toLowerCase() && (
-            <div className="mt-2 p-2 border rounded bg-red-100 text-sm">
-              Your answer is incorrect because it does not match the expected word or phrase. The correct answer is "{question.answer}".
-            </div>
-          )}
+          {showResults &&
+            userAnswer?.toLowerCase() !== correctAnswer.toLowerCase() && (
+              <div className="mt-2 p-2 border rounded bg-red-100 text-sm">
+                Your answer is incorrect because it does not match the expected word or phrase. The correct answer is "{correctAnswer}".
+              </div>
+            )}
         </>
       )}
     </div>

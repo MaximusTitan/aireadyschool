@@ -8,6 +8,7 @@ import MCQQuestion from "../questions/MCQQuestion"
 import TrueFalseQuestion from "../questions/TrueFalseQuestion"
 import FillInTheBlankQuestion from "../questions/FillInTheBlankQuestion"
 import ShortQuestion from "../questions/ShortQuestion"
+import MixedAssessmentQuestion from "../questions/MixedAssessmentQuestion"
 import { downloadAssessment } from "@/utils/exportAssessment"
 import { Download, Edit, Save, Upload } from "lucide-react"
 import ReactMarkdown from "react-markdown"
@@ -311,9 +312,9 @@ export default function Assessment({
             {imageUploadComponent(index)}
           </div>
         </div>
-      )
+      );
     } else {
-      let questionComponent
+      let questionComponent;
       switch (assessmentType) {
         case "mcq":
           questionComponent = (
@@ -325,8 +326,8 @@ export default function Assessment({
               onChange={(answer) => handleAnswerChange(index, answer)}
               showResults={showResults}
             />
-          )
-          break
+          );
+          break;
         case "truefalse":
           questionComponent = (
             <TrueFalseQuestion
@@ -337,8 +338,8 @@ export default function Assessment({
               onChange={(answer) => handleAnswerChange(index, answer)}
               showResults={showResults}
             />
-          )
-          break
+          );
+          break;
         case "fillintheblank":
           questionComponent = (
             <FillInTheBlankQuestion
@@ -349,8 +350,8 @@ export default function Assessment({
               onChange={(answer) => handleAnswerChange(index, answer)}
               showResults={showResults}
             />
-          )
-          break
+          );
+          break;
         case "shortanswer":
           questionComponent = (
             <ShortQuestion
@@ -362,10 +363,22 @@ export default function Assessment({
               showResults={showResults}
               evaluatedScore={shortAnswerScores[index]}
             />
-          )
-          break
+          );
+          break;
+        case "mixedassessment":
+          questionComponent = (
+            <MixedAssessmentQuestion
+              key={index}
+              question={editedAssessment[index]}
+              index={index}
+              userAnswer={answers[index]}
+              onChange={(answer) => handleAnswerChange(index, answer)}
+              showResults={showResults}
+            />
+          );
+          break;
         default:
-          questionComponent = null
+          questionComponent = null;
       }
       return (
         <div key={index} className="border rounded-lg p-4 mb-4 bg-white shadow-sm">
@@ -382,9 +395,9 @@ export default function Assessment({
             )}
           </div>
         </div>
-      )      
+      );
     }
-  }  
+  }
 
   const handleSaveResults = async () => {
     setIsSaving(true)

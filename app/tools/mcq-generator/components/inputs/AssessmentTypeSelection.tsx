@@ -12,6 +12,7 @@ export default function AssessmentTypeSelection({ value, onChange, disabled = fa
     { value: "truefalse", label: "True or False" },
     { value: "fillintheblank", label: "Fill in the Blanks" },
     { value: "shortanswer", label: "Short Answer" },
+    { value: "mixedassessment", label: "Mixed Assessments" },
   ]
 
   return (

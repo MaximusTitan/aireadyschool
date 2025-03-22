@@ -45,6 +45,10 @@ interface FormData {
   assessmentType: string;
   difficulty: string;
   questionCount: number;
+  mixedQuestionCount: {
+    mcq: number,
+    shortanswer: number,
+  };
   learningOutcomes: string[];
   selectedDocument?: string | null;
 }
@@ -81,6 +85,10 @@ export default function Home() {
     assessmentType: "mcq",
     difficulty: "Medium",
     questionCount: 10,
+    mixedQuestionCount: {
+      mcq: 0,
+      shortanswer: 0,
+    },
     learningOutcomes: [],
     selectedDocument: null,
   });
@@ -404,6 +412,10 @@ export default function Home() {
         assessmentType: data.assessment_type,
         difficulty: data.difficulty,
         questionCount: data.questions.length,
+        mixedQuestionCount: {
+          mcq: 0,
+          shortanswer: 0,
+        },
         learningOutcomes: data.learning_outcomes || [],
       });
       setShowResults(false);
@@ -440,6 +452,10 @@ export default function Home() {
         assessmentType: data.assessment_type,
         difficulty: data.difficulty,
         questionCount: data.questions.length,
+        mixedQuestionCount: {
+          mcq: 0,
+          shortanswer: 0,
+        },
         learningOutcomes: data.learning_outcomes || [],
       });
       setShowResults(true);
@@ -513,6 +529,10 @@ export default function Home() {
       assessmentType: formData.assessmentType,
       difficulty: formData.difficulty,
       questionCount: formData.questionCount,
+      mixedQuestionCount: {
+        mcq: 0,
+        shortanswer: 0,
+      },
       learningOutcomes: formData.learningOutcomes,
       selectedDocument: null,
     });
@@ -687,13 +707,48 @@ export default function Home() {
                         setFormData({ ...formData, difficulty: value })
                       }
                     />
-                    <QuestionCount
-                      value={formData.questionCount}
-                      onChange={(value) =>
-                        setFormData({ ...formData, questionCount: value })
-                      }
-                    />
+
+                    {formData.assessmentType === "mixedassessment" ? (
+                      <div className="grid grid-cols-1 gap-4">
+                        <QuestionCount
+                          id="mcqCount"
+                          value={formData.mixedQuestionCount.mcq}
+                          onChange={(val) =>
+                            setFormData({
+                              ...formData,
+                              mixedQuestionCount: {
+                                ...formData.mixedQuestionCount,
+                                mcq: val,
+                              },
+                            })
+                          }
+                          label="Number of MCQs"
+                        />
+                        <QuestionCount
+                          id="shortanswerCount"
+                          value={formData.mixedQuestionCount.shortanswer}
+                          onChange={(val) =>
+                            setFormData({
+                              ...formData,
+                              mixedQuestionCount: {
+                                ...formData.mixedQuestionCount,
+                                shortanswer: val,
+                              },
+                            })
+                          }
+                          label="Number of Short Answers"
+                        />
+                      </div>
+                    ) : (
+                      <QuestionCount
+                        value={formData.questionCount}
+                        onChange={(value) =>
+                          setFormData({ ...formData, questionCount: value })
+                        }
+                      />
+                    )}
                   </div>
+
                 </div>
 
                 {/* Generate Button */}

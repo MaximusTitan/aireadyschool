@@ -529,7 +529,7 @@ export default function EvaluatorDashboard() {
   } | null>(null);
 
   const [formData, setFormData] = useState({
-    assessment_id: "",
+    assessmentIds: [""], // Array to store multiple assessment IDs
     student_id: "",
   });
 
@@ -594,28 +594,84 @@ export default function EvaluatorDashboard() {
     }
   }
 
+  const handleAddAssessmentId = () => {
+    setFormData(prev => ({
+      ...prev,
+      assessmentIds: [...prev.assessmentIds, ""]
+    }));
+  };
+
+  const handleRemoveAssessmentId = (index: number) => {
+    if (formData.assessmentIds.length > 1) {
+      setFormData(prev => ({
+        ...prev,
+        assessmentIds: prev.assessmentIds.filter((_, i) => i !== index)
+      }));
+    }
+  };
+
+  const handleAssessmentIdChange = (index: number, value: string) => {
+    setFormData(prev => {
+      const newIds = [...prev.assessmentIds];
+      newIds[index] = value;
+      return { ...prev, assessmentIds: newIds };
+    });
+  };
+
   async function fetchAssessmentDetails() {
     setLoading(true);
     setError(null);
 
     try {
-      const { data, error } = await supabase
-        .from("assessments")
-        .select("*")
-        .eq("id", formData.assessment_id)
-        .single();
+      const validIds = formData.assessmentIds.filter(id => id.trim());
+      if (validIds.length === 0) {
+        throw new Error("Please enter at least one assessment ID");
+      }
 
-      if (error) throw error;
-      if (!data) throw new Error("Assessment not found");
+      const promises = validIds.map(id =>
+        supabase
+          .from("assessments")
+          .select("*")
+          .eq("id", id)
+          .single()
+      );
+
+      const results = await Promise.all(promises);
+      
+      let combinedQuestions: Question[] = [];
+      let combinedAnswers: any[] = [];
+      let subjects: string[] = [];
+      let topics: string[] = [];
+
+      results.forEach((result, index) => {
+        if (result.error) {
+          throw new Error(`Error fetching assessment ${validIds[index]}: ${result.error.message}`);
+        }
+        if (!result.data) {
+          throw new Error(`Assessment ${validIds[index]} not found`);
+        }
+
+        // Add assessment ID to each question for tracking
+        const questionsWithId = result.data.questions.map((q: Question) => ({
+          ...q,
+          assessmentId: validIds[index]
+        }));
+
+        combinedQuestions = [...combinedQuestions, ...questionsWithId];
+        combinedAnswers = [...combinedAnswers, ...result.data.answers];
+        if (result.data.subject) subjects.push(result.data.subject);
+        if (result.data.topic) topics.push(result.data.topic);
+      });
 
       setAssessmentDetails({
-        questions: data.questions,
-        answers: data.answers,
-        assessment_type: data.assessment_type,
+        questions: combinedQuestions,
+        answers: combinedAnswers,
+        subject: subjects.join(", "),
+        topic: topics.join(", "),
       });
     } catch (err: any) {
       setError(err.message);
-      console.error("Error fetching assessment:", err);
+      console.error("Error fetching assessments:", err);
     } finally {
       setLoading(false);
     }
@@ -631,33 +687,26 @@ export default function EvaluatorDashboard() {
         throw new Error("No questions to evaluate");
       }
 
-      // Create an array of student answers in the correct format
-      const studentAnswers = assessmentDetails.questions.map((_, index) => {
-        return assessmentDetails.answers[index] ?? null;
-      });
-
       const response = await fetch("/api/evaluate_test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          assessment_id: formData.assessment_id,
+          assessment_id: formData.assessmentIds.join(","),
           student_id: formData.student_id,
-          student_answers: studentAnswers,
-          questions: assessmentDetails.questions, // Send questions along with answers
+          student_answers: assessmentDetails.answers,
+          questions: assessmentDetails.questions,
         }),
       });
 
       if (!response.ok) throw new Error(`Error: ${response.statusText}`);
 
       const result = await response.json();
-      console.log("Evaluation result:", result);
-
+      
       setCurrentEvaluation({
         ...result,
         assessments: {
-          subject: assessmentDetails.subject || "Assessment",
-          topic: assessmentDetails.topic || "Topic",
-          assessment_type: assessmentDetails.assessment_type,
+          subject: assessmentDetails.subject || "Multiple Assessments",
+          topic: assessmentDetails.topic || "Combined Topics",
           questions: assessmentDetails.questions,
         },
       });
@@ -794,26 +843,44 @@ export default function EvaluatorDashboard() {
         </div>
 
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex gap-6 mb-6">
-            <InputField
-              label="Assessment ID"
-              type="number"
-              value={formData.assessment_id}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData((prev) => ({
-                  ...prev,
-                  assessment_id: e.target.value,
-                }))
-              }
-              required
-              placeholder="Enter ID"
-            />
+          <div className="space-y-4 mb-6">
+            {formData.assessmentIds.map((id, index) => (
+              <div key={index} className="flex gap-4 items-center">
+                <InputField
+                  label={`Assessment ID ${index + 1}`}
+                  type="number"
+                  value={id}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    handleAssessmentIdChange(index, e.target.value)
+                  }
+                  required
+                  placeholder="Enter Assessment ID"
+                />
+                {formData.assessmentIds.length > 1 && (
+                  <button
+                    onClick={() => handleRemoveAssessmentId(index)}
+                    className="mt-8 p-2 text-red-600 hover:text-red-800"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            ))}
+            
+            <button
+              onClick={handleAddAssessmentId}
+              className="text-blue-600 hover:text-blue-800 font-medium"
+              type="button"
+            >
+              + Add Another Assessment
+            </button>
+
             <InputField
               label="Student ID"
               type="text"
               value={formData.student_id}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                setFormData((prev) => ({ ...prev, student_id: e.target.value }))
+                setFormData(prev => ({ ...prev, student_id: e.target.value }))
               }
               required
               placeholder="Enter Student ID"
@@ -823,9 +890,9 @@ export default function EvaluatorDashboard() {
           <GradientButton
             onClick={fetchAssessmentDetails}
             isLoading={loading}
-            disabled={!formData.assessment_id}
+            disabled={formData.assessmentIds.every(id => !id)}
           >
-            {loading ? "Fetching..." : "Fetch Assessment"}
+            {loading ? "Fetching..." : "Fetch Assessments"}
           </GradientButton>
 
           {error && (
@@ -833,7 +900,6 @@ export default function EvaluatorDashboard() {
               {error}
             </div>
           )}
-
           {renderQuestionDetails()}
         </div>
       </div>

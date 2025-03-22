@@ -21,6 +21,15 @@ interface Question {
   explanation?: string;
 }
 
+// Add new interface for evaluation result
+interface EvaluationResult {
+  assessment_id: number;
+  score: number;
+  feedback: Record<string, string>;
+  total_questions: number;
+  correct_answers: number;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -30,41 +39,73 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Use the questions from the request if available, otherwise fetch from database
-    let assessmentQuestions = questions;
-    if (!assessmentQuestions) {
-      const { data: assessment, error } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('id', assessment_id)
-        .single();
+    // Split and validate assessment IDs
+    const assessmentIds: string[] = assessment_id.split(',').map((id: string) => id.trim());
+    const primaryAssessmentId = parseInt(assessmentIds[0]); // Use first ID as primary
 
-      if (error || !assessment) {
-        console.error('Error fetching assessment:', error);
-        return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
-      }
-      assessmentQuestions = assessment.questions;
-    }
+    // Group questions by assessment ID
+    const questionsByAssessment = questions.reduce((acc: any, q: any) => {
+      const id = q.assessmentId;
+      if (!acc[id]) acc[id] = [];
+      acc[id].push(q);
+      return acc;
+    }, {});
 
-    // Calculate score and generate feedback
-    const evaluationResult = await evaluateAnswers(student_answers, { questions: assessmentQuestions });
+    // Evaluate each assessment separately
+    const evaluationPromises = assessmentIds.map(async (id: string) => {
+      const assessmentQuestions = questionsByAssessment[id];
+      const result = await evaluateAnswers(
+        student_answers.slice(0, assessmentQuestions.length),
+        { questions: assessmentQuestions }
+      );
 
-    // Determine performance based on benchmark
-    const benchmark_score = 50; // You can make this dynamic
-    const performance = evaluationResult.score >= benchmark_score ? 'Good' : 'Needs Improvement';
+      return {
+        assessment_id: parseInt(id),
+        score: result.score,
+        feedback: result.feedback,
+        total_questions: result.totalQuestions,
+        correct_answers: result.correctAnswers
+      };
+    });
 
-    // Store evaluation results
+    const evaluations = await Promise.all(evaluationPromises);
+
+    // Calculate combined score and metrics
+    const totalScore = evaluations.reduce((sum, evaluation: EvaluationResult) => sum + evaluation.score, 0);
+    const averageScore = Math.round(totalScore / evaluations.length);
+
+    // Format combined feedback with assessment IDs
+    const detailedFeedback = evaluations.reduce((acc, evaluation: EvaluationResult, index) => {
+      const assessmentId = assessmentIds[index];
+      // Convert feedback objects to include assessment ID prefix
+      const assessmentFeedback = Object.entries(evaluation.feedback).reduce((fb, [qKey, value]) => ({
+        ...fb,
+        [`A${assessmentId}_${qKey}`]: value
+      }), {});
+      return { ...acc, ...assessmentFeedback };
+    }, {});
+
+    // Store evaluation with primary assessment ID and metadata
     const { data: evaluationData, error: evalError } = await supabase
       .from('evaluation_test')
       .insert({
-        assessment_id,
+        assessment_id: primaryAssessmentId, // Store only the first assessment ID
         student_id,
         student_answers,
-        score: evaluationResult.score,
+        score: averageScore,
         total_marks: 100,
-        benchmark_score,
-        performance,
-        detailed_feedback: evaluationResult.feedback
+        benchmark_score: 50,
+        performance: averageScore >= 50 ? 'Good' : 'Needs Improvement',
+        detailed_feedback: detailedFeedback,
+        metadata: {  // Store additional assessment info in metadata
+          assessment_ids: assessmentIds,
+          individual_scores: evaluations.map((evaluation: EvaluationResult, index) => ({
+            assessment_id: assessmentIds[index],
+            score: evaluation.score,
+            total_questions: evaluation.total_questions,
+            correct_answers: evaluation.correct_answers
+          }))
+        }
       })
       .select()
       .single();
@@ -74,7 +115,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to store evaluation' }, { status: 500 });
     }
 
-    return NextResponse.json(evaluationData);
+    return NextResponse.json({
+      ...evaluationData,
+      individual_evaluations: evaluations,
+      all_assessment_ids: assessmentIds
+    });
+
   } catch (error) {
     console.error('Evaluation error:', error);
     return NextResponse.json(

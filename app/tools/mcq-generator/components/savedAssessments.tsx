@@ -13,6 +13,7 @@ interface Assessment {
   answers?: any[];
   learning_outcomes?: string[];
   created_at: string;
+  submitted?: boolean; // new field to track submission state
 }
 
 interface SavedAssessmentsProps {
@@ -31,9 +32,7 @@ export default function SavedAssessments({
   return (
     <Card className="shadow-lg border-2">
       <CardHeader className="bg-muted/50 border-b">
-        <CardTitle className="text-2xl font-bold">
-          Saved Assessments
-        </CardTitle>
+        <CardTitle className="text-2xl font-bold">Saved Assessments</CardTitle>
       </CardHeader>
       <CardContent className="p-6">
         <div className="relative w-full overflow-auto max-h-[400px] scrollbar-thin">
@@ -95,12 +94,8 @@ export default function SavedAssessments({
                   <td className="p-4 align-middle truncate max-w-[200px]">
                     {assessment.topic}
                   </td>
-                  <td className="p-4 align-middle">
-                    {assessment.class_level}
-                  </td>
-                  <td className="p-4 align-middle">
-                    {assessment.subject}
-                  </td>
+                  <td className="p-4 align-middle">{assessment.class_level}</td>
+                  <td className="p-4 align-middle">{assessment.subject}</td>
                   <td className="p-4 align-middle capitalize">
                     {assessment.assessment_type}
                   </td>
@@ -116,50 +111,53 @@ export default function SavedAssessments({
                   </td>
                   <td className="p-4 align-middle text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        onClick={() => handleLoadAssessment(assessment.id)}
-                        variant="ghost"
-                        size="icon"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-pencil"
+                      {assessment.submitted ? (
+                        <Button
+                          onClick={() => handleViewAnswers(assessment.id)}
+                          variant="ghost"
+                          size="icon"
                         >
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                        <span className="sr-only">Edit</span>
-                      </Button>
-                      <Button
-                        onClick={() => handleViewAnswers(assessment.id)}
-                        variant="ghost"
-                        size="icon"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="lucide lucide-eye"
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-eye"
+                          >
+                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
+                            <circle cx="12" cy="12" r="3" />
+                          </svg>
+                          <span className="sr-only">View Answers</span>
+                        </Button>
+                      ) : (
+                        <Button
+                          onClick={() => handleLoadAssessment(assessment.id)}
+                          variant="ghost"
+                          size="icon"
                         >
-                          <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                        <span className="sr-only">View Answers</span>
-                      </Button>
+                          <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            className="lucide lucide-pencil"
+                          >
+                            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                            <path d="m15 5 4 4" />
+                          </svg>
+                          <span className="sr-only">Edit</span>
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>

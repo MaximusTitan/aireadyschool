@@ -155,6 +155,25 @@ export default function Assessment({
       newAnswers[questionIndex] = answer;
     }
     setAnswers(newAnswers);
+
+    // Save answer to DB immediately
+    if (assessmentId) {
+      (async () => {
+        try {
+          await fetch("/api/save-answer", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              assessmentId,
+              questionIndex,
+              answer: newAnswers[questionIndex],
+            }),
+          });
+        } catch (error) {
+          console.error("Error saving answer:", error);
+        }
+      })();
+    }
   };
 
   const handleSubmit = async () => {
@@ -429,6 +448,7 @@ export default function Assessment({
           id: assessmentId,
           answers: answers,
           images: uploadedImages,
+          submitted: true,
         }),
       });
 

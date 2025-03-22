@@ -153,13 +153,41 @@ export async function PUT(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id, questions, answers } = await req.json()
+    const { id, questions, answers, submitted } = await req.json()
 
     const updateData: any = {}
     if (questions) updateData.questions = questions
-    if (answers) updateData.answers = answers
-
-    // Remove the user_email check to allow students to submit answers
+    
+    // If the client is marking submission, update submitted field to true.
+    if (submitted === true) {
+      updateData.submitted = true
+    }
+    
+    if (answers) {
+      // Fetch existing assessment record to verify submission state
+      const { data: existingRecord, error: fetchError } = await supabase
+        .from("assessments")
+        .select("answers, questions, submitted")
+        .eq("id", id)
+        .single()
+      if (fetchError) {
+        throw fetchError
+      }
+      // If the assessment is already submitted, do not allow editing
+      if (existingRecord.submitted) {
+        return NextResponse.json({ error: "Assessment already submitted" }, { status: 403 })
+      }
+      const existingAnswers: any[] =
+        existingRecord.answers ||
+        new Array(existingRecord.questions.length).fill(undefined)
+      // Merge only non-null, non-undefined answers
+      const mergedAnswers = existingAnswers.map((prev, idx) => {
+        const newAns = answers[idx]
+        return newAns !== null && newAns !== undefined ? newAns : prev
+      })
+      updateData.answers = mergedAnswers
+    }
+    
     const { data, error } = await supabase
       .from("assessments")
       .update(updateData)

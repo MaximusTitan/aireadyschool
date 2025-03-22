@@ -10,9 +10,11 @@ const supabase = createClient(
 
 interface Question {
   question: string;
-  options?: string[];
-  correctAnswer?: number;
+  options?: string[] | { [key: string]: string };
+  correctAnswer?: any;
   answer?: string;  // for descriptive questions
+  explanation?: string;
+  modelAnswer?: string; // Add this for descriptive/short answer questions
 }
 
 function InputField({ label, ...props }: any) {
@@ -57,6 +59,24 @@ function QuestionCard({ question, studentAnswer, index }: any) {
   const questionType = question.questionType || (question.options ? 
     (Array.isArray(question.options) ? 'FillBlanks' : 'MCQ') : 
     question.correctAnswer !== undefined ? 'TrueFalse' : 'Descriptive');
+
+  // Enhanced getModelAnswer function
+  const getModelAnswer = () => {
+    switch (questionType) {
+      case 'MCQ':
+        return Array.isArray(question.options) 
+          ? question.options[Number(question.correctAnswer)]
+          : question.options?.[String(question.correctAnswer)];
+      case 'TrueFalse':
+        return question.correctAnswer?.toString() || '';
+      case 'FillBlanks':
+        return question.answer || question.correctAnswer;
+      default:
+        return question.modelAnswer || question.correctAnswer || question.answer || '';
+    }
+  };
+
+  const correctAnswer = getModelAnswer();
 
   return (
     <div className="p-6 bg-white rounded-xl shadow-lg hover:shadow-xl transition-shadow duration-300">
@@ -131,7 +151,7 @@ function QuestionCard({ question, studentAnswer, index }: any) {
         <div className="mt-4">
           <div className="p-3 bg-green-50 rounded-lg border border-green-200">
             <div className="font-medium text-green-800 mb-1">Correct Answer:</div>
-            <div className="text-green-700">{question.answer}</div>
+            <div className="text-green-700">{correctAnswer}</div>
           </div>
           <div className="mt-2 p-3 bg-pink-50 rounded-lg border border-pink-200">
             <div className="font-medium text-pink-800 mb-1">Your Answer:</div>
@@ -150,7 +170,7 @@ function QuestionCard({ question, studentAnswer, index }: any) {
         <div className="mt-4 space-y-3">
           <div className="p-3 bg-green-50 rounded-lg border border-green-200">
             <div className="font-medium text-green-800 mb-1">Model Answer:</div>
-            <div className="text-green-700">{question.correctAnswer}</div>
+            <div className="text-green-700">{correctAnswer}</div>
           </div>
           <div className="p-3 bg-pink-50 rounded-lg border border-pink-200">
             <div className="font-medium text-pink-800 mb-1">Your Answer:</div>
@@ -240,11 +260,16 @@ function QuestionCircle({ number, correct }: { number: number; correct: boolean 
 }
 
 function DetailedFeedbackItem({ question, index, feedback }: any) {
-  const isCorrect = feedback.toString().includes('✅');
+  // Convert feedback to string if it's an object
+  const feedbackText = typeof feedback === 'object' 
+    ? JSON.stringify(feedback) 
+    : String(feedback);
+
+  const isCorrect = feedbackText.includes('✅');
   const points = isCorrect ? '(5/5)' : '(0/5)';
   
   // Remove any existing scoring information from feedback
-  const cleanFeedback = feedback.toString()
+  const cleanFeedback = feedbackText
     .replace(/\s*\([0-5]\/5\)(?=\s|$)/g, '')  // Remove scores at the end
     .replace('❌', '')  // Remove X emoji
     .trim();
@@ -512,9 +537,14 @@ export default function EvaluatorDashboard() {
     setError(null);
 
     try {
-      if (!assessmentDetails?.answers) {
-        throw new Error('No answers to evaluate');
+      if (!assessmentDetails?.questions) {
+        throw new Error('No questions to evaluate');
       }
+
+      // Create an array of student answers in the correct format
+      const studentAnswers = assessmentDetails.questions.map((_, index) => {
+        return assessmentDetails.answers[index] ?? null;
+      });
 
       const response = await fetch('/api/evaluate_test', {
         method: 'POST',
@@ -522,7 +552,8 @@ export default function EvaluatorDashboard() {
         body: JSON.stringify({
           assessment_id: formData.assessment_id,
           student_id: formData.student_id,
-          student_answers: assessmentDetails.answers
+          student_answers: studentAnswers,
+          questions: assessmentDetails.questions // Send questions along with answers
         }),
       });
 
@@ -705,9 +736,11 @@ export default function EvaluatorDashboard() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Evaluation Dashboard</h1>
-      {renderMainContent()}
+    <div>
+      <div className="p-6 max-w-7xl mx-auto">
+        <h1 className="text-2xl font-bold mb-6">Evaluation Dashboard</h1>
+        {renderMainContent()}
+      </div>
     </div>
   );
 }

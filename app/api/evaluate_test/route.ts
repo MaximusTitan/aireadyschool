@@ -17,34 +17,37 @@ interface Question {
   options?: { [key: string]: string } | string[];
   correctAnswer?: any;
   answer?: string;
+  modelAnswer?: string;
   explanation?: string;
 }
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { assessment_id, student_id, student_answers } = body;
+    const { assessment_id, student_id, student_answers, questions } = body;
 
     if (!assessment_id || !student_id || !student_answers) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    console.log('Evaluating test for:', { assessment_id, student_id });
+    // Use the questions from the request if available, otherwise fetch from database
+    let assessmentQuestions = questions;
+    if (!assessmentQuestions) {
+      const { data: assessment, error } = await supabase
+        .from('assessments')
+        .select('*')
+        .eq('id', assessment_id)
+        .single();
 
-    // Fetch assessment details
-    const { data: assessment, error } = await supabase
-      .from('assessments')
-      .select('*')
-      .eq('id', assessment_id)
-      .single();
-
-    if (error || !assessment) {
-      console.error('Error fetching assessment:', error);
-      return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
+      if (error || !assessment) {
+        console.error('Error fetching assessment:', error);
+        return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
+      }
+      assessmentQuestions = assessment.questions;
     }
 
-    // Calculate score and generate feedback using GPT-4o
-    const evaluationResult = await evaluateAnswers(student_answers, assessment);
+    // Calculate score and generate feedback
+    const evaluationResult = await evaluateAnswers(student_answers, { questions: assessmentQuestions });
 
     // Determine performance based on benchmark
     const benchmark_score = 50; // You can make this dynamic
@@ -125,16 +128,19 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
 
         case 'FillBlanks': {
           const normalizedStudentAnswer = studentAnswer?.toString().toLowerCase().trim();
-          const normalizedCorrectAnswer = question.answer?.toString().toLowerCase().trim();
+          const correctAnswer = question.answer || question.correctAnswer;
+          const normalizedCorrectAnswer = correctAnswer?.toString().toLowerCase().trim();
           const isCorrect = normalizedStudentAnswer === normalizedCorrectAnswer;
+          
           score += isCorrect ? 5 : 0;
           feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! Answer: ${question.answer}`
-            : `Incorrect. You wrote: "${studentAnswer || 'no answer'}". Correct answer: "${question.answer}"`;
+            ? `✅ Correct! Answer: ${correctAnswer}`
+            : `Incorrect. You wrote: "${studentAnswer || 'no answer'}". Correct answer: "${correctAnswer}"`;
           break;
         }
 
-        case 'Short Answer': {
+        case 'Short Answer':
+        case 'Descriptive': {
           if (!studentAnswer) {
             feedback[`q${i + 1}`] = "No answer provided";
             continue;
@@ -159,7 +165,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
                 {
                   role: "user",
                   content: `Question: ${question.question}
-Model Answer: ${question.correctAnswer}
+Model Answer: ${question.modelAnswer || question.correctAnswer || question.answer}
 Student Answer: ${studentAnswer}
 
 Grade this answer out of 5 points.`

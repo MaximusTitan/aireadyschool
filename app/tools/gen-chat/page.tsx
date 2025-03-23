@@ -33,6 +33,7 @@ function ChatPageContent() {
   // Replace direct window usage with useSearchParams to avoid "window is not defined"
   const searchParams = useSearchParams();
   const lessonPlanIdParam = searchParams.get("lessonPlanId");
+  const scheduleDataParam = searchParams.get("scheduleData");
   const teachingModeParam = searchParams.get("teachingMode") === "true";
 
   // State management
@@ -152,9 +153,10 @@ function ChatPageContent() {
         let activeThreadId = threadId;
         if (!activeThreadId) {
           activeThreadId = await createThread();
-          // First update URL with all params
           await router.push(
-            `/tools/gen-chat?thread=${activeThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}`
+            `/tools/gen-chat?thread=${activeThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}${
+              scheduleDataParam ? `&scheduleData=${scheduleDataParam}` : ""
+            }`
           );
           await new Promise((resolve) => setTimeout(resolve, 100));
         }
@@ -163,7 +165,20 @@ function ChatPageContent() {
         if (!response.ok) throw new Error("Failed to fetch lesson plan");
 
         const lessonPlan = await response.json();
-        const messageContent = formatLessonPlanMessage(lessonPlan);
+        let messageContent = formatLessonPlanMessage(lessonPlan);
+
+        // Add schedule-specific context if available
+        if (scheduleDataParam) {
+          const scheduleData = JSON.parse(
+            decodeURIComponent(scheduleDataParam)
+          );
+          messageContent += `\n\nLet's focus on Day ${scheduleData.day}: ${scheduleData.topicHeading}\n`;
+          messageContent += `Activity: ${scheduleData.schedule.type} - ${scheduleData.schedule.title}\n`;
+          messageContent += `Content: ${scheduleData.schedule.content}\n`;
+          messageContent += `Duration: ${scheduleData.schedule.timeAllocation} minutes\n\n`;
+          messageContent +=
+            "Please help me understand this specific part of the lesson.";
+        }
 
         const userMessage: ChatMessage = {
           id: String(Date.now()),
@@ -175,7 +190,6 @@ function ChatPageContent() {
         await saveMessage(userMessage, activeThreadId);
         await append(userMessage);
 
-        // After sending the first message, clear the teaching mode and lesson plan params
         router.replace(`/tools/gen-chat?thread=${activeThreadId}`);
       } catch (error) {
         console.error("Error initializing lesson plan chat:", error);
@@ -185,6 +199,7 @@ function ChatPageContent() {
     initializeLessonPlan();
   }, [
     lessonPlanIdParam,
+    scheduleDataParam,
     messages.length,
     append,
     threadId,

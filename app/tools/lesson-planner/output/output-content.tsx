@@ -653,12 +653,26 @@ export default function OutputContent() {
     }
   };
 
-  const handleChatWithBuddy = () => {
+  const handleChatWithBuddy = (item: ScheduleItem, day: Day) => {
     if (lessonPlan) {
+      const scheduleData = {
+        day: day.day,
+        topicHeading: day.topicHeading,
+        schedule: item,
+        learningOutcomes: day.learningOutcomes,
+      };
+
       router.push(
-        `/tools/gen-chat?thread=new&teachingMode=true&lessonPlanId=${lessonPlan.id}`
+        `/tools/gen-chat?thread=new&teachingMode=true&lessonPlanId=${lessonPlan.id}&scheduleData=${encodeURIComponent(JSON.stringify(scheduleData))}`
       );
     }
+  };
+
+  const handleChatWithBuddyNoArgs = () => {
+    if (!lessonPlan) return;
+    router.push(
+      `/tools/gen-chat?thread=new&teachingMode=true&lessonPlanId=${lessonPlan.id}`
+    );
   };
 
   const renderAssignButton = () => {
@@ -682,8 +696,8 @@ export default function OutputContent() {
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-gray-300 border-t-gray-800 rounded-full animate-spin mx-auto mb-4"></div>
+        <div className="text-center"></div>
+        <div className="w-16 h-16 border-4 border-gray-300 border-t-gray-800 rounded-full animate-spin mx-auto mb-4">
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
@@ -806,7 +820,10 @@ export default function OutputContent() {
                       <div className="text-gray-500">{item.title}</div>
                       {userRole === "Student" ? (
                         <button
-                          onClick={handleChatWithBuddy}
+                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                            e.preventDefault();
+                            handleChatWithBuddy(item, day);
+                          }}
                           className="text-blue-500 hover:text-blue-600 text-sm mt-1 flex items-center gap-1"
                         >
                           Chat with Buddy
@@ -1048,7 +1065,7 @@ export default function OutputContent() {
 
             <div className="mt-6 flex gap-4">
               {userRole !== "Student" && (
-                <Button onClick={handleChatWithBuddy} variant="default">
+                <Button onClick={handleChatWithBuddyNoArgs} variant="default">
                   Chat with Buddy
                 </Button>
               )}

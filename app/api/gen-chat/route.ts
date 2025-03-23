@@ -239,6 +239,19 @@ async function saveToolOutputs(
   }
 }
 
+// Add this interface with the existing interfaces
+interface ScheduleData {
+  day: number;
+  topicHeading: string;
+  schedule: {
+    type: string;
+    title: string;
+    content: string;
+    timeAllocation: number;
+  };
+  learningOutcomes: string[];
+}
+
 export async function POST(request: Request) {
   let controller: AbortController | null = null;
   
@@ -258,7 +271,7 @@ export async function POST(request: Request) {
     // Get user role from metadata
     const userRole = user.user_metadata?.role;
 
-    const { messages, id: threadId, language = 'english', teachingMode = false, lessonPlanId } = await request.json();
+    const { messages, id: threadId, language = 'english', teachingMode = false, lessonPlanId, scheduleData } = await request.json();
 
     // Add logging to debug language toggle
     console.log('Thread ID:', threadId);
@@ -357,6 +370,22 @@ export async function POST(request: Request) {
 
       if (lessonPlan && !error) {
         systemPrompt += `\n\nYou are discussing the lesson plan for "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} for grade ${lessonPlan.grade}. The lesson is planned for ${lessonPlan.number_of_days} sessions of ${lessonPlan.class_duration} minutes each. Learning objectives: ${lessonPlan.learning_objectives || 'Not specified'}`;
+
+        // Add schedule-specific context if available
+        if (scheduleData) {
+          const data = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData;
+          systemPrompt += `\n\nSpecific Focus:
+Day ${data.day}: ${data.topicHeading}
+Activity Type: ${data.schedule.type}
+Title: ${data.schedule.title}
+Duration: ${data.schedule.timeAllocation} minutes
+Content: ${data.schedule.content}
+
+Learning Outcomes for this session:
+${data.learningOutcomes.map((outcome: string) => `- ${outcome}`).join('\n')}
+
+Please provide detailed guidance and explanations specifically for this part of the lesson.`;
+        }
       }
     }
 

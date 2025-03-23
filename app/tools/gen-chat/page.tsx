@@ -35,6 +35,8 @@ function ChatPageContent() {
   const lessonPlanIdParam = searchParams.get("lessonPlanId");
   const scheduleDataParam = searchParams.get("scheduleData");
   const teachingModeParam = searchParams.get("teachingMode") === "true";
+  const userInputParam = searchParams.get("userInput");
+  const userInputInitRef = useRef(false);
 
   // State management
   const [showCommands, setShowCommands] = useState(false);
@@ -132,13 +134,13 @@ function ChatPageContent() {
   // Add this helper function
   const formatLessonPlanMessage = (lessonPlan: any) => {
     return (
-      `Let's discuss the lesson plan for "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} (Grade ${lessonPlan.grade}).\n\n` +
+      `Hey buddy, "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} (I'm from grade ${lessonPlan.grade}).\n\n` +
       `Class Details:\n` +
       `- Duration: ${lessonPlan.class_duration} minutes\n` +
       `- Number of sessions: ${lessonPlan.number_of_days}\n` +
       `- Board: ${lessonPlan.board || "Not specified"}\n\n` +
       `Learning Objectives:\n${lessonPlan.learning_objectives || "Not specified"}\n\n` +
-      `Please help me understand the key concepts and teaching strategies for this lesson.`
+      `Please help me understand the key concepts for this lesson.`
     );
   };
 
@@ -165,19 +167,27 @@ function ChatPageContent() {
         if (!response.ok) throw new Error("Failed to fetch lesson plan");
 
         const lessonPlan = await response.json();
-        let messageContent = formatLessonPlanMessage(lessonPlan);
+        let messageContent;
 
-        // Add schedule-specific context if available
-        if (scheduleDataParam) {
-          const scheduleData = JSON.parse(
-            decodeURIComponent(scheduleDataParam)
-          );
-          messageContent += `\n\nLet's focus on Day ${scheduleData.day}: ${scheduleData.topicHeading}\n`;
-          messageContent += `Activity: ${scheduleData.schedule.type} - ${scheduleData.schedule.title}\n`;
-          messageContent += `Content: ${scheduleData.schedule.content}\n`;
-          messageContent += `Duration: ${scheduleData.schedule.timeAllocation} minutes\n\n`;
-          messageContent +=
-            "Please help me understand this specific part of the lesson.";
+        if (userInputParam) {
+          // If userInput is present, use it directly
+          messageContent = userInputParam;
+        } else {
+          // Otherwise use the formatted lesson plan message
+          messageContent = formatLessonPlanMessage(lessonPlan);
+
+          // Add schedule-specific context if available
+          if (scheduleDataParam) {
+            const scheduleData = JSON.parse(
+              decodeURIComponent(scheduleDataParam)
+            );
+            messageContent += `\n\nLet's focus on Day ${scheduleData.day}: ${scheduleData.topicHeading}\n`;
+            messageContent += `Activity: ${scheduleData.schedule.type} - ${scheduleData.schedule.title}\n`;
+            messageContent += `Content: ${scheduleData.schedule.content}\n`;
+            messageContent += `Duration: ${scheduleData.schedule.timeAllocation} minutes\n\n`;
+            messageContent +=
+              "Please help me understand this specific part of the lesson.";
+          }
         }
 
         const userMessage: ChatMessage = {
@@ -207,7 +217,22 @@ function ChatPageContent() {
     router,
     isTeachingMode,
     saveMessage,
+    userInputParam, // Add userInputParam to dependencies
   ]);
+
+  useEffect(() => {
+    if (userInputInitRef.current || !userInputParam) return;
+    userInputInitRef.current = true;
+    setMessages((prevMessages: ChatMessage[]) => [
+      ...prevMessages,
+      {
+        id: String(Date.now()),
+        role: "user",
+        content: `User says: ${userInputParam}`,
+        createdAt: new Date(),
+      },
+    ]);
+  }, [userInputParam, setMessages]);
 
   // Update handleThreadSelect to handle 'new' thread parameter
   const handleThreadSelect = async (selectedThreadId: string) => {

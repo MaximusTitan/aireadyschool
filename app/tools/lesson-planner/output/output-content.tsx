@@ -122,6 +122,7 @@ export default function OutputContent() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
+  const [buddyInput, setBuddyInput] = useState("");
 
   // Check authentication state directly in component
   useEffect(() => {
@@ -675,6 +676,17 @@ export default function OutputContent() {
     );
   };
 
+  const handleRedirectToBuddy = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (lessonPlan) {
+      router.push(
+        `/tools/gen-chat?thread=new&teachingMode=false&lessonPlanId=${
+          lessonPlan.id
+        }&userInput=${encodeURIComponent(buddyInput)}`
+      );
+    }
+  };
+
   const renderAssignButton = () => {
     if (!lessonPlan) return null;
 
@@ -1075,6 +1087,20 @@ export default function OutputContent() {
               </Button>
               {userRole !== "Student" && renderAssignButton()}
             </div>
+
+            {/* Add the new form here */}
+            <form onSubmit={handleRedirectToBuddy} className="mt-4 flex gap-2">
+              <input
+                type="text"
+                value={buddyInput}
+                onChange={(e) => setBuddyInput(e.target.value)}
+                placeholder="Enter your question for buddy..."
+                className="flex-1 px-4 py-2 border rounded-md"
+              />
+              <Button type="submit" variant="default">
+                Ask Buddy
+              </Button>
+            </form>
           </>
         )}
 

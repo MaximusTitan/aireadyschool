@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, Share2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import { EditLessonContent } from "../components/edit-lesson-content";
@@ -78,10 +78,18 @@ interface UploadedFile {
   url: string;
 }
 
+interface AssignLessonModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  lessonPlan: LessonPlan;
+  assessmentId: string | null;
+}
+
 export default function OutputContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
+  const assessmentId = searchParams.get("assessmentId");
   const [lessonPlan, setLessonPlan] = useState<LessonPlan | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("day-1");
@@ -97,6 +105,11 @@ export default function OutputContent() {
     isOpen: false,
     activity: null,
   });
+  const [assignLessonModal, setAssignLessonModal] = useState<{
+    isOpen: boolean;
+  }>({
+    isOpen: false,
+  });
   const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({});
   const [uploadedFiles, setUploadedFiles] = useState<{
     [key: string]: UploadedFile[];
@@ -104,6 +117,7 @@ export default function OutputContent() {
   const { toast } = useToast();
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
+  const [isAssigning, setIsAssigning] = useState(false);
 
   // Check authentication state directly in component
   useEffect(() => {
@@ -562,6 +576,83 @@ export default function OutputContent() {
     doc.save(fileName);
   };
 
+  const handleAssignLesson = async () => {
+    if (!lessonPlan) return;
+
+    setIsAssigning(true);
+    try {
+      if (!assessmentId) {
+        // If no assessmentId, open assign modal
+        setAssignLessonModal({ isOpen: true });
+        return;
+      }
+
+      // If we have an assessmentId, update the assigned_assessment record directly
+      const { error } = await supabase
+        .from("assigned_assessments")
+        .update({
+          lesson_plan: {
+            id: lessonPlan.id,
+            subject: lessonPlan.subject,
+            chapter_topic: lessonPlan.chapter_topic,
+            grade: lessonPlan.grade,
+            board: lessonPlan.board,
+            class_duration: lessonPlan.class_duration,
+            number_of_days: lessonPlan.number_of_days,
+            learning_objectives: lessonPlan.learning_objectives,
+            plan_data: lessonPlan.plan_data,
+            created_at: new Date().toISOString(),
+          },
+        })
+        .eq("assessment_id", assessmentId);
+
+      if (error) {
+        console.error("Error assigning lesson plan:", error);
+        toast({
+          title: "Error",
+          description: "Failed to assign lesson plan. Please try again.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: "Lesson plan assigned successfully",
+        });
+
+        // Redirect back to the assessment page
+        router.push(`/classroom/assessments/${assessmentId}`);
+      }
+    } catch (error) {
+      console.error("Error assigning lesson plan:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign lesson plan. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const renderAssignButton = () => {
+    if (!lessonPlan) return null;
+
+    return (
+      <Button
+        onClick={handleAssignLesson}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
+        disabled={isAssigning}
+      >
+        <Share2 className="mr-2 h-4 w-4" />
+        {isAssigning
+          ? "Assigning..."
+          : assessmentId
+            ? "Assign to Assessment"
+            : "Assign to Student"}
+      </Button>
+    );
+  };
+
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
@@ -932,6 +1023,7 @@ export default function OutputContent() {
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>
+              {renderAssignButton()}
             </div>
           </>
         )}
@@ -958,6 +1050,49 @@ export default function OutputContent() {
             lessonPlanId={lessonPlan.id}
           />
         )}
+        {assignLessonModal.isOpen && lessonPlan && (
+          <AssignLessonModal
+            isOpen={assignLessonModal.isOpen}
+            onClose={() => setAssignLessonModal({ isOpen: false })}
+            lessonPlan={lessonPlan}
+            assessmentId={assessmentId}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AssignLessonModal({
+  isOpen,
+  onClose,
+  lessonPlan,
+  assessmentId,
+}: AssignLessonModalProps) {
+  const router = useRouter();
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full">
+        <h2 className="text-xl font-semibold mb-4">Assign Lesson Plan</h2>
+        <p className="mb-6">
+          To assign this lesson plan to students, please go to the student
+          management page.
+        </p>
+
+        <div className="flex justify-end gap-3">
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => router.push("/classroom/students")}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            Go to Student Management
+          </Button>
+        </div>
       </div>
     </div>
   );

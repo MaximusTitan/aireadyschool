@@ -68,7 +68,9 @@ export async function POST(request: Request) {
       learningObjectives,
       lessonObjectives,
       additionalInstructions,
-      userEmail
+      userEmail,
+      assessmentId, // Extract assessmentId if provided
+      studentId // Extract studentId if provided
     } = await request.json();
 
     // Validate required fields
@@ -90,14 +92,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify the email matches the authenticated user
-    if (user.email !== userEmail) {
-      return NextResponse.json(
-        { error: "Unauthorized - email mismatch" },
-        { status: 403 }
-      );
-    }
-
     console.log("Generating lesson plan for:", {
       subject,
       chapterTopic,
@@ -109,6 +103,8 @@ export async function POST(request: Request) {
       userEmail,
       lessonObjectives,
       additionalInstructions: additionalInstructions || "Not provided",
+      assessmentId: assessmentId || "Not provided",
+      studentId: studentId || "Not provided"
     });
 
     // Create the user prompt
@@ -202,7 +198,8 @@ Include all days in the plan. Return ONLY a complete, valid JSON object with no 
     }
 
     console.log("Storing lesson plan in Supabase");
-    // Store the lesson plan in the database
+    
+    // Store the lesson plan in the lesson_plans table
     const { data: insertedData, error: insertError } = await supabase
       .from("lesson_plans")
       .insert({
@@ -226,6 +223,40 @@ Include all days in the plan. Return ONLY a complete, valid JSON object with no 
         { error: `Failed to save lesson plan: ${insertError.message}` },
         { status: 500 }
       );
+    }
+
+    // If an assessmentId was provided, update the assigned_assessments table with the lesson plan
+    if (assessmentId) {
+      console.log(`Updating assigned_assessments with lesson plan for assessment ID: ${assessmentId}`);
+      
+      // Create the complete lesson plan object with all data
+      const completeLessonPlanData = {
+        id: insertedData[0].id,
+        subject,
+        chapter_topic: chapterTopic,
+        grade,
+        board,
+        class_duration: Number.parseInt(classDuration),
+        number_of_days: Number.parseInt(numberOfDays.toString()),
+        learning_objectives: learningObjectives,
+        lesson_objectives: lessonObjectives,
+        additional_instructions: additionalInstructions,
+        plan_data: lessonPlan,
+        created_at: new Date().toISOString()
+      };
+
+      // Update the assigned_assessments table
+      const { error: updateError } = await supabase
+        .from("assigned_assessments")
+        .update({ lesson_plan: completeLessonPlanData })
+        .eq("assessment_id", assessmentId);
+
+      if (updateError) {
+        console.error("Error updating assigned_assessments with lesson plan:", updateError);
+        // We'll continue even if this fails, as the primary insertion succeeded
+      } else {
+        console.log("Successfully updated assigned_assessments with lesson plan data");
+      }
     }
 
     if (!insertedData || insertedData.length === 0) {

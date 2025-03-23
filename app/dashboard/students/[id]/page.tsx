@@ -283,6 +283,30 @@ export default function StudentDetailsPage({
     router.push(`/tools/lesson-content-generator?lesson=${lessonId}`);
   };
 
+  // Update the createLessonPlan function to accept assessment details
+  const createLessonPlan = () => {
+    if (student) {
+      router.push(
+        `/tools/lesson-planner/create?studentId=${student.id}&studentName=${encodeURIComponent(student.name)}&grade=${encodeURIComponent(student.grade_name)}&email=${encodeURIComponent(student.email)}`
+      );
+    }
+  };
+
+  // Create a new function to handle creating lesson plan from assessment
+  const createLessonPlanFromAssessment = (
+    assessmentId: string,
+    subject: string,
+    title: string,
+    grade: string,
+    board: string
+  ) => {
+    if (student) {
+      router.push(
+        `/tools/lesson-planner/create?studentId=${student.id}&studentName=${encodeURIComponent(student.name)}&assessmentId=${encodeURIComponent(assessmentId)}&grade=${encodeURIComponent(student.grade_name)}&email=${encodeURIComponent(student.email)}&subject=${encodeURIComponent(subject)}&title=${encodeURIComponent(title)}&board=${encodeURIComponent(board || "CBSE")}`
+      );
+    }
+  };
+
   if (loading) {
     return (
       <DashboardLayout title="Student Details">
@@ -387,6 +411,7 @@ export default function StudentDetailsPage({
           assignedAssessments={assignedAssessments}
           viewAssessment={viewAssessment}
           studentEmail={student.email} // added new prop
+          createLessonPlanFromAssessment={createLessonPlanFromAssessment} // Add the new prop
         />
 
         <DashboardCard title="Study Plan History">
@@ -488,6 +513,15 @@ export default function StudentDetailsPage({
 
         <DashboardCard title="Lesson Content History">
           <div className="p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">Past Lessons</h3>
+              <Button
+                onClick={createLessonPlan}
+                className="bg-rose-600 hover:bg-rose-700 text-white"
+              >
+                Create Lesson Plan
+              </Button>
+            </div>
             {lessonContentsLoading ? (
               <div className="animate-pulse text-center py-4">
                 Loading lesson content history...

@@ -20,6 +20,13 @@ interface AssessmentHistoryProps {
   assignedAssessments: any[];
   viewAssessment: (assessmentId: string) => void;
   studentEmail: string; // added prop
+  createLessonPlanFromAssessment?: (
+    assessmentId: string,
+    subject: string,
+    title: string,
+    grade: string,
+    board: string
+  ) => void;
 }
 
 const AssessmentHistory: React.FC<AssessmentHistoryProps> = ({
@@ -29,6 +36,7 @@ const AssessmentHistory: React.FC<AssessmentHistoryProps> = ({
   assignedAssessments,
   viewAssessment,
   studentEmail, // destructured new prop
+  createLessonPlanFromAssessment,
 }) => {
   const router = useRouter(); // initialize router
 
@@ -149,6 +157,24 @@ const AssessmentHistory: React.FC<AssessmentHistoryProps> = ({
                         >
                           Show Evaluation
                         </Button>
+                        {/* Add Create Lesson Plan button */}
+                        {createLessonPlanFromAssessment && (
+                          <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() =>
+                              createLessonPlanFromAssessment(
+                                assessment.id,
+                                assessment.subject,
+                                assessment.topic,
+                                assessment.class_level,
+                                assessment.board || "CBSE"
+                              )
+                            }
+                          >
+                            Lesson Plan
+                          </Button>
+                        )}
                       </td>
                     </tr>
                   );

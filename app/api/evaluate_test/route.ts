@@ -21,6 +21,15 @@ interface Question {
   explanation?: string;
 }
 
+// Add new interface for evaluation result
+interface EvaluationResult {
+  assessment_id: number;
+  score: number;
+  feedback: Record<string, FeedbackItem>;
+  total_questions: number;
+  correct_answers: number;
+}
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -30,41 +39,73 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Use the questions from the request if available, otherwise fetch from database
-    let assessmentQuestions = questions;
-    if (!assessmentQuestions) {
-      const { data: assessment, error } = await supabase
-        .from('assessments')
-        .select('*')
-        .eq('id', assessment_id)
-        .single();
+    // Split and validate assessment IDs
+    const assessmentIds: string[] = assessment_id.split(',').map((id: string) => id.trim());
+    const primaryAssessmentId = parseInt(assessmentIds[0]); // Use first ID as primary
 
-      if (error || !assessment) {
-        console.error('Error fetching assessment:', error);
-        return NextResponse.json({ error: 'Assessment not found' }, { status: 404 });
-      }
-      assessmentQuestions = assessment.questions;
-    }
+    // Group questions by assessment ID
+    const questionsByAssessment = questions.reduce((acc: any, q: any) => {
+      const id = q.assessmentId;
+      if (!acc[id]) acc[id] = [];
+      acc[id].push(q);
+      return acc;
+    }, {});
 
-    // Calculate score and generate feedback
-    const evaluationResult = await evaluateAnswers(student_answers, { questions: assessmentQuestions });
+    // Evaluate each assessment separately
+    const evaluationPromises = assessmentIds.map(async (id: string) => {
+      const assessmentQuestions = questionsByAssessment[id];
+      const result = await evaluateAnswers(
+        student_answers.slice(0, assessmentQuestions.length),
+        { questions: assessmentQuestions }
+      );
 
-    // Determine performance based on benchmark
-    const benchmark_score = 50; // You can make this dynamic
-    const performance = evaluationResult.score >= benchmark_score ? 'Good' : 'Needs Improvement';
+      return {
+        assessment_id: parseInt(id),
+        score: result.score,
+        feedback: result.feedback,
+        total_questions: result.totalQuestions,
+        correct_answers: result.correctAnswers
+      };
+    });
 
-    // Store evaluation results
+    const evaluations = await Promise.all(evaluationPromises);
+
+    // Calculate combined score and metrics
+    const totalScore = evaluations.reduce((sum, evaluation: EvaluationResult) => sum + evaluation.score, 0);
+    const averageScore = Math.round(totalScore / evaluations.length);
+
+    // Format combined feedback with assessment IDs
+    const detailedFeedback = evaluations.reduce((acc, evaluation: EvaluationResult, index) => {
+      const assessmentId = assessmentIds[index];
+      // Convert feedback objects to include assessment ID prefix
+      const assessmentFeedback = Object.entries(evaluation.feedback).reduce((fb, [qKey, value]) => ({
+        ...fb,
+        [`A${assessmentId}_${qKey}`]: value
+      }), {});
+      return { ...acc, ...assessmentFeedback };
+    }, {});
+
+    // Store evaluation with primary assessment ID and metadata
     const { data: evaluationData, error: evalError } = await supabase
       .from('evaluation_test')
       .insert({
-        assessment_id,
+        assessment_id: primaryAssessmentId, // Store only the first assessment ID
         student_id,
         student_answers,
-        score: evaluationResult.score,
+        score: averageScore,
         total_marks: 100,
-        benchmark_score,
-        performance,
-        detailed_feedback: evaluationResult.feedback
+        benchmark_score: 50,
+        performance: averageScore >= 50 ? 'Good' : 'Needs Improvement',
+        detailed_feedback: detailedFeedback,
+        metadata: {  // Store additional assessment info in metadata
+          assessment_ids: assessmentIds,
+          individual_scores: evaluations.map((evaluation: EvaluationResult, index) => ({
+            assessment_id: assessmentIds[index],
+            score: evaluation.score,
+            total_questions: evaluation.total_questions,
+            correct_answers: evaluation.correct_answers
+          }))
+        }
       })
       .select()
       .single();
@@ -74,7 +115,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to store evaluation' }, { status: 500 });
     }
 
-    return NextResponse.json(evaluationData);
+    return NextResponse.json({
+      ...evaluationData,
+      individual_evaluations: evaluations,
+      all_assessment_ids: assessmentIds
+    });
+
   } catch (error) {
     console.error('Evaluation error:', error);
     return NextResponse.json(
@@ -84,18 +130,30 @@ export async function POST(req: Request) {
   }
 }
 
+interface FeedbackItem {
+  question: string;
+  studentAnswer: string;
+  correctAnswer: string | undefined;
+  isCorrect: boolean;
+  explanation: string;
+  options?: { [key: string]: string } | string[]; // Add options
+  selectedOptionIndex?: number | string;  // Add selected index
+  correctOptionIndex?: number | string;   // Add correct index
+}
+
 async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Question[] }) {
   let score = 0;
-  let feedback: Record<string, string> = {};
+  let feedback: Record<string, FeedbackItem> = {};
   const questions = assessment.questions;
 
   for (let i = 0; i < questions.length; i++) {
     const question = questions[i];
     const studentAnswer = studentAnswers[i];
+    const questionNumber = `${i + 1}`;  // Simple sequential number
     
-    // Determine question type
+    // Update question type detection
     const questionType = question.questionType || 
-      (Array.isArray(question.options) ? 'FillBlanks' : 
+      (Array.isArray(question.options) ? 'MCQ' : // Changed from 'FillBlanks' to 'MCQ'
        typeof question.options === 'object' ? 'MCQ' :
        typeof question.correctAnswer === 'boolean' ? 'TrueFalse' :
        'Short Answer');
@@ -105,24 +163,46 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
         case 'MCQ': {
           const isCorrect = studentAnswer === question.correctAnswer;
           score += isCorrect ? 5 : 0;
-          const selectedOption = Array.isArray(question.options) 
-            ? question.options[Number(studentAnswer)] 
-            : question.options?.[String(studentAnswer)] || 'No answer';
-          const correctOption = Array.isArray(question.options)
-            ? question.options[Number(question.correctAnswer)]
-            : question.options?.[String(question.correctAnswer)];
-          feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! Selected: ${selectedOption}`
-            : `Incorrect. Selected: ${selectedOption}. Correct: ${correctOption}`;
+          
+          // Fixed options handling
+          let options: string[] = [];
+          if (Array.isArray(question.options)) {
+            options = question.options;
+          } else if (question.options) {
+            options = Object.values(question.options);
+          }
+
+          const selectedOption = studentAnswer !== undefined ? options[studentAnswer] : 'No answer';
+          const correctOption = options[question.correctAnswer];
+
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: selectedOption || 'No answer',
+            correctAnswer: correctOption,
+            isCorrect,
+            explanation: isCorrect
+              ? `✅ Correct! You selected "${selectedOption}"`
+              : `❌ Incorrect. You selected "${selectedOption}". The correct answer is "${correctOption}"`,
+            options: options,
+            selectedOptionIndex: studentAnswer,
+            correctOptionIndex: question.correctAnswer
+          };
           break;
         }
 
         case 'TrueFalse': {
           const isCorrect = studentAnswer === question.correctAnswer;
           score += isCorrect ? 5 : 0;
-          feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! The statement is ${question.correctAnswer}`
-            : `Incorrect. You answered ${studentAnswer}, but the statement is ${question.correctAnswer}`;
+          
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: studentAnswer?.toString() || 'No answer',
+            correctAnswer: question.correctAnswer.toString(),
+            isCorrect,
+            explanation: isCorrect
+              ? `✅ Correct! The statement is ${question.correctAnswer}`
+              : `❌ Incorrect. You answered ${studentAnswer}, but the statement is ${question.correctAnswer}`
+          };
           break;
         }
 
@@ -133,16 +213,28 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const isCorrect = normalizedStudentAnswer === normalizedCorrectAnswer;
           
           score += isCorrect ? 5 : 0;
-          feedback[`q${i + 1}`] = isCorrect
-            ? `✅ Correct! Answer: ${correctAnswer}`
-            : `Incorrect. You wrote: "${studentAnswer || 'no answer'}". Correct answer: "${correctAnswer}"`;
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: studentAnswer || 'No answer',
+            correctAnswer: correctAnswer,
+            isCorrect,
+            explanation: isCorrect
+              ? `✅ Correct! Answer: "${correctAnswer}"`
+              : `❌ Incorrect. You wrote: "${studentAnswer || 'No answer'}". Correct answer: "${correctAnswer}"`
+          };
           break;
         }
 
         case 'Short Answer':
         case 'Descriptive': {
           if (!studentAnswer) {
-            feedback[`q${i + 1}`] = "No answer provided";
+            feedback[questionNumber] = {
+              question: question.question,
+              studentAnswer: 'No answer provided',
+              correctAnswer: question.correctAnswer || 'No correct answer',
+              isCorrect: false,
+              explanation: "No answer provided"
+            };
             continue;
           }
 
@@ -180,30 +272,54 @@ Grade this answer out of 5 points.`
             const questionScore = scoreMatch ? parseInt(scoreMatch[1]) : 0;
             
             score += questionScore;
-            feedback[`q${i + 1}`] = evaluation
-              .replace(/Score:\s*\d+\/5\n?/i, '')
-              .replace(/Feedback:\s*/i, '')
-              .trim();
+            feedback[questionNumber] = {
+              question: question.question,
+              studentAnswer: studentAnswer,
+              correctAnswer: question.correctAnswer || 'No correct answer',
+              isCorrect: questionScore === 5,
+              explanation: evaluation
+                .replace(/Score:\s*\d+\/5\n?/i, '')
+                .replace(/Feedback:\s*/i, '')
+                .trim()
+            };
 
             // Add checkmark for full marks
             if (questionScore === 5) {
-              feedback[`q${i + 1}`] = `✅ ${feedback[`q${i + 1}`]}`;
+              feedback[questionNumber].explanation = `✅ ${feedback[questionNumber].explanation}`;
             }
           } catch (error) {
             console.error(`GPT evaluation error for question ${i + 1}:`, error);
-            feedback[`q${i + 1}`] = "Error evaluating answer";
+            feedback[questionNumber] = {
+              question: question.question,
+              studentAnswer: 'Error',
+              correctAnswer: 'Error',
+              isCorrect: false,
+              explanation: "Error evaluating answer"
+            };
             score += 0;
           }
           break;
         }
 
         default:
-          feedback[`q${i + 1}`] = "Unknown question type";
+          feedback[questionNumber] = {
+            question: question.question,
+            studentAnswer: 'Unknown',
+            correctAnswer: 'Unknown',
+            isCorrect: false,
+            explanation: "Unknown question type"
+          };
           break;
       }
     } catch (error) {
       console.error(`Error evaluating question ${i + 1}:`, error);
-      feedback[`q${i + 1}`] = "Error in evaluation";
+      feedback[questionNumber] = {
+        question: question.question,
+        studentAnswer: 'Error',
+        correctAnswer: 'Error',
+        isCorrect: false,
+        explanation: "Error in evaluation"
+      };
     }
   }
 
@@ -213,6 +329,6 @@ Grade this answer out of 5 points.`
     score: finalScore,
     feedback,
     totalQuestions: questions.length,
-    correctAnswers: Object.values(feedback).filter(f => f.includes('✅')).length
+    correctAnswers: Object.values(feedback).filter(f => f.isCorrect).length
   };
 }

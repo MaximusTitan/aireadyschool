@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/utils/supabase/client";
 import ChatThreadsTable from "../components/ChatThreadsTable";
+import AssessmentHistory from "../../components/AssessmentHistory";
 
 interface StudentDetails {
   id: string;
@@ -379,17 +380,26 @@ export default function StudentDetailsPage({
           </div>
         </DashboardCard>
 
-        <DashboardCard title="Assessment History">
+        <AssessmentHistory
+          assessments={student.assessments}
+          loading={assessmentsLoading}
+          error={assessmentsError}
+          assignedAssessments={assignedAssessments}
+          viewAssessment={viewAssessment}
+          studentEmail={student.email} // added new prop
+        />
+
+        <DashboardCard title="Study Plan History">
           <div className="p-6">
-            {assessmentsLoading ? (
+            {studyPlansLoading ? (
               <div className="animate-pulse text-center py-4">
-                Loading assessment history...
+                Loading study plan history...
               </div>
-            ) : assessmentsError ? (
+            ) : studyPlansError ? (
               <div className="text-red-500 text-center py-4">
-                {assessmentsError}
+                {studyPlansError}
               </div>
-            ) : student.assessments && student.assessments.length > 0 ? (
+            ) : student.study_plans && student.study_plans.length > 0 ? (
               <div className="relative w-full overflow-auto max-h-[400px] scrollbar-thin">
                 <style>{`
                 .scrollbar-thin::-webkit-scrollbar {
@@ -413,105 +423,6 @@ export default function StudentDetailsPage({
                   background-color: rgba(255, 255, 255, 0.2);
                 }
                 `}</style>
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Board
-                      </th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Title
-                      </th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Grade
-                      </th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Subject
-                      </th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Type
-                      </th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Date
-                      </th>
-                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
-                        Action
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {student.assessments.map((assessment) => {
-                      const isAssigned = assignedAssessments.some(
-                        (a) => a.assessment_id === assessment.id
-                      );
-
-                      return (
-                        <tr
-                          key={assessment.id}
-                          className="border-b transition-colors hover:bg-gray-100"
-                        >
-                          <td className="p-4 align-middle">
-                            {assessment.board || "N/A"}
-                          </td>
-                          <td className="p-4 align-middle truncate max-w-[200px]">
-                            {assessment.topic}
-                          </td>
-                          <td className="p-4 align-middle">
-                            {assessment.class_level}
-                          </td>
-                          <td className="p-4 align-middle">
-                            {assessment.subject}
-                          </td>
-                          <td className="p-4 align-middle capitalize">
-                            {assessment.assessment_type}
-                          </td>
-                          <td className="p-4 align-middle">
-                            {new Date(assessment.created_at).toLocaleDateString(
-                              "en-GB",
-                              {
-                                day: "2-digit",
-                                month: "short",
-                                year: "2-digit",
-                              }
-                            )}
-                          </td>
-                          <td className="p-4 align-middle">
-                            {isAssigned && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => viewAssessment(assessment.id)}
-                              >
-                                View
-                              </Button>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-center text-gray-500">
-                No assessment history available
-              </p>
-            )}
-          </div>
-        </DashboardCard>
-
-        <DashboardCard title="Study Plan History">
-          <div className="p-6">
-            {studyPlansLoading ? (
-              <div className="animate-pulse text-center py-4">
-                Loading study plan history...
-              </div>
-            ) : studyPlansError ? (
-              <div className="text-red-500 text-center py-4">
-                {studyPlansError}
-              </div>
-            ) : student.study_plans && student.study_plans.length > 0 ? (
-              <div className="relative w-full overflow-auto max-h-[400px] scrollbar-thin">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>

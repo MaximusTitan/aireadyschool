@@ -263,6 +263,7 @@ export function useChatThread(initialThreadId?: string) {
       return formattedMessages;
     } catch (error) {
       console.error('Error loading thread:', error);
+      // Remove duplicate thread creation; just rethrow the error.
       throw error;
     }
   };

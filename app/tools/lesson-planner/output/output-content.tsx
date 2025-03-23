@@ -10,6 +10,9 @@ import { EditLessonContent } from "../components/edit-lesson-content";
 import { GenerateNotesDialog } from "../components/generate-notes-dialog";
 import { AddContentDropdown } from "../components/add-content-dropdown";
 import { useToast } from "@/components/ui/use-toast";
+import { createClient } from "@/utils/supabase/client";
+
+const supabaseClient = createClient();
 
 interface ScheduleItem {
   type: string;
@@ -118,6 +121,7 @@ export default function OutputContent() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
+  const [userRole, setUserRole] = useState<string | null>(null);
 
   // Check authentication state directly in component
   useEffect(() => {
@@ -126,6 +130,7 @@ export default function OutputContent() {
         const { data } = await supabase.auth.getSession();
         const email = data.session?.user?.email || null;
         setUserEmail(email);
+        setUserRole(data.session?.user?.user_metadata?.role || null);
         setIsAuthChecking(false);
       } catch (error) {
         console.error("Auth check error:", error);
@@ -140,11 +145,28 @@ export default function OutputContent() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => {
       setUserEmail(session?.user?.email || null);
+      setUserRole(session?.user?.user_metadata?.role || null);
     });
 
     return () => {
       subscription.unsubscribe();
     };
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const sessionCheck = await supabaseClient.auth.getSession();
+        // For example, fetch user metadata or role here
+        if (sessionCheck.data?.session?.user) {
+          setUserRole(
+            sessionCheck.data.session.user.user_metadata?.role || null
+          );
+        }
+      } catch (error) {
+        console.error("Page load role check error:", error);
+      }
+    })();
   }, []);
 
   const fetchLessonPlan = useCallback(async () => {
@@ -618,9 +640,6 @@ export default function OutputContent() {
           title: "Success",
           description: "Lesson plan assigned successfully",
         });
-
-        // Redirect back to the assessment page
-        router.push(`/classroom/assessments/${assessmentId}`);
       }
     } catch (error) {
       console.error("Error assigning lesson plan:", error);
@@ -634,20 +653,27 @@ export default function OutputContent() {
     }
   };
 
+  const handleChatWithBuddy = () => {
+    if (lessonPlan) {
+      router.push(
+        `/tools/gen-chat?thread=new&teachingMode=true&lessonPlanId=${lessonPlan.id}`
+      );
+    }
+  };
+
   const renderAssignButton = () => {
     if (!lessonPlan) return null;
 
     return (
       <Button
         onClick={handleAssignLesson}
-        className="bg-blue-600 hover:bg-blue-700 text-white"
+        className="bg-rose-400 hover:bg-rose-500 text-black"
         disabled={isAssigning}
       >
-        <Share2 className="mr-2 h-4 w-4" />
         {isAssigning
           ? "Assigning..."
           : assessmentId
-            ? "Assign to Assessment"
+            ? "Assign to Student"
             : "Assign to Student"}
       </Button>
     );
@@ -765,32 +791,38 @@ export default function OutputContent() {
                     <div className="text-sm">
                       <div className="flex items-center justify-between mb-2">
                         <div className="font-medium">Lesson Content</div>
-                        <AddContentDropdown
-                          onUpload={(file, type) =>
-                            handleFileUpload(
-                              file,
-                              type,
-                              `material-${day.day}-${index}`
-                            )
-                          }
-                        />
+                        {userRole !== "Student" && (
+                          <AddContentDropdown
+                            onUpload={(file, type) =>
+                              handleFileUpload(
+                                file,
+                                type,
+                                `material-${day.day}-${index}`
+                              )
+                            }
+                          />
+                        )}
                       </div>
                       <div className="text-gray-500">{item.title}</div>
-                      <button
-                        className="text-rose-500 hover:text-rose-600 text-sm mt-1 flex items-center gap-1"
-                        onClick={() =>
-                          handleGenerateNotes(item.title, item.content)
-                        }
-                        aria-label={
-                          generatedNotes[item.title]
-                            ? "View generated notes"
-                            : "Generate notes"
-                        }
-                      >
-                        {generatedNotes[item.title]
-                          ? "See the content"
-                          : "Generate"}
-                      </button>
+                      {userRole === "Student" ? (
+                        <button
+                          onClick={handleChatWithBuddy}
+                          className="text-blue-500 hover:text-blue-600 text-sm mt-1 flex items-center gap-1"
+                        >
+                          Chat with Buddy
+                        </button>
+                      ) : (
+                        <button
+                          className="text-rose-500 hover:text-rose-600 text-sm mt-1 flex items-center gap-1"
+                          onClick={() =>
+                            handleGenerateNotes(item.title, item.content)
+                          }
+                        >
+                          {generatedNotes[item.title]
+                            ? "See the content"
+                            : "Generate"}
+                        </button>
+                      )}
                       {uploadedFiles[`material-${day.day}-${index}`]?.map(
                         (file, fileIndex) => {
                           // Generate standardized file name based on type and count
@@ -837,11 +869,13 @@ export default function OutputContent() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold">Assessment Plan</h2>
-        <AddContentDropdown
-          onUpload={(file, type) =>
-            handleFileUpload(file, type, "assessment-plan")
-          }
-        />
+        {userRole !== "Student" && (
+          <AddContentDropdown
+            onUpload={(file, type) =>
+              handleFileUpload(file, type, "assessment-plan")
+            }
+          />
+        )}
       </div>
 
       {uploadedFiles["assessment-plan"]?.length > 0 && (
@@ -1013,17 +1047,16 @@ export default function OutputContent() {
             </div>
 
             <div className="mt-6 flex gap-4">
-              <Button
-                onClick={() => router.push("/tools/lesson-planner/create")}
-                className="bg-rose-600 hover:bg-rose-700 text-white"
-              >
-                Generate New Lesson Plan
-              </Button>
+              {userRole !== "Student" && (
+                <Button onClick={handleChatWithBuddy} variant="default">
+                  Chat with Buddy
+                </Button>
+              )}
               <Button variant="outline" onClick={handleDownload}>
                 <Download className="mr-2 h-4 w-4" />
                 Download PDF
               </Button>
-              {renderAssignButton()}
+              {userRole !== "Student" && renderAssignButton()}
             </div>
           </>
         )}
@@ -1050,49 +1083,6 @@ export default function OutputContent() {
             lessonPlanId={lessonPlan.id}
           />
         )}
-        {assignLessonModal.isOpen && lessonPlan && (
-          <AssignLessonModal
-            isOpen={assignLessonModal.isOpen}
-            onClose={() => setAssignLessonModal({ isOpen: false })}
-            lessonPlan={lessonPlan}
-            assessmentId={assessmentId}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-function AssignLessonModal({
-  isOpen,
-  onClose,
-  lessonPlan,
-  assessmentId,
-}: AssignLessonModalProps) {
-  const router = useRouter();
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <h2 className="text-xl font-semibold mb-4">Assign Lesson Plan</h2>
-        <p className="mb-6">
-          To assign this lesson plan to students, please go to the student
-          management page.
-        </p>
-
-        <div className="flex justify-end gap-3">
-          <Button variant="outline" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button
-            onClick={() => router.push("/classroom/students")}
-            className="bg-blue-600 hover:bg-blue-700"
-          >
-            Go to Student Management
-          </Button>
-        </div>
       </div>
     </div>
   );

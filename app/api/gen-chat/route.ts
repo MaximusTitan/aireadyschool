@@ -258,7 +258,7 @@ export async function POST(request: Request) {
     // Get user role from metadata
     const userRole = user.user_metadata?.role;
 
-    const { messages, id: threadId, language = 'english', teachingMode = false } = await request.json();
+    const { messages, id: threadId, language = 'english', teachingMode = false, lessonPlanId } = await request.json();
 
     // Add logging to debug language toggle
     console.log('Thread ID:', threadId);
@@ -338,18 +338,31 @@ export async function POST(request: Request) {
     let streamFinished = false;
     let streamError: Error | null = null;
 
+    let systemPrompt = getSystemPrompt(
+      cleanMessages, 
+      userRole, 
+      language as Language, 
+      teachingMode, 
+      studentDetails, 
+      studentDetails?.assignedAssessment ?? undefined // Fixed: ensure null is converted to undefined
+    );
+
+    // Add lesson plan context if available
+    if (lessonPlanId) {
+      const { data: lessonPlan, error } = await supabase
+        .from('lesson_plans')
+        .select('*')
+        .eq('id', lessonPlanId)
+        .single();
+
+      if (lessonPlan && !error) {
+        systemPrompt += `\n\nYou are discussing the lesson plan for "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} for grade ${lessonPlan.grade}. The lesson is planned for ${lessonPlan.number_of_days} sessions of ${lessonPlan.class_duration} minutes each. Learning objectives: ${lessonPlan.learning_objectives || 'Not specified'}`;
+      }
+    }
+
     const streamHandler = streamText({
       model: anthropic('claude-3-7-sonnet-20250219'),
-      system: teachingMode 
-        ? (language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI)
-        : getSystemPrompt(
-            cleanMessages, 
-            userRole, 
-            language as Language, 
-            teachingMode, 
-            studentDetails, 
-            studentDetails?.assignedAssessment ?? undefined // Fixed: ensure null is converted to undefined
-          ),
+      system: systemPrompt,
       messages: cleanMessages as CreateMessage[],
       maxSteps: 5,
       tools,

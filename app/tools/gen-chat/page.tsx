@@ -2,18 +2,18 @@
 
 import { useChat } from "ai/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useRef, useState, useCallback, useEffect } from "react";
+import { useRef, useState, useCallback, useEffect, Suspense } from "react"; // Add Suspense import
 import { useSidebar } from "@/components/ui/sidebar";
 import { ChatArea } from "./components/chat-area";
 import { useChatThread } from "@/app/tools/gen-chat/hooks/useChatThread";
 import { ThreadList } from "./components/thread-list";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Message } from "ai";
 import { ChatMessage } from "@/types/chat";
 import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 import { useTools } from "@/app/tools/gen-chat/hooks/useTools";
 
-export default function Page() {
+function ChatPageContent() {
   const router = useRouter();
   const { setOpen } = useSidebar();
   const { language } = useLanguageSettings();
@@ -30,6 +30,11 @@ export default function Page() {
     isOwner,
   } = useChatThread();
 
+  // Replace direct window usage with useSearchParams to avoid "window is not defined"
+  const searchParams = useSearchParams();
+  const lessonPlanIdParam = searchParams.get("lessonPlanId");
+  const teachingModeParam = searchParams.get("teachingMode") === "true";
+
   // State management
   const [showCommands, setShowCommands] = useState(false);
   const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(
@@ -38,7 +43,8 @@ export default function Page() {
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const chatRef = useRef<any>(null);
-  const [isTeachingMode, setIsTeachingMode] = useState(false);
+  // Replace initial state with URL value:
+  const [isTeachingMode, setIsTeachingMode] = useState(teachingModeParam);
 
   // Add this function to handle teaching mode
   const handleTeachingModeToggle = () => {
@@ -51,7 +57,7 @@ export default function Page() {
     setLastGeneratedImage,
   });
 
-  // Initialize chat and handle message saving
+  // Add lessonPlanId to chat body
   const chat = useChat({
     api: "/api/gen-chat",
     id: threadId,
@@ -65,6 +71,7 @@ export default function Page() {
       id: threadId,
       language,
       teachingMode: isTeachingMode,
+      lessonPlanId: lessonPlanIdParam, // Add this line
     },
     onFinish: useCallback(
       async (message: Message) => {
@@ -91,12 +98,21 @@ export default function Page() {
   chatRef.current = chat;
   const { messages, input, setInput, append, isLoading, setMessages } = chat;
 
+  // Add initialization control
+  const initializationRef = useRef(false);
+  const threadInitRef = useRef(false);
+
   // Side effects
   useEffect(() => {
+    if (initializationRef.current) return;
+    initializationRef.current = true;
+
     setOpen(false);
     const searchParams = new URLSearchParams(window.location.search);
     const threadParam = searchParams.get("thread");
-    if (threadParam) handleThreadSelect(threadParam);
+    if (threadParam && threadParam !== "new") {
+      handleThreadSelect(threadParam);
+    }
   }, [setOpen]);
 
   useEffect(() => {
@@ -112,14 +128,92 @@ export default function Page() {
     }
   }, [currentMessages, setMessages]);
 
-  // Handle thread operations
+  // Add this helper function
+  const formatLessonPlanMessage = (lessonPlan: any) => {
+    return (
+      `Let's discuss the lesson plan for "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} (Grade ${lessonPlan.grade}).\n\n` +
+      `Class Details:\n` +
+      `- Duration: ${lessonPlan.class_duration} minutes\n` +
+      `- Number of sessions: ${lessonPlan.number_of_days}\n` +
+      `- Board: ${lessonPlan.board || "Not specified"}\n\n` +
+      `Learning Objectives:\n${lessonPlan.learning_objectives || "Not specified"}\n\n` +
+      `Please help me understand the key concepts and teaching strategies for this lesson.`
+    );
+  };
+
+  // Modify the lesson plan initialization effect
+  useEffect(() => {
+    const initializeLessonPlan = async () => {
+      if (threadInitRef.current || !lessonPlanIdParam || messages.length > 0)
+        return;
+      threadInitRef.current = true;
+
+      try {
+        let activeThreadId = threadId;
+        if (!activeThreadId) {
+          activeThreadId = await createThread();
+          // First update URL with all params
+          await router.push(
+            `/tools/gen-chat?thread=${activeThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}`
+          );
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+
+        const response = await fetch(`/api/lesson-plans/${lessonPlanIdParam}`);
+        if (!response.ok) throw new Error("Failed to fetch lesson plan");
+
+        const lessonPlan = await response.json();
+        const messageContent = formatLessonPlanMessage(lessonPlan);
+
+        const userMessage: ChatMessage = {
+          id: String(Date.now()),
+          role: "user",
+          content: messageContent,
+          createdAt: new Date(),
+        };
+
+        await saveMessage(userMessage, activeThreadId);
+        await append(userMessage);
+
+        // After sending the first message, clear the teaching mode and lesson plan params
+        router.replace(`/tools/gen-chat?thread=${activeThreadId}`);
+      } catch (error) {
+        console.error("Error initializing lesson plan chat:", error);
+      }
+    };
+
+    initializeLessonPlan();
+  }, [
+    lessonPlanIdParam,
+    messages.length,
+    append,
+    threadId,
+    createThread,
+    router,
+    isTeachingMode,
+    saveMessage,
+  ]);
+
+  // Update handleThreadSelect to handle 'new' thread parameter
   const handleThreadSelect = async (selectedThreadId: string) => {
+    if (selectedThreadId === "new") {
+      const newThreadId = await startNewThread();
+      router.push(
+        `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}`
+      );
+      return;
+    }
+
     try {
       const messages = await loadThread(selectedThreadId);
       if (messages) setMessages(messages);
       router.push(`/tools/gen-chat?thread=${selectedThreadId}`);
     } catch (error) {
       console.error("Failed to load thread:", error);
+      const newThreadId = await startNewThread();
+      router.push(
+        `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}`
+      );
     }
   };
 
@@ -278,7 +372,6 @@ export default function Page() {
           isOwner={isOwner}
           isTeachingMode={isTeachingMode}
           onTeachingModeToggle={handleTeachingModeToggle}
-          // Add these new props
           generatedAssessments={tools.generatedAssessments}
           pendingAssessments={tools.pendingAssessments}
           handleAssessmentGeneration={tools.handleAssessmentGeneration}
@@ -286,5 +379,19 @@ export default function Page() {
         />
       </div>
     </TooltipProvider>
+  );
+}
+
+// Create a loading component
+function Loading() {
+  return <div className="p-4">Loading...</div>;
+}
+
+// Main page component with Suspense boundary
+export default function Page() {
+  return (
+    <Suspense fallback={<Loading />}>
+      <ChatPageContent />
+    </Suspense>
   );
 }

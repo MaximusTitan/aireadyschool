@@ -24,9 +24,9 @@ export default function QuestionCount({
       <Input
         type="number"
         id={id}
-        placeholder="10"
+        placeholder="1"
         min="1"
-        max="20"
+        max="50"
         value={value}
         onChange={(e) => onChange(Number(e.target.value))}
       />

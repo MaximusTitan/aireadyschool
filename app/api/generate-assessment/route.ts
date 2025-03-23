@@ -50,10 +50,11 @@ export async function POST(req: Request) {
       prompt += `The assessment should address the following learning outcomes:\n${(learningOutcomes as string[])
         .map((outcome: string, index: number) => `${index + 1}. ${outcome}`)
         .join("\n")}\n\n`
-        prompt += `For each question type, follow the guidelines below:
-  - **MCQs:** Provide 4 options (A, B, C, D) with one correct answer.
-  - **Short Answer:** Provide a concise question with a correct answer.
-  Format the output as a JSON array of objects. You may group the questions by type or merge them in one array, as long as each object contains the appropriate fields based on its question type.`
+      // Explicitly instruct the AI to generate the specified number of questions per type
+      prompt += `Generate exactly ${mixedQuestionCount.mcq} MCQs and ${mixedQuestionCount.shortanswer} Short Answer questions. `
+      prompt += `For MCQs: Provide 4 options (A, B, C, D) with one correct answer. `
+      prompt += `For Short Answer: Provide a concise question with its correct answer. `
+      prompt += `Format the output as a JSON array of objects. Each object must include a 'questionType' field (with value "MCQ" or "Short Answer") along with the appropriate fields for that type.`
     } else {
       prompt += `${questionCount} questions. `
       prompt += `The assessment should address the following learning outcomes:\n${(learningOutcomes as string[])
@@ -77,11 +78,12 @@ export async function POST(req: Request) {
       }
     }
 
+
     const { text, usage } = await generateText({
       model: anthropic("claude-3-7-sonnet-20250219"),
       prompt: prompt,
       temperature: 0.9,
-      maxTokens: 2000,
+      maxTokens: 6000,
     })
 
     // Log token usage with authenticated user's email

@@ -9,6 +9,7 @@ interface MixedAssessmentQuestionProps {
   userAnswer: any;
   onChange: (answer: any) => void;
   showResults: boolean;
+  shortAnswerScore?: number;
 }
 
 const transformObjectToArray = (optionsObject: Record<string, string>): string[] => {
@@ -24,35 +25,37 @@ export default function MixedAssessmentQuestion({
   userAnswer,
   onChange,
   showResults,
+  shortAnswerScore,
 }: MixedAssessmentQuestionProps) {
   // Normalize questionType for comparison
   const rawType = question.questionType || "";
   const questionType = rawType.toLowerCase();
 
-  if (questionType === "mcq") {
-    // Transform options if they're coming as an object instead of an array
-    let optionsArray: string[] = [];
-    if (Array.isArray(question.options)) {
-      optionsArray = question.options;
-    } else if (question.options && typeof question.options === "object") {
-      optionsArray = transformObjectToArray(question.options);
-    }
-    
-    // Convert correctAnswer from letter to index if needed.
-    let correctAnswerIndex: number = 0;
-    if (typeof question.correctAnswer === "string") {
-      // Assuming "A" corresponds to index 0, "B" to 1, etc.
-      correctAnswerIndex =
-        question.correctAnswer.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
-    } else {
-      correctAnswerIndex = question.correctAnswer;
-    }
-    const mcqQuestion = {
-      ...question,
-      options: optionsArray,
-      correctAnswer: correctAnswerIndex,
-    };
+  // Transform options if they're coming as an object instead of an array
+  let optionsArray: string[] = [];
+  if (Array.isArray(question.options)) {
+    optionsArray = question.options;
+  } else if (question.options && typeof question.options === "object") {
+    optionsArray = transformObjectToArray(question.options);
+  }
+  
+  // Convert correctAnswer from letter to index if needed.
+  let correctAnswerIndex: number = 0;
+  if (typeof question.correctAnswer === "string") {
+    // Assuming "A" corresponds to index 0, "B" to 1, etc.
+    correctAnswerIndex =
+      question.correctAnswer.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+  } else {
+    correctAnswerIndex = question.correctAnswer;
+  }
+  const mcqQuestion = {
+    ...question,
+    options: optionsArray,
+    correctAnswer: correctAnswerIndex,
+  };
 
+  // Use conditional logic to return the appropriate component
+  if (questionType === "mcq") {
     return (
       <MCQQuestion
         question={mcqQuestion}
@@ -60,6 +63,17 @@ export default function MixedAssessmentQuestion({
         userAnswer={userAnswer}
         onChange={onChange}
         showResults={showResults}
+      />
+    );
+  } else if (questionType === "short answer" || questionType === "shortanswer") {
+    return (
+      <ShortQuestion
+        question={question}
+        index={index}
+        userAnswer={userAnswer}
+        onChange={onChange}
+        showResults={showResults}
+        evaluatedScore={shortAnswerScore} // Ensure proper evaluation logic
       />
     );
   } else if (questionType === "true/false" || questionType === "truefalse") {
@@ -100,17 +114,6 @@ export default function MixedAssessmentQuestion({
         userAnswer={userAnswer}
         onChange={onChange}
         showResults={showResults}
-      />
-    );
-  } else if (questionType === "short answer" || questionType === "shortanswer") {
-    return (
-      <ShortQuestion
-        question={question}
-        index={index}
-        userAnswer={userAnswer}
-        onChange={onChange}
-        showResults={showResults}
-        evaluatedScore={undefined} // Adjust if you have evaluation logic
       />
     );
   } else {

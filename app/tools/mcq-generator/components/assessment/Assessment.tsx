@@ -8,7 +8,7 @@ import MCQQuestion from "../questions/MCQQuestion";
 import TrueFalseQuestion from "../questions/TrueFalseQuestion";
 import FillInTheBlankQuestion from "../questions/FillInTheBlankQuestion";
 import ShortQuestion from "../questions/ShortQuestion";
-import MixedAssessmentQuestion from "../questions/MixedAssessmentQuestion"
+import MixedAssessmentQuestion from "../questions/MixedAssessmentQuestion";
 import { downloadAssessment } from "@/utils/exportAssessment";
 import { Download, Edit, Save, Upload } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -32,16 +32,14 @@ export default function Assessment({
   userAnswers,
   assessmentId,
   topic,
-  readOnly = false, // Default to false if not provided
+  readOnly = false,
 }: AssessmentProps) {
   // New state for the full assessment record fetched from backend
   const [assessmentRecord, setAssessmentRecord] = useState<any>(null);
 
   // States for questions, answers, and images
   const [answers, setAnswers] = useState<any[]>(
-    userAnswers.length > 0
-      ? userAnswers
-      : new Array(assessment.length).fill(null)
+    userAnswers.length > 0 ? userAnswers : new Array(assessment.length).fill(null)
   );
   const [editedAssessment, setEditedAssessment] = useState(assessment);
   const [uploadedImages, setUploadedImages] = useState<(string | null)[]>(
@@ -61,6 +59,13 @@ export default function Assessment({
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const autoSaveTimeoutRef = useRef<number | null>(null);
+
+  // Helper: Convert an object of options to a sorted array
+  const transformObjectToArray = (optionsObject: Record<string, string>): string[] => {
+    return Object.keys(optionsObject)
+      .sort()
+      .map((key) => optionsObject[key]);
+  };
 
   // Fetch the full assessment record if an assessmentId is provided.
   useEffect(() => {
@@ -118,6 +123,26 @@ export default function Assessment({
     }
   }, [assessment, userAnswers, assessmentRecord]);
 
+  // Convert MCQ options from object to array once,
+  // so that editedAssessment always has options as an array.
+  useEffect(() => {
+    if (editedAssessment && editedAssessment.length > 0) {
+      const newAssessment = editedAssessment.map((q: any) => {
+        if (
+          q.questionType?.trim().toLowerCase() === "mcq" &&
+          q.options &&
+          !Array.isArray(q.options)
+        ) {
+          return { ...q, options: transformObjectToArray(q.options) };
+        }
+        return q;
+      });
+      setEditedAssessment(newAssessment);
+    }
+    // We run this effect only when the initial assessment data is set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assessment]);
+
   useEffect(() => {
     if (showResults && assessmentType === "shortanswer") {
       const evaluateAnswers = async () => {
@@ -147,7 +172,6 @@ export default function Assessment({
   }, [showResults, editedAssessment, answers, assessmentType]);
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
-    // Skip updating answers if in readonly mode
     if (readOnly) return;
 
     const newAnswers = [...answers];
@@ -161,10 +185,7 @@ export default function Assessment({
     // Save answer to DB
     if (assessmentId) {
       if (assessmentType === "shortanswer") {
-        // Clear previous debounce timer
-        if (autoSaveTimeoutRef.current)
-          clearTimeout(autoSaveTimeoutRef.current);
-        // Set debounce timer to save after 1 second
+        if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
         autoSaveTimeoutRef.current = window.setTimeout(() => {
           fetch("/api/save-answer", {
             method: "PUT",
@@ -197,7 +218,6 @@ export default function Assessment({
   };
 
   const handleSubmit = async () => {
-    // Don't allow submission in readonly mode
     if (readOnly) return;
     await onSubmit(answers);
     await handleSaveResults();
@@ -219,10 +239,7 @@ export default function Assessment({
       ) {
         return score + (answer === question.correctAnswer ? 1 : 0);
       } else if (assessmentType === "fillintheblank" && question.answer) {
-        return (
-          score +
-          (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
-        );
+        return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
       } else if (assessmentType === "shortanswer") {
         return score + (shortAnswerScores[index] || 0);
       }
@@ -230,21 +247,16 @@ export default function Assessment({
     }, 0);
   };
 
-  // Modified handleImageUpload sends the file along with index, num_questions, and assessmentId.
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
     index: number
   ) => {
     const file = event.target.files?.[0];
     if (!file) return;
-
-    // Check if file is PNG or JPEG
     if (!["image/png", "image/jpeg", "image/jpg"].includes(file.type)) {
       alert("Please upload only PNG or JPEG images");
       return;
     }
-
-    // Create a local preview
     const reader = new FileReader();
     reader.onload = (e) => {
       const newUploadedImages = [...uploadedImages];
@@ -253,7 +265,6 @@ export default function Assessment({
     };
     reader.readAsDataURL(file);
 
-    // Prepare form data to send to backend
     const formData = new FormData();
     formData.append("file", file);
     formData.append("index", index.toString());
@@ -266,28 +277,20 @@ export default function Assessment({
     }
 
     try {
-      const response = await fetch(
-        "/api/generate-assessment/que-image-upload",
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      // Check if the response is JSON
+      const response = await fetch("/api/generate-assessment/que-image-upload", {
+        method: "POST",
+        body: formData,
+      });
       const contentType = response.headers.get("content-type");
       let data: any;
       if (contentType && contentType.includes("application/json")) {
         data = await response.json();
       } else {
-        // If not, log the text for debugging
         const text = await response.text();
         console.error("Unexpected response:", text);
         throw new Error("Response is not JSON");
       }
-
       if (response.ok && data.fileUrl) {
-        // Update the image URL with the one returned from Supabase
         const newUploadedImages = [...uploadedImages];
         newUploadedImages[index] = data.fileUrl;
         setUploadedImages(newUploadedImages);
@@ -347,25 +350,34 @@ export default function Assessment({
                 onChange={(e) => handleEdit(index, "question", e.target.value)}
                 className="mb-2"
               />
-              {assessmentType === "mcq" && (
-                <div>
-                  {question.options.map(
-                    (option: string, optionIndex: number) => (
-                      <Input
-                        key={optionIndex}
-                        value={option}
-                        onChange={(e) =>
-                          handleOptionEdit(index, optionIndex, e.target.value)
-                        }
-                        className="mb-1"
-                      />
-                    )
-                  )}
-                </div>
-              )}
+              {(assessmentType === "mcq" ||
+              (assessmentType === "mixedassessment" &&
+                question.questionType?.trim().toLowerCase() === "mcq")) && (
+              <div>
+                {(() => {
+                  // Ensure we have an array regardless of the underlying type.
+                  const optionsArray =
+                    Array.isArray(question.options)
+                      ? question.options
+                      : question.options
+                      ? transformObjectToArray(question.options)
+                      : [];
+                  return optionsArray.map((option: string, optionIndex: number) => (
+                    <Input
+                      key={optionIndex}
+                      value={option}
+                      onChange={(e) => handleOptionEdit(index, optionIndex, e.target.value)}
+                      className="mb-1"
+                    />
+                  ));
+                })()}
+              </div>
+            )}
               {(assessmentType === "truefalse" ||
                 assessmentType === "fillintheblank" ||
-                assessmentType === "shortanswer") && (
+                assessmentType === "shortanswer" ||
+                (assessmentType === "mixedassessment" &&
+                  question.questionType === "Short Answer")) && (
                 <Input
                   value={question.answer}
                   onChange={(e) => handleEdit(index, "answer", e.target.value)}
@@ -443,13 +455,9 @@ export default function Assessment({
           break;
         default:
           questionComponent = null;
-          questionComponent = null;
       }
       return (
-        <div
-          key={index}
-          className="border rounded-lg p-4 mb-4 bg-white shadow-sm"
-        >
+        <div key={index} className="border rounded-lg p-4 mb-4 bg-white shadow-sm">
           <div className="flex gap-4 items-stretch justify-between">
             <div className="flex-[0.8]">{questionComponent}</div>
             {uploadedImages[index] && (
@@ -465,7 +473,7 @@ export default function Assessment({
         </div>
       );
     }
-  }  
+  };
 
   const handleSaveResults = async () => {
     setIsSaving(true);
@@ -484,11 +492,9 @@ export default function Assessment({
           submitted: true,
         }),
       });
-
       if (!response.ok) {
         throw new Error("Failed to save answers");
       }
-
       const data = await response.json();
       console.log("Answers saved successfully:", data);
     } catch (error) {
@@ -517,11 +523,9 @@ export default function Assessment({
           images: uploadedImages,
         }),
       });
-
       if (!response.ok) {
         throw new Error("Failed to update assessment");
       }
-
       const data = await response.json();
       if (data.success) {
         setEditMode(false);
@@ -539,9 +543,7 @@ export default function Assessment({
     }
   };
 
-  const fetchSummaryExplanation = async (
-    followUpMessage?: string
-  ): Promise<void> => {
+  const fetchSummaryExplanation = async (followUpMessage?: string): Promise<void> => {
     try {
       if (followUpMessage) {
         setIsLoadingChat(true);
@@ -598,13 +600,27 @@ export default function Assessment({
   const handleOptionEdit = (
     questionIndex: number,
     optionIndex: number,
-    value: string
+    newValue: string
   ) => {
-    const newAssessment = [...editedAssessment];
-    newAssessment[questionIndex].options[optionIndex] = value;
-    setEditedAssessment(newAssessment);
+    setEditedAssessment((prev) => {
+      const updated = [...prev];
+      const questionCopy = { ...updated[questionIndex] };
+  
+      // Ensure we have an array for options.
+      const currentOptions = Array.isArray(questionCopy.options)
+        ? questionCopy.options
+        : questionCopy.options
+        ? transformObjectToArray(questionCopy.options)
+        : [];
+  
+      const newOptions = [...currentOptions];
+      newOptions[optionIndex] = newValue;
+      questionCopy.options = newOptions;
+      updated[questionIndex] = questionCopy;
+      return updated;
+    });
   };
-
+ 
   return (
     <div className="space-y-4 bg-[#f7f3f2] p-4 rounded-lg">
       <div className="flex justify-between items-center mb-4">
@@ -624,7 +640,6 @@ export default function Assessment({
           Download {showResults ? "PDF with Answers" : "Questions PDF"}
         </Button>
 
-        {/* Only show Edit button if not in readonly mode */}
         {!readOnly && (
           <Button
             onClick={() => {
@@ -646,11 +661,9 @@ export default function Assessment({
         )}
       </div>
 
-      {editMode ? (
-        <div>
-          {editedAssessment.map((question, index) =>
-            renderQuestion(question, index)
-          )}
+      <div>
+        {editedAssessment.map((question, index) => renderQuestion(question, index))}
+        {editMode ? (
           <Button
             onClick={saveEdits}
             className="mt-4 bg-rose-600 hover:bg-rose-500"
@@ -658,22 +671,18 @@ export default function Assessment({
           >
             {isSaving ? "Saving..." : "Save Edits"}
           </Button>
-        </div>
-      ) : (
-        <div>
-          {editedAssessment.map((question, index) =>
-            renderQuestion(question, index)
-          )}
-          {!showResults && !readOnly && (
+        ) : (
+          !showResults &&
+          !readOnly && (
             <Button
               onClick={handleSubmit}
               className="w-full bg-rose-500 hover:bg-rose-600 text-white mt-6"
             >
               Submit Answers
             </Button>
-          )}
-        </div>
-      )}
+          )
+        )}
+      </div>
 
       {showResults && !editMode && (
         <div className="text-center">

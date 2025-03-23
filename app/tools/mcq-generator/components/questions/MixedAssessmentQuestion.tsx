@@ -11,6 +11,13 @@ interface MixedAssessmentQuestionProps {
   showResults: boolean;
 }
 
+const transformObjectToArray = (optionsObject: Record<string, string>): string[] => {
+  return Object.keys(optionsObject)
+    .sort()
+    .map((key) => optionsObject[key]);
+};
+
+
 export default function MixedAssessmentQuestion({
   question,
   index,
@@ -28,11 +35,9 @@ export default function MixedAssessmentQuestion({
     if (Array.isArray(question.options)) {
       optionsArray = question.options;
     } else if (question.options && typeof question.options === "object") {
-      // If keys are letters, sort them so A, B, C... become the array order
-      optionsArray = Object.keys(question.options)
-        .sort()
-        .map((key) => question.options[key]);
+      optionsArray = transformObjectToArray(question.options);
     }
+    
     // Convert correctAnswer from letter to index if needed.
     let correctAnswerIndex: number = 0;
     if (typeof question.correctAnswer === "string") {

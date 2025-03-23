@@ -143,33 +143,63 @@ export default function Assessment({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessment]);
 
+  // Evaluate short answers for both pure shortanswer and mixedassessment
   useEffect(() => {
-    if (showResults && assessmentType === "shortanswer") {
-      const evaluateAnswers = async () => {
-        try {
-          const payload = {
-            questions: editedAssessment.map((q: any, index: number) => ({
-              question: q.question,
-              correctAnswer: q.answer,
-              userAnswer: answers[index] || "",
-            })),
-          };
-          const res = await fetch("/api/evaluate-short-answer", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-          const data = await res.json();
-          if (data.scores && Array.isArray(data.scores)) {
-            setShortAnswerScores(data.scores);
-          }
-        } catch (error) {
-          console.error("Error evaluating short answers:", error);
-        }
-      };
-      evaluateAnswers();
+    if (
+      showResults &&
+      (assessmentType === "shortanswer" || assessmentType === "mixedassessment")
+    ) {
+      evaluateShortAnswers();
     }
   }, [showResults, editedAssessment, answers, assessmentType]);
+  
+  const evaluateShortAnswers = async () => {
+    try {
+      // 1. Identify which questions are short-answer:
+      const shortAnswerIndices = editedAssessment
+        .map((q, i) => ({ ...q, index: i }))
+        .filter((q) => {
+          const type = q.questionType?.toLowerCase();
+          return type === "shortanswer" || type === "short answer";
+        });
+  
+      if (shortAnswerIndices.length === 0) {
+        return; // No short-answer questions
+      }
+  
+      // 2. Build a payload for the API
+      const payload = shortAnswerIndices.map(({ question, correctAnswer, answer, index }) => ({
+        question: question,
+        // Use correctAnswer if present, otherwise answer
+        correctAnswer: correctAnswer ?? answer,
+        userAnswer: answers[index] || "",
+      }));
+  
+      // 3. Make the API request
+      const res = await fetch("/api/evaluate-short-answer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          questions: payload,
+          maxScorePerQuestion: 1,
+        }),
+      });
+      const data = await res.json();
+  
+      // 4. Create a full array of scores aligned with all questions
+      if (data.scores && Array.isArray(data.scores)) {
+        const newScores = new Array(editedAssessment.length).fill(0);
+        shortAnswerIndices.forEach((item, i) => {
+          newScores[item.index] = data.scores[i];
+        });
+        setShortAnswerScores(newScores);
+      }
+    } catch (error) {
+      console.error("Error evaluating short answers:", error);
+    }
+  };
+
+  // Removed duplicate mixedassessment useEffect for evaluating short answers
 
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     if (readOnly) return;
@@ -225,28 +255,39 @@ export default function Assessment({
 
   const calculateScore = () => {
     if (!Array.isArray(answers)) {
-      console.error("Answers is not an array:", answers);
       return 0;
     }
+  
     return answers.reduce((score, answer, index) => {
       const question = editedAssessment[index];
       if (!question) return score;
-      if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
+  
+      // Check question's own type
+      const type = question.questionType?.toLowerCase();
+  
+      if (type === "mcq") {
+        let correctIndex = 0;
+        if (typeof question.correctAnswer === "string") {
+          correctIndex = question.correctAnswer.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+        } else {
+          correctIndex = question.correctAnswer;
+        }
+        return score + (answer === correctIndex ? 1 : 0);
+  
+      } else if (type === "truefalse" || type === "true/false") {
         return score + (answer === question.correctAnswer ? 1 : 0);
-      } else if (
-        assessmentType === "truefalse" &&
-        question.correctAnswer !== undefined
-      ) {
-        return score + (answer === question.correctAnswer ? 1 : 0);
-      } else if (assessmentType === "fillintheblank" && question.answer) {
-        return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
-      } else if (assessmentType === "shortanswer") {
+  
+      } else if (type === "fillintheblank" || type === "fill in the blanks") {
+        return score + (answer?.toLowerCase() === question.answer?.toLowerCase() ? 1 : 0);
+  
+      } else if (type === "shortanswer" || type === "short answer") {
         return score + (shortAnswerScores[index] || 0);
       }
+  
       return score;
     }, 0);
   };
-
+ 
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
     index: number
@@ -355,7 +396,6 @@ export default function Assessment({
                 question.questionType?.trim().toLowerCase() === "mcq")) && (
               <div>
                 {(() => {
-                  // Ensure we have an array regardless of the underlying type.
                   const optionsArray =
                     Array.isArray(question.options)
                       ? question.options
@@ -450,6 +490,7 @@ export default function Assessment({
               userAnswer={answers[index]}
               onChange={(answer) => handleAnswerChange(index, answer)}
               showResults={showResults}
+              shortAnswerScore={shortAnswerScores[index]} // Pass the actual score here
             />
           );
           break;
@@ -605,14 +646,13 @@ export default function Assessment({
     setEditedAssessment((prev) => {
       const updated = [...prev];
       const questionCopy = { ...updated[questionIndex] };
-  
-      // Ensure we have an array for options.
+
       const currentOptions = Array.isArray(questionCopy.options)
         ? questionCopy.options
         : questionCopy.options
         ? transformObjectToArray(questionCopy.options)
         : [];
-  
+
       const newOptions = [...currentOptions];
       newOptions[optionIndex] = newValue;
       questionCopy.options = newOptions;
@@ -620,7 +660,7 @@ export default function Assessment({
       return updated;
     });
   };
- 
+
   return (
     <div className="space-y-4 bg-[#f7f3f2] p-4 rounded-lg">
       <div className="flex justify-between items-center mb-4">
@@ -717,13 +757,6 @@ export default function Assessment({
           </div>
           {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
           <div className="mt-8 border-t pt-4">
-            <Button
-              onClick={() => fetchSummaryExplanation()}
-              className="bg-rose-600 hover:bg-rose-500 text-white"
-              disabled={isLoadingAnalysis}
-            >
-              {isLoadingAnalysis ? "Loading..." : "Get Analysis"}
-            </Button>
             {explanation && (
               <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
                 <h3 className="font-semibold mb-2">Summary Explanation:</h3>

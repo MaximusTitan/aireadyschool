@@ -310,6 +310,16 @@ export function useTools({ lastGeneratedImage, setLastGeneratedImage }: UseTools
           }),
         ];
         break;
+      case "document":
+        const docContent = parts.slice(1).join(" ");
+        baseMessage.content = `Open document generator with content: ${docContent}`;
+        baseMessage.toolCalls = [
+          createToolCall("generateDocument", {
+            initialContent: docContent,
+            title: "Generated Document"
+          }),
+        ];
+        break;
       default:
         baseMessage.content = `Unknown command: ${command}`;
         baseMessage.toolCalls = [];

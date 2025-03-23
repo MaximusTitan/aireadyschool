@@ -255,6 +255,7 @@ export default function Assessment({
 
   const calculateScore = () => {
     if (!Array.isArray(answers)) {
+      console.error("Answers is not an array:", answers);
       return 0;
     }
   
@@ -262,12 +263,37 @@ export default function Assessment({
       const question = editedAssessment[index];
       if (!question) return score;
   
-      // Check question's own type
+      // ----------------------------
+      // 1) For pure single-type assessments
+      // ----------------------------
+      if (assessmentType !== "mixedassessment") {
+        if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
+          return score + (answer === question.correctAnswer ? 1 : 0);
+  
+        } else if (assessmentType === "truefalse" && question.correctAnswer !== undefined) {
+          return score + (answer === question.correctAnswer ? 1 : 0);
+  
+        } else if (assessmentType === "fillintheblank" && question.answer) {
+          return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
+  
+        } else if (assessmentType === "shortanswer") {
+          // Use shortAnswerScores
+          return score + (shortAnswerScores[index] || 0);
+        }
+  
+        // Fallback if none of the above
+        return score;
+      }
+  
+      // ----------------------------
+      // 2) For "mixedassessment" only
+      // ----------------------------
       const type = question.questionType?.toLowerCase();
   
       if (type === "mcq") {
         let correctIndex = 0;
         if (typeof question.correctAnswer === "string") {
+          // Convert letter "A"/"B"/"C" to 0/1/2, etc.
           correctIndex = question.correctAnswer.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
         } else {
           correctIndex = question.correctAnswer;
@@ -281,12 +307,15 @@ export default function Assessment({
         return score + (answer?.toLowerCase() === question.answer?.toLowerCase() ? 1 : 0);
   
       } else if (type === "shortanswer" || type === "short answer") {
+        // Use shortAnswerScores
         return score + (shortAnswerScores[index] || 0);
       }
   
+      // Fallback if question type is unrecognized
       return score;
     }, 0);
   };
+  
  
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,

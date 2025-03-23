@@ -11,10 +11,10 @@ export async function POST(req: Request) {
     const { data: { user }, error } = await supabase.auth.getUser();
     
     if (error) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { questions } = await req.json();
+    const { questions, maxScorePerQuestion } = await req.json();
     if (!questions || !Array.isArray(questions)) {
       throw new Error("Invalid payload");
     }
@@ -28,9 +28,10 @@ Questions:
 ${questions.map((q: any, index: number) => 
   `${index + 1}. Question: "${q.question}"
    Correct Answer: "${q.correctAnswer}"
-   Student Answer: "${q.userAnswer}"
-  `).join("\n")}
+   Student Answer: "${q.userAnswer}"`
+).join("\n")}
 `;
+
     const { text, usage } = await generateText({
       model: openai("gpt-4o"),
       prompt,
@@ -58,7 +59,11 @@ ${questions.map((q: any, index: number) =>
     if (!Array.isArray(scores)) {
       throw new Error("Evaluation did not return an array of scores.");
     }
-    return NextResponse.json({ scores });
+    
+    // Convert each score to 1 if > 0, otherwise 0.
+    const binaryScores = scores.map((score: number) => score > 0 ? 1 : 0);
+
+    return NextResponse.json({ scores: binaryScores });
   } catch (error) {
     console.error("Error evaluating short answers:", error);
     return NextResponse.json(

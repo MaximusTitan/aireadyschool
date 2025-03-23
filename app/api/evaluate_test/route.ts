@@ -136,9 +136,11 @@ interface FeedbackItem {
   correctAnswer: string | undefined;
   isCorrect: boolean;
   explanation: string;
-  options?: { [key: string]: string } | string[]; // Add options
-  selectedOptionIndex?: number | string;  // Add selected index
-  correctOptionIndex?: number | string;   // Add correct index
+  options?: string[];
+  optionKeys?: string[];
+  selectedOptionIndex?: number;
+  correctOptionIndex?: number;
+  questionType?: string;
 }
 
 async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Question[] }) {
@@ -149,31 +151,50 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
   for (let i = 0; i < questions.length; i++) {
     const question = questions[i];
     const studentAnswer = studentAnswers[i];
-    const questionNumber = `${i + 1}`;  // Simple sequential number
-    
-    // Update question type detection
+    const questionNumber = `${i + 1}`;
+
+    // Use the explicit questionType if provided, otherwise detect it
     const questionType = question.questionType || 
-      (Array.isArray(question.options) ? 'MCQ' : // Changed from 'FillBlanks' to 'MCQ'
-       typeof question.options === 'object' ? 'MCQ' :
+      (typeof question.options === 'object' ? 'MCQ' :
        typeof question.correctAnswer === 'boolean' ? 'TrueFalse' :
        'Short Answer');
 
     try {
       switch (questionType) {
         case 'MCQ': {
-          const isCorrect = studentAnswer === question.correctAnswer;
-          score += isCorrect ? 5 : 0;
+          // Normalize the options to a consistent format
+          let optionsMap: { [key: string]: string };
           
-          // Fixed options handling
-          let options: string[] = [];
           if (Array.isArray(question.options)) {
-            options = question.options;
-          } else if (question.options) {
-            options = Object.values(question.options);
+            // Convert array to lettered options
+            optionsMap = question.options.reduce((acc, opt, idx) => ({
+              ...acc,
+              [String.fromCharCode(65 + idx)]: opt // Convert 0,1,2,3 to A,B,C,D
+            }), {});
+          } else if (typeof question.options === 'object') {
+            optionsMap = question.options as { [key: string]: string };
+          } else {
+            optionsMap = {};
           }
 
-          const selectedOption = studentAnswer !== undefined ? options[studentAnswer] : 'No answer';
-          const correctOption = options[question.correctAnswer];
+          const optionKeys = Object.keys(optionsMap);
+          const options = Object.values(optionsMap);
+
+          // Convert numeric student answer to letter if needed
+          const selectedOptionIndex = typeof studentAnswer === 'number' 
+            ? String.fromCharCode(65 + studentAnswer) // Convert 0,1,2,3 to A,B,C,D
+            : studentAnswer?.toString();
+
+          // Convert numeric correct answer to letter if needed
+          const correctOptionIndex = typeof question.correctAnswer === 'number'
+            ? String.fromCharCode(65 + question.correctAnswer)
+            : question.correctAnswer?.toString();
+
+          const selectedOption = optionsMap[selectedOptionIndex];
+          const correctOption = optionsMap[correctOptionIndex];
+
+          const isCorrect = selectedOptionIndex === correctOptionIndex;
+          score += isCorrect ? 5 : 0;
 
           feedback[questionNumber] = {
             question: question.question,
@@ -182,10 +203,12 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
             isCorrect,
             explanation: isCorrect
               ? `✅ Correct! You selected "${selectedOption}"`
-              : `❌ Incorrect. You selected "${selectedOption}". The correct answer is "${correctOption}"`,
-            options: options,
-            selectedOptionIndex: studentAnswer,
-            correctOptionIndex: question.correctAnswer
+              : `❌ Incorrect. You selected "${selectedOption || 'No answer'}". The correct answer is "${correctOption}"`,
+            options,
+            optionKeys,
+            selectedOptionIndex,
+            correctOptionIndex,
+            questionType: 'MCQ'
           };
           break;
         }
@@ -323,6 +346,7 @@ Grade this answer out of 5 points.`
     }
   }
 
+  // Calculate final score based on question type weights
   const finalScore = Math.round((score / (questions.length * 5)) * 100);
 
   return {

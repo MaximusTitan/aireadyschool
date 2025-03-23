@@ -331,6 +331,42 @@ function DetailedFeedbackItem({ question, index, feedback }: any) {
     );
   };
 
+  const renderMCQOptions = () => {
+    if (!feedbackData.options || feedbackData.questionType !== 'MCQ') return null;
+
+    return (
+      <div className="mt-2 space-y-1">
+        <p className="text-sm text-gray-600">Options:</p>
+        <div className="grid grid-cols-1 gap-1 pl-4">
+          {feedbackData.options.map((option: string, idx: number) => {
+            const optionKey = feedbackData.optionKeys[idx];
+            const isSelected = optionKey === feedbackData.selectedOptionIndex;
+            const isCorrect = optionKey === feedbackData.correctOptionIndex;
+
+            return (
+              <div
+                key={idx}
+                className={`text-sm p-2 rounded ${
+                  isCorrect && isSelected
+                    ? "bg-green-100 text-green-800"
+                    : isSelected
+                      ? "bg-red-100 text-red-800"
+                      : isCorrect
+                        ? "bg-green-50 text-green-700"
+                        : "text-gray-600"
+                }`}
+              >
+                {feedbackData.optionKeys[idx]}. {option}
+                {isCorrect && " ✓"}
+                {isSelected && !isCorrect && " ✗"}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 border-b last:border-b-0">
       <div className="flex items-start gap-4">

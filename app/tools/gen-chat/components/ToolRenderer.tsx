@@ -4,6 +4,7 @@ import { QuizCard } from "./tools/quiz-card";
 import { MindMapViewer } from "./tools/mind-map-viewer";
 import { VideoGenerator } from "./tools/video-generator";
 import { AssessmentCard } from "./tools/assessment-card";
+import DocumentGenerator from "../../document-generator/DocumentGeneratorComponent";
 
 type ToolRendererProps = {
   invocation: any;
@@ -283,6 +284,18 @@ export const ToolRenderer = ({
                 }),
               });
             }}
+          />
+        </div>
+      );
+    }
+
+    case "generateDocument": {
+      return (
+        <div className="mb-4 w-full h-[800px] border rounded-lg overflow-hidden">
+          <DocumentGenerator
+            initialContent={result.initialContent}
+            initialTitle={result.title}
+            embedded={true}
           />
         </div>
       );

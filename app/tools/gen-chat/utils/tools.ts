@@ -148,6 +148,21 @@ export const assessmentGeneratorTool = createTool({
   },
 });
 
+export const documentGeneratorTool = createTool({
+  description: 'Open the document generator with an optional initial content',
+  parameters: z.object({
+    initialContent: z.string().optional().describe('Initial content for the document'),
+    title: z.string().optional().describe('Initial title for the document'),
+  }),
+  execute: async function ({ initialContent, title }) {
+    return {
+      initialContent,
+      title,
+      pending: true,
+    };
+  },
+});
+
 export const tools = {
   evaluateAnswer: evaluateAnswerTool,
   generateQuiz: quizTool,
@@ -157,4 +172,5 @@ export const tools = {
   evaluateQuizAnswer: quizAnswerEvaluationTool,
   generateVideo: videoGeneratorTool,
   generateAssessment: assessmentGeneratorTool,
+  generateDocument: documentGeneratorTool,
 };

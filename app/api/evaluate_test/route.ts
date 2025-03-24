@@ -148,6 +148,15 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
   let feedback: Record<string, FeedbackItem> = {};
   const questions = assessment.questions;
 
+  // Define points per question type
+  const POINTS = {
+    MCQ: 2,          // 2 points for each MCQ
+    'Short Answer': 5,  // 5 points for each short answer
+    Descriptive: 5,     // 5 points for descriptive
+    TrueFalse: 1,      // 1 point for true/false
+    FillBlanks: 2      // 2 points for fill in blanks
+  };
+
   for (let i = 0; i < questions.length; i++) {
     const question = questions[i];
     const studentAnswer = studentAnswers[i];
@@ -194,7 +203,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const correctOption = optionsMap[correctOptionIndex];
 
           const isCorrect = selectedOptionIndex === correctOptionIndex;
-          score += isCorrect ? 5 : 0;
+          score += isCorrect ? POINTS.MCQ : 0;  // Award 2 points for correct MCQ
 
           feedback[questionNumber] = {
             question: question.question,
@@ -215,7 +224,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
 
         case 'TrueFalse': {
           const isCorrect = studentAnswer === question.correctAnswer;
-          score += isCorrect ? 5 : 0;
+          score += isCorrect ? POINTS.TrueFalse : 0;  // Award 1 point for correct True/False
           
           feedback[questionNumber] = {
             question: question.question,
@@ -235,7 +244,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const normalizedCorrectAnswer = correctAnswer?.toString().toLowerCase().trim();
           const isCorrect = normalizedStudentAnswer === normalizedCorrectAnswer;
           
-          score += isCorrect ? 5 : 0;
+          score += isCorrect ? POINTS.FillBlanks : 0;  // Award 2 points for correct fill in blanks
           feedback[questionNumber] = {
             question: question.question,
             studentAnswer: studentAnswer || 'No answer',
@@ -294,7 +303,7 @@ Grade this answer out of 5 points.`
             const scoreMatch = evaluation.match(/Score:\s*(\d+)\/5/i);
             const questionScore = scoreMatch ? parseInt(scoreMatch[1]) : 0;
             
-            score += questionScore;
+            score += questionScore; // GPT scores out of 5 points already
             feedback[questionNumber] = {
               question: question.question,
               studentAnswer: studentAnswer,
@@ -346,8 +355,15 @@ Grade this answer out of 5 points.`
     }
   }
 
-  // Calculate final score based on question type weights
-  const finalScore = Math.round((score / (questions.length * 5)) * 100);
+  // Update final score calculation based on maximum possible points
+  const maxPoints = questions.reduce((total, q) => {
+    const type = q.questionType || 
+      (typeof q.options === 'object' ? 'MCQ' :
+       typeof q.correctAnswer === 'boolean' ? 'TrueFalse' : 'Short Answer');
+    return total + POINTS[type as keyof typeof POINTS];
+  }, 0);
+
+  const finalScore = Math.round((score / maxPoints) * 100);
 
   return {
     score: finalScore,

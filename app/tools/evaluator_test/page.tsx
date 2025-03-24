@@ -117,7 +117,7 @@ function QuestionCard({ question, studentAnswer, index }: any) {
           <p className="mt-1 text-gray-600">{question.question}</p>
         </div>
         <span className="ml-4 px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
-          5 points
+          
         </span>
       </div>
 
@@ -539,30 +539,193 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
         </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-4">
-        <h2 className="text-lg font-semibold mb-3">
-          Recommended Areas for Improvement
-        </h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {evaluation.performance === "Needs Improvement" && (
-            <>
-              <div className="border rounded-lg p-3">
-                <h3 className="font-medium text-red-600 mb-2">Focus Areas</h3>
-                <p className="text-sm text-gray-700">
-                  Review the questions you answered incorrectly and focus on
-                  understanding the concepts behind them.
-                </p>
-              </div>
-              <div className="border rounded-lg p-3">
-                <h3 className="font-medium text-red-600 mb-2">Study Tips</h3>
-                <p className="text-sm text-gray-700">
-                  Practice similar questions and review the related topics in
-                  your study materials.
-                </p>
-              </div>
-            </>
-          )}
+      
+      {evaluation.metadata?.recommendations && (
+        <>
+          <TopicAnalysisView 
+            topicAnalysis={evaluation.metadata.recommendations.topicAnalysis || []}
+            prioritizedTopics={evaluation.metadata.recommendations.prioritizedTopics || {
+              critical: [],
+              needsWork: [],
+              good: [],
+              excellent: []
+            }}
+          />
+          
+          <ImprovementRecommendations 
+            recommendations={evaluation.metadata.recommendations}
+            performance={evaluation.performance}
+            score={evaluation.score}
+          />
+        </>
+      )}
+    </div>
+  );
+}
+
+function ImprovementRecommendations({ recommendations, performance, score }: any) {
+  if (!recommendations) return null;
+
+  return (
+    <div className="space-y-7">
+      
+
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Focus Areas Card */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-orange-100 px-6 py-4">
+            <h3 className="text-xl font-semibold text-orange-800">
+              Priority Focus Areas
+            </h3>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {recommendations.focusAreas.map((area: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-start space-x-3 p-3 bg-orange-50 rounded-lg"
+                >
+                  <div className="flex-shrink-0">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-200 text-orange-600">
+                      {idx + 1}
+                    </span>
+                  </div>
+                  <p className="text-orange-800">{area}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+
+        {/* Study Strategy Card */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-blue-100 px-6 py-4">
+            <h3 className="text-xl font-semibold text-blue-800">
+              Study Strategies
+            </h3>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              {recommendations.studyTips.map((tip: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg"
+                >
+                  <div className="flex-shrink-0">
+                    <span className="text-blue-600 text-xl">💡</span>
+                  </div>
+                  <p className="text-blue-800">{tip}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Concepts Review Card */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-red-100 px-6 py-4">
+            <h3 className="text-xl font-semibold text-red-800">
+              Concepts to Master
+            </h3>
+          </div>
+          <div className="p-6">
+            <div className="grid gap-3">
+              {recommendations.conceptsToReview.map((concept: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-center p-3 bg-red-50 rounded-lg"
+                >
+                  <span className="mr-3 text-red-600">⚠️</span>
+                  <p className="text-red-800">{concept}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Strengths Card */}
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          <div className="bg-green-100 px-6 py-4">
+            <h3 className="text-xl font-semibold text-green-800">
+              Your Strengths
+            </h3>
+          </div>
+          <div className="p-6">
+            <div className="grid gap-3">
+              {recommendations.strengths.map((strength: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="flex items-center p-3 bg-green-50 rounded-lg"
+                >
+                  <span className="mr-3 text-green-600">✨</span>
+                  <p className="text-green-800">{strength}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Progress Indicators */}
+      
+    </div>
+  );
+}
+
+function TopicAnalysisView({ topicAnalysis, prioritizedTopics }: any) {
+  if (!topicAnalysis?.length || !prioritizedTopics) return null;
+
+  const statusColors: Record<string, string> = {
+    Excellent: 'bg-green-100 border-green-500 text-green-800',
+    Good: 'bg-blue-100 border-blue-500 text-blue-800',
+    'Needs Work': 'bg-yellow-100 border-yellow-500 text-yellow-800',
+    Critical: 'bg-red-100 border-red-500 text-red-800'
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-6 mt-6">
+      <h2 className="text-xl font-semibold mb-6">Topic Analysis</h2>
+      
+      {/* Priority Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {Object.entries(prioritizedTopics).map(([priority, topics]) => (
+          <div key={priority} className={`p-4 rounded-lg border ${statusColors[priority]}`}>
+            <h3 className="font-medium capitalize mb-2">{priority}</h3>
+            <ul className="text-sm space-y-1">
+              {(topics as string[]).map((topic: string, idx: number) => (
+                <li key={idx}>• {topic}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+
+      {/* Detailed Topic Analysis */}
+      <div className="space-y-6">
+        {topicAnalysis.map((topic: any, idx: number) => (
+          <div key={idx} className="border rounded-lg p-4">
+            <h3 className="text-lg font-medium mb-4">{topic.mainTopic}</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {topic.subtopics.map((subtopic: any, subIdx: number) => (
+                <div key={subIdx} className={`p-4 rounded-lg border ${statusColors[subtopic.status]}`}>
+                  <div className="flex justify-between items-center mb-2">
+                    <h4 className="font-medium">{subtopic.name}</h4>
+                    
+                  </div>
+                  <div className="text-sm space-y-2">
+                    <p>Questions: {subtopic.questions.join(', ')}</p>
+                    <ul className="list-disc list-inside">
+                      {subtopic.recommendations.map((rec: string, recIdx: number) => (
+                        <li key={recIdx}>{rec}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -893,7 +1056,6 @@ function EvaluatorContent() {
             </div>
             {renderEvaluation(currentEvaluation)}
 
-            {/* Success Message */}
             {assignSuccess && (
               <div className="mt-4 p-4 bg-green-100 border-l-4 border-green-500 text-green-700 rounded animate-fade-in">
                 <div className="flex items-center">

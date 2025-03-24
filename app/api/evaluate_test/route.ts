@@ -21,13 +21,38 @@ interface Question {
   explanation?: string;
 }
 
-// Add new interface for evaluation result
 interface EvaluationResult {
   assessment_id: number;
   score: number;
   feedback: Record<string, FeedbackItem>;
   total_questions: number;
   correct_answers: number;
+}
+
+interface TopicAnalysis {
+  mainTopic: string;
+  subtopics: {
+    name: string;
+    mastery: number;  // Percentage of correct answers
+    questions: number[]; // Question indices
+    status: 'Excellent' | 'Good' | 'Needs Work' | 'Critical';
+    recommendations: string[];
+  }[];
+}
+
+interface ImprovementRecommendation {
+  focusAreas: string[];
+  studyTips: string[];
+  conceptsToReview: string[];
+  strengths: string[];
+  overallAnalysis: string;
+  topicAnalysis: TopicAnalysis[];
+  prioritizedTopics: {
+    critical: string[];
+    needsWork: string[];
+    good: string[];
+    excellent: string[];
+  };
 }
 
 export async function POST(req: Request) {
@@ -39,11 +64,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Split and validate assessment IDs
     const assessmentIds: string[] = assessment_id.split(',').map((id: string) => id.trim());
-    const primaryAssessmentId = parseInt(assessmentIds[0]); // Use first ID as primary
+    const primaryAssessmentId = parseInt(assessmentIds[0]);
 
-    // Group questions by assessment ID
     const questionsByAssessment = questions.reduce((acc: any, q: any) => {
       const id = q.assessmentId;
       if (!acc[id]) acc[id] = [];
@@ -51,7 +74,6 @@ export async function POST(req: Request) {
       return acc;
     }, {});
 
-    // Evaluate each assessment separately
     const evaluationPromises = assessmentIds.map(async (id: string) => {
       const assessmentQuestions = questionsByAssessment[id];
       const result = await evaluateAnswers(
@@ -70,14 +92,11 @@ export async function POST(req: Request) {
 
     const evaluations = await Promise.all(evaluationPromises);
 
-    // Calculate combined score and metrics
     const totalScore = evaluations.reduce((sum, evaluation: EvaluationResult) => sum + evaluation.score, 0);
     const averageScore = Math.round(totalScore / evaluations.length);
 
-    // Format combined feedback with assessment IDs
     const detailedFeedback = evaluations.reduce((acc, evaluation: EvaluationResult, index) => {
       const assessmentId = assessmentIds[index];
-      // Convert feedback objects to include assessment ID prefix
       const assessmentFeedback = Object.entries(evaluation.feedback).reduce((fb, [qKey, value]) => ({
         ...fb,
         [`A${assessmentId}_${qKey}`]: value
@@ -85,26 +104,34 @@ export async function POST(req: Request) {
       return { ...acc, ...assessmentFeedback };
     }, {});
 
-    // Store evaluation with primary assessment ID and metadata
+    const recommendations = await getImprovementRecommendations(
+      questions,
+      detailedFeedback,
+      averageScore,
+      75
+    );
+
     const { data: evaluationData, error: evalError } = await supabase
       .from('evaluation_test')
       .insert({
-        assessment_id: primaryAssessmentId, // Store only the first assessment ID
+        assessment_id: primaryAssessmentId,
         student_id,
         student_answers,
         score: averageScore,
         total_marks: 100,
-        benchmark_score: 50,
-        performance: averageScore >= 50 ? 'Good' : 'Needs Improvement',
+        benchmark_score: 75,
+        performance: averageScore >= 75 ? 'Good' : 'Needs Improvement',
         detailed_feedback: detailedFeedback,
-        metadata: {  // Store additional assessment info in metadata
+        improvement_recommendations: recommendations,
+        metadata: {
           assessment_ids: assessmentIds,
           individual_scores: evaluations.map((evaluation: EvaluationResult, index) => ({
             assessment_id: assessmentIds[index],
             score: evaluation.score,
             total_questions: evaluation.total_questions,
             correct_answers: evaluation.correct_answers
-          }))
+          })),
+          recommendations: recommendations
         }
       })
       .select()
@@ -148,13 +175,12 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
   let feedback: Record<string, FeedbackItem> = {};
   const questions = assessment.questions;
 
-  // Define points per question type
   const POINTS = {
-    MCQ: 2,          // 2 points for each MCQ
-    'Short Answer': 5,  // 5 points for each short answer
-    Descriptive: 5,     // 5 points for descriptive
-    TrueFalse: 1,      // 1 point for true/false
-    FillBlanks: 2      // 2 points for fill in blanks
+    MCQ: 2,
+    'Short Answer': 5,
+    Descriptive: 5,
+    TrueFalse: 1,
+    FillBlanks: 2
   };
 
   for (let i = 0; i < questions.length; i++) {
@@ -162,7 +188,6 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
     const studentAnswer = studentAnswers[i];
     const questionNumber = `${i + 1}`;
 
-    // Use the explicit questionType if provided, otherwise detect it
     const questionType = question.questionType || 
       (typeof question.options === 'object' ? 'MCQ' :
        typeof question.correctAnswer === 'boolean' ? 'TrueFalse' :
@@ -171,14 +196,12 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
     try {
       switch (questionType) {
         case 'MCQ': {
-          // Normalize the options to a consistent format
           let optionsMap: { [key: string]: string };
           
           if (Array.isArray(question.options)) {
-            // Convert array to lettered options
             optionsMap = question.options.reduce((acc, opt, idx) => ({
               ...acc,
-              [String.fromCharCode(65 + idx)]: opt // Convert 0,1,2,3 to A,B,C,D
+              [String.fromCharCode(65 + idx)]: opt
             }), {});
           } else if (typeof question.options === 'object') {
             optionsMap = question.options as { [key: string]: string };
@@ -189,12 +212,10 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const optionKeys = Object.keys(optionsMap);
           const options = Object.values(optionsMap);
 
-          // Convert numeric student answer to letter if needed
           const selectedOptionIndex = typeof studentAnswer === 'number' 
-            ? String.fromCharCode(65 + studentAnswer) // Convert 0,1,2,3 to A,B,C,D
+            ? String.fromCharCode(65 + studentAnswer)
             : studentAnswer?.toString();
 
-          // Convert numeric correct answer to letter if needed
           const correctOptionIndex = typeof question.correctAnswer === 'number'
             ? String.fromCharCode(65 + question.correctAnswer)
             : question.correctAnswer?.toString();
@@ -203,7 +224,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const correctOption = optionsMap[correctOptionIndex];
 
           const isCorrect = selectedOptionIndex === correctOptionIndex;
-          score += isCorrect ? POINTS.MCQ : 0;  // Award 2 points for correct MCQ
+          score += isCorrect ? POINTS.MCQ : 0;
 
           feedback[questionNumber] = {
             question: question.question,
@@ -224,7 +245,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
 
         case 'TrueFalse': {
           const isCorrect = studentAnswer === question.correctAnswer;
-          score += isCorrect ? POINTS.TrueFalse : 0;  // Award 1 point for correct True/False
+          score += isCorrect ? POINTS.TrueFalse : 0;
           
           feedback[questionNumber] = {
             question: question.question,
@@ -244,7 +265,7 @@ async function evaluateAnswers(studentAnswers: any[], assessment: { questions: Q
           const normalizedCorrectAnswer = correctAnswer?.toString().toLowerCase().trim();
           const isCorrect = normalizedStudentAnswer === normalizedCorrectAnswer;
           
-          score += isCorrect ? POINTS.FillBlanks : 0;  // Award 2 points for correct fill in blanks
+          score += isCorrect ? POINTS.FillBlanks : 0;
           feedback[questionNumber] = {
             question: question.question,
             studentAnswer: studentAnswer || 'No answer',
@@ -303,7 +324,7 @@ Grade this answer out of 5 points.`
             const scoreMatch = evaluation.match(/Score:\s*(\d+)\/5/i);
             const questionScore = scoreMatch ? parseInt(scoreMatch[1]) : 0;
             
-            score += questionScore; // GPT scores out of 5 points already
+            score += questionScore;
             feedback[questionNumber] = {
               question: question.question,
               studentAnswer: studentAnswer,
@@ -315,7 +336,6 @@ Grade this answer out of 5 points.`
                 .trim()
             };
 
-            // Add checkmark for full marks
             if (questionScore === 5) {
               feedback[questionNumber].explanation = `✅ ${feedback[questionNumber].explanation}`;
             }
@@ -355,7 +375,6 @@ Grade this answer out of 5 points.`
     }
   }
 
-  // Update final score calculation based on maximum possible points
   const maxPoints = questions.reduce((total, q) => {
     const type = q.questionType || 
       (typeof q.options === 'object' ? 'MCQ' :
@@ -371,4 +390,160 @@ Grade this answer out of 5 points.`
     totalQuestions: questions.length,
     correctAnswers: Object.values(feedback).filter(f => f.isCorrect).length
   };
+}
+
+async function getImprovementRecommendations(
+  questions: Question[],
+  feedback: Record<string, FeedbackItem>,
+  score: number,
+  benchmarkScore: number = 75
+): Promise<ImprovementRecommendation> {
+  try {
+    // Map questions with safer feedback access
+    const questionAnalysis = questions.map((q, idx) => {
+      const feedbackKey = `${idx + 1}`;
+      const feedbackItem = feedback[feedbackKey] || {
+        studentAnswer: 'No answer',
+        isCorrect: false
+      };
+
+      return {
+        question: q.question,
+        type: q.questionType || 'Unknown',
+        correctAnswer: q.correctAnswer,
+        studentAnswer: feedbackItem.studentAnswer,
+        isCorrect: feedbackItem.isCorrect,
+        explanation: feedbackItem.explanation || ''
+      };
+    });
+
+    const promptData = {
+      score,
+      benchmarkScore,
+      totalQuestions: questions.length,
+      correctAnswers: questionAnalysis.filter(q => q.isCorrect).length,
+      questionsByType: questionAnalysis.reduce((acc, q) => {
+        acc[q.type] = (acc[q.type] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>),
+      questions: questionAnalysis
+    };
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o",
+      messages: [
+        {
+          role: "system",
+          content: `You are an expert educational analyst. Analyze the student's performance and provide detailed recommendations.
+            First, identify main topics from the questions.
+            Then, create meaningful subtopics for each main topic.
+            Analyze performance in each subtopic.
+            
+            Return a valid JSON object (no markdown) with this structure:
+            {
+              "focusAreas": ["topic1", "topic2", "topic3"],
+              "studyTips": ["tip1", "tip2", "tip3"],
+              "conceptsToReview": ["concept1", "concept2", "concept3"],
+              "strengths": ["strength1", "strength2"],
+              "overallAnalysis": "brief analysis",
+              "topicAnalysis": [
+                {
+                  "mainTopic": "Topic Name",
+                  "subtopics": [
+                    {
+                      "name": "Subtopic Name",
+                      "mastery": 75,
+                      "questions": [1, 2, 3],
+                      "status": "Good",
+                      "recommendations": ["specific recommendation 1", "specific recommendation 2"]
+                    }
+                  ]
+                }
+              ],
+              "prioritizedTopics": {
+                "critical": ["topic1", "topic2"],
+                "needsWork": ["topic3"],
+                "good": ["topic4"],
+                "excellent": ["topic5"]
+              }
+            }`
+        },
+        {
+          role: "user",
+          content: `Analyze this assessment performance and create topic-based recommendations:
+            ${JSON.stringify(promptData, null, 2)}`
+        }
+      ],
+      temperature: 0.5,
+      max_tokens: 1500
+    });
+
+    const recommendationText = completion.choices[0]?.message?.content || '{}';
+    
+    // Clean the response text - remove any markdown formatting
+    const cleanedText = recommendationText
+      .replace(/```json\n?/g, '')  // Remove ```json
+      .replace(/```\n?/g, '')      // Remove closing ```
+      .trim();                     // Remove extra whitespace
+
+    try {
+      const recommendations = JSON.parse(cleanedText);
+      
+      // Validate the structure
+      const requiredFields = ['focusAreas', 'studyTips', 'conceptsToReview', 'strengths', 'overallAnalysis', 'topicAnalysis', 'prioritizedTopics'];
+      const missingFields = requiredFields.filter(field => !recommendations[field]);
+      
+      if (missingFields.length > 0) {
+        throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+      }
+
+      // Ensure arrays have content
+      if (!recommendations.focusAreas.length || !recommendations.studyTips.length) {
+        throw new Error('Focus areas and study tips cannot be empty');
+      }
+
+      return recommendations;
+    } catch (parseError) {
+      console.error('Error parsing GPT response:', parseError);
+      console.error('Raw response:', recommendationText);
+      console.error('Cleaned response:', cleanedText);
+      throw new Error('Invalid recommendation format');
+    }
+  } catch (error) {
+    console.error('Error generating recommendations:', error);
+    // Provide more specific fallback recommendations
+    return {
+      focusAreas: [
+        'Review incorrect answers',
+        'Focus on core concepts',
+        'Practice problem areas'
+      ],
+      studyTips: [
+        'Create concept summaries',
+        'Practice similar questions',
+        'Use active recall techniques'
+      ],
+      conceptsToReview: [
+        'Topics from missed questions',
+        'Related fundamental concepts',
+        'Problem-solving strategies'
+      ],
+      strengths: [
+        'Successfully answered questions',
+        'Areas of demonstrated knowledge'
+      ],
+      overallAnalysis: `Score: ${score}%. ${
+        score >= benchmarkScore 
+          ? 'Performance meets benchmark but has room for improvement.' 
+          : 'Focus needed on core concepts and practice.'
+      }`,
+      topicAnalysis: [],
+      prioritizedTopics: {
+        critical: [],
+        needsWork: [],
+        good: [],
+        excellent: []
+      }
+    };
+  }
 }

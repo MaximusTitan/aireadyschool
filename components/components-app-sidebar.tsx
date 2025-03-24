@@ -83,7 +83,7 @@ export function AppSidebar() {
   const navData = {
     navMain: [
       { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
-      { title: "Dashbaord", url: "/dashboard", icon: Map },
+      { title: "Dashboard", url: "/dashboard", icon: Map },
 
       {
         title: "AI Apps",

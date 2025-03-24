@@ -4,6 +4,8 @@ import { useState, useEffect, Suspense } from "react";
 import { createClient } from "@supabase/supabase-js";
 import React from "react";
 import { useSearchParams } from "next/navigation";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -294,6 +296,7 @@ function CircularProgress({ percentage }: { percentage: number }) {
   );
 }
 
+// Update QuestionCircle component
 function QuestionCircle({
   number,
   correct,
@@ -303,9 +306,9 @@ function QuestionCircle({
 }) {
   return (
     <div
-      className={`w-full aspect-square rounded-full flex items-center justify-center 
-        text-xs font-bold shadow-sm transition-all duration-300 
-        ${correct ? "bg-green-500 text-white hover:bg-green-600" : "bg-red-500 text-white hover:bg-red-600"}`}
+      className={`aspect-square w-6 h-6 rounded-full flex items-center justify-center 
+        text-[10px] font-medium shadow-sm transition-all duration-300 
+        ${correct ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}
     >
       {number}
     </div>
@@ -463,102 +466,107 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Performance Summary</h2>
-          <div className="flex items-center justify-center h-48">
-            <CircularProgress percentage={percentage} />
-          </div>
-        </div>
-        <div className="bg-white p-4 rounded-lg shadow">
-          <h2 className="text-lg font-semibold mb-4">Question Analysis</h2>
-          <div className="h-48 flex items-center justify-center">
-            <div className="w-full h-full flex flex-col">
-              <div className="flex mb-2">
-                <div className="flex-1 bg-green-100 p-2 rounded-l text-center">
-                  <div className="text-xl font-bold text-green-700">
-                    {correctAnswers}
-                  </div>
-                  <div className="text-xs text-green-600">Correct</div>
-                </div>
-                <div className="flex-1 bg-red-100 p-2 rounded-r text-center">
-                  <div className="text-xl font-bold text-red-700">
-                    {incorrectAnswers}
-                  </div>
-                  <div className="text-xs text-red-600">Incorrect</div>
-                </div>
-              </div>
-              <div className="flex-1 flex flex-col justify-between">
-                <div className="bg-gray-200 h-6 rounded-full overflow-hidden">
-                  <div
-                    className="bg-green-500 h-full transition-all duration-500"
-                    style={{ width: `${percentage}%` }}
-                  ></div>
-                </div>
-                <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 mt-4">
-                  {Object.entries(evaluation.detailed_feedback).map(
-                    ([qId, feedback]: any, index: number) => (
-                      <QuestionCircle
-                        key={qId}
-                        number={index + 1}
-                        correct={
-                          typeof feedback === "string"
-                            ? feedback.includes("✅")
-                            : feedback.isCorrect
-                        }
-                      />
-                    )
-                  )}
-                </div>
-              </div>
+      <div id="evaluation-content">
+        {/* Wrap all content that should be included in PDF */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-3">
+          <div className="bg-white p-4 rounded-lg shadow">
+            <h2 className="text-lg font-semibold mb-4">Performance Summary</h2>
+            <div className="flex items-center justify-center h-50">
+              <CircularProgress percentage={percentage} />
             </div>
           </div>
+          <div className="bg-white p-4 rounded-lg shadow">
+  <h2 className="text-lg font-semibold mb-4">Question Analysis</h2>
+  <div className="h-64 flex items-center justify-center">
+    <div className="w-full h-full flex flex-col">
+      <div className="flex mb-2">
+        <div className="flex-1 bg-green-100 p-2 rounded-l text-center">
+          <div className="text-xl font-bold text-green-700">
+            {correctAnswers}
+          </div>
+          <div className="text-xs text-green-600">Correct</div>
+        </div>
+        <div className="flex-1 bg-red-100 p-2 rounded-r text-center">
+          <div className="text-xl font-bold text-red-700">
+            {incorrectAnswers}
+          </div>
+          <div className="text-xs text-red-600">Incorrect</div>
         </div>
       </div>
-
-      <div className="bg-white rounded-lg shadow mb-6">
-        <h2 className="text-lg font-semibold p-4 border-b">
-          Detailed Feedback
-        </h2>
-        <div className="divide-y">
-          {Object.entries(evaluation.detailed_feedback)
-            .sort((a, b) => {
-              // Sort by question number
-              const aNum = parseInt(a[0].replace(/\D/g, ""));
-              const bNum = parseInt(b[0].replace(/\D/g, ""));
-              return aNum - bNum;
-            })
-            .map(([_, feedback], index) => (
-              <DetailedFeedbackItem
-                key={index}
-                question={assessment.questions[index]}
-                index={index}
-                feedback={feedback}
-              />
-            ))}
+      <div className="flex-1 flex flex-col justify-between">
+        <div className="bg-gray-200 h-4 rounded-full overflow-hidden">
+          <div
+            className="bg-green-500 h-full transition-all duration-500"
+            style={{ width: `${percentage}%` }}
+          ></div>
+        </div>
+        <div className="mt-4">
+          <div className="grid grid-cols-10 gap-1 p-1 min-w-0">
+            {Object.entries(evaluation.detailed_feedback).map(
+              ([qId, feedback]: any, index: number) => (
+                <QuestionCircle
+                  key={qId}
+                  number={index + 1}
+                  correct={
+                    typeof feedback === "string"
+                      ? feedback.includes("✅")
+                      : feedback.isCorrect
+                  }
+                />
+              )
+            )}
+          </div>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+        </div>
 
-      
-      {evaluation.metadata?.recommendations && (
-        <>
-          <TopicAnalysisView 
-            topicAnalysis={evaluation.metadata.recommendations.topicAnalysis || []}
-            prioritizedTopics={evaluation.metadata.recommendations.prioritizedTopics || {
-              critical: [],
-              needsWork: [],
-              good: [],
-              excellent: []
-            }}
-          />
-          
-          <ImprovementRecommendations 
-            recommendations={evaluation.metadata.recommendations}
-            performance={evaluation.performance}
-            score={evaluation.score}
-          />
-        </>
-      )}
+        <div className="bg-white rounded-lg shadow mb-6">
+          <h2 className="text-lg font-semibold p-4 border-b">
+            Detailed Feedback
+          </h2>
+          <div className="divide-y">
+            {Object.entries(evaluation.detailed_feedback)
+              .sort((a, b) => {
+                // Sort by question number
+                const aNum = parseInt(a[0].replace(/\D/g, ""));
+                const bNum = parseInt(b[0].replace(/\D/g, ""));
+                return aNum - bNum;
+              })
+              .map(([_, feedback], index) => (
+                <DetailedFeedbackItem
+                  key={index}
+                  question={assessment.questions[index]}
+                  index={index}
+                  feedback={feedback}
+                />
+              ))}
+          </div>
+        </div>
+
+        
+        {evaluation.metadata?.recommendations && (
+          <>
+            <TopicAnalysisView 
+              topicAnalysis={evaluation.metadata.recommendations.topicAnalysis || []}
+              prioritizedTopics={evaluation.metadata.recommendations.prioritizedTopics || {
+                critical: [],
+                needsWork: [],
+                good: [],
+                excellent: []
+              }}
+            />
+            
+            <ImprovementRecommendations 
+              recommendations={evaluation.metadata.recommendations}
+              performance={evaluation.performance}
+              score={evaluation.score}
+            />
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -645,26 +653,7 @@ function ImprovementRecommendations({ recommendations, performance, score }: any
         </div>
 
         {/* Strengths Card */}
-        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-          <div className="bg-green-100 px-6 py-4">
-            <h3 className="text-xl font-semibold text-green-800">
-              Your Strengths
-            </h3>
-          </div>
-          <div className="p-6">
-            <div className="grid gap-3">
-              {recommendations.strengths.map((strength: string, idx: number) => (
-                <div
-                  key={idx}
-                  className="flex items-center p-3 bg-green-50 rounded-lg"
-                >
-                  <span className="mr-3 text-green-600">✨</span>
-                  <p className="text-green-800">{strength}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+       
       </div>
 
       {/* Progress Indicators */}
@@ -728,6 +717,97 @@ function TopicAnalysisView({ topicAnalysis, prioritizedTopics }: any) {
         ))}
       </div>
     </div>
+  );
+}
+
+function DownloadButton({ evaluationData }: { evaluationData: any }) {
+  const [downloading, setDownloading] = useState(false);
+
+  const generatePDF = async () => {
+    setDownloading(true);
+    try {
+      const element = document.getElementById('evaluation-content');
+      if (!element) return;
+
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        logging: false,
+        useCORS: true,
+        backgroundColor: '#ffffff'
+      });
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      let currentPage = 0;
+
+      // Add header to first page
+      pdf.setFontSize(18);
+      pdf.setTextColor(33, 33, 33);
+      pdf.text('Evaluation Report', 105, 15, { align: 'center' });
+      pdf.setFontSize(12);
+      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 22, { align: 'center' });
+      position = 30;
+
+      while (heightLeft >= 0) {
+        pdf.addImage(
+          canvas.toDataURL('image/png'),
+          'PNG',
+          0,
+          position,
+          imgWidth,
+          imgHeight,
+          '',
+          'FAST'
+        );
+        heightLeft -= pageHeight;
+        if (heightLeft >= 0) {
+          pdf.addPage();
+          currentPage++;
+          // Add header to subsequent pages
+          pdf.setFontSize(10);
+          pdf.setTextColor(128, 128, 128);
+          pdf.text(`Page ${currentPage + 1}`, 105, 10, { align: 'center' });
+        }
+        position -= pageHeight;
+      }
+
+      pdf.save(`evaluation-report-${evaluationData.student_id}.pdf`);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <button
+      onClick={generatePDF}
+      disabled={downloading}
+      className="px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+                 flex items-center space-x-2 transition-all disabled:opacity-50"
+    >
+      {downloading ? (
+        <>
+          <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          <span>Generating PDF...</span>
+        </>
+      ) : (
+        <>
+          <svg className="w-4 h-4 mr-2" fill="none" strokeWidth="1.5" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          <span>Download Report</span>
+        </>
+      )}
+    </button>
   );
 }
 
@@ -1046,6 +1126,7 @@ function EvaluatorContent() {
                 >
                   {assignLoading ? "Assigning..." : "Assign to Student"}
                 </button>
+                <DownloadButton evaluationData={currentEvaluation} />
                 <GradientButton
                   onClick={() => setCurrentEvaluation(null)}
                   className="bg-gradient-to-r from-purple-500 to-pink-500"
@@ -1155,12 +1236,9 @@ function EvaluatorContent() {
     return (
       <div className="space-y-6">
         <div className="flex justify-between items-center">
-          <h2 className="text-xl font-semibold text-gray-800">
-            Assessment Details
-          </h2>
+          
         </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6">
+        <div>
           <div className="space-y-4 mb-6">
             {formData.assessmentIds.map((id, index) => (
               <div key={index} className="flex gap-4 items-center">
@@ -1208,9 +1286,8 @@ function EvaluatorContent() {
           <GradientButton
             onClick={fetchAssessmentDetails}
             isLoading={loading}
-            disabled={formData.assessmentIds.every((id) => !id)}
           >
-            {loading ? "Fetching..." : "Fetch Assessments"}
+            {loading ? "Fetching Details..." : "Fetch Assessment Details"}
           </GradientButton>
 
           {error && (

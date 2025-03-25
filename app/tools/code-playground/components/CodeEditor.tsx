@@ -31,28 +31,35 @@ export default function CodeEditor({
   }
 
   return (
-    <div className="border rounded-md overflow-hidden h-full">
-      <Editor
-        value={code}
-        onValueChange={setCode}
-        highlight={(code) =>
-          Prism.highlight(
-            code,
-            Prism.languages[language.toLowerCase()] ||
-              Prism.languages.javascript,
-            language.toLowerCase()
-          )
-        }
-        padding={16}
-        style={{
-          fontFamily: '"Fira code", "Fira Mono", monospace',
-          fontSize: 14,
-          backgroundColor: "#2d2d2d",
-          color: "#ccc",
-          height: "100%",
-        }}
-        textareaClassName="focus:outline-none"
-      />
-    </div>
+    <>
+      <div className="border rounded-md overflow-hidden h-full">
+        <style>{`
+          .npm__react-simple-code-editor__textarea {
+            -webkit-text-fill-color: black !important;
+          }
+        `}</style>
+        <Editor
+          value={code}
+          onValueChange={setCode}
+          highlight={(code) =>
+            Prism.highlight(
+              code,
+              Prism.languages[language.toLowerCase()] ||
+                Prism.languages.javascript,
+              language.toLowerCase()
+            )
+          }
+          padding={16}
+          style={{
+            fontFamily: '"Fira code", "Fira Mono", monospace',
+            fontSize: 14,
+            backgroundColor: "#2d2d2d",
+            color: "black",
+            height: "100%",
+          }}
+          textareaClassName="focus:outline-none"
+        />
+      </div>
+    </>
   );
 }

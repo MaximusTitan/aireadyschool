@@ -390,16 +390,16 @@ export async function POST(request: Request) {
         if (scheduleData) {
           const data = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData;
           systemPrompt += `\n\nSpecific Focus:
-Day ${data.day}: ${data.topicHeading}
-Activity Type: ${data.schedule.type}
-Title: ${data.schedule.title}
-Duration: ${data.schedule.timeAllocation} minutes
-Content: ${data.schedule.content}
+          Day ${data.day}: ${data.topicHeading}
+          Activity Type: ${data.schedule.type}
+          Title: ${data.schedule.title}
+          Duration: ${data.schedule.timeAllocation} minutes
+          Content: ${data.schedule.content}
 
-Learning Outcomes for this session:
-${data.learningOutcomes.map((outcome: string) => `- ${outcome}`).join('\n')}
+          Learning Outcomes for this session:
+          ${data.learningOutcomes.map((outcome: string) => `- ${outcome}`).join('\n')}
 
-Please provide detailed guidance and explanations specifically for this part of the lesson.`;
+          Please provide detailed guidance and explanations specifically for this part of the lesson.`;
         }
       }
     }
@@ -410,28 +410,52 @@ Please provide detailed guidance and explanations specifically for this part of 
       messages: cleanMessages as CreateMessage[],
       maxSteps: 5,
       tools,
-      // Adjust temperature and max tokens for teaching mode
-      temperature: teachingMode ? 0.3 : 0.5,
+      // Log all input parameters before stream initialization
+      temperature: (() => {
+        console.log('Stream Input Parameters:', {
+          model: 'claude-3-5-haiku-20241022',
+          systemPrompt: systemPrompt,
+          messages: cleanMessages,
+          maxSteps: 5,
+          tools: tools ? Object.keys(tools) : null,
+          teachingMode: teachingMode
+        });
+    
+        console.log('Raw System Prompt:', systemPrompt);
+        console.log('Raw Messages:', JSON.stringify(cleanMessages, null, 2));
+        
+        return teachingMode ? 0.3 : 0.5;
+      })(),
       maxTokens: teachingMode ? 1500 : 500,
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',
       }),
       onStepFinish: async ({ text, toolCalls, toolResults }) => {
-        // Update connection status
+        // Enhanced logging for step finish
+        console.log('Step Finish Details:', {
+          text: text,
+          toolCalls: toolCalls ? toolCalls.map(call => ({
+            toolName: call.toolName,
+            args: call.args
+          })) : null,
+          toolResults: toolResults ? toolResults.map(result => ({
+            toolCallId: result.toolCallId,
+            result: result.result
+          })) : null
+        });
+    
         const connectionInfo = activeConnections.get(requestId);
         if (connectionInfo) {
           connectionInfo.status = 'stepComplete';
           connectionInfo.lastActivity = Date.now();
         }
-
+    
         if (!toolCalls?.length) return;
-
+    
         try {
-          // Generate a message ID for this step
           const messageId = crypto.randomUUID();
-
-          // Save the message first
+    
           const { error: messageError } = await supabase
             .from('chat_messages')
             .insert({
@@ -440,13 +464,12 @@ Please provide detailed guidance and explanations specifically for this part of 
               role: 'assistant',
               content: text
             });
-
+    
           if (messageError) {
             console.error('Error saving message:', messageError);
             return;
           }
-
-          // Map tool results to their corresponding calls
+    
           const toolCallsWithResults = toolCalls.map(call => {
             const result = toolResults?.find(r => r.toolCallId === call.toolCallId);
             return {
@@ -457,24 +480,25 @@ Please provide detailed guidance and explanations specifically for this part of 
               state: result ? 'result' : 'pending'
             };
           });
-
-          // Save tool outputs
+    
+          // Log tool calls and results before saving
+          console.log('Tool Calls with Results:', JSON.stringify(toolCallsWithResults, null, 2));
+    
           await saveToolOutputs(supabase, messageId, toolCallsWithResults);
-
-              // More granular logging of request parsing
-    const body = await request.json();
-    console.log('Request Body:', JSON.stringify(body, null, 2));
     
         } catch (err) {
           console.error('Error in onStepFinish:', err);
-          // Don't throw here to avoid breaking the stream
         }
       },
-      // Replace the onFinish handler with this improved version:
       onFinish: async ({ usage, finishReason }) => {
+        // Log finish details
+        console.log('Stream Finish Details:', {
+          usage: usage,
+          finishReason: finishReason
+        });
+    
         streamFinished = true;
         
-        // Update connection status
         const connectionInfo = activeConnections.get(requestId);
         if (connectionInfo) {
           connectionInfo.status = 'finished';
@@ -482,7 +506,6 @@ Please provide detailed guidance and explanations specifically for this part of 
         }
         
         try {
-          // Handle error finish reason
           if (finishReason === 'error') {
             console.error('Stream finished with error:', { finishReason, usage });
             streamError = new Error(`STREAM_FINISH_ERROR: ${JSON.stringify({ 
@@ -491,7 +514,6 @@ Please provide detailed guidance and explanations specifically for this part of 
               usage: usage || { promptTokens: 0, completionTokens: 0 }, 
               timestamp: new Date().toISOString() 
             })}`);
-            // Don't throw here, just record the error
           }
         
           if (usage) {
@@ -507,9 +529,7 @@ Please provide detailed guidance and explanations specifically for this part of 
           }
         } catch (err) {
           console.error('Error in onFinish:', err);
-          // Don't rethrow, just log
         } finally {
-          // Clean up the connection after a short delay
           setTimeout(() => {
             activeConnections.delete(requestId);
             console.log(`Request ${requestId}: Removed from active connections`);
@@ -517,7 +537,7 @@ Please provide detailed guidance and explanations specifically for this part of 
         }
       },
     });
-
+    
     try {
       console.log(`Request ${requestId}: Creating response stream`);
       const response = streamHandler.toDataStreamResponse();

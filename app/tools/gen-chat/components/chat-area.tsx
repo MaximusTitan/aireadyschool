@@ -416,6 +416,7 @@ export const ChatArea = ({
             onInputChange={onInputChange}
             onSubmit={onSubmit}
             isOwner={isOwner}
+            isTeachingMode={isTeachingMode} // Add this line to pass the prop
           />
         </div>
       </div>

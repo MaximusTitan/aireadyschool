@@ -34,12 +34,14 @@ const placeholders = {
     prompt: "Type / for commands or ask a question...",
     viewOnly: "View only - you don't own this chat",
     recording: "Recording... Click to stop",
+    teaching: "In teaching mode - switch to interactive mode to ask questions",
   },
   hindi: {
     thinking: "सोच रहा हूँ...",
     prompt: "कमांड के लिए / टाइप करें या प्रश्न पूछें...",
     viewOnly: "केवल देखें - यह चैट आपके स्वामित्व में नहीं है",
     recording: "रिकॉर्डिंग... रोकने के लिए क्लिक करें",
+    teaching: "शिक्षण मोड में - प्रश्न पूछने के लिए इंटरैक्टिव मोड पर जाएं",
   },
 };
 
@@ -49,6 +51,7 @@ type CommandInputProps = {
   onInputChange: (value: string) => void;
   onSubmit: (e: React.FormEvent) => void;
   isOwner?: boolean;
+  isTeachingMode?: boolean;
 };
 
 export const CommandInput = ({
@@ -57,6 +60,7 @@ export const CommandInput = ({
   onInputChange,
   onSubmit,
   isOwner = true,
+  isTeachingMode = false,
 }: CommandInputProps) => {
   const [showCommands, setShowCommands] = useState(false);
   const [filteredCommands, setFilteredCommands] = useState(AVAILABLE_COMMANDS);
@@ -208,16 +212,18 @@ export const CommandInput = ({
     placeholders[language as keyof typeof placeholders] || placeholders.english;
 
   // Determine if input should be disabled
-  const isDisabled = isLoading || !isOwner;
+  const isDisabled = isLoading || !isOwner || isTeachingMode;
 
   // Determine appropriate placeholder text
   const placeholderText = isLoading
     ? currentPlaceholders.thinking
     : !isOwner
       ? currentPlaceholders.viewOnly
-      : isRecording
-        ? currentPlaceholders.recording
-        : currentPlaceholders.prompt;
+      : isTeachingMode
+        ? currentPlaceholders.teaching
+        : isRecording
+          ? currentPlaceholders.recording
+          : currentPlaceholders.prompt;
 
   return (
     <form

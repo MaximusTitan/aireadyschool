@@ -405,7 +405,7 @@ Please provide detailed guidance and explanations specifically for this part of 
     }
 
     const streamHandler = streamText({
-      model: anthropic('claude-3-7-sonnet-20250219'),
+      model: anthropic('claude-3-5-haiku-20241022'),
       system: systemPrompt,
       messages: cleanMessages as CreateMessage[],
       maxSteps: 5,

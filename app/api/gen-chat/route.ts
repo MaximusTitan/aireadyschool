@@ -20,10 +20,6 @@ import {
 
 export const runtime = 'edge';
 
-if (!process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY) {
-  throw new Error('Missing DEEPGRAM_API_KEY environment variable');
-}
-
 type Subject = 'science' | 'math' | 'english' | 'generic';
 type Language = 'english' | 'hindi';
 
@@ -252,15 +248,34 @@ interface ScheduleData {
   learningOutcomes: string[];
 }
 
+// Add a connection manager to track active connections
+const activeConnections = new Map();
+
 export async function POST(request: Request) {
+  console.log('Chat API Route: Received request');
+
+  // Generate a unique request ID for tracking this connection
+  const requestId = crypto.randomUUID();
+  console.log(`Request ${requestId}: Starting processing`);
+
   let controller: AbortController | null = null;
   
   try {
     controller = new AbortController();
     const signal = controller.signal;
     
+    // Track the connection in our map
+    activeConnections.set(requestId, {
+      controller,
+      timestamp: Date.now(),
+      status: 'processing'
+    });
+    
+    console.log(`Request ${requestId}: User Authentication Check...`);
+
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
+    
 
     if (error || !user) {
       return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
@@ -403,6 +418,13 @@ Please provide detailed guidance and explanations specifically for this part of 
         chunking: 'word',
       }),
       onStepFinish: async ({ text, toolCalls, toolResults }) => {
+        // Update connection status
+        const connectionInfo = activeConnections.get(requestId);
+        if (connectionInfo) {
+          connectionInfo.status = 'stepComplete';
+          connectionInfo.lastActivity = Date.now();
+        }
+
         if (!toolCalls?.length) return;
 
         try {
@@ -438,6 +460,11 @@ Please provide detailed guidance and explanations specifically for this part of 
 
           // Save tool outputs
           await saveToolOutputs(supabase, messageId, toolCallsWithResults);
+
+              // More granular logging of request parsing
+    const body = await request.json();
+    console.log('Request Body:', JSON.stringify(body, null, 2));
+    
         } catch (err) {
           console.error('Error in onStepFinish:', err);
           // Don't throw here to avoid breaking the stream
@@ -446,6 +473,13 @@ Please provide detailed guidance and explanations specifically for this part of 
       // Replace the onFinish handler with this improved version:
       onFinish: async ({ usage, finishReason }) => {
         streamFinished = true;
+        
+        // Update connection status
+        const connectionInfo = activeConnections.get(requestId);
+        if (connectionInfo) {
+          connectionInfo.status = 'finished';
+          connectionInfo.finishTime = Date.now();
+        }
         
         try {
           // Handle error finish reason
@@ -474,11 +508,18 @@ Please provide detailed guidance and explanations specifically for this part of 
         } catch (err) {
           console.error('Error in onFinish:', err);
           // Don't rethrow, just log
+        } finally {
+          // Clean up the connection after a short delay
+          setTimeout(() => {
+            activeConnections.delete(requestId);
+            console.log(`Request ${requestId}: Removed from active connections`);
+          }, 5000);
         }
       },
     });
 
     try {
+      console.log(`Request ${requestId}: Creating response stream`);
       const response = streamHandler.toDataStreamResponse();
       
       if (!response.body) {
@@ -489,6 +530,12 @@ Please provide detailed guidance and explanations specifically for this part of 
       const transformStream = new TransformStream({
         transform(chunk, controller) {
           try {
+            // Update connection activity timestamp
+            const connectionInfo = activeConnections.get(requestId);
+            if (connectionInfo) {
+              connectionInfo.lastActivity = Date.now();
+            }
+
             if (chunk.type === 'error') {
               console.error('Stream chunk error:', chunk.error);
               
@@ -504,7 +551,7 @@ Please provide detailed guidance and explanations specifically for this part of 
             
             controller.enqueue(chunk);
           } catch (err) {
-            console.error('Transform error:', err);
+            console.error(`Request ${requestId}: Transform error:`, err);
             // Don't call controller.error() here either
             controller.enqueue({
               type: 'text',
@@ -515,9 +562,16 @@ Please provide detailed guidance and explanations specifically for this part of 
         flush(controller) {
           // Make sure the stream ends gracefully
           try {
+            console.log(`Request ${requestId}: Flushing transform stream`);
             controller.terminate();
           } catch (err) {
-            console.error('Error terminating controller:', err);
+            console.error(`Request ${requestId}: Error terminating controller:`, err);
+          } finally {
+            // Ensure connection is cleaned up
+            setTimeout(() => {
+              activeConnections.delete(requestId);
+              console.log(`Request ${requestId}: Cleaned up after flush`);
+            }, 1000);
           }
         }
       });
@@ -525,6 +579,7 @@ Please provide detailed guidance and explanations specifically for this part of 
       const stream = response.body.pipeThrough(transformStream);
 
       // Create a response with the transformed stream
+      console.log(`Request ${requestId}: Returning response stream`);
       return new Response(stream, {
         status: response.status,
         headers: {
@@ -532,11 +587,12 @@ Please provide detailed guidance and explanations specifically for this part of 
           'Connection': 'keep-alive',
           'Cache-Control': 'no-cache',
           'Content-Type': 'text/event-stream',
+          'X-Request-ID': requestId // Add request ID to response headers
         },
         statusText: response.statusText,
       });
     } catch (streamErr: unknown) {
-      console.error('Detailed stream error:', {
+      console.error(`Request ${requestId}: Detailed stream error:`, {
         error: streamErr,
         message: streamErr instanceof Error ? streamErr.message : String(streamErr),
         type: streamErr instanceof Error ? streamErr.constructor.name : typeof streamErr,
@@ -548,9 +604,13 @@ Please provide detailed guidance and explanations specifically for this part of 
         try {
           controller.abort();
         } catch (abortErr) {
-          console.error('Error aborting controller:', abortErr);
+          console.error(`Request ${requestId}: Error aborting controller:`, abortErr);
         }
       }
+
+      // Remove from active connections map
+      activeConnections.delete(requestId);
+      console.log(`Request ${requestId}: Removed from active connections due to stream error`);
 
       // Handle stream finish errors
       if (isStreamFinishError(streamErr)) {
@@ -622,16 +682,26 @@ Please provide detailed guidance and explanations specifically for this part of 
       }, { status: 500 });
     }
   } catch (err: any) {
-    console.error('General error in POST /api/gen-chat:', err);
+    console.error(`Request ${requestId}: General error in POST /api/gen-chat:`, err);
+    console.error('COMPREHENSIVE ERROR LOGGING:', {
+      errorMessage: err.message,
+      errorName: err.name,
+      errorStack: err.stack,
+      errorCode: err.code
+    });
     
     // Clean up the controller if there was an error
     if (controller) {
       try {
         controller.abort();
       } catch (abortErr) {
-        console.error('Error aborting controller:', abortErr);
+        console.error(`Request ${requestId}: Error aborting controller:`, abortErr);
       }
     }
+    
+    // Remove from active connections map
+    activeConnections.delete(requestId);
+    console.log(`Request ${requestId}: Removed from active connections due to general error`);
     
     // Enhanced error classification
     if (err instanceof TypeError) {
@@ -695,4 +765,30 @@ Please provide detailed guidance and explanations specifically for this part of 
       stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     }, { status: 500 });
   }
+}
+
+// Add a cleanup function for stalled connections (can be called periodically)
+function cleanupStalledConnections() {
+  const now = Date.now();
+  const timeout = 60000; // 60 seconds timeout
+  
+  activeConnections.forEach((connection, id) => {
+    if (now - (connection.lastActivity || connection.timestamp) > timeout) {
+      console.log(`Cleaning up stalled connection ${id}`);
+      if (connection.controller) {
+        try {
+          connection.controller.abort();
+        } catch (err) {
+          console.error(`Error aborting controller for connection ${id}:`, err);
+        }
+      }
+      activeConnections.delete(id);
+    }
+  });
+}
+
+// Optional: Set up periodic cleanup
+if (typeof setInterval !== 'undefined') {
+  // Only run in environments that support setInterval
+  setInterval(cleanupStalledConnections, 30000); // Check every 30 seconds
 }

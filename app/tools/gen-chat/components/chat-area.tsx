@@ -52,6 +52,8 @@ export const ChatArea = ({
   } = useAudioSettings();
   const toolsContentRef = useRef<HTMLDivElement>(null);
   const ttsControllerRef = useRef<AbortController | null>(null);
+  // Add a ref to track active fetch requests
+  const activeFetchRequests = useRef<AbortController[]>([]);
 
   // Add ref to track previous isLoading state
   const prevIsLoadingRef = useRef(isLoading);
@@ -59,6 +61,34 @@ export const ChatArea = ({
   const toolInvocations = messages.flatMap(
     (message) => message.toolInvocations || []
   );
+
+  // Clean up all active requests when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up TTS controller if active
+      if (ttsControllerRef.current) {
+        try {
+          ttsControllerRef.current.abort();
+          ttsControllerRef.current = null;
+        } catch (err) {
+          console.error("Error aborting TTS controller:", err);
+        }
+      }
+
+      // Stop any playing audio
+      stopAudio();
+
+      // Clean up any active fetch requests
+      activeFetchRequests.current.forEach((controller) => {
+        try {
+          controller.abort();
+        } catch (err) {
+          console.error("Error aborting fetch controller:", err);
+        }
+      });
+      activeFetchRequests.current = [];
+    };
+  }, [stopAudio]);
 
   // Scroll tools panel to bottom when new tools are added
   useEffect(() => {
@@ -102,7 +132,7 @@ export const ChatArea = ({
     };
   }, [markUserInteraction]);
 
-  // Handle text-to-speech
+  // Handle text-to-speech with improved request management
   const handleTTS = async (messageId: string, text: string) => {
     try {
       if (playingMessageId === messageId) {
@@ -133,6 +163,9 @@ export const ChatArea = ({
       // Create a new abort controller for this request
       ttsControllerRef.current = new AbortController();
 
+      // Add to active requests list
+      activeFetchRequests.current.push(ttsControllerRef.current);
+
       const response = await fetch(`/api/gen-chat-tts`, {
         method: "POST",
         headers: {
@@ -143,6 +176,11 @@ export const ChatArea = ({
         }),
         signal: ttsControllerRef.current.signal,
       });
+
+      // Remove from active requests list
+      activeFetchRequests.current = activeFetchRequests.current.filter(
+        (controller) => controller !== ttsControllerRef.current
+      );
 
       if (!response.ok) throw new Error("TTS request failed");
 

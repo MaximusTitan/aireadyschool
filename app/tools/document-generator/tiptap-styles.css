@@ -96,3 +96,25 @@
 .ProseMirror mark[data-type="textStyle"] {
   background-color: transparent; /* Override default mark background */
 }
+
+/* Add typing cursor animation */
+.ProseMirror.typing::after {
+  content: '|';
+  display: inline-block;
+  animation: blink 1s step-start infinite;
+  margin-left: 2px;
+  color: #000;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Add highlighting effect for processing text */
+.ProseMirror .processing-text {
+  background: rgba(0, 123, 255, 0.1);
+  border-radius: 2px;
+  transition: background-color 0.3s ease;
+}

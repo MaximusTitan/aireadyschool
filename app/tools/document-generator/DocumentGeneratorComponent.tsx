@@ -49,6 +49,8 @@ import {
   Paintbrush,
   Save,
   Edit,
+  Sparkles,
+  Wand2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -183,6 +185,37 @@ interface DocumentGeneratorProps {
   embedded?: boolean;
 }
 
+function FloatingAIMenu({
+  onRewriteSelected,
+  onRewriteAll,
+  isProcessing,
+}: {
+  onRewriteSelected: () => void;
+  onRewriteAll: () => void;
+  isProcessing: boolean;
+}) {
+  return (
+    <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg border p-2 z-10">
+      <div className="flex items-center gap-2">
+        <Button
+          onClick={onRewriteSelected}
+          variant="outline"
+          className="flex items-center gap-2"
+          disabled={isProcessing}
+        >
+          {isProcessing ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles size={16} />
+          )}
+          Enhance Selected
+        </Button>
+      
+      </div>
+    </div>
+  );
+}
+
 const DocumentGeneratorContent = ({
   initialContent = "",
   initialTitle = "Untitled Document",
@@ -209,6 +242,25 @@ const DocumentGeneratorContent = ({
   const supabase = createClient();
   const [exportingPdf, setExportingPdf] = useState(false);
   const [isViewMode, setIsViewMode] = useState(false);
+  const [showAIMenu, setShowAIMenu] = useState(false);
+  const [selectedText, setSelectedText] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleTextSelection = () => {
+    if (editor) {
+      const text = editor.state.doc.textBetween(
+        editor.state.selection.from,
+        editor.state.selection.to,
+        " "
+      );
+      if (text) {
+        setSelectedText(text);
+        setShowAIMenu(true);
+      } else {
+        setShowAIMenu(false);
+      }
+    }
+  };
 
   const editor = useEditor({
     extensions: [
@@ -296,6 +348,9 @@ const DocumentGeneratorContent = ({
       if (content && content.trim().length > 0 && !aiPromptVisible) {
         setAiPromptVisible(true);
       }
+    },
+    onSelectionUpdate: ({ editor }) => {
+      handleTextSelection();
     },
   });
 
@@ -942,6 +997,95 @@ const DocumentGeneratorContent = ({
     return null;
   }
 
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  const typeText = async (editor: any, text: string, startPos: number, endPos: number) => {
+    // First, clear the selected text
+    editor.chain()
+      .focus()
+      .setTextSelection({ from: startPos, to: endPos })
+      .deleteSelection()
+      .run();
+    
+    // Then type out the new text character by character
+    const words = text.split(' ');
+    for (let i = 0; i < words.length; i++) {
+      const word = words[i];
+      editor.chain().focus().insertContent(word).run();
+      if (i < words.length - 1) {
+        editor.chain().focus().insertContent(' ').run();
+      }
+      await sleep(20); // Adjust typing speed here
+    }
+  };
+
+  // Update the enhanceSelectedText function
+  const enhanceSelectedText = async () => {
+    if (!selectedText || !editor) return;
+  
+    try {
+      setIsProcessing(true);
+      const startPos = editor.state.selection.from;
+      const endPos = editor.state.selection.to;
+  
+      const response = await fetch("/api/enhance-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: selectedText,
+          mode: "enhance"
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to enhance text");
+
+      const { enhancedText } = await response.json();
+      await typeText(editor, enhancedText, startPos, endPos);
+
+      setShowAIMenu(false);
+      toast.success("Text enhanced successfully!");
+    } catch (error) {
+      console.error("Error enhancing text:", error);
+      toast.error("Failed to enhance text");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const rewriteEntireDocument = async () => {
+    if (!editor || !editor.getText().trim()) {
+      toast.error("Please add some content first");
+      return;
+    }
+
+    try {
+      setIsProcessing(true);
+
+      const response = await fetch("/api/enhance-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: editor.getText(),
+          mode: "rewrite",
+        }),
+      });
+
+      if (!response.ok) throw new Error("Failed to rewrite document");
+
+      const { enhancedText } = await response.json();
+
+      editor.chain().focus().selectAll().insertContent(enhancedText).run();
+
+      setShowAIMenu(false);
+      toast.success("Document rewritten successfully!");
+    } catch (error) {
+      console.error("Error rewriting document:", error);
+      toast.error("Failed to rewrite document");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
       {/* Document Header */}
@@ -1179,6 +1323,7 @@ const DocumentGeneratorContent = ({
         >
           <Heading2 size={18} />
         </Button>
+
         <div className="w-px h-6 bg-gray-300 mx-1"></div>
 
         {/* Alignment buttons */}
@@ -1228,7 +1373,10 @@ const DocumentGeneratorContent = ({
 
         <div className="w-px h-6 bg-gray-300 mx-1"></div>
 
-        {/* Enhanced Image Handling */}
+        {/* Replace the separate image buttons with a single Image Popover */}
+        <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+        {/* Combined Image Upload and Generation Popover */}
         <Popover>
           <PopoverTrigger asChild>
             <Button size="icon" variant="ghost">
@@ -1236,69 +1384,67 @@ const DocumentGeneratorContent = ({
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-80">
-            <div className="flex flex-col gap-4">
-              <h3 className="font-medium">Insert Image</h3>
-
-              {/* Upload from computer */}
-              <div>
-                <Button
-                  variant="outline"
-                  className="w-full flex items-center gap-2"
+            <div className="space-y-4">
+              <div className="border-b pb-2">
+                <h4 className="font-medium mb-2">Add Image</h4>
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-start" 
                   onClick={triggerFileInput}
                 >
-                  <Upload size={16} />
+                  <Upload className="h-4 w-4 mr-2" />
                   Upload from Computer
                 </Button>
                 <input
                   type="file"
                   ref={fileInputRef}
                   onChange={handleImageUpload}
-                  accept="image/*"
                   className="hidden"
+                  accept="image/*"
                 />
               </div>
-
-              <DropdownMenuSeparator />
-
-              {/* Generate with AI */}
-              <div className="flex flex-col gap-2">
-                <h4 className="text-sm font-medium">Generate with AI</h4>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Describe the image..."
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
-                    className="flex-1"
-                  />
-                  <Button disabled={generatingImage} onClick={generateImage}>
-                    {generatingImage ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Generate"
-                    )}
-                  </Button>
-                </div>
-
+              
+              <div className="space-y-2">
+                <h4 className="font-medium">Generate with AI</h4>
+                <Input
+                  placeholder="Describe the image..."
+                  value={imagePrompt}
+                  onChange={(e) => setImagePrompt(e.target.value)}
+                />
+                <Button
+                  onClick={generateImage}
+                  disabled={!imagePrompt || generatingImage}
+                  className="w-full"
+                >
+                  {generatingImage ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4 mr-2" />
+                      Generate Image
+                    </>
+                  )}
+                </Button>
                 {generatedImageUrl && (
-                  <div className="flex flex-col gap-2">
-                    <div className="aspect-video relative border rounded overflow-hidden">
+                  <div className="mt-4">
+                    <div className="relative aspect-video rounded-lg overflow-hidden">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={generatedImageUrl}
                         alt="Generated"
-                        className="object-contain w-full h-full"
+                        className="object-cover"
                       />
-                    </div>
-                    <div className="flex justify-between">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={regenerateImage}
-                      >
-                        Regenerate
-                      </Button>
-                      <Button size="sm" onClick={addGeneratedImage}>
-                        Add to Document
-                      </Button>
+                      <div className="absolute bottom-0 left-0 right-0 p-2  flex justify-end gap-2">
+                        <Button size="sm"  onClick={regenerateImage}>
+                          Regenerate
+                        </Button>
+                        <Button size="sm" onClick={addGeneratedImage}>
+                          Add to Document
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -1306,6 +1452,9 @@ const DocumentGeneratorContent = ({
             </div>
           </PopoverContent>
         </Popover>
+
+        {/* Remove the separate AI image generation button */}
+        
       </div>
 
       {/* Editor Content */}
@@ -1326,25 +1475,13 @@ const DocumentGeneratorContent = ({
           </div>
         </div>
 
-        {/* AI generation floating button */}
-        {aiPromptVisible && (
-          <div className="fixed bottom-5 left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg border p-2 z-10 flex items-center gap-2">
-            <Button
-              onClick={generateDocument}
-              disabled={loading}
-              className="flex items-center gap-2"
-            >
-              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Enhance with AI
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setAiPromptVisible(false)}
-            >
-              <X size={16} />
-            </Button>
-          </div>
+        {/* Replace the existing AI button with this */}
+        {showAIMenu && (
+          <FloatingAIMenu
+            onRewriteSelected={enhanceSelectedText}
+            onRewriteAll={rewriteEntireDocument}
+            isProcessing={isProcessing}
+          />
         )}
       </div>
     </div>

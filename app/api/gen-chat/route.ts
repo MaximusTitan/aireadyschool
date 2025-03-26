@@ -18,6 +18,34 @@ import {
   TEACHING_MODE_PROMPT_HINDI,
 } from '@/app/utils/systemPrompt';
 
+// Import token estimation utility
+import { encodingForModel } from "js-tiktoken";
+
+// Add this utility function at the top level
+function estimateTokens(text: string): number {
+  try {
+    // Claude uses cl100k_base encoding
+    const encoding = encodingForModel("gpt-4");
+    const tokens = encoding.encode(text);
+    return tokens.length;
+  } catch (error) {
+    console.warn("Error estimating tokens:", error);
+    // Fallback to character-based estimation (rough approximation)
+    return Math.ceil(text.length / 4);
+  }
+}
+
+// Token usage logging and limits
+const TOKEN_USAGE_LIMIT = 4000; // Set a reasonable limit
+
+// System prompt cache to avoid regenerating for similar requests
+const systemPromptCache = new Map<string, {prompt: string, tokens: number}>();
+
+// Cache key generator for system prompts
+function getSystemPromptCacheKey(subject: string, userRole: string, language: string, teachingMode: boolean): string {
+  return `${subject}-${userRole}-${language}-${teachingMode}`;
+}
+
 export const runtime = 'edge';
 
 type Subject = 'science' | 'math' | 'english' | 'generic';
@@ -94,7 +122,32 @@ function isAPICallError(error: unknown): error is APICallError {
   return APICallError.isInstance(error);
 }
 
-// Updated getSystemPrompt to receive an optional studentDetails parameter
+// Cache student details to avoid repeated DB calls
+const studentDetailsCache = new Map<string, any>();
+
+async function getStudentDetails(supabase: any, userId: string, userName: string) {
+  if (studentDetailsCache.has(userId)) {
+    return studentDetailsCache.get(userId);
+  }
+
+  const { data, error } = await supabase
+    .from('student_details')
+    .select('grade, board, country')
+    .eq('id', userId)
+    .single();
+
+  // Only include essential fields to reduce token usage
+  const details = !error && data ? { 
+    grade: data.grade,
+    name: userName 
+    // Removed non-essential fields to save tokens
+  } : { name: userName };
+  
+  studentDetailsCache.set(userId, details);
+  return details;
+}
+
+// Optimize the system prompt to be more concise
 function getSystemPrompt(
   messages: any[],
   userRole?: string,
@@ -103,101 +156,57 @@ function getSystemPrompt(
   studentDetails?: any,
   assignedAssessment?: { evaluation: any; lesson_plan: any }
 ): string {
-  let promptString = '';
-  // For teachers, only use teacher buddy prompt
+  const subject = detectSubject(messages);
+  
+  // Check cache first
+  const cacheKey = getSystemPromptCacheKey(subject, userRole || 'Student', language, teachingMode);
+  if (systemPromptCache.has(cacheKey) && !studentDetails) {
+    return systemPromptCache.get(cacheKey)!.prompt;
+  }
+
+  let prompt = prompts[language][subject];
+
   if (userRole === 'Teacher') {
-    promptString = TEACHER_BUDDY_PROMPT;
-  }
-  // If in teaching mode, use teaching mode prompt
-  else if (teachingMode) {
-    promptString = language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI;
-  }
-  // For students, use subject context and student details if available
-  else if (userRole === 'Student' && studentDetails) {
-    const subject = detectSubject(messages);
-    const basePrompt = prompts[language][subject];
-    const detailsContext = `
-Student Details:
-Always greet student with their name and provide personalized learning experience.
-- Name: ${studentDetails.name || 'N/A'}
-- Grade: ${studentDetails.grade || 'N/A'}
-- Board: ${studentDetails.board || 'N/A'}
-- Country: ${studentDetails.country || 'N/A'}`;
-    promptString = language === 'english'
-      ? `${basePrompt}
-${detailsContext}
-
-You can use various tools to enhance the learning experience:
-- Create quizzes
-- Generate educational images
-- Create concept visualizations
-- Generate mind maps
-
-Do not ever mention that you are using the tools to the user. Just start using them. After explaining the concept, you should ask the student to take an assessment to reinforce their learning.
-
-Always provide clear explanations and encourage active learning. Give short responses whenever possible.`
-      : `${basePrompt}
-${detailsContext}
-
-आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
-- इंटरैक्टिव गणित समस्याएँ उत्पन्न करें
-- क्विज़ बनाएँ
-- शैक्षिक छवियाँ उत्पन्न करें
-- अवधारणा विज़ुअलाइज़ेशन बनाएँ
-- माइंड मैप उत्पन्न करें
-
-कभी भी उपयोगकर्ता को यह न बताएं कि आप उपकरण का उपयोग कर रहे हैं। बस उनका उपयोग करना शुरू कर दें। अवधारित कोण के बाद, आपको छात्र से अभ्यास लेने के लिए कहना चाहिए ताकि उनके सीखने को मजबूत किया जा सके।
-
-हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
-  }
-  // Default prompt for other cases:
-  else {
-    const subject = detectSubject(messages);
-    const basePrompt = prompts[language][subject];
-    promptString = language === 'english'
-      ? `${basePrompt}
-
-You can use various tools to enhance the learning experience:
-- Create quizzes
-- Generate educational images
-- Create concept visualizations
-- Generate mind maps
-
-Do not ever mention that you are using the tools to the user. Just start using them.
-
-Always provide clear explanations and encourage active learning. Give short responses whenever possible.`
-      : `${basePrompt}
-
-आप सीखने के अनुभव को बढ़ाने के लिए विभिन्न उपकरणों का उपयोग कर सकते हैं:
-- इंटरैक्टिव गणित समस्याएँ उत्पन्न करें
-- क्विज़ बनाएँ
-- शैक्षिक छवियाँ उत्पन्न करें
-- अवधारणा विज़ुअलाइज़ेशन बनाएँ
-- माइंड मैप उत्पन्न करें
-
-कभी भी उपयोगकर्ता को यह न बताएं कि आप उपकरण का उपयोग कर रहे हैं। बस उनका उपयोग करना शुरू कर दें।
-
-हमेशा स्पष्ट व्याख्या प्रदान करें और सक्रिय सीखने को प्रोत्साहित करें। संभव हो तो छोटे उत्तर दें।`;
+    systemPromptCache.set(cacheKey, {
+      prompt: TEACHER_BUDDY_PROMPT,
+      tokens: estimateTokens(TEACHER_BUDDY_PROMPT)
+    });
+    return TEACHER_BUDDY_PROMPT;
   }
 
-  // Append assigned assessment context if exists for Student users
-  if (userRole === 'Student' && assignedAssessment) {
-
-    const assessmentContext = language === 'english'
-      ? `
-
-Additional Context to continue the lesson:
-Evaluation: ${JSON.stringify(assignedAssessment.evaluation)}
-Lesson Plan: ${JSON.stringify(assignedAssessment.lesson_plan)}`
-      : `
-
-अतिरिक्त संदर्भ पाठ जारी रखने के लिए:
-Evaluation: ${JSON.stringify(assignedAssessment.evaluation)}
-Lesson Plan: ${JSON.stringify(assignedAssessment.lesson_plan)}`;
-    promptString += assessmentContext;
+  if (teachingMode) {
+    const teachingPrompt = language === 'english' ? TEACHING_MODE_PROMPT : TEACHING_MODE_PROMPT_HINDI;
+    systemPromptCache.set(cacheKey, {
+      prompt: teachingPrompt,
+      tokens: estimateTokens(teachingPrompt)
+    });
+    return teachingPrompt;
   }
 
-  return promptString;
+  if (userRole === 'Student' && studentDetails) {
+    // Add only essential student info to reduce tokens
+    prompt += `\nStudent: ${studentDetails.name || 'N/A'}, Grade: ${studentDetails.grade || 'N/A'}`;
+    
+    if (assignedAssessment?.evaluation) {
+      // Only include the most critical assessment data
+      const evalSummary = {
+        score: assignedAssessment.evaluation.score,
+        // Limit to just one improvement area to save tokens
+        area: assignedAssessment.evaluation.improvementAreas?.[0] || ''
+      };
+      prompt += `\nAssessment: ${JSON.stringify(evalSummary)}`;
+    }
+  }
+  
+  // Cache the prompt if it doesn't contain personalized data
+  if (!studentDetails) {
+    systemPromptCache.set(cacheKey, {
+      prompt: prompt,
+      tokens: estimateTokens(prompt)
+    });
+  }
+  
+  return prompt;
 }
 
 async function saveToolOutputs(
@@ -212,14 +221,23 @@ async function saveToolOutputs(
   }>
 ) {
   try {
-    const outputs = toolCalls.map(call => ({
-      message_id: messageId,
-      tool_name: call.tool,
-      tool_call_id: call.id,
-      parameters: call.parameters,
-      result: call.result,
-      state: call.state || 'pending'
-    }));
+    const outputs = toolCalls.map(call => {
+      // Truncate large results to save tokens and database space
+      const truncatedResult = call.result ? 
+        (typeof call.result === 'string' && call.result.length > 1000 ? 
+          call.result.substring(0, 1000) + '...[truncated]' : 
+          call.result) : 
+        undefined;
+      
+      return {
+        message_id: messageId,
+        tool_name: call.tool,
+        tool_call_id: call.id,
+        parameters: call.parameters,
+        result: truncatedResult,
+        state: call.state || 'pending'
+      };
+    });
 
     const { error } = await supabase
       .from('tool_outputs')
@@ -252,11 +270,9 @@ interface ScheduleData {
 const activeConnections = new Map();
 
 export async function POST(request: Request) {
-  console.log('Chat API Route: Received request');
 
   // Generate a unique request ID for tracking this connection
   const requestId = crypto.randomUUID();
-  console.log(`Request ${requestId}: Starting processing`);
 
   let controller: AbortController | null = null;
   
@@ -271,7 +287,6 @@ export async function POST(request: Request) {
       status: 'processing'
     });
     
-    console.log(`Request ${requestId}: User Authentication Check...`);
 
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
@@ -288,38 +303,39 @@ export async function POST(request: Request) {
 
     const { messages, id: threadId, language = 'english', teachingMode = false, lessonPlanId, scheduleData } = await request.json();
 
-    // Add logging to debug language toggle
-    console.log('Thread ID:', threadId);
-    console.log('User ID:', user.id);
-    console.log('Language selected:', language);
+    // Check if the input is unreasonably large before processing
+    const lastUserMessage = messages.find((m: any) => m.role === 'user')?.content || '';
+    const inputTokenEstimate = estimateTokens(lastUserMessage);
+    console.log(`Token estimate for user input: ${inputTokenEstimate}`);
+    
+    if (inputTokenEstimate > TOKEN_USAGE_LIMIT) {
+      return Response.json({ 
+        error: 'Input too large', 
+        message: 'Your message is too long. Please provide a shorter question.' 
+      }, { status: 413 });
+    }
 
     // Fetch student details if role is Student
     let studentDetails = null;
-    if (userRole === 'Student') {
-      const { data, error: detailsError } = await supabase
-        .from('student_details')
-        .select('grade, board, country')
-        .eq('id', user.id)
-        .single();
-      if (!detailsError && data) {
-        studentDetails = { ...data, name: userName };
-        console.log('Student details found:', studentDetails);
-      } else {
-        studentDetails = { name: userName }; 
-      }
+    if (userRole === 'Student' && !studentDetailsCache.has(user.id)) {
+      studentDetails = await getStudentDetails(supabase, user.id, userName);
+    } else if (userRole === 'Student') {
+      studentDetails = studentDetailsCache.get(user.id);
+    }
 
-      const { data: assignedData, error: assignedError } = await supabase
+    // Only fetch recent assessment if needed
+    if (userRole === 'Student' && !studentDetails?.assignedAssessment) {
+      const { data: assignedData } = await supabase
         .from('assigned_assessments')
         .select('evaluation, lesson_plan')
         .eq('student_email', user.email)
         .order('assigned_at', { ascending: false })
         .limit(1)
         .single();
-      let assignedAssessment = null;
-      if (!assignedError && assignedData) {
-        assignedAssessment = assignedData;
+
+      if (assignedData) {
+        studentDetails.assignedAssessment = assignedData;
       }
-      studentDetails = { ...studentDetails, assignedAssessment };
     }
 
     // Verify thread belongs to user
@@ -329,9 +345,6 @@ export async function POST(request: Request) {
         .select('user_id')
         .eq('id', threadId)
         .single();
-
-      console.log('Thread data:', thread);
-      console.log('Thread error:', threadError);
 
       if (threadError) {
         return Response.json({ error: 'Thread not found' }, { status: 404 });
@@ -375,33 +388,17 @@ export async function POST(request: Request) {
       studentDetails?.assignedAssessment ?? undefined // Fixed: ensure null is converted to undefined
     );
 
-    // Add lesson plan context if available
-    if (lessonPlanId) {
-      const { data: lessonPlan, error } = await supabase
-        .from('lesson_plans')
-        .select('*')
-        .eq('id', lessonPlanId)
-        .single();
-
-      if (lessonPlan && !error) {
-        systemPrompt += `\n\nYou are discussing the lesson plan for "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} for grade ${lessonPlan.grade}. The lesson is planned for ${lessonPlan.number_of_days} sessions of ${lessonPlan.class_duration} minutes each. Learning objectives: ${lessonPlan.learning_objectives || 'Not specified'}`;
-
-        // Add schedule-specific context if available
-        if (scheduleData) {
-          const data = typeof scheduleData === 'string' ? JSON.parse(scheduleData) : scheduleData;
-          systemPrompt += `\n\nSpecific Focus:
-          Day ${data.day}: ${data.topicHeading}
-          Activity Type: ${data.schedule.type}
-          Title: ${data.schedule.title}
-          Duration: ${data.schedule.timeAllocation} minutes
-          Content: ${data.schedule.content}
-
-          Learning Outcomes for this session:
-          ${data.learningOutcomes.map((outcome: string) => `- ${outcome}`).join('\n')}
-
-          Please provide detailed guidance and explanations specifically for this part of the lesson.`;
-        }
-      }
+    // Log the system prompt token usage for monitoring
+    const systemPromptTokens = estimateTokens(systemPrompt);
+    console.log(`System prompt tokens: ${systemPromptTokens}`);
+    
+    // Add safeguard against excessively large system prompts
+    if (systemPromptTokens > TOKEN_USAGE_LIMIT) {
+      console.warn(`System prompt exceeds token limit: ${systemPromptTokens} tokens`);
+      // Use a simplified prompt instead
+      systemPrompt = teachingMode ? 
+        "You are a helpful teaching assistant. Respond concisely." : 
+        "You are a learning buddy. Provide helpful but concise responses.";
     }
 
     const streamHandler = streamText({
@@ -411,40 +408,16 @@ export async function POST(request: Request) {
       maxSteps: 5,
       tools,
       experimental_telemetry: { isEnabled: true },
-      // Log all input parameters before stream initialization
-      temperature: (() => {
-        console.log('Stream Input Parameters:', {
-          model: 'claude-3-5-haiku-20241022',
-          systemPrompt: systemPrompt,
-          messages: cleanMessages,
-          maxSteps: 5,
-          tools: tools ? Object.keys(tools) : null,
-          teachingMode: teachingMode
-        });
-    
-        console.log('Raw System Prompt:', systemPrompt);
-        console.log('Raw Messages:', JSON.stringify(cleanMessages, null, 2));
-        
+      // Optimize token usage by limiting output length more aggressively
+      temperature: (() => {        
         return teachingMode ? 0.3 : 0.5;
       })(),
-      maxTokens: teachingMode ? 1500 : 500,
+      maxTokens: teachingMode ? 1000 : 400, // Reduced token limits to save tokens
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',
       }),
       onStepFinish: async ({ text, toolCalls, toolResults }) => {
-        // Enhanced logging for step finish
-        console.log('Step Finish Details:', {
-          text: text,
-          toolCalls: toolCalls ? toolCalls.map(call => ({
-            toolName: call.toolName,
-            args: call.args
-          })) : null,
-          toolResults: toolResults ? toolResults.map(result => ({
-            toolCallId: result.toolCallId,
-            result: result.result
-          })) : null
-        });
     
         const connectionInfo = activeConnections.get(requestId);
         if (connectionInfo) {
@@ -481,10 +454,7 @@ export async function POST(request: Request) {
               state: result ? 'result' : 'pending'
             };
           });
-    
-          // Log tool calls and results before saving
-          console.log('Tool Calls with Results:', JSON.stringify(toolCallsWithResults, null, 2));
-    
+        
           await saveToolOutputs(supabase, messageId, toolCallsWithResults);
     
         } catch (err) {
@@ -492,11 +462,6 @@ export async function POST(request: Request) {
         }
       },
       onFinish: async ({ usage, finishReason }) => {
-        // Log finish details
-        console.log('Stream Finish Details:', {
-          usage: usage,
-          finishReason: finishReason
-        });
     
         streamFinished = true;
         
@@ -533,14 +498,12 @@ export async function POST(request: Request) {
         } finally {
           setTimeout(() => {
             activeConnections.delete(requestId);
-            console.log(`Request ${requestId}: Removed from active connections`);
           }, 5000);
         }
       },
     });
     
     try {
-      console.log(`Request ${requestId}: Creating response stream`);
       const response = streamHandler.toDataStreamResponse();
       
       if (!response.body) {
@@ -583,7 +546,6 @@ export async function POST(request: Request) {
         flush(controller) {
           // Make sure the stream ends gracefully
           try {
-            console.log(`Request ${requestId}: Flushing transform stream`);
             controller.terminate();
           } catch (err) {
             console.error(`Request ${requestId}: Error terminating controller:`, err);
@@ -591,7 +553,6 @@ export async function POST(request: Request) {
             // Ensure connection is cleaned up
             setTimeout(() => {
               activeConnections.delete(requestId);
-              console.log(`Request ${requestId}: Cleaned up after flush`);
             }, 1000);
           }
         }
@@ -600,7 +561,6 @@ export async function POST(request: Request) {
       const stream = response.body.pipeThrough(transformStream);
 
       // Create a response with the transformed stream
-      console.log(`Request ${requestId}: Returning response stream`);
       return new Response(stream, {
         status: response.status,
         headers: {
@@ -631,7 +591,6 @@ export async function POST(request: Request) {
 
       // Remove from active connections map
       activeConnections.delete(requestId);
-      console.log(`Request ${requestId}: Removed from active connections due to stream error`);
 
       // Handle stream finish errors
       if (isStreamFinishError(streamErr)) {
@@ -722,7 +681,6 @@ export async function POST(request: Request) {
     
     // Remove from active connections map
     activeConnections.delete(requestId);
-    console.log(`Request ${requestId}: Removed from active connections due to general error`);
     
     // Enhanced error classification
     if (err instanceof TypeError) {
@@ -795,7 +753,6 @@ function cleanupStalledConnections() {
   
   activeConnections.forEach((connection, id) => {
     if (now - (connection.lastActivity || connection.timestamp) > timeout) {
-      console.log(`Cleaning up stalled connection ${id}`);
       if (connection.controller) {
         try {
           connection.controller.abort();

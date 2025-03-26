@@ -410,6 +410,7 @@ export async function POST(request: Request) {
       messages: cleanMessages as CreateMessage[],
       maxSteps: 5,
       tools,
+      experimental_telemetry: { isEnabled: true },
       // Log all input parameters before stream initialization
       temperature: (() => {
         console.log('Stream Input Parameters:', {

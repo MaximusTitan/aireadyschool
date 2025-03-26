@@ -46,7 +46,7 @@ function getSystemPromptCacheKey(subject: string, userRole: string, language: st
   return `${subject}-${userRole}-${language}-${teachingMode}`;
 }
 
-export const runtime = 'edge';
+// export const runtime = 'edge';
 
 type Subject = 'science' | 'math' | 'english' | 'generic';
 type Language = 'english' | 'hindi';

@@ -11,12 +11,24 @@ const EvaluationSchema = z.object({
     board: z.string(),
     assessmentId: z.string(),
     dateOfAssessment: z.string(),
+    evaluationType: z.string(), // Generic field for any test type information available
   }),
   PERFORMANCE_METRICS: z.object({
     overallScore: z.number(),
     correctAnswers: z.number(),
     incorrectAnswers: z.number(),
     performanceRating: z.enum(['Excellent', 'Good', 'Needs Improvement', 'Poor']),
+    percentile: z.number(),
+    attemptsDistribution: z.object({
+      easyQuestions: z.number(),
+      mediumQuestions: z.number(),
+      hardQuestions: z.number(),
+    }),
+    accuracyByDifficulty: z.object({
+      easy: z.number(),
+      medium: z.number(),
+      hard: z.number(),
+    }),
   }),
   TOPIC_ANALYSIS: z.object({
     mainTopics: z.array(z.object({
@@ -24,12 +36,42 @@ const EvaluationSchema = z.object({
       subtopics: z.array(z.string()),
       strongUnderstandingTopics: z.array(z.string()),
       weakUnderstandingTopics: z.array(z.string()),
+      topicScore: z.number(),
+      confidenceLevel: z.number(),
+      masteryLevel: z.enum(['Mastered', 'Proficient', 'Developing', 'Beginning']),
+      subtopicPerformance: z.array(z.object({
+        name: z.string(),
+        score: z.number(),
+        questionsAttempted: z.number(),
+        questionsCorrect: z.number(),
+        averageResponseTime: z.number(),
+        difficultyRating: z.number(),
+        confidenceRating: z.number(),
+        mistakePatterns: z.array(z.string()),
+      })),
     })),
+    // overallTopicDistribution: z.record(z.string(), z.number()),
   }),
   CONCEPT_UNDERSTANDING: z.object({
     conceptUnderstandingLevels: z.record(z.string(), z.number()).nullable(),
     knowledgeGaps: z.array(z.string()).nullable(),
+    strengthAreas: z.array(z.string()),
+    recommendedFocusAreas: z.array(z.string()),
+    conceptHierarchy: z.array(z.object({
+      primaryConcept: z.string(),
+      relatedConcepts: z.array(z.string()),
+      understandingScore: z.number(), // 0-100
+    })),
+    // applicationAbility: z.record(z.string(), z.number()), // Concept to application ability score
   }).strict(),
+  LEARNING_STYLE_INDICATORS: z.object({
+    preferredQuestionTypes: z.array(z.string()),
+    learningPaceMetrics: z.object({
+      fastLearningAreas: z.array(z.string()),
+      challengeAreas: z.array(z.string()),
+    }),
+    // engagementPatterns: z.record(z.string(), z.number()), // Pattern name to strength score
+  }),
 });
 
 export async function POST(request: Request) {

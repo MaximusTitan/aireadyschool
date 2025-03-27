@@ -30,7 +30,7 @@ interface PosterOptions {
     console.log("Generating school poster with options:", JSON.stringify(options, null, 2))
   
     try {
-      const response = await fetch("https://fal.run/fal-ai/recraft-v3", {
+      const response = await fetch("https://fal.run/fal-ai/flux/schnell", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

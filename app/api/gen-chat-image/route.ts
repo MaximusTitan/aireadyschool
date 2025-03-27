@@ -6,7 +6,7 @@ import { createClient } from '@/utils/supabase/server'
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
-    const { prompt, imageSize, style, colors } = await request.json()
+    const { prompt, imageSize } = await request.json()
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -36,8 +36,8 @@ export async function POST(request: Request) {
       credentials: process.env.FAL_KEY
     })
 
-    // Generate images using Recraft V3
-    const result = await fal.subscribe("fal-ai/flux/dev", {
+    // Generate images using Flux Schnell
+    const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
         prompt,
         image_size: imageSize || "square_hd",

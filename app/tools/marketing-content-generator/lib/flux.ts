@@ -68,7 +68,7 @@ export async function generateImage(options: ThumbnailOptions): Promise<{ imageU
       prompt: requestBody.prompt.substring(0, 100) + "..." // Log truncated version
     });
 
-    const response = await fetch("https://fal.run/fal-ai/recraft-v3", {
+    const response = await fetch("https://fal.run/fal-ai/flux/schnell", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -120,7 +120,7 @@ export async function generateImage(options: ThumbnailOptions): Promise<{ imageU
       contactDetails.length > 0 ? `Contact Details (place in bottom-right corner): ${contactDetails.join(", ")}` : ""
   
     try {
-      const response = await fetch("https://fal.run/fal-ai/recraft-v3", {
+      const response = await fetch("https://fal.run/fal-ai/flux/schnell", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

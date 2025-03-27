@@ -24,11 +24,10 @@ async function attemptImageGeneration(prompt: string, attempt: number = 1): Prom
   try {
     console.log(`Attempt ${attempt} - Generating image for prompt: "${prompt}"`);
     
-    const result = await fal.subscribe("fal-ai/recraft-v3", {
+    const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
         prompt,
         image_size: "square_hd",
-        style: "digital_illustration"
       },
       logs: true,
       onQueueUpdate: (update) => {

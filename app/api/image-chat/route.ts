@@ -17,7 +17,6 @@ export async function POST(request: Request) {
       4. Providing feedback and suggestions for better results
 
       Always use the generateImage tool with these parameters:
-      - style: "realistic_image", "digital_illustration", or "vector_illustration"
       - imageSize: "square_hd", "landscape_4_3", or "portrait_hd"
       - numInferenceSteps: 1
       - numImages: 1

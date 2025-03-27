@@ -38,7 +38,7 @@ async function uploadImageToSupabase(imageUrl: string, supabase: any, userEmail:
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
-    const { prompt, imageSize, style, colors } = await request.json()
+    const { prompt, imageSize } = await request.json()
 
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
@@ -73,13 +73,11 @@ export async function POST(request: Request) {
       credentials: process.env.FAL_KEY
     })
 
-    // Generate images using Recraft V3
-    const result = await fal.subscribe("fal-ai/recraft-v3", {
+    // Generate images using Flux Schnells
+    const result = await fal.subscribe("fal-ai/flux/schnell", {
       input: {
         prompt,
         image_size: imageSize || "square_hd",
-        style: style || "realistic_image" || "digital_illustration" || "vector_illustration",
-        colors: colors || []
       },
       logs: true
     });
@@ -98,7 +96,6 @@ export async function POST(request: Request) {
             prompt: prompt,
             image_url: publicUrl, // Store the Supabase public URL instead of FAL URL
             aspect_ratio: imageSize,
-            style: style,
             bucket_path: bucketPath,
             metadata: {
               original_url: image.url // Store original FAL URL in metadata

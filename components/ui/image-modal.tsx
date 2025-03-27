@@ -1,9 +1,16 @@
-import { Dialog, DialogContent } from "@/components/ui/dialog"
-import { X, Download, ChevronLeft, ChevronRight, RefreshCw, Info } from "lucide-react"
-import { Button } from "./button"
-import { VisuallyHidden } from '@/components/ui/visually-hidden'
-import { motion } from "framer-motion"
-import { cn } from "@/lib/utils"
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  X,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  Info,
+} from "lucide-react";
+import { Button } from "./button";
+import { VisuallyHidden } from "@/components/ui/visually-hidden";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface ImageModalProps {
   isOpen: boolean;
@@ -28,7 +35,7 @@ export function ImageModal({
   imageUrl,
   prompt,
   style = "Not specified",
-  model = "Recraft v3",
+  model = "Flux Schnell",
   aspectRatio = "Square",
   onDownload,
   onRegenerate,
@@ -36,7 +43,7 @@ export function ImageModal({
   onPrevious,
   onNext,
   hasPrevious,
-  hasNext
+  hasNext,
 }: ImageModalProps) {
   return (
     <Dialog open={isOpen} onOpenChange={() => onClose()}>
@@ -54,7 +61,7 @@ export function ImageModal({
                 <X className="h-4 w-4" />
               </Button>
             </div>
-            
+
             <div className="absolute inset-0 flex items-center justify-center p-4">
               <motion.img
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -96,7 +103,9 @@ export function ImageModal({
               {/* Prompt */}
               <div>
                 <h3 className="text-lg font-semibold mb-2">Prompt</h3>
-                <p className="text-neutral-600 dark:text-neutral-300">{prompt}</p>
+                <p className="text-neutral-600 dark:text-neutral-300">
+                  {prompt}
+                </p>
               </div>
 
               {/* Details */}
@@ -154,5 +163,5 @@ export function ImageModal({
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

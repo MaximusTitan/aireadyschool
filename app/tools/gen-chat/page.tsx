@@ -12,6 +12,7 @@ import { Message } from "ai";
 import { ChatMessage } from "@/types/chat";
 import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSettings";
 import { useTools } from "@/app/tools/gen-chat/hooks/useTools";
+import { createClient } from "@/utils/supabase/client";
 
 function ChatPageContent() {
   const router = useRouter();
@@ -29,6 +30,22 @@ function ChatPageContent() {
     setCurrentMessages,
     isOwner,
   } = useChatThread();
+  const [userRole, setUserRole] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const supabase = createClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (user) {
+        setUserRole(user.user_metadata.role ?? null);
+      }
+    };
+
+    fetchUser();
+  }, []);
 
   // Replace direct window usage with useSearchParams to avoid "window is not defined"
   const searchParams = useSearchParams();
@@ -383,6 +400,7 @@ function ChatPageContent() {
           messages={messages}
           isLoading={isLoading}
           language={language}
+          userRole={userRole ?? ""}
         />
         <ChatArea
           messages={messages}

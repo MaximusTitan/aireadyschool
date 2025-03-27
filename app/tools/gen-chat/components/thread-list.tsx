@@ -18,6 +18,7 @@ interface ThreadListProps {
   messages: any[];
   isLoading: boolean;
   language: string;
+  userRole: string; // added new property
 }
 
 export function ThreadList({
@@ -29,6 +30,7 @@ export function ThreadList({
   messages,
   isLoading,
   language,
+  userRole, // destructured new property
 }: ThreadListProps) {
   const router = useRouter();
   const { toggleLanguage } = useLanguageSettings();
@@ -77,17 +79,19 @@ export function ThreadList({
                 })}
               </div>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDeleteThread(thread.id);
-              }}
-            >
-              <Trash2 size={16} />
-            </Button>
+            {userRole !== "Student" && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDeleteThread(thread.id);
+                }}
+              >
+                <Trash2 size={16} />
+              </Button>
+            )}
           </div>
         ))}
       </div>

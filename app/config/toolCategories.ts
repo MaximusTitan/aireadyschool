@@ -214,7 +214,7 @@ export const categories: CategoryTools = {
         description: "Create eye-catching thumbnails for your YouTube videos.",
         route: "/tools/marketing-content-generator/youtube-thumbnail-generator",
         icon: Video,
-      },
+      }
     ]
   },
   Teacher: {
@@ -226,14 +226,26 @@ export const categories: CategoryTools = {
         icon: BookOpen
       },
       {
+        title: "AI Tutor",
+        description: "Learn with AI tutor",
+        route: "/tools/gen-chat",
+        icon: Atom
+      },
+      {
         title: "Assessment Generator",
         description: "Create interactive multiple-choice, descriptive, fill in the blanks questions for students to assess their understanding.",
         route: "/tools/mcq-generator",
         icon: ClipboardList
       },
       {
+        title: "Study Plan Generator",
+        description: "Plan your study schedule",
+        route: "/tools/study-planner",
+        icon: Calendar
+      },
+      {
         title: "Assessment Evaluator",
-        description: "Evaluate Asnwer Sheets",
+        description: "Evaluate Answer Sheets",
         route: "/tools/assessment-evaluator",
         icon: CheckSquare
       },
@@ -254,14 +266,32 @@ export const categories: CategoryTools = {
         description: "Generate assignments",
         route: "/tools/assignment-generator",
         icon: FileText
+      },
+      {
+        title: "Lesson Content Generator",
+        description: "Generate lesson content",
+        route: "/tools/lesson-content-generator",
+        icon: BookOpen
       }
     ],
     Research: [
+      {
+        title: "Research Assistant",
+        description: "Get help with your research",
+        route: "/tools/research",
+        icon: Search
+      },
       {
         title: "YouTube Summary",
         description: "Video summaries and questions",
         route: "/tools/youtube-assistant",
         icon: Youtube
+      },
+      {
+        title: "Project Helper",
+        description: "Get help with your projects",
+        route: "/tools/project-helper",
+        icon: FolderKanban
       },
       {
         title: "Chat with Docs",
@@ -278,6 +308,12 @@ export const categories: CategoryTools = {
       }
     ],
     Creative: [
+      {
+        title: "Comic Strip Generator",
+        description: "Generate comics",
+        route: "/tools/comic-generator",
+        icon: Image
+      },
       {
         title: "Image Generator",
         description: "Create stunning images",
@@ -317,11 +353,29 @@ export const categories: CategoryTools = {
         isHot: true
       },
       {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+        icon: BookText
+      },
+      {
+        title: "Song Generator",
+        description: "Generate songs from lyrics",
+        route: "/tools/song-generator",
+        icon: Music
+      },
+      {
         title: "Canvas",
         description: "Generate using Canvas",
         route: "/canvas",
         icon: CanvasIcon
       },
+      {
+        title: "Text to Speech",
+        description: "Generate speech from text",
+        route: "/tools/tts",
+        icon: AudioLines
+      }
     ],
     Tech: [
       {
@@ -329,6 +383,24 @@ export const categories: CategoryTools = {
         description: "Train a machine learning model",
         route: "/tools/teachable-machine",
         icon: Brain
+      },
+      {
+        title: "App Builder",
+        description: "Build apps without coding",
+        route: "/tools/builder",
+        icon: Hammer
+      },
+      {
+        title: "Creative Coding Playground",
+        description: "Code in P5.js",
+        route: "/tools/p5",
+        icon: Code
+      },
+      {
+        title: "Code Playground",
+        description: "Code in various languages",
+        route: "/tools/code-playground",
+        icon: Terminal
       }
     ],
     Marketing: [
@@ -337,7 +409,7 @@ export const categories: CategoryTools = {
         description: "Create eye-catching thumbnails for your educational YouTube videos.",
         route: "/tools/marketing-content-generator/youtube-thumbnail-generator",
         icon: Video,
-      },
+      }
     ]
   },
   School: {

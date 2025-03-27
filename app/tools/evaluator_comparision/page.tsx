@@ -13,7 +13,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { TrendingUp } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  FileText,
+  BarChart2,
+  List,
+} from "lucide-react";
 import {
   Bar,
   BarChart,
@@ -22,6 +28,7 @@ import {
   ResponsiveContainer,
   XAxis,
   YAxis,
+  LabelList,
 } from "recharts";
 import {
   ChartConfig,
@@ -29,6 +36,14 @@ import {
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Comprehensive interfaces
 interface AssessmentData {
@@ -87,8 +102,8 @@ interface AssessmentData {
 }
 
 const EvaluationComparisonPage: React.FC = () => {
-  const [assessmentId1, setAssessmentId1] = useState<string>("355");
-  const [assessmentId2, setAssessmentId2] = useState<string>("367");
+  const [assessmentId1, setAssessmentId1] = useState<string>("367");
+  const [assessmentId2, setAssessmentId2] = useState<string>("355");
   const [data1, setData1] = useState<AssessmentData | null>(null);
   const [data2, setData2] = useState<AssessmentData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -192,8 +207,7 @@ const EvaluationComparisonPage: React.FC = () => {
     const eval1 = data1.assignedData.evaluation;
     const eval2 = data2.assignedData.evaluation;
 
-    // Start with overall score
-    const chartData = [
+    let chartData = [
       {
         name: "Overall Score",
         baseline: Math.round(data1.assignedData.score || 0),
@@ -201,9 +215,7 @@ const EvaluationComparisonPage: React.FC = () => {
       },
     ];
 
-    // Add concept understanding levels dynamically
     getAllConceptTopics().forEach((topic) => {
-      // Find the matching concept from the hierarchy arrays
       const baselineConcept =
         eval1.CONCEPT_UNDERSTANDING?.conceptHierarchy?.find(
           (item) => item.primaryConcept === topic
@@ -223,41 +235,90 @@ const EvaluationComparisonPage: React.FC = () => {
       });
     });
 
+    // Filter out any comparison where either value is 0
+    chartData = chartData.filter(
+      (item) => item.baseline !== 0 && item.final !== 0
+    );
     return chartData;
   }, [data1, data2]);
 
-  // New computed variable for subtopic performance chart data using fetched Topic parameters
   const topicSubtopicChartData = React.useMemo(() => {
     if (
       !data1 ||
       !data2 ||
-      !data1.assignedData.evaluation ||
-      !data2.assignedData.evaluation
+      !data1.assignedData?.evaluation ||
+      !data2.assignedData?.evaluation
     )
       return [];
-    // Assume the fetched new parameters are in the first main topic of TOPIC_ANALYSIS
-    const topic1 =
-      data1.assignedData.evaluation.TOPIC_ANALYSIS?.mainTopics?.[0];
-    const topic2 =
-      data2.assignedData.evaluation.TOPIC_ANALYSIS?.mainTopics?.[0];
-    if (!topic1 || !topic2) return [];
-    const subtopicsSet = new Set([
-      ...topic1.subtopicPerformance.map((sp) => sp.name),
-      ...topic2.subtopicPerformance.map((sp) => sp.name),
-    ]);
-    const data: { name: string; baseline: number; final: number }[] = [];
-    subtopicsSet.forEach((sub) => {
-      const baselineSub = topic1.subtopicPerformance.find(
-        (sp) => sp.name === sub
-      );
-      const finalSub = topic2.subtopicPerformance.find((sp) => sp.name === sub);
-      data.push({
-        name: sub,
-        baseline: baselineSub ? baselineSub.score : 0,
-        final: finalSub ? finalSub.score : 0,
+
+    const eval1Topics =
+      data1.assignedData.evaluation.TOPIC_ANALYSIS?.mainTopics || [];
+    const eval2Topics =
+      data2.assignedData.evaluation.TOPIC_ANALYSIS?.mainTopics || [];
+
+    const getWords = (str: string) => new Set(str.toLowerCase().split(/\s+/));
+
+    const baselineSubs: { name: string; score: number; words: Set<string> }[] =
+      [];
+    const finalSubs: { name: string; score: number; words: Set<string> }[] = [];
+
+    eval1Topics.forEach((topic) => {
+      topic.subtopicPerformance.forEach((sub) => {
+        baselineSubs.push({
+          name: sub.name,
+          score: sub.score,
+          words: getWords(sub.name),
+        });
       });
     });
-    return data;
+    eval2Topics.forEach((topic) => {
+      topic.subtopicPerformance.forEach((sub) => {
+        finalSubs.push({
+          name: sub.name,
+          score: sub.score,
+          words: getWords(sub.name),
+        });
+      });
+    });
+
+    let matches: { name: string; baseline: number; final: number }[] = [];
+
+    baselineSubs.forEach((bSub) => {
+      const matchIndex = finalSubs.findIndex((fSub) => {
+        for (const word of bSub.words) {
+          if (fSub.words.has(word)) return true;
+        }
+        return false;
+      });
+      if (matchIndex !== -1) {
+        const fSub = finalSubs.splice(matchIndex, 1)[0];
+        matches.push({
+          name: `${bSub.name} / ${fSub.name}`,
+          baseline: bSub.score,
+          final: fSub.score,
+        });
+      } else {
+        matches.push({
+          name: bSub.name,
+          baseline: bSub.score,
+          final: 0,
+        });
+      }
+    });
+
+    finalSubs.forEach((fSub) => {
+      matches.push({
+        name: fSub.name,
+        baseline: 0,
+        final: fSub.score,
+      });
+    });
+
+    // Filter out any comparison where either value is 0
+    matches = matches.filter(
+      (match) => match.baseline !== 0 && match.final !== 0
+    );
+    return matches;
   }, [data1, data2]);
 
   // Chart configuration
@@ -293,20 +354,63 @@ const EvaluationComparisonPage: React.FC = () => {
   const renderMetadataSection = (data: AssessmentData | null) => {
     if (!data) return <div>No data available</div>;
 
+    const metadataFields = [
+      { key: "subject", icon: <FileText className="h-4 w-4 mr-2" /> },
+      { key: "topic", icon: <List className="h-4 w-4 mr-2" /> },
+      { key: "class_level", icon: <BarChart2 className="h-4 w-4 mr-2" /> },
+      { key: "difficulty", icon: null },
+      { key: "assessment_type", icon: null },
+      { key: "board", icon: null },
+    ];
+
     return (
-      <div className="grid grid-cols-2 gap-4">
-        {Object.entries(data.metadata).map(([key, value]) => (
-          <div key={key} className="capitalize">
-            <strong>{key.replace(/_/g, " ")}:</strong> {value || "N/A"}
-          </div>
-        ))}
-        <div>
-          <strong>Score:</strong> {data.assignedData.score?.toFixed(2) || "N/A"}
+      <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-4">
+          {metadataFields.map(({ key, icon }) => {
+            const value = data.metadata[key as keyof typeof data.metadata];
+            return (
+              <TooltipProvider key={key}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-center capitalize">
+                      {icon}
+                      <strong className="mr-2">
+                        {key.replace(/_/g, " ")}:
+                      </strong>
+                      <Badge
+                        variant="secondary"
+                        className="truncate max-w-[150px]"
+                      >
+                        {value || "N/A"}
+                      </Badge>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{value || "No information available"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            );
+          })}
+        </div>
+        <div className="flex items-center space-x-2">
+          <strong>Score:</strong>
+          <Badge
+            variant={
+              (data.assignedData.score || 0) > 7
+                ? "default"
+                : (data.assignedData.score || 0) > 5
+                  ? "secondary"
+                  : "destructive"
+            }
+          >
+            {data.assignedData.score?.toFixed(2) || "N/A"}
+          </Badge>
         </div>
       </div>
     );
   };
-
+  // Enhanced performance details with more visual hierarchy
   const renderPerformanceDetails = (data: AssessmentData | null) => {
     if (!data?.assignedData?.evaluation) return <div>No performance data</div>;
 
@@ -315,38 +419,45 @@ const EvaluationComparisonPage: React.FC = () => {
       data.assignedData.evaluation.CONCEPT_UNDERSTANDING;
 
     return (
-      <div className="space-y-4">
-        <div>
-          <h4 className="font-semibold">Performance Strengths</h4>
-          <ul className="list-disc pl-5">
-            {performanceMetrics?.strengths?.map((strength, index) => (
-              <li key={index} className="text-green-600">
-                {strength}
-              </li>
-            )) || <li>No specific strengths noted</li>}
-          </ul>
+      <ScrollArea className="h-[400px] w-full rounded-md border p-4">
+        <div className="space-y-4">
+          {[
+            {
+              title: "Performance Strengths",
+              items: performanceMetrics?.strengths,
+              emptyText: "No specific strengths noted",
+              className: "text-green-600",
+            },
+            {
+              title: "Performance Weaknesses",
+              items: performanceMetrics?.weaknesses,
+              emptyText: "No specific weaknesses noted",
+              className: "text-red-600",
+            },
+            {
+              title: "Knowledge Gaps",
+              items: conceptUnderstanding?.knowledgeGaps,
+              emptyText: "No knowledge gaps identified",
+              className: "text-orange-600",
+            },
+          ].map(({ title, items, emptyText, className }) => (
+            <div key={title}>
+              <h4 className="font-semibold mb-2 border-b pb-1">{title}</h4>
+              <ul className={`list-disc pl-5 space-y-1 ${className}`}>
+                {items?.length ? (
+                  items.map((item, index) => (
+                    <li key={index} className="text-sm">
+                      {item}
+                    </li>
+                  ))
+                ) : (
+                  <li className="text-sm text-gray-500">{emptyText}</li>
+                )}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div>
-          <h4 className="font-semibold">Performance Weaknesses</h4>
-          <ul className="list-disc pl-5">
-            {performanceMetrics?.weaknesses?.map((weakness, index) => (
-              <li key={index} className="text-red-600">
-                {weakness}
-              </li>
-            )) || <li>No specific weaknesses noted</li>}
-          </ul>
-        </div>
-        <div>
-          <h4 className="font-semibold">Knowledge Gaps</h4>
-          <ul className="list-disc pl-5">
-            {conceptUnderstanding?.knowledgeGaps?.map((gap, index) => (
-              <li key={index} className="text-orange-600">
-                {gap}
-              </li>
-            )) || <li>No knowledge gaps identified</li>}
-          </ul>
-        </div>
-      </div>
+      </ScrollArea>
     );
   };
 
@@ -436,10 +547,25 @@ const EvaluationComparisonPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="metadata">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="metadata">Metadata</TabsTrigger>
-                  <TabsTrigger value="performance">Performance</TabsTrigger>
-                  <TabsTrigger value="topics">Topics</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger
+                    value="metadata"
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" /> Metadata
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="performance"
+                    className="flex items-center gap-2"
+                  >
+                    <BarChart2 className="h-4 w-4" /> Performance
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="topics"
+                    className="flex items-center gap-2"
+                  >
+                    <List className="h-4 w-4" /> Topics
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="metadata">
                   {renderMetadataSection(data1)}
@@ -461,10 +587,25 @@ const EvaluationComparisonPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <Tabs defaultValue="metadata">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="metadata">Metadata</TabsTrigger>
-                  <TabsTrigger value="performance">Performance</TabsTrigger>
-                  <TabsTrigger value="topics">Topics</TabsTrigger>
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger
+                    value="metadata"
+                    className="flex items-center gap-2"
+                  >
+                    <FileText className="h-4 w-4" /> Metadata
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="performance"
+                    className="flex items-center gap-2"
+                  >
+                    <BarChart2 className="h-4 w-4" /> Performance
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="topics"
+                    className="flex items-center gap-2"
+                  >
+                    <List className="h-4 w-4" /> Topics
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="metadata">
                   {renderMetadataSection(data2)}
@@ -479,60 +620,68 @@ const EvaluationComparisonPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Existing Performance Comparison Card */}
-          <Card className="col-span-2">
-            <CardHeader>
-              <CardTitle>Performance Comparison</CardTitle>
-              <CardDescription>Baseline vs Final Test Results</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig}>
-                <BarChart data={performanceChartData} height={400}>
-                  <CartesianGrid vertical={false} />
-                  <XAxis
-                    dataKey="name"
-                    tickLine={false}
-                    tickMargin={10}
-                    axisLine={false}
-                  />
-                  <YAxis />
-                  <ChartTooltip
-                    cursor={false}
-                    content={<ChartTooltipContent />}
-                  />
-                  <Bar
-                    dataKey="baseline"
-                    fill="var(--color-baseline)"
-                    radius={4}
-                  />
-                  <Bar dataKey="final" fill="var(--color-final)" radius={4} />
-                </BarChart>
-              </ChartContainer>
-            </CardContent>
-            <CardFooter className="flex-col items-start gap-2 text-sm">
-              {improvementPercentage && (
-                <div className="flex gap-2 font-medium leading-none">
-                  {parseFloat(improvementPercentage) >= 0 ? (
-                    <>
-                      Performance improved by {improvementPercentage}%{" "}
-                      <TrendingUp className="h-4 w-4 text-green-500" />
-                    </>
-                  ) : (
-                    <>
-                      Performance decreased by{" "}
-                      {Math.abs(parseFloat(improvementPercentage))}%
-                    </>
-                  )}
+          {/* Conditionally render Performance Comparison Card */}
+          {performanceChartData.length > 0 && (
+            <Card className="col-span-2">
+              <CardHeader>
+                <CardTitle>Performance Comparison</CardTitle>
+                <CardDescription>
+                  Baseline vs Final Test Results
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ChartContainer config={chartConfig}>
+                  <BarChart data={performanceChartData} height={400}>
+                    <CartesianGrid vertical={false} />
+                    <XAxis
+                      dataKey="name"
+                      tickLine={false}
+                      tickMargin={10}
+                      axisLine={false}
+                    />
+                    <YAxis />
+                    <ChartTooltip
+                      cursor={false}
+                      content={<ChartTooltipContent />}
+                    />
+                    <Bar
+                      dataKey="baseline"
+                      fill="var(--color-baseline)"
+                      radius={4}
+                    >
+                      <LabelList dataKey="baseline" position="top" />
+                    </Bar>
+                    <Bar dataKey="final" fill="var(--color-final)" radius={4}>
+                      <LabelList dataKey="final" position="top" />
+                    </Bar>
+                  </BarChart>
+                </ChartContainer>
+              </CardContent>
+              <CardFooter className="flex-col items-start gap-2 text-sm">
+                {improvementPercentage && (
+                  <div className="flex gap-2 font-medium leading-none">
+                    {parseFloat(improvementPercentage) >= 0 ? (
+                      <>
+                        Performance improved by {improvementPercentage}%{" "}
+                        <TrendingUp className="h-4 w-4 text-green-500" />
+                      </>
+                    ) : (
+                      <>
+                        Performance decreased by{" "}
+                        {Math.abs(parseFloat(improvementPercentage))}%
+                      </>
+                    )}
+                  </div>
+                )}
+                <div className="leading-none text-muted-foreground">
+                  Comparing key performance metrics between baseline and final
+                  assessments
                 </div>
-              )}
-              <div className="leading-none text-muted-foreground">
-                Comparing key performance metrics between baseline and final
-                assessments
-              </div>
-            </CardFooter>
-          </Card>
+              </CardFooter>
+            </Card>
+          )}
 
-          {/* New Topic Comparison Chart Card for the fetched Topic parameters */}
+          {/* Topic Comparison Chart Card */}
           {topicSubtopicChartData.length > 0 && (
             <Card className="col-span-2">
               <CardHeader>
@@ -560,8 +709,12 @@ const EvaluationComparisonPage: React.FC = () => {
                       dataKey="baseline"
                       fill="var(--color-baseline)"
                       radius={4}
-                    />
-                    <Bar dataKey="final" fill="var(--color-final)" radius={4} />
+                    >
+                      <LabelList dataKey="baseline" position="top" />
+                    </Bar>
+                    <Bar dataKey="final" fill="var(--color-final)" radius={4}>
+                      <LabelList dataKey="final" position="top" />
+                    </Bar>
                   </BarChart>
                 </ChartContainer>
               </CardContent>

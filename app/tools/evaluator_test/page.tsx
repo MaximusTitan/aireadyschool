@@ -437,7 +437,7 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
 
   return (
     <div className="bg-slate-50 rounded-lg shadow-md p-6">
-      <div className="flex justify-between items-center mb-6 border-b pb-4">
+      <div className="evaluation-header flex justify-between items-center mb-6 border-b pb-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-800">
             {assessment.subject} - {assessment.topic}
@@ -467,7 +467,7 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
 
       <div id="evaluation-content">
         {/* Wrap all content that should be included in PDF */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-3">
+        <div className="section-break grid grid-cols-1 md:grid-cols-2 gap-6 mb-3">
           <div className="bg-white p-4 rounded-lg shadow">
             <h2 className="text-lg font-semibold mb-4">Performance Summary</h2>
             <div className="flex items-center justify-center h-50">
@@ -522,7 +522,7 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow mb-6">
+        <div className="section-break bg-white rounded-lg shadow mb-6">
           <h2 className="text-lg font-semibold p-4 border-b">
             Detailed Feedback
           </h2>
@@ -537,7 +537,7 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
               .map(([_, feedback], index) => (
                 <DetailedFeedbackItem
                   key={index}
-                  question={assessment.questions[index]}
+                  question={feedback} // Pass the feedback directly instead of accessing assessment.questions
                   index={index}
                   feedback={feedback}
                 />
@@ -547,25 +547,29 @@ function EnhancedEvaluationView({ evaluation, assessment }: any) {
 
         {evaluation.metadata?.recommendations && (
           <>
-            <TopicAnalysisView
-              topicAnalysis={
-                evaluation.metadata.recommendations.topicAnalysis || []
-              }
-              prioritizedTopics={
-                evaluation.metadata.recommendations.prioritizedTopics || {
-                  critical: [],
-                  needsWork: [],
-                  good: [],
-                  excellent: [],
+            <div className="section-break">
+              <TopicAnalysisView
+                topicAnalysis={
+                  evaluation.metadata.recommendations.topicAnalysis || []
                 }
-              }
-            />
+                prioritizedTopics={
+                  evaluation.metadata.recommendations.prioritizedTopics || {
+                    critical: [],
+                    needsWork: [],
+                    good: [],
+                    excellent: [],
+                  }
+                }
+              />
+            </div>
 
-            <ImprovementRecommendations
-              recommendations={evaluation.metadata.recommendations}
-              performance={evaluation.performance}
-              score={evaluation.score}
-            />
+            <div className="section-break">
+              <ImprovementRecommendations
+                recommendations={evaluation.metadata.recommendations}
+                performance={evaluation.performance}
+                score={evaluation.score}
+              />
+            </div>
           </>
         )}
       </div>
@@ -740,53 +744,132 @@ function DownloadButton({ evaluationData }: { evaluationData: any }) {
       const element = document.getElementById("evaluation-content");
       if (!element) return;
 
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-      });
-
-      const imgWidth = 210; // A4 width in mm
-      const pageHeight = 297; // A4 height in mm
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
+      // Create PDF document with A4 dimensions
       const pdf = new jsPDF("p", "mm", "a4");
-      let currentPage = 0;
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margins = { top: 15, right: 15, bottom: 15, left: 15 };
 
-      // Add header to first page
-      pdf.setFontSize(18);
-      pdf.setTextColor(33, 33, 33);
-      pdf.text("Evaluation Report", 105, 15, { align: "center" });
-      pdf.setFontSize(12);
-      pdf.text(`Generated on: ${new Date().toLocaleDateString()}`, 105, 22, {
-        align: "center",
+      // Add metadata
+      pdf.setProperties({
+        title: `Evaluation Report - ${evaluationData.student_id}`,
+        subject: `Assessment Evaluation Report`,
+        creator: 'AI Ready School',
+        author: 'Evaluation System'
       });
-      position = 30;
 
-      while (heightLeft >= 0) {
+      // Helper function to create a styled container for questions
+      const createStyledContainer = (elements: Element[]): HTMLElement => {
+        const container = document.createElement('div');
+        container.style.backgroundColor = '#ffffff';
+        container.style.padding = '20px';
+        container.style.margin = '0';
+        container.style.width = '100%';
+        elements.forEach(el => {
+          const clone = el.cloneNode(true) as HTMLElement;
+          // Ensure styles are copied
+          const styles = window.getComputedStyle(el as HTMLElement);
+          Object.values(styles).forEach(key => {
+            if (key.startsWith('margin') || key.startsWith('padding')) {
+              clone.style[key as any] = styles.getPropertyValue(key);
+            }
+          });
+          container.appendChild(clone);
+        });
+        return container;
+      };
+
+      // Helper function to process section
+      const processSection = async (section: HTMLElement): Promise<HTMLCanvasElement> => {
+        return await html2canvas(section, {
+          scale: 2,
+          logging: false,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          windowWidth: section.scrollWidth,
+          windowHeight: section.scrollHeight,
+        });
+      };
+
+      // Helper function to add image to PDF
+      const addImageToPDF = (canvas: HTMLCanvasElement, yPos: number): number => {
+        const imgWidth = pageWidth - margins.left - margins.right;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+        
+        if (yPos + imgHeight > pageHeight - margins.bottom) {
+          pdf.addPage();
+          yPos = margins.top;
+        }
+        
         pdf.addImage(
-          canvas.toDataURL("image/png"),
-          "PNG",
-          0,
-          position,
+          canvas.toDataURL('image/png'),
+          'PNG',
+          margins.left,
+          yPos,
           imgWidth,
           imgHeight,
-          "",
-          "FAST"
+          undefined,
+          'FAST'
         );
-        heightLeft -= pageHeight;
-        if (heightLeft >= 0) {
-          pdf.addPage();
-          currentPage++;
-          // Add header to subsequent pages
-          pdf.setFontSize(10);
-          pdf.setTextColor(128, 128, 128);
-          pdf.text(`Page ${currentPage + 1}`, 105, 10, { align: "center" });
+        
+        return yPos + imgHeight + 10;
+      };
+
+      let currentY = margins.top;
+
+      // Process header
+      const headerSection = element.querySelector('.evaluation-header');
+      if (headerSection) {
+        const canvas = await processSection(headerSection as HTMLElement);
+        currentY = addImageToPDF(canvas, currentY);
+      }
+
+      // Process summary section
+      const summarySection = element.querySelector('.section-break:nth-child(1)');
+      if (summarySection) {
+        const canvas = await processSection(summarySection as HTMLElement);
+        currentY = addImageToPDF(canvas, currentY);
+      }
+
+      // Process detailed feedback section
+      const detailedFeedbackSection = element.querySelector('.section-break:nth-child(2)');
+      if (detailedFeedbackSection) {
+        const questions = Array.from(detailedFeedbackSection.querySelectorAll('.divide-y > div'));
+        
+        // Process questions in smaller chunks
+        for (let i = 0; i < questions.length; i += 2) {
+          const chunk = questions.slice(i, i + 2);
+          const container = createStyledContainer(chunk);
+          document.body.appendChild(container);
+          
+          try {
+            const canvas = await processSection(container);
+            currentY = addImageToPDF(canvas, currentY);
+          } finally {
+            document.body.removeChild(container);
+          }
         }
-        position -= pageHeight;
+      }
+
+      // Process remaining sections
+      const remainingSections = Array.from(element.querySelectorAll('.section-break')).slice(2);
+      for (const section of remainingSections) {
+        const canvas = await processSection(section as HTMLElement);
+        currentY = addImageToPDF(canvas, currentY);
+      }
+
+      // Add page numbers
+      const totalPages = pdf.internal.pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        pdf.setPage(i);
+        pdf.setFontSize(10);
+        pdf.setTextColor(128, 128, 128);
+        pdf.text(
+          `Page ${i} of ${totalPages}`,
+          pageWidth / 2,
+          pageHeight - 10,
+          { align: 'center' }
+        );
       }
 
       pdf.save(`evaluation-report-${evaluationData.student_id}.pdf`);
@@ -801,7 +884,7 @@ function DownloadButton({ evaluationData }: { evaluationData: any }) {
     <button
       onClick={generatePDF}
       disabled={downloading}
-      className="px-4 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
+      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 
                  flex items-center space-x-2 transition-all disabled:opacity-50"
     >
       {downloading ? (
@@ -1252,24 +1335,18 @@ function EvaluatorContent() {
             <div className="bg-white rounded-xl shadow-lg p-6">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-lg font-semibold">Evaluation Details</h3>
-                <button
-                  onClick={() => setSelectedEvaluation(null)}
-                  className="text-gray-600 hover:text-gray-800"
-                >
-                  ← Back to History
-                </button>
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => setSelectedEvaluation(null)}
+                    className="text-gray-600 hover:text-gray-800"
+                  >
+                    ← Back to History
+                  </button>
+                  <DownloadButton evaluationData={selectedEvaluation} />
+                </div>
               </div>
-              {renderEvaluation(selectedEvaluation)}
-              <div className="mt-4">
-                <h4 className="font-semibold mb-2">Detailed Feedback:</h4>
-                {Object.entries(selectedEvaluation.detailed_feedback || {}).map(
-                  ([qId, feedback]) => (
-                    <div key={qId} className="mb-2 p-3 bg-gray-50 rounded-lg">
-                      <span className="font-medium">Q{qId}:</span>{" "}
-                      {String(feedback)}
-                    </div>
-                  )
-                )}
+              <div id="evaluation-content">
+                {renderEvaluation(selectedEvaluation)}
               </div>
             </div>
           ) : (
@@ -1289,7 +1366,15 @@ function EvaluatorContent() {
 
     return (
       <div className="space-y-6">
-        <div className="flex justify-between items-center"></div>
+        <div className="flex justify-between items-center">
+          <button
+            onClick={handleViewHistory}
+            className="px-4 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 
+                     bg-white rounded-lg shadow hover:shadow-md transition-all"
+          >
+            View History
+          </button>
+        </div>
         <div>
           <div className="space-y-4 mb-6">
             {formData.assessmentIds.map((id, index) => (

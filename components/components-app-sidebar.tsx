@@ -132,6 +132,16 @@ export function AppSidebar() {
             },
           ]
         : []),
+
+      ...(userRole === "School"
+        ? [
+            {
+              title: "Evaluation Comparision",
+              url: "/tools/comparision",
+              icon: LibraryBig,
+            },
+          ]
+        : []),
     ],
   };
 

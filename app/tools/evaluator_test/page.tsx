@@ -761,21 +761,31 @@ function DownloadButton({ evaluationData }: { evaluationData: any }) {
       // Helper function to create a styled container for questions
       const createStyledContainer = (elements: Element[]): HTMLElement => {
         const container = document.createElement('div');
-        container.style.backgroundColor = '#ffffff';
-        container.style.padding = '20px';
-        container.style.margin = '0';
-        container.style.width = '100%';
-        elements.forEach(el => {
+        container.style.cssText = `
+          background-color: #ffffff;
+          padding: 0;
+          margin: 0;
+          width: 100%;
+          display: flex;
+          flex-direction: column;
+        `;
+        
+        elements.forEach((el, index) => {
           const clone = el.cloneNode(true) as HTMLElement;
-          // Ensure styles are copied
-          const styles = window.getComputedStyle(el as HTMLElement);
-          Object.values(styles).forEach(key => {
-            if (key.startsWith('margin') || key.startsWith('padding')) {
-              clone.style[key as any] = styles.getPropertyValue(key);
-            }
-          });
+          clone.style.cssText = `
+            padding: 16px;
+            border-bottom: 1px solid #e5e7eb;
+            margin: 0;
+          `;
+          
+          // Remove border from last element
+          if (index === elements.length - 1) {
+            clone.style.borderBottom = 'none';
+          }
+          
           container.appendChild(clone);
         });
+        
         return container;
       };
 
@@ -831,19 +841,26 @@ function DownloadButton({ evaluationData }: { evaluationData: any }) {
         currentY = addImageToPDF(canvas, currentY);
       }
 
-      // Process detailed feedback section
+      // Process detailed feedback section with improved spacing
       const detailedFeedbackSection = element.querySelector('.section-break:nth-child(2)');
       if (detailedFeedbackSection) {
         const questions = Array.from(detailedFeedbackSection.querySelectorAll('.divide-y > div'));
+        const chunkSize = 3;
         
-        // Process questions in smaller chunks
-        for (let i = 0; i < questions.length; i += 2) {
-          const chunk = questions.slice(i, i + 2);
+        for (let i = 0; i < questions.length; i += chunkSize) {
+          const chunk = questions.slice(i, i + chunkSize);
           const container = createStyledContainer(chunk);
           document.body.appendChild(container);
           
           try {
             const canvas = await processSection(container);
+            
+            // If this is not the first chunk and we're continuing on the same page,
+            // reduce the gap
+            if (i > 0 && currentY + (canvas.height * (pageWidth - margins.left - margins.right) / canvas.width) <= pageHeight - margins.bottom) {
+              currentY -= 5;
+            }
+            
             currentY = addImageToPDF(canvas, currentY);
           } finally {
             document.body.removeChild(container);
@@ -854,8 +871,25 @@ function DownloadButton({ evaluationData }: { evaluationData: any }) {
       // Process remaining sections
       const remainingSections = Array.from(element.querySelectorAll('.section-break')).slice(2);
       for (const section of remainingSections) {
-        const canvas = await processSection(section as HTMLElement);
-        currentY = addImageToPDF(canvas, currentY);
+        const container = createFinalSectionContainer(section);
+        document.body.appendChild(container);
+        
+        try {
+          const canvas = await processSection(container);
+          
+          // Add page break before new section if needed
+          if (currentY + 20 > pageHeight - margins.bottom) {
+            pdf.addPage();
+            currentY = margins.top;
+          } else if (currentY > margins.top) {
+            // Add consistent spacing between sections
+            currentY += 10;
+          }
+          
+          currentY = addImageToPDF(canvas, currentY);
+        } finally {
+          document.body.removeChild(container);
+        }
       }
 
       // Add page numbers
@@ -1444,3 +1478,28 @@ function EvaluatorContent() {
     </div>
   );
 }
+function createFinalSectionContainer(section: Element): HTMLElement {
+  // Create container with clean styling
+  const container = document.createElement('div');
+  container.style.cssText = `
+    background-color: #ffffff;
+    padding: 24px;
+    margin: 0;
+    width: 100%;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  `;
+  
+  // Clone the section content
+  const clone = section.cloneNode(true) as HTMLElement;
+  
+  // Remove any existing background colors and shadows
+  clone.style.backgroundColor = 'transparent';
+  clone.style.boxShadow = 'none';
+  
+  // Add the cloned content to container
+  container.appendChild(clone);
+  
+  return container;
+}
+

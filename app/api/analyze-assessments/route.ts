@@ -48,6 +48,25 @@ export async function POST(request: NextRequest) {
       (a, b) => new Date(b.assigned_at).getTime() - new Date(a.assigned_at).getTime(),
     )[0]
 
+    // Replace the cache checking code with this improved version
+    // Change this:
+    const { data: cachedAnalysisResults, error: cacheError } = await supabase
+      .from("ai_analysis_cache")
+      .select("analysis")
+      .eq("student_email", studentEmail)
+      .eq("baseline_assessment_id", baselineAssessment.id)
+      .eq("final_assessment_id", finalAssessment.id)
+
+    if (cacheError) {
+      console.error("Error checking cache:", cacheError)
+    }
+
+    // If we have a cached result, return it
+    if (cachedAnalysisResults && cachedAnalysisResults.length > 0) {
+      console.log("Using cached AI analysis for student:", studentEmail)
+      return NextResponse.json({ analysis: cachedAnalysisResults[0].analysis })
+    }
+
     // Process the assessments to get basic metrics
     const processedBaseline = processAssessmentData(baselineAssessment)
     const processedFinal = processAssessmentData(finalAssessment)
@@ -67,6 +86,8 @@ export async function POST(request: NextRequest) {
         ? JSON.parse(finalAssessment.evaluation)
         : finalAssessment.evaluation
 
+    console.log("Generating new AI analysis for student:", studentEmail)
+
     // Generate AI analysis
     const result = await generateObject({
       model: openai("gpt-4o", {
@@ -74,27 +95,79 @@ export async function POST(request: NextRequest) {
       }),
       schema: aiAnalysisSchema,
       prompt: `
-        You are an expert educational data analyst. Analyze these two assessments (baseline and final) for the same student and generate insights about their progress.
-        
-        The assessments might have different subtopic names but similar overall topics. Identify matching concepts even if they're named differently.
-        
-        Focus on:
-        1. Topic-by-topic comparison and improvement
-        2. Skill development across different areas
-        3. Learning patterns and confidence changes
-        4. Recommended interventions based on the data
-        
-        BASELINE ASSESSMENT:
-        ${JSON.stringify(baselineEvaluation)}
-        
-        FINAL ASSESSMENT:
-        ${JSON.stringify(finalEvaluation)}
-        
-        Generate a comprehensive analysis that highlights the student's progress, strengths, weaknesses, and recommendations for further improvement.
-        
-        IMPORTANT: Make sure to normalize topic names between assessments. If a topic exists in only one assessment, estimate its value in the other assessment based on related topics or subtopics.
-      `,
+      You are an expert educational data analyst. Analyze these two assessments (baseline and final) for the same student and generate insights about their progress.
+      
+      The assessments might have different subtopic names but similar overall topics. Identify matching concepts even if they're named differently.
+      
+      Focus on:
+      1. Topic-by-topic comparison and improvement
+      2. Skill development across different areas
+      3. Learning patterns and confidence changes
+      4. Recommended interventions based on the data
+      
+      BASELINE ASSESSMENT:
+      ${JSON.stringify(baselineEvaluation)}
+      
+      FINAL ASSESSMENT:
+      ${JSON.stringify(finalEvaluation)}
+      
+      Generate a comprehensive analysis that highlights the student's progress, strengths, weaknesses, and recommendations for further improvement.
+      
+      IMPORTANT: Make sure to normalize topic names between assessments. If a topic exists in only one assessment, estimate its value in the other assessment based on related topics or subtopics.
+    `,
     })
+
+    // Store the analysis in the cache
+    // Replace the cache insertion code with this improved version
+    // Change this:
+    // const { error: insertError } = await supabase.from("ai_analysis_cache").insert({
+    //   student_email: studentEmail,
+    //   baseline_assessment_id: baselineAssessment.id,
+    //   final_assessment_id: finalAssessment.id,
+    //   analysis: result.object,
+    // })
+
+    // if (insertError) {
+    //   console.error("Error caching AI analysis:", insertError)
+    // }
+
+    // Replace with this:
+    // First check if a record already exists
+    const { data: existingCache } = await supabase
+      .from("ai_analysis_cache")
+      .select("id")
+      .eq("student_email", studentEmail)
+      .eq("baseline_assessment_id", baselineAssessment.id)
+      .eq("final_assessment_id", finalAssessment.id)
+
+    let cacheUpdateError = null
+
+    if (existingCache && existingCache.length > 0) {
+      // Update existing record
+      const { error } = await supabase
+        .from("ai_analysis_cache")
+        .update({
+          analysis: result.object,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", existingCache[0].id)
+
+      cacheUpdateError = error
+    } else {
+      // Insert new record
+      const { error } = await supabase.from("ai_analysis_cache").insert({
+        student_email: studentEmail,
+        baseline_assessment_id: baselineAssessment.id,
+        final_assessment_id: finalAssessment.id,
+        analysis: result.object,
+      })
+
+      cacheUpdateError = error
+    }
+
+    if (cacheUpdateError) {
+      console.error("Error caching AI analysis:", cacheUpdateError)
+    }
 
     return NextResponse.json({ analysis: result.object })
   } catch (error) {

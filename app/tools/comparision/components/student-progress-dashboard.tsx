@@ -45,45 +45,52 @@ export function StudentProgressDashboard({
     (student) => student.id === selectedStudent
   );
 
-  // Fetch AI analysis whenever the selected student changes
-  useEffect(() => {
+  // Remove the automatic fetching of AI analysis
+  // Instead, we'll only fetch when the user clicks the button
+
+  const fetchAnalysis = async () => {
     if (!currentStudent) return;
 
-    const fetchAnalysis = async () => {
-      setIsLoadingAI(true);
-      setError(null);
+    setIsLoadingAI(true);
+    setError(null);
 
-      try {
-        const response = await fetch("/api/analyze-assessments", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ studentEmail: currentStudent.email }),
-        });
+    try {
+      const response = await fetch("/api/analyze-assessments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ studentEmail: currentStudent.email }),
+      });
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || "Failed to analyze assessments");
-        }
-
-        const data = await response.json();
-        setAiAnalysis(data.analysis);
-      } catch (err) {
-        setError(
-          err instanceof Error ? err.message : "An unknown error occurred"
-        );
-        console.error("Error fetching AI analysis:", err);
-      } finally {
-        setIsLoadingAI(false);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to analyze assessments");
       }
-    };
 
-    fetchAnalysis();
-  }, [currentStudent]);
+      const data = await response.json();
+      setAiAnalysis(data.analysis);
+
+      // Automatically show AI insights after fetching
+      setShowAIInsights(true);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "An unknown error occurred"
+      );
+      console.error("Error fetching AI analysis:", err);
+    } finally {
+      setIsLoadingAI(false);
+    }
+  };
 
   const handleToggleAIInsights = () => {
-    setShowAIInsights(!showAIInsights);
+    if (aiAnalysis) {
+      // If we already have analysis data, just toggle the view
+      setShowAIInsights(!showAIInsights);
+    } else {
+      // If we don't have analysis data yet, fetch it
+      fetchAnalysis();
+    }
   };
 
   if (studentsData.length === 0) {
@@ -135,11 +142,15 @@ export function StudentProgressDashboard({
 
               <Button
                 onClick={handleToggleAIInsights}
-                disabled={isLoadingAI || !currentStudent || !aiAnalysis}
+                disabled={isLoadingAI || !currentStudent}
                 className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700"
               >
                 <Brain className="mr-2 h-4 w-4" />
-                {showAIInsights ? "Show Standard View" : "Show AI Insights"}
+                {aiAnalysis
+                  ? showAIInsights
+                    ? "Show Standard View"
+                    : "Show AI Insights"
+                  : "Fetch AI Analysis"}
               </Button>
             </div>
           </CardContent>
@@ -203,7 +214,30 @@ export function StudentProgressDashboard({
                 </TabsContent>
               </Tabs>
             )
-          ) : null}
+          ) : (
+            <div className="mt-8">
+              <Card>
+                <CardContent className="pt-6 flex flex-col items-center justify-center p-8">
+                  <Brain className="h-16 w-16 text-rose-200 mb-4" />
+                  <h3 className="text-xl font-medium mb-2">
+                    AI Analysis Not Loaded
+                  </h3>
+                  <p className="text-muted-foreground text-center mb-4">
+                    Click the "Fetch AI Analysis" button to generate insights
+                    for this student's assessments.
+                  </p>
+                  <Button
+                    onClick={fetchAnalysis}
+                    disabled={isLoadingAI}
+                    className="bg-rose-500 hover:bg-rose-600"
+                  >
+                    <Brain className="mr-2 h-4 w-4" />
+                    Fetch AI Analysis
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </>
       )}
     </div>

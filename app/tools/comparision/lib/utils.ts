@@ -8,53 +8,70 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString)
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  })
+  if (!dateString) return "Unknown date"
+
+  try {
+    const date = new Date(dateString)
+    return date.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    })
+  } catch (error) {
+    console.error("Error formatting date:", error)
+    return "Invalid date"
+  }
 }
 
 export function processAssessmentData(assessment: AssignedAssessment): ProcessedAssessment | null {
-  if (!assessment.evaluation) return null
+  if (!assessment || !assessment.evaluation) return null
 
   try {
     const evaluation: AssessmentEvaluation =
       typeof assessment.evaluation === "string" ? JSON.parse(assessment.evaluation) : assessment.evaluation
 
-    // Extract basic metrics
-    const overallScore = evaluation.PERFORMANCE_METRICS.overallScore / 100
-    const correctAnswers = evaluation.PERFORMANCE_METRICS.correctAnswers
-    const incorrectAnswers = evaluation.PERFORMANCE_METRICS.incorrectAnswers
+    // Check if required properties exist
+    if (!evaluation.PERFORMANCE_METRICS || !evaluation.TOPIC_ANALYSIS) {
+      console.error("Missing required properties in evaluation data")
+      return null
+    }
+
+    // Extract basic metrics with fallbacks
+    const overallScore = (evaluation.PERFORMANCE_METRICS.overallScore || 0) / 100
+    const correctAnswers = evaluation.PERFORMANCE_METRICS.correctAnswers || 0
+    const incorrectAnswers = evaluation.PERFORMANCE_METRICS.incorrectAnswers || 0
     const totalQuestions = correctAnswers + incorrectAnswers
     const accuracy = totalQuestions > 0 ? correctAnswers / totalQuestions : 0
 
+    // Safely access mainTopics with fallback
+    const mainTopics = evaluation.TOPIC_ANALYSIS.mainTopics || []
+
     // Calculate average confidence across topics
-    const confidenceSum = evaluation.TOPIC_ANALYSIS.mainTopics.reduce((sum, topic) => sum + topic.confidenceLevel, 0)
-    const confidenceLevel =
-      evaluation.TOPIC_ANALYSIS.mainTopics.length > 0
-        ? confidenceSum / (evaluation.TOPIC_ANALYSIS.mainTopics.length * 100)
-        : 0
+    const confidenceSum = mainTopics.reduce((sum, topic) => sum + (topic.confidenceLevel || 0), 0)
+    const confidenceLevel = mainTopics.length > 0 ? confidenceSum / (mainTopics.length * 100) : 0
 
     // Extract topic data
-    const topics = evaluation.TOPIC_ANALYSIS.mainTopics.map((topic) => ({
-      name: topic.name,
-      score: topic.topicScore / 100,
-      confidence: topic.confidenceLevel / 100,
+    const topics = mainTopics.map((topic) => ({
+      name: topic.name || "Unknown Topic",
+      score: (topic.topicScore || 0) / 100,
+      confidence: (topic.confidenceLevel || 0) / 100,
     }))
+
+    // Safely access knowledge gaps and strength areas with fallbacks
+    const knowledgeGaps = evaluation.CONCEPT_UNDERSTANDING?.knowledgeGaps || []
+    const strengthAreas = evaluation.CONCEPT_UNDERSTANDING?.strengthAreas || []
 
     return {
       id: assessment.id,
-      date: evaluation.STUDENT_METADATA.dateOfAssessment,
+      date: evaluation.STUDENT_METADATA?.dateOfAssessment || assessment.assigned_at,
       overallScore,
       accuracy,
       correctAnswers,
       totalQuestions,
       confidenceLevel,
       topics,
-      knowledgeGaps: evaluation.CONCEPT_UNDERSTANDING.knowledgeGaps,
-      strengthAreas: evaluation.CONCEPT_UNDERSTANDING.strengthAreas,
+      knowledgeGaps,
+      strengthAreas,
     }
   } catch (error) {
     console.error("Error processing assessment data:", error)
@@ -101,7 +118,7 @@ export function compareAssessments(
   // Create mock detailed responses based on knowledge gaps and strength areas
   const detailedResponses: DetailedResponse[] = [
     // Create responses from knowledge gaps
-    ...baselineAssessment.knowledgeGaps.slice(0, 3).map((gap) => ({
+    ...(baselineAssessment.knowledgeGaps || []).slice(0, 3).map((gap) => ({
       topic: topics.find((t) => t.name.includes(gap.split(" ")[0]))?.name || "General",
       question: `Understanding of ${gap}`,
       type: "Short Answer" as const,
@@ -109,7 +126,7 @@ export function compareAssessments(
       finalScore: 0.6,
     })),
     // Create responses from strength areas
-    ...baselineAssessment.strengthAreas.slice(0, 3).map((strength) => ({
+    ...(baselineAssessment.strengthAreas || []).slice(0, 3).map((strength) => ({
       topic: topics.find((t) => t.name.includes(strength.split(" ")[0]))?.name || "General",
       question: `Application of ${strength}`,
       type: "MCQ" as const,

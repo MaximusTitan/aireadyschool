@@ -26,7 +26,6 @@ import type { AIAnalysis } from "../lib/ai-schema";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle, Brain } from "lucide-react";
 import { LoadingDashboard } from "../components/loading-dashboard";
-
 interface StudentProgressDashboardProps {
   studentsData: StudentData[];
 }
@@ -118,6 +117,7 @@ export function StudentProgressDashboard({
                 onValueChange={(value) => {
                   setSelectedStudent(value);
                   setAiAnalysis(null);
+                  setShowAIInsights(false);
                 }}
                 defaultValue={studentsData[0]?.id}
               >
@@ -139,7 +139,7 @@ export function StudentProgressDashboard({
                 className="bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-600 hover:to-rose-700"
               >
                 <Brain className="mr-2 h-4 w-4" />
-                {showAIInsights ? "Show Standard View" : "Fetch Insights"}
+                {showAIInsights ? "Show Standard View" : "Show AI Insights"}
               </Button>
             </div>
           </CardContent>

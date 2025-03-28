@@ -50,7 +50,7 @@ export async function getStudentsWithMultipleAssessments(): Promise<StudentWithA
   }
 }
 
-// Update the getStudentProgressData function to use test_name field
+// Update the getStudentProgressData function to use test_name field and handle undefined values
 export async function getStudentProgressData(studentEmail: string): Promise<StudentData | null> {
   try {
     // Get baseline assessment for the student

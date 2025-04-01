@@ -38,21 +38,47 @@ export function ScoreOverview({ studentData, aiAnalysis }: ScoreOverviewProps) {
             </p>
           </div>
 
-          <div className="p-6 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-gray-100 bg-rose-50">
-            <h3 className="text-lg font-medium text-rose-700 mb-1">
+          <div
+            className={`p-6 flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-gray-100 ${
+              improvement >= 0 ? "bg-green-50" : "bg-rose-50"
+            }`}
+          >
+            <h3
+              className={`text-lg font-medium mb-1 ${
+                improvement >= 0 ? "text-green-700" : "text-rose-700"
+              }`}
+            >
               Improvement
             </h3>
             <div className="flex items-center">
-              <ArrowUpRight className="h-8 w-8 text-rose-500 mr-1" />
-              <div className="text-5xl font-bold text-rose-500">
+              <ArrowUpRight
+                className={`h-8 w-8 mr-1 ${
+                  improvement >= 0 ? "text-green-500" : "text-rose-500"
+                }`}
+              />
+              <div
+                className={`text-5xl font-bold ${
+                  improvement >= 0 ? "text-green-500" : "text-rose-500"
+                }`}
+              >
                 {improvement.toFixed(1)}%
               </div>
             </div>
             <div className="flex flex-col items-center mt-2">
-              <p className="text-sm font-medium text-rose-700">
+              <p
+                className={`text-sm font-medium ${
+                  improvement >= 0 ? "text-green-700" : "text-rose-700"
+                }`}
+              >
                 Student: {studentData.name}
               </p>
-              <p className="text-xs text-rose-600">{studentData.email}</p>
+              <p
+                className={`text-xs ${
+                  improvement >= 0 ? "text-green-600" : "text-rose-600"
+                }`}
+              >
+                {studentData.email}
+              </p>
             </div>
           </div>
 

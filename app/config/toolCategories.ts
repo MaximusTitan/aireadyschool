@@ -178,7 +178,7 @@ export const categories: CategoryTools = {
       {
         title: "Canvas",
         description: "Generate using Canvas",
-        route: "/canvas",
+        route: "/canvas-ai",
         icon: CanvasIcon
       },
       {
@@ -367,7 +367,7 @@ export const categories: CategoryTools = {
       {
         title: "Canvas",
         description: "Generate using Canvas",
-        route: "/canvas",
+        route: "/canvas-ai",
         icon: CanvasIcon
       },
       {

@@ -33,6 +33,10 @@ const RoleSelector = ({ initialRole }: { initialRole: string | null }) => {
         <option value="School">School</option>
         <option value="Teacher">Teacher</option>
         <option value="Student">Student</option>
+        <option value="dat_admin">DAT ADMIN</option>
+        <option value="dat_school">DAT SCHOOL</option>
+        <option value="dat_student">DAT STUDENT</option>
+        <option value="dat_judge">DAT JUDGE</option>
       </select>
       {message && <p className="mt-2 text-sm text-green-600">{message}</p>}
     </div>

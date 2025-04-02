@@ -1,6 +1,6 @@
 "use client";
 
-import YourBillingComponent from "./components/YourBillingComponent";
+// import YourBillingComponent from "./components/YourBillingComponent";
 
 export default function Page() {
   return (
@@ -11,14 +11,18 @@ export default function Page() {
             AI Ready School Subscriptions
           </h1>
           <p className="text-neutral-600 dark:text-neutral-400 max-w-2xl mx-auto">
-            Choose a subscription plan that fits your needs and unlock the full potential of AI tools for education.
+            Choose a subscription plan that fits your needs and unlock the full
+            potential of AI tools for education.
           </p>
         </div>
-        
-        <YourBillingComponent />
-        
+
+        {/* <YourBillingComponent /> */}
+
         <div className="mt-16 text-center text-sm text-neutral-500 dark:text-neutral-400">
-          <p>Need help choosing a plan? Contact our support team at support@aireadyschool.com</p>
+          <p>
+            Need help choosing a plan? Contact our support team at
+            support@aireadyschool.com
+          </p>
         </div>
       </div>
     </div>

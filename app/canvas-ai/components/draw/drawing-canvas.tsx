@@ -21,9 +21,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   generateDocumentId,
   getUserId,
-  saveDocumentState,
-  saveSessionState,
-  getSnapshot as getSupabaseSnapshot,
+  saveCanvasState,
+  getSnapshot,
 } from "../../lib/canvas-persistence";
 
 // This inner component uses useSearchParams and must be used within a Suspense boundary
@@ -33,6 +32,7 @@ export function DrawingCanvasInner() {
   const [documentId, setDocumentId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Add debounce timer ref
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,10 +43,23 @@ export function DrawingCanvasInner() {
 
   useEffect(() => {
     const docId = searchParams.get("id") || generateDocumentId();
-    const uid = getUserId();
 
     setDocumentId(docId);
-    setUserId(uid);
+
+    // Get the user ID asynchronously
+    async function fetchUserId() {
+      setIsLoading(true);
+      try {
+        const email = await getUserId();
+        setUserId(email);
+      } catch (err) {
+        console.error("Failed to get user email:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchUserId();
 
     if (!searchParams.get("id")) {
       router.replace(`?id=${docId}`);
@@ -60,7 +73,7 @@ export function DrawingCanvasInner() {
 
     async function loadDocument() {
       try {
-        const snapshot = await getSupabaseSnapshot(documentId, userId);
+        const snapshot = await getSnapshot(documentId, userId);
 
         if (cancelled) return;
 
@@ -128,9 +141,12 @@ export function DrawingCanvasInner() {
               setIsSaving(true);
               try {
                 const snapshot = editor.store.getSnapshot();
-                // Save the store data and schema version
-                await saveDocumentState(documentId, snapshot.store);
-                await saveSessionState(documentId, userId, snapshot.store);
+                await saveCanvasState(
+                  documentId,
+                  userId,
+                  snapshot.store,
+                  false
+                );
               } catch (err) {
                 console.error("Auto-save failed:", err);
               } finally {
@@ -169,8 +185,7 @@ export function DrawingCanvasInner() {
     setIsSaving(true);
     try {
       const snapshot = editor.store.getSnapshot();
-      await saveDocumentState(documentId, snapshot.store);
-      await saveSessionState(documentId, userId, snapshot.store);
+      await saveCanvasState(documentId, userId, snapshot.store, false);
       alert("Canvas saved successfully!");
     } catch (err) {
       console.error("Failed to save canvas:", err);
@@ -273,6 +288,12 @@ export function DrawingCanvasInner() {
 
   return (
     <>
+      {isLoading ? (
+        <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-50">
+          <div className="text-lg">Loading your canvas...</div>
+        </div>
+      ) : null}
+
       <div className="absolute top-1/2 -translate-y-1/2 left-4 z-50 flex flex-col gap-2 bg-white/80 rounded-lg p-2 shadow-sm">
         <button
           onClick={handleCreateTextNode}

@@ -161,21 +161,33 @@ export const signInAction = async (formData: FormData) => {
   // Get user role from metadata
   const role = authData.user?.user_metadata?.role;
 
-  // if (role === 'Student') {
-  //   // Check if student exists in students table
-  //   const { data: studentData, error: studentError } = await supabase
-  //     .from('students')
-  //     .select('student_email')
-  //     .eq('student_email', email)
-  //     .single();
+  // Check for DAT roles and redirect accordingly
+  if (role) {
+    if (role === "dat_admin") {
+      return redirect("/dat/admin");
+    } else if (role === "dat_judge") {
+      return redirect("/dat/judge");
+    } else if (role === "dat_student") {
+      return redirect("/dat/student");
+    } else if (role === "dat_school") {
+      // Check school approval status
+      const { data: schoolData } = await supabase
+        .from("dat_school_details")
+        .select("status")
+        .eq("email", email)
+        .maybeSingle();
 
-  //   if (studentError || !studentData) {
-  //     // Student not found in students table, redirect to profile
-  //     return redirect("/portfolio");
-  //   }
-  // }
+      if (schoolData?.status === "pending") {
+        return redirect("/dat/school/pending");
+      } else if (schoolData?.status === "rejected") {
+        return redirect("/dat/school/rejected");
+      } else {
+        return redirect("/dat/school");
+      }
+    }
+  }
 
-  // Default redirect or if student exists in table
+  // Default redirect for non-DAT roles
   return redirect("/tools");
 };
 

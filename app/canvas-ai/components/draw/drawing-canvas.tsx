@@ -10,6 +10,7 @@ import {
   TLStoreWithStatus,
   createTLStore,
   loadSnapshot,
+  defaultShapeUtils,
 } from "tldraw";
 import { useToast } from "@/hooks/use-toast";
 import { ToastAction } from "@/components/ui/toast";
@@ -34,6 +35,14 @@ import {
   saveCanvasState,
   getSnapshot,
 } from "../../lib/canvas-persistence";
+
+// Define custom shape utils
+const customShapeUtils = [
+  TextInputShapeUtil,
+  TailwindShapeUtil,
+  TextOutputShapeUtil,
+  ImageOutputShapeUtil,
+];
 
 // This inner component uses useSearchParams and must be used within a Suspense boundary
 export function DrawingCanvasInner() {
@@ -104,7 +113,10 @@ export function DrawingCanvasInner() {
 
         if (cancelled) return;
 
-        const newStore = createTLStore();
+        // Create a store with the custom shape utils properly registered
+        const newStore = createTLStore({
+          shapeUtils: [...defaultShapeUtils, ...customShapeUtils],
+        });
 
         // Instead of trying to manipulate the snapshot structure,
         // let's just start with a fresh store if no valid snapshot exists
@@ -136,7 +148,9 @@ export function DrawingCanvasInner() {
       } catch (err) {
         console.error("Failed to load document:", err);
         // Create an empty store as fallback
-        const emptyStore = createTLStore();
+        const emptyStore = createTLStore({
+          shapeUtils: [...defaultShapeUtils, ...customShapeUtils],
+        });
         setStore({
           store: emptyStore,
           status: "synced-local",
@@ -449,12 +463,7 @@ export function DrawingCanvasInner() {
 
       <Tldraw
         store={store}
-        shapeUtils={[
-          TextInputShapeUtil,
-          TailwindShapeUtil,
-          TextOutputShapeUtil,
-          ImageOutputShapeUtil,
-        ]}
+        shapeUtils={[...defaultShapeUtils, ...customShapeUtils]}
         onMount={handleMount}
         options={{
           createTextOnCanvasDoubleClick: false,

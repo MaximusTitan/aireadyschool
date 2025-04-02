@@ -46,6 +46,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 type CanvasRecord = {
   document_id: string;
@@ -62,12 +63,14 @@ export default function CanvasHistoryPage() {
   const [deleting, setDeleting] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState<string>("");
+  const [sharing, setSharing] = useState<string | null>(null);
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     async function fetchDocuments() {
       try {
-        const email = await getUserId();
+        const email = await getUserId(false); // Explicitly set to false for non-view mode
         const docs = await listUserDocuments(email);
         // Use the stored title or generate a default one
         const docsWithTitles = docs.map((doc, index) => ({
@@ -136,6 +139,33 @@ export default function CanvasHistoryPage() {
     } catch (err) {
       console.error("Failed to update canvas title:", err);
     }
+  };
+
+  const handleShareCanvas = (documentId: string) => {
+    setSharing(documentId);
+
+    const shareUrl = `${window.location.origin}/canvas-ai/canvas?id=${documentId}&mode=view`;
+
+    // Copy to clipboard
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => {
+        toast({
+          title: "Link copied to clipboard!",
+          description: "Anyone with this link can view your canvas.",
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to copy link:", err);
+        toast({
+          title: "Failed to copy link",
+          description: `Share this link: ${shareUrl}`,
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setSharing(null);
+      });
   };
 
   if (loading) {
@@ -261,14 +291,22 @@ export default function CanvasHistoryPage() {
                         <Button
                           size="icon"
                           variant="ghost"
-                          disabled={true} // Temporarily disable sharing
                           className="h-8 w-8"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleShareCanvas(canvas.document_id);
+                          }}
+                          disabled={sharing === canvas.document_id}
                         >
-                          <Share2 className="h-4 w-4" />
+                          {sharing === canvas.document_id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Share2 className="h-4 w-4" />
+                          )}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>{canvas.is_shared ? "Shared" : "Share canvas"}</p>
+                        <p>Share canvas</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>

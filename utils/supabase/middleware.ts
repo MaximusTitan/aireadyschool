@@ -35,7 +35,7 @@ export const updateSession = async (request: NextRequest) => {
     
 
     // Define public routes (accessible without authentication)
-    const publicRoutes = ["/portfolio/", "/sign-in", "/sign-up", "/verification-waiting", "/apps/", "/dat/"];
+    const publicRoutes = ["/portfolio/", "/sign-in", "/sign-up", "/verification-waiting", "/apps/", "/dat/", "/canvas-ai/"];
 
     // Check if the route is public
     const isPublicRoute = publicRoutes.some((route) =>

@@ -11,12 +11,22 @@ import {
   createTLStore,
   loadSnapshot,
 } from "tldraw";
+import { useToast } from "@/hooks/use-toast";
+import { ToastAction } from "@/components/ui/toast";
 import { ErrorBoundary } from "./error-boundary";
 import { TailwindShapeUtil } from "../../tldraw/tailwindShape";
 import { TextInputShapeUtil } from "../../tldraw/textInputShape";
 import { TextOutputShapeUtil } from "../../tldraw/textOutputShape";
 import { ImageOutputShapeUtil } from "../../tldraw/imageOutputShape";
-import { Type, Waves, MessageCircle, Image, Save } from "lucide-react";
+import {
+  Type,
+  Waves,
+  MessageCircle,
+  Image,
+  Save,
+  Share,
+  ChevronLeft,
+} from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   generateDocumentId,
@@ -27,12 +37,14 @@ import {
 
 // This inner component uses useSearchParams and must be used within a Suspense boundary
 export function DrawingCanvasInner() {
+  const { toast } = useToast();
   const [editor, setEditor] = useState<Editor | null>(null);
   const [store, setStore] = useState<TLStoreWithStatus>({ status: "loading" });
   const [documentId, setDocumentId] = useState<string>("");
   const [userId, setUserId] = useState<string>("");
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPublicView, setIsPublicView] = useState(false);
 
   // Add debounce timer ref
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -43,6 +55,7 @@ export function DrawingCanvasInner() {
 
   useEffect(() => {
     const docId = searchParams.get("id") || generateDocumentId();
+    const viewMode = searchParams.get("mode") === "view";
 
     setDocumentId(docId);
 
@@ -50,10 +63,14 @@ export function DrawingCanvasInner() {
     async function fetchUserId() {
       setIsLoading(true);
       try {
-        const email = await getUserId();
-        setUserId(email);
+        // Pass the viewMode flag to getUserId
+        const email = await getUserId(viewMode);
+        setUserId(email || "anonymous");
+        setIsPublicView(viewMode || !email);
       } catch (err) {
         console.error("Failed to get user email:", err);
+        setUserId("anonymous");
+        setIsPublicView(true);
       } finally {
         setIsLoading(false);
       }
@@ -67,13 +84,23 @@ export function DrawingCanvasInner() {
   }, [searchParams, router]);
 
   useEffect(() => {
-    if (!documentId || !userId) return;
+    if (!documentId) return;
 
     let cancelled = false;
 
     async function loadDocument() {
       try {
-        const snapshot = await getSnapshot(documentId, userId);
+        // First try to load as if we're the owner
+        let snapshot = null;
+
+        if (userId && userId !== "anonymous") {
+          snapshot = await getSnapshot(documentId, userId);
+        }
+
+        // If not found or anonymous, try to load as public document
+        if (!snapshot) {
+          snapshot = await getSnapshot(documentId, "public");
+        }
 
         if (cancelled) return;
 
@@ -128,9 +155,22 @@ export function DrawingCanvasInner() {
     (editor: Editor) => {
       setEditor(editor);
 
+      // Set editor to read-only if in public view mode
+      if (isPublicView) {
+        editor.updateInstanceState({
+          isReadonly: true,
+        });
+      }
+
       const unlistenChanges = editor.store.listen(
         () => {
-          if (documentId && userId && !isSaving) {
+          if (
+            documentId &&
+            userId &&
+            userId !== "anonymous" &&
+            !isSaving &&
+            !isPublicView
+          ) {
             // Clear any existing timer to avoid multiple save requests
             if (saveTimerRef.current) {
               clearTimeout(saveTimerRef.current);
@@ -147,8 +187,20 @@ export function DrawingCanvasInner() {
                   snapshot.store,
                   false
                 );
+                // Also save public version
+                await saveCanvasState(
+                  documentId,
+                  "public",
+                  snapshot.store,
+                  true
+                );
               } catch (err) {
                 console.error("Auto-save failed:", err);
+                toast({
+                  title: "Auto-save failed",
+                  description: "Your changes couldn't be saved automatically",
+                  variant: "destructive",
+                });
               } finally {
                 setIsSaving(false);
                 saveTimerRef.current = null;
@@ -167,7 +219,7 @@ export function DrawingCanvasInner() {
         unlistenChanges();
       };
     },
-    [documentId, userId, isSaving]
+    [documentId, userId, isSaving, isPublicView, toast]
   );
 
   // Clean up timer on unmount
@@ -180,23 +232,69 @@ export function DrawingCanvasInner() {
   }, []);
 
   const handleSave = async () => {
-    if (!editor || !documentId || !userId) return;
+    if (!editor || !documentId || !userId || userId === "anonymous") return;
 
     setIsSaving(true);
     try {
       const snapshot = editor.store.getSnapshot();
       await saveCanvasState(documentId, userId, snapshot.store, false);
-      alert("Canvas saved successfully!");
+      // Also save a public copy for sharing
+      await saveCanvasState(documentId, "public", snapshot.store, true);
+      toast({
+        title: "Canvas saved",
+        description: "Your work has been saved successfully",
+        variant: "default",
+      });
     } catch (err) {
       console.error("Failed to save canvas:", err);
-      alert("Failed to save canvas");
+      toast({
+        title: "Save failed",
+        description: "There was an error saving your canvas",
+        variant: "destructive",
+      });
     } finally {
       setIsSaving(false);
     }
   };
 
+  const handleShare = () => {
+    if (!documentId) return;
+
+    const shareUrl = `${window.location.origin}${window.location.pathname}?id=${documentId}&mode=view`;
+
+    // Copy to clipboard
+    navigator.clipboard
+      .writeText(shareUrl)
+      .then(() => {
+        toast({
+          title: "Link copied",
+          description: "Anyone with this link can view your canvas",
+          action: (
+            <ToastAction
+              altText="Copy again"
+              onClick={() => navigator.clipboard.writeText(shareUrl)}
+            >
+              Copy again
+            </ToastAction>
+          ),
+        });
+      })
+      .catch((err) => {
+        console.error("Failed to copy link:", err);
+        toast({
+          title: "Could not copy link",
+          description: shareUrl,
+          variant: "destructive",
+        });
+      });
+  };
+
+  const handleGoBack = () => {
+    router.push("/canvas-ai");
+  };
+
   const handleCreateTextNode = () => {
-    if (!editor) return;
+    if (!editor || isPublicView) return;
 
     const viewportBounds = editor.getViewportPageBounds();
     const centerX = (viewportBounds.minX + viewportBounds.maxX) / 2;
@@ -218,7 +316,7 @@ export function DrawingCanvasInner() {
   };
 
   const handleCreateGenerateBox = () => {
-    if (!editor) return;
+    if (!editor || isPublicView) return;
 
     const viewportBounds = editor.getViewportPageBounds();
     const centerX = (viewportBounds.minX + viewportBounds.maxX) / 2;
@@ -241,7 +339,7 @@ export function DrawingCanvasInner() {
   };
 
   const handleCreateTextOutputNode = () => {
-    if (!editor) return;
+    if (!editor || isPublicView) return;
 
     const viewportBounds = editor.getViewportPageBounds();
     const centerX = (viewportBounds.minX + viewportBounds.maxX) / 2;
@@ -265,7 +363,7 @@ export function DrawingCanvasInner() {
   };
 
   const handleCreateImageOutputNode = () => {
-    if (!editor) return;
+    if (!editor || isPublicView) return;
 
     const viewportBounds = editor.getViewportPageBounds();
     const centerX = (viewportBounds.minX + viewportBounds.maxX) / 2;
@@ -294,44 +392,60 @@ export function DrawingCanvasInner() {
         </div>
       ) : null}
 
-      <div className="absolute top-1/2 -translate-y-1/2 left-4 z-50 flex flex-col gap-2 bg-white/80 rounded-lg p-2 shadow-sm">
-        <button
-          onClick={handleCreateTextNode}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-        >
-          <Type />
-          <span>Text</span>
-        </button>
-        <button
-          onClick={handleCreateTextOutputNode}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-        >
-          <MessageCircle />
-          <span>AI Response</span>
-        </button>
-        <button
-          onClick={handleCreateImageOutputNode}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-        >
-          <Image />
-          <span>AI Image</span>
-        </button>
-        <button
-          onClick={handleCreateGenerateBox}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-        >
-          <Waves />
-          <span>Tailwind</span>
-        </button>
-        <button
-          onClick={handleSave}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
-          disabled={isSaving}
-        >
-          <Save />
-          <span>{isSaving ? "Saving..." : "Save"}</span>
-        </button>
-      </div>
+      {!isPublicView && (
+        <div className="absolute top-1/2 -translate-y-1/2 left-4 z-50 flex flex-col gap-2 bg-white/80 rounded-lg p-2 shadow-sm">
+          <button
+            onClick={handleGoBack}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <ChevronLeft />
+            <span>Go Back</span>
+          </button>
+          <button
+            onClick={handleCreateTextNode}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Type />
+            <span>Text</span>
+          </button>
+          <button
+            onClick={handleCreateTextOutputNode}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <MessageCircle />
+            <span>AI Response</span>
+          </button>
+          <button
+            onClick={handleCreateImageOutputNode}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Image />
+            <span>AI Image</span>
+          </button>
+          <button
+            onClick={handleCreateGenerateBox}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Waves />
+            <span>Tailwind</span>
+          </button>
+          <button
+            onClick={handleSave}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+            disabled={isSaving}
+          >
+            <Save />
+            <span>{isSaving ? "Saving..." : "Save"}</span>
+          </button>
+          <button
+            onClick={handleShare}
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-md transition-colors"
+          >
+            <Share />
+            <span>Share</span>
+          </button>
+        </div>
+      )}
 
       <Tldraw
         store={store}

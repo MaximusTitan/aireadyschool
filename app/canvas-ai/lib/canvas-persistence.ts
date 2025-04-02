@@ -162,7 +162,7 @@ export function generateDocumentId(): string {
 }
 
 // Get user email from Supabase Auth
-export async function getUserId(): Promise<string> {
+export async function getUserId(isViewMode: boolean = false): Promise<string> {
   if (typeof window === 'undefined') return '';
   
   try {
@@ -174,10 +174,18 @@ export async function getUserId(): Promise<string> {
       return user.email;
     }
     
-    // If there's no authenticated user, throw an error
+    // If there's no authenticated user but we're in view mode, return 'public' instead of throwing
+    if (isViewMode) {
+      return 'public';
+    }
+    
+    // If there's no authenticated user and not in view mode, throw an error
     throw new Error('No authenticated user found');
   } catch (err) {
     console.error('Error getting authenticated user:', err);
+    if (isViewMode) {
+      return 'public';
+    }
     throw err;
   }
 }

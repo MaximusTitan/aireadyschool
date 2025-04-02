@@ -104,7 +104,7 @@ export default function JudgeDashboard() {
       if (userError)
         throw new Error(`Authentication error: ${userError.message}`);
       if (!user) {
-        router.push("/login");
+        router.push("/sign-in");
         return;
       }
 
@@ -333,11 +333,11 @@ export default function JudgeDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/sign-in");
   };
 
   const handleViewSubmission = (studentId: string) => {
-    router.push(`/judge/submissions/${studentId}`);
+    router.push(`/dat/judge/submissions/${studentId}`);
   };
 
   const handleRatingSubmit = async (studentId: string) => {
@@ -641,7 +641,7 @@ export default function JudgeDashboard() {
               Logout
             </Button>
             <Button
-              onClick={() => router.push("/judge/profile")}
+              onClick={() => router.push("/dat/judge/profile")}
               variant="outline"
             >
               <User className="h-4 w-4" />

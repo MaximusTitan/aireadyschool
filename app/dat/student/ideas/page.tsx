@@ -148,7 +148,7 @@ export default function StudentIdeaPage() {
           </Button>
           <h1 className="text-3xl font-bold text-gray-800">My Idea</h1>
           <div className="flex-grow" /> {/* fills remaining space */}
-          <Link href="/student/profile">
+          <Link href="/dat/student/profile">
             <Button variant="outline" className="rounded-full p-3">
               <User className="h-5 w-5" />
             </Button>

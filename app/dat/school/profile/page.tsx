@@ -47,7 +47,7 @@ export default function SchoolProfilePage() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = "/login";
+    window.location.href = "/sign-in";
   };
 
   const handleBack = () => {

@@ -13,7 +13,7 @@ const DataAITalksHomepage = () => {
           <div className="flex justify-between items-center">
             <div className="text-white font-bold text-xl">Data & AI Talks</div>
             <div className="flex gap-4">
-              <Link href="/login">
+              <Link href="/sign-in">
                 <button className="bg-white text-purple-700 px-6 py-2 rounded-full font-semibold hover:bg-opacity-90 transition-all flex items-center">
                   <LogIn className="mr-2 h-4 w-4" />
                   Login
@@ -32,7 +32,7 @@ const DataAITalksHomepage = () => {
           <p className="text-xl mb-8">
             A Quest for AI Product Ideas from Children
           </p>
-          <Link href="/school/register">
+          <Link href="/dat/school/register">
             <button className="bg-white text-purple-700 px-8 py-3 rounded-full font-semibold hover:bg-opacity-90 transition-all flex items-center mx-auto">
               Register Your School
               <ArrowRight className="ml-2 h-5 w-5" />

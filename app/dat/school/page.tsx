@@ -87,7 +87,7 @@ export default function SchoolDashboard() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/instructions/view_school">
+          <Link href="/dat/instructions/view_school">
             <Button
               variant="outline"
               className="border-rose-200 hover:bg-rose-50"
@@ -96,7 +96,7 @@ export default function SchoolDashboard() {
               Instructions
             </Button>
           </Link>
-          <Link href="/school/profile">
+          <Link href="/dat/school/profile">
             <Button
               variant="outline"
               size="icon"
@@ -113,7 +113,7 @@ export default function SchoolDashboard() {
         {/* Total Students Card */}
         <Card className="shadow-md rounded-xl">
           <div className="p-2">
-            <Link href="/school/students" className="block">
+            <Link href="/dat/school/students" className="block">
               <div className="bg-white rounded-lg p-6 text-rose-600 flex justify-between items-center">
                 <h3 className="text-2xl font-bold text-black">
                   Total Students
@@ -134,7 +134,7 @@ export default function SchoolDashboard() {
           ].map((item) => (
             <Card key={item.group} className="shadow-md rounded-xl">
               <Link
-                href={`/school/students?group=${item.group}`}
+                href={`/dat/school/students?group=${item.group}`}
                 className="block"
               >
                 <div className="p-6">

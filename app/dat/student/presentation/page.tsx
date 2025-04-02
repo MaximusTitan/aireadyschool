@@ -146,7 +146,7 @@ export default function PresentationLinkPage() {
             Presentation Link
           </h1>
           <div className="flex-grow" />
-          <Link href="/student/profile">
+          <Link href="/dat/student/profile">
             <Button variant="outline" className="rounded-full p-3">
               <User className="h-5 w-5" />
             </Button>

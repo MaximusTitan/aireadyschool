@@ -38,10 +38,10 @@ const LoginPage: React.FC = () => {
       // Route based on role
       switch (role) {
         case "dat_admin":
-          router.push("/admin");
+          router.push("/dat/admin");
           break;
         case "dat_judge":
-          router.push("/judge");
+          router.push("/dat/judge");
           break;
         case "dat_school":
           // Check school approval status
@@ -52,17 +52,17 @@ const LoginPage: React.FC = () => {
             .maybeSingle();
 
           if (schoolData?.status === "pending") {
-            router.push("/school/pending");
+            router.push("/dat/school/pending");
           } else if (schoolData?.status === "rejected") {
             setError(
               "Your school registration has been rejected. Please contact support."
             );
           } else {
-            router.push("/school");
+            router.push("/dat/school");
           }
           break;
         case "dat_student":
-          router.push("/student");
+          router.push("/dat/student");
           break;
         default:
           setError("Invalid user role");

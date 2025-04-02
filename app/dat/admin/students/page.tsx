@@ -1445,7 +1445,7 @@ function StudentsListContent() {
       <div className="min-h-screen" style={{ backgroundColor: "#F7F1EF" }}>
         <div className="container mx-auto p-6">
           <div className="flex items-center mb-8">
-            <Link href="/admin">
+            <Link href="/dat/admin">
               <Button variant="outline" size="sm">
                 <ChevronLeft className="h-4 w-4 mr-2" />
               </Button>
@@ -1471,7 +1471,7 @@ function StudentsListContent() {
     <div className="min-h-screen" style={{ backgroundColor: "#F7F1EF" }}>
       <div className="container mx-auto p-6">
         <div className="flex items-center mb-8">
-          <Link href="/admin">
+          <Link href="/dat/admin">
             <Button variant="outline" size="sm">
               <ChevronLeft className="h-4 w-4 mr-2" />
             </Button>
@@ -1610,7 +1610,7 @@ function StudentsListContent() {
                     })()}
                   </td>
                   <td className="px-4 py-2">
-                    <Link href={`/admin/students/${student.id}/ideas`}>
+                    <Link href={`/dat/admin/students/${student.id}/ideas`}>
                       <Button variant="outline" size="sm">
                         View Submission
                       </Button>

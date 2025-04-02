@@ -115,7 +115,7 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.push("/login");
+    router.push("/sign-in");
   };
 
   return (
@@ -126,13 +126,13 @@ export default function AdminDashboard() {
           <div className="flex gap-4">
             <Button
               variant="outline"
-              onClick={() => router.push("/admin/register-judge")}
+              onClick={() => router.push("/dat/admin/register-judge")}
             >
               Register Judge
             </Button>
             <Button
               variant="outline"
-              onClick={() => router.push("/instructions")}
+              onClick={() => router.push("/dat/instructions")}
             >
               <BookOpen className="h-4 w-4 mr-1" />
               Instructions
@@ -150,7 +150,7 @@ export default function AdminDashboard() {
         </div>
 
         <div className="grid md:grid-cols-2 gap-6 mb-8">
-          <Link href="/admin/schools">
+          <Link href="/dat/admin/schools">
             <Card className="bg-white hover:shadow-lg transition-all cursor-pointer border-rose-200">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
@@ -166,7 +166,7 @@ export default function AdminDashboard() {
             </Card>
           </Link>
 
-          <Link href="/admin/students">
+          <Link href="/dat/admin/students">
             <Card className="bg-white hover:shadow-lg transition-all cursor-pointer border-rose-200">
               <CardContent className="p-6">
                 <div className="flex items-center space-x-4">
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
             <Link
               key={group}
               href={{
-                pathname: "/admin/students",
+                pathname: "/dat/admin/students",
                 query: { group },
               }}
             >

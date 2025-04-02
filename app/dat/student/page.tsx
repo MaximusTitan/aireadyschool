@@ -292,7 +292,7 @@ export default function StudentDashboard() {
                 exit={{ scale: 0.8, opacity: 0, x: "100%" }}
                 className="absolute top-4 right-4 bg-white/10 backdrop-blur-md p-4 rounded-xl shadow-xl"
               >
-                <Link href="/instructions/view" onClick={hideInstructionGuide}>
+                <Link href="/dat/instructions/view" onClick={hideInstructionGuide}>
                   <motion.button
                     className="px-6 py-3 bg-rose-600 text-white rounded-lg flex items-center gap-2 hover:bg-rose-700 transition-colors"
                     whileHover={{ scale: 1.05 }}
@@ -338,7 +338,7 @@ export default function StudentDashboard() {
                       repeatType: "reverse",
                     }}
                   >
-                    <Link href="/instructions/view">
+                    <Link href="/dat/instructions/view">
                       <Button
                         variant="outline"
                         className="border-rose-200 hover:bg-rose-50 relative"
@@ -354,7 +354,7 @@ export default function StudentDashboard() {
                     </Link>
                   </motion.div>
                 ) : (
-                  <Link href="/instructions/view">
+                  <Link href="/dat/instructions/view">
                     <Button
                       variant="outline"
                       className="border-rose-200 hover:bg-rose-50"
@@ -365,7 +365,7 @@ export default function StudentDashboard() {
                   </Link>
                 )}
                 <Link
-                  href="/student/profile"
+                  href="/dat/student/profile"
                   className="flex items-center gap-2 bg-white p-2 rounded-full shadow-sm hover:shadow-md transition-all"
                 >
                   <div className="w-10 h-10 rounded-full bg-rose-100 flex items-center justify-center">
@@ -663,7 +663,7 @@ export default function StudentDashboard() {
               <div className="space-y-6">
                 <div>
                   <h3 className="text-xl font-semibold text-rose-600 mb-2"></h3>
-                  <Link href="/student/ideas" className="block">
+                  <Link href="/dat/student/ideas" className="block">
                     <div className="w-full p-6 bg-white border border-rose-200 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer">
                       <div className="flex flex-col items-start justify-center space-y-4">
                         <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center">
@@ -698,7 +698,7 @@ export default function StudentDashboard() {
                 {idea?.status === "approved" && (
                   <div>
                     <h3 className="text-xl font-semibold text-rose-600 mb-2"></h3>
-                    <Link href="/student/presentation" className="block">
+                    <Link href="/dat/student/presentation" className="block">
                       <div className="w-full p-6 bg-white border border-rose-200 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer">
                         <div className="flex flex-col items-start justify-center space-y-4">
                           <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center">
@@ -742,7 +742,7 @@ export default function StudentDashboard() {
                   prototypeStatus === "finals_runner_up") && (
                   <div>
                     <h3 className="text-xl font-semibold text-rose-600 mb-2"></h3>
-                    <Link href="/student/prototype" className="block">
+                    <Link href="/dat/student/prototype" className="block">
                       <div className="w-full p-6 bg-white border border-rose-200 rounded-xl shadow-sm hover:shadow-md transition-all cursor-pointer">
                         <div className="flex flex-col items-start justify-center space-y-4">
                           {/* ...existing prototype card content... */}

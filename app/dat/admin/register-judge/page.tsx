@@ -8,7 +8,7 @@ export default function RegisterJudgePage() {
     <div className="min-h-screen" style={{ backgroundColor: "#F7F1EF" }}>
       <div className="container mx-auto p-6">
         <div className="flex items-center mb-8">
-          <Link href="/admin" className="mr-4">
+          <Link href="/dat/admin" className="mr-4">
             <Button variant="outline" size="sm">
               <ChevronLeft className="h-4 w-4 mr-2" />
             </Button>

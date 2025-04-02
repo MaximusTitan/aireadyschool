@@ -24,7 +24,7 @@ export default function ThankYouPage() {
 
     // Direct user to the DATA-AI-Talks website
     const handleBackToHome = () => {
-        window.location.href = 'https://www.aireadyschool.com/data-ai-talks';
+        window.location.href = 'https://app.aireadyschool.com/sign-in';
     };
 
     return (

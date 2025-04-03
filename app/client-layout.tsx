@@ -88,6 +88,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
       pathname.startsWith("/guide") ||
       pathname.startsWith("/knowledge-base") ||
       pathname.startsWith("/dat-submissions") ||
+      pathname.startsWith("/dat/") ||
       (pathname.startsWith("/portfolio") &&
         userRole === "Student" &&
         hasCognitiveAssessment));

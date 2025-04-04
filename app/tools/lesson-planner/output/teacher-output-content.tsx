@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Download } from "lucide-react";
-import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from "@/utils/supabase/client";
@@ -23,9 +22,9 @@ import { SessionNavigator } from "../components/session-navigator";
 import { LessonModalDialogs } from "../components/lesson-modal-dialogs";
 import { LessonContent } from "../components/lesson-content";
 
-const supabaseClient = createClient();
+const supabase = createClient();
 
-export default function OutputContent() {
+export default function TeacherOutputContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get("id");
@@ -70,66 +69,68 @@ export default function OutputContent() {
   const [isAuthChecking, setIsAuthChecking] = useState(true);
   const [isAssigning, setIsAssigning] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
-  const [buddyInput, setBuddyInput] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
   useEffect(() => {
-    async function checkAuth() {
+    const checkAuthentication = async () => {
+      setIsAuthChecking(true);
       try {
-        const { data } = await supabase.auth.getSession();
-        const email = data.session?.user?.email || null;
-        setUserEmail(email);
-        setUserRole(data.session?.user?.user_metadata?.role || null);
-        setIsAuthChecking(false);
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const user = session?.user;
+
+        if (!user) {
+          setIsAuthorized(false);
+          return;
+        }
+
+        const role = user.user_metadata?.role;
+        if (role !== "Teacher") {
+          setIsAuthorized(false);
+          router.push("/sign-in");
+          return;
+        }
+
+        setUserRole(role || null);
+        setUserEmail(user.email || null);
+        setIsAuthorized(true);
       } catch (error) {
-        console.error("Auth check error:", error);
+        console.error("Authentication check failed:", error);
+        setIsAuthorized(false);
+      } finally {
         setIsAuthChecking(false);
       }
-    }
-
-    checkAuth();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_, session) => {
-      setUserEmail(session?.user?.email || null);
-      setUserRole(session?.user?.user_metadata?.role || null);
-    });
-
-    return () => {
-      subscription.unsubscribe();
     };
-  }, []);
+
+    checkAuthentication();
+  }, [router]);
 
   useEffect(() => {
+    if (!isAuthorized || !userEmail) return;
+
     (async () => {
       try {
-        const sessionCheck = await supabaseClient.auth.getSession();
-        if (sessionCheck.data?.session?.user) {
-          setUserRole(
-            sessionCheck.data.session.user.user_metadata?.role || null
-          );
+        const { data: teacherData } = await supabase
+          .from("teachers")
+          .select("id")
+          .eq(
+            "user_id",
+            (await supabase.auth.getSession()).data.session?.user?.id
+          )
+          .single();
 
-          if (sessionCheck.data.session?.user) {
-            const { data: teacherData } = await supabase
-              .from("teachers")
-              .select("id")
-              .eq("user_id", sessionCheck.data.session.user.id)
-              .single();
-
-            if (teacherData) {
-              setTeacherId(teacherData.id);
-            }
-          }
+        if (teacherData) {
+          setTeacherId(teacherData.id);
         }
       } catch (error) {
-        console.error("Page load role check error:", error);
+        console.error("Failed to fetch teacher ID:", error);
       }
     })();
-  }, []);
+  }, [isAuthorized, userEmail]);
 
   const fetchLessonPlan = useCallback(async () => {
-    if (!id) {
-      setError("No lesson plan ID provided");
+    if (!id || !isAuthorized) {
       return;
     }
 
@@ -144,14 +145,6 @@ export default function OutputContent() {
 
       if (lessonPlanData) {
         setLessonPlan(lessonPlanData as LessonPlan);
-
-        if (
-          userEmail &&
-          lessonPlanData.user_email &&
-          lessonPlanData.user_email !== userEmail
-        ) {
-          console.warn("User viewing a lesson plan they don't own");
-        }
       } else {
         setError("Lesson plan not found");
       }
@@ -201,13 +194,11 @@ export default function OutputContent() {
       console.error("Error fetching lesson plan data:", error);
       setError("Failed to fetch lesson plan data. Please try again.");
     }
-  }, [id, userEmail]);
+  }, [id, isAuthorized]);
 
   useEffect(() => {
-    if (id) {
-      fetchLessonPlan();
-    }
-  }, [id, fetchLessonPlan]);
+    fetchLessonPlan();
+  }, [fetchLessonPlan]);
 
   const handleEdit = (type: string, data: any, dayIndex?: number) => {
     setEditContent({
@@ -404,6 +395,8 @@ export default function OutputContent() {
     const doc = new jsPDF();
     let yOffset = 20;
 
+    // PDF generation code from the original component
+    // ... [PDF generation logic] ...
     const addHeading = (text: string, size = 16) => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(size);
@@ -440,12 +433,14 @@ export default function OutputContent() {
     addText(`Board: ${lessonPlan.board}`);
     addText(`Duration: ${lessonPlan.class_duration} minutes`);
     addText(`Number of Days: ${lessonPlan.number_of_days}`);
+
     if (lessonPlan.learning_objectives) {
       addText(`Learning Objectives: ${lessonPlan.learning_objectives}`);
     }
     yOffset += 10;
 
-    lessonPlan.plan_data.days.forEach((day, index) => {
+    // Generate content for each day
+    lessonPlan.plan_data.days.forEach((day) => {
       checkNewPage();
       addHeading(`Day ${day.day}: ${day.topicHeading}`, 16);
 
@@ -468,6 +463,7 @@ export default function OutputContent() {
       yOffset += 10;
     });
 
+    // Assessment plan
     checkNewPage();
     addHeading("Assessment Plan", 16);
     yOffset += 5;
@@ -780,17 +776,6 @@ export default function OutputContent() {
     );
   };
 
-  const handleRedirectToBuddy = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (lessonPlan) {
-      router.push(
-        `/tools/gen-chat?thread=new&teachingMode=false&lessonPlanId=${
-          lessonPlan.id
-        }&userInput=${encodeURIComponent(buddyInput)}`
-      );
-    }
-  };
-
   const renderAssignButton = () => {
     if (!lessonPlan) return null;
 
@@ -812,12 +797,13 @@ export default function OutputContent() {
   if (isAuthChecking) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
-        <div className="text-center"></div>
-        <div className="w-16 h-16 border-4 border-gray-300 border-t-gray-800 rounded-full animate-spin mx-auto mb-4">
-          <p className="text-gray-600">Loading...</p>
-        </div>
+        <div className="w-16 h-16 border-4 border-gray-300 border-t-gray-800 rounded-full animate-spin"></div>
       </div>
     );
+  }
+
+  if (!isAuthorized) {
+    return null;
   }
 
   if (error) {
@@ -865,6 +851,17 @@ export default function OutputContent() {
               </p>
             </div>
 
+            <div className="flex gap-4 mb-6">
+              <Button onClick={handleChatWithBuddyNoArgs} variant="default">
+                Chat with Buddy
+              </Button>
+              <Button variant="outline" onClick={handleDownload}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </Button>
+              {renderAssignButton()}
+            </div>
+
             <SessionNavigator
               days={lessonPlan.plan_data.days}
               activeTab={activeTab}
@@ -901,32 +898,6 @@ export default function OutputContent() {
                 />
               )}
             </div>
-
-            <div className="mt-6 flex gap-4">
-              {userRole !== "Student" && (
-                <Button onClick={handleChatWithBuddyNoArgs} variant="default">
-                  Chat with Buddy
-                </Button>
-              )}
-              <Button variant="outline" onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </Button>
-              {userRole !== "Student" && renderAssignButton()}
-            </div>
-
-            <form onSubmit={handleRedirectToBuddy} className="mt-4 flex gap-2">
-              <input
-                type="text"
-                value={buddyInput}
-                onChange={(e) => setBuddyInput(e.target.value)}
-                placeholder="Enter your question for buddy..."
-                className="flex-1 px-4 py-2 border rounded-md"
-              />
-              <Button type="submit" variant="default">
-                Ask Buddy
-              </Button>
-            </form>
           </>
         )}
 

@@ -36,6 +36,7 @@ export default function LessonPlanGenerator() {
   const router = useRouter();
   const [lessonPlans, setLessonPlans] = useState<LessonPlan[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -53,12 +54,13 @@ export default function LessonPlanGenerator() {
 
         if (!isMounted) return;
 
-        if (session?.user?.email) {
-          // Set email first
-          setUserEmail(session.user.email);
+        if (session?.user) {
+          // Set email and role
+          setUserEmail(session.user.email || null);
+          setUserRole(session.user.user_metadata?.role || null);
 
           // Then fetch plans
-          await fetchLessonPlans(session.user.email);
+          await fetchLessonPlans(session.user.email || null);
         } else {
           console.log("No authenticated user found");
           setLessonPlans([]);
@@ -102,7 +104,7 @@ export default function LessonPlanGenerator() {
     };
   }, []); // Removed userEmail from the dependency array
 
-  const fetchLessonPlans = async (email: string | undefined) => {
+  const fetchLessonPlans = async (email: string | null) => {
     if (!email) {
       console.warn("Cannot fetch lesson plans: No email provided");
       return;
@@ -159,6 +161,14 @@ export default function LessonPlanGenerator() {
     } catch (error) {
       console.error("Error deleting lesson plan:", error);
     }
+  };
+
+  const handleViewPlan = (planId: string) => {
+    const route =
+      userRole === "Student"
+        ? `/tools/lesson-planner/student-output?id=${planId}`
+        : `/tools/lesson-planner/output?id=${planId}`;
+    router.push(route);
   };
 
   const getSubjectIcon = (subject: string) => {
@@ -226,9 +236,7 @@ export default function LessonPlanGenerator() {
                     variant="outline"
                     size="sm"
                     className="flex-1 text-gray-600 hover:text-gray-700 border-gray-200 hover:border-gray-300"
-                    onClick={() =>
-                      router.push(`/tools/lesson-planner/output?id=${plan.id}`)
-                    }
+                    onClick={() => handleViewPlan(plan.id)}
                   >
                     <BookOpen className="h-3 w-3 mr-1" />
                     View Plan

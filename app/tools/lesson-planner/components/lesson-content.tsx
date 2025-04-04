@@ -2,7 +2,16 @@
 
 import { Button } from "@/components/ui/button";
 import { AddContentDropdown } from "./add-content-dropdown";
+import { FileViewer } from "./file-viewer";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import ReactMarkdown from "react-markdown";
 import { Day, ScheduleItem, GeneratedNotes, UploadedFile } from "../types";
+import { Fragment } from "react";
 
 interface LessonContentProps {
   day: Day;
@@ -112,30 +121,29 @@ export function LessonContent({
                 <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
                   Activities
                 </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-64">
-                  Materials
+                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
+                  Actions
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {day.schedule.map((item, index) => (
-                <tr key={index}>
-                  <td className="px-4 py-4 text-sm text-gray-500">
-                    {String(item.timeAllocation).padStart(2, "0")}:
-                    {String(0).padStart(2, "0")}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="font-medium text-gray-900">
-                      {item.title || item.type}
-                    </div>
-                    <div className="mt-1 text-sm text-gray-500">
-                      {item.content}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="text-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium">Lesson Content</div>
+                <Fragment key={index}>
+                  <tr key={`row-${index}`}>
+                    <td className="px-4 py-4 text-sm text-gray-500">
+                      {String(item.timeAllocation).padStart(2, "0")}:
+                      {String(0).padStart(2, "0")}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="font-medium text-gray-900">
+                        {item.title || item.type}
+                      </div>
+                      <div className="mt-1 text-sm text-gray-500">
+                        {item.content}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="flex items-center gap-2">
                         {userRole !== "Student" && (
                           <AddContentDropdown
                             onUpload={(file, type) =>
@@ -147,67 +155,95 @@ export function LessonContent({
                             }
                           />
                         )}
+                        {/* {userRole === "Student" ? (
+                          <Button
+                            onClick={() => onChatWithBuddy(item, day)}
+                            variant="default"
+                            size="sm"
+                          >
+                            Chat with Buddy
+                          </Button>
+                        ) : ( */}
+                        {userRole !== "Student" && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              onGenerateNotes(item.title, item.content)
+                            }
+                          >
+                            {generatedNotes[item.title]
+                              ? "See Notes"
+                              : "Generate Notes"}
+                          </Button>
+                        )}
                       </div>
-                      <div className="text-gray-500">{item.title}</div>
-                      {userRole === "Student" ? (
-                        <button
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            e.preventDefault();
-                            onChatWithBuddy(item, day);
-                          }}
-                          className="text-blue-500 hover:text-blue-600 text-sm mt-1 flex items-center gap-1"
-                        >
-                          Chat with Buddy
-                        </button>
-                      ) : (
-                        <button
-                          className="text-rose-500 hover:text-rose-600 text-sm mt-1 flex items-center gap-1"
-                          onClick={() =>
-                            onGenerateNotes(item.title, item.content)
-                          }
-                        >
-                          {generatedNotes[item.title]
-                            ? "See the content"
-                            : "Generate"}
-                        </button>
-                      )}
+                    </td>
+                  </tr>
+                  {/* Content below the row */}
+                  {(generatedNotes[item.title] ||
+                    uploadedFiles[`material-${day.day}-${index}`]?.length >
+                      0) && (
+                    <tr key={`content-${index}`}>
+                      <td colSpan={3} className="px-4 py-4 bg-gray-50">
+                        <Accordion type="single" collapsible>
+                          <AccordionItem value="content">
+                            <AccordionTrigger className="text-sm font-medium">
+                              View Materials & Notes
+                            </AccordionTrigger>
+                            <AccordionContent>
+                              <div className="space-y-4 pt-2">
+                                {/* Generated Notes */}
+                                {generatedNotes[item.title] && (
+                                  <div className="bg-white rounded-lg border p-4">
+                                    <h4 className="font-medium text-gray-900 mb-2">
+                                      Generated Notes
+                                    </h4>
+                                    <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                                      <ReactMarkdown>
+                                        {generatedNotes[item.title]}
+                                      </ReactMarkdown>
+                                    </div>
+                                  </div>
+                                )}
 
-                      {/* Display uploaded files for all users (both students and teachers) */}
-                      {uploadedFiles[`material-${day.day}-${index}`]?.map(
-                        (file, fileIndex) => {
-                          const displayName = `${file.type}_${fileIndex + 1}`;
-
-                          return (
-                            <div key={file.id} className="mt-2 text-sm">
-                              <a
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline flex items-center gap-1"
-                                title={file.name}
-                              >
-                                {displayName}
-                              </a>
-                              {userRole !== "Student" && (
-                                <button
-                                  className="text-red-500 hover:text-red-600 text-sm ml-2"
-                                  onClick={() =>
-                                    onDeleteFile(
-                                      file.id,
-                                      `material-${day.day}-${index}`
-                                    )
-                                  }
-                                >
-                                  Delete
-                                </button>
-                              )}
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                                {/* Uploaded Files */}
+                                {uploadedFiles[`material-${day.day}-${index}`]
+                                  ?.length > 0 && (
+                                  <div className="space-y-2">
+                                    <h4 className="font-medium text-gray-900">
+                                      Materials
+                                    </h4>
+                                    <div className="grid gap-4">
+                                      {uploadedFiles[
+                                        `material-${day.day}-${index}`
+                                      ].map((file) => (
+                                        <FileViewer
+                                          key={file.id}
+                                          file={file}
+                                          onDelete={
+                                            userRole !== "Student"
+                                              ? (id) =>
+                                                  onDeleteFile(
+                                                    id,
+                                                    `material-${day.day}-${index}`
+                                                  )
+                                              : undefined
+                                          }
+                                          canDelete={userRole !== "Student"}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </AccordionContent>
+                          </AccordionItem>
+                        </Accordion>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
               ))}
             </tbody>
           </table>

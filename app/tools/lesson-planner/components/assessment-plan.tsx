@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { AddContentDropdown } from "./add-content-dropdown";
+import { FileViewer } from "./file-viewer";
 import { AssessmentPlan, UploadedFile } from "../types";
 
 interface AssessmentPlanViewProps {
@@ -47,25 +48,19 @@ export function AssessmentPlanView({
 
       {uploadedFiles["assessment-plan"]?.length > 0 && (
         <div className="border-t border-gray-200 pt-4 mt-4">
-          <h3 className="font-semibold mb-2">Uploaded Materials</h3>
-          <div className="space-y-2">
+          <h3 className="font-semibold mb-4">Uploaded Materials</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {uploadedFiles["assessment-plan"].map((file) => (
-              <div key={file.id} className="flex items-center gap-2">
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  {file.type}: {file.name}
-                </a>
-                <button
-                  className="text-red-500 hover:text-red-600 text-sm ml-2"
-                  onClick={() => onDeleteFile(file.id, "assessment-plan")}
-                >
-                  Delete
-                </button>
-              </div>
+              <FileViewer
+                key={file.id}
+                file={file}
+                onDelete={
+                  userRole !== "Student"
+                    ? (id) => onDeleteFile(id, "assessment-plan")
+                    : undefined
+                }
+                canDelete={userRole !== "Student"}
+              />
             ))}
           </div>
         </div>

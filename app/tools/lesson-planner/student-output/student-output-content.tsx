@@ -15,6 +15,7 @@ import {
 } from "../types";
 import { SessionNavigator } from "../components/session-navigator";
 import { LessonContent } from "../components/lesson-content";
+import { AssessmentPlanView } from "../components/assessment-plan";
 
 const supabase = createClient();
 
@@ -90,6 +91,25 @@ export default function StudentOutputContent() {
         setLessonPlan(lessonPlanData as LessonPlan);
       } else {
         setError("Lesson plan not found");
+      }
+
+      // Fetch generated notes
+      try {
+        const { data: notesData, error: notesError } = await supabase
+          .from("generated_notes")
+          .select("*")
+          .eq("lesson_plan_id", id);
+
+        if (notesError) throw notesError;
+        if (notesData) {
+          const notesObj: GeneratedNotes = {};
+          notesData.forEach((note) => {
+            notesObj[note.activity_title] = note.content;
+          });
+          setGeneratedNotes(notesObj);
+        }
+      } catch (notesError) {
+        console.warn("Error fetching generated notes:", notesError);
       }
 
       // Fetch uploaded files
@@ -229,6 +249,17 @@ export default function StudentOutputContent() {
               onFileUpload={async () => {}}
               onDeleteFile={async () => {}}
               onChatWithBuddy={handleChatWithBuddy}
+            />
+          )}
+
+          {activeTab === "assessment" && (
+            <AssessmentPlanView
+              assessmentPlan={lessonPlan.plan_data.assessmentPlan}
+              userRole={userRole}
+              uploadedFiles={uploadedFiles}
+              onEdit={() => {}}
+              onFileUpload={async () => {}}
+              onDeleteFile={async () => {}}
             />
           )}
         </div>

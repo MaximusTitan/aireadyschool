@@ -72,7 +72,11 @@ const config = {
   			backgroundApp: '#f7f3f2'
   		},
   		fontFamily: {
-  			sans: ['var(--font-poppins)', 'system-ui', 'sans-serif'],
+  			sans: [
+  				'var(--font-poppins)',
+  				'system-ui',
+  				'sans-serif'
+  			],
   			comic: [
   				'var(--font-comic)',
   				'system-ui',

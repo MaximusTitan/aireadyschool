@@ -669,6 +669,32 @@ export default function TeacherOutputContent() {
         .select();
 
       if (error) throw error;
+
+      // Copy all generated notes to the student's lesson plan
+      const studentLessonPlanId = data[0].id;
+
+      // Transfer generated notes
+      for (const [activityTitle, content] of Object.entries(generatedNotes)) {
+        await supabase.from("generated_notes").insert({
+          lesson_plan_id: studentLessonPlanId,
+          activity_title: activityTitle,
+          content: content,
+        });
+      }
+
+      // Transfer uploaded files
+      for (const [sectionId, files] of Object.entries(uploadedFiles)) {
+        for (const file of files) {
+          await supabase.from("uploaded_files").insert({
+            lesson_plan_id: studentLessonPlanId,
+            section_id: sectionId,
+            file_name: file.name,
+            file_type: file.type,
+            file_url: file.url,
+          });
+        }
+      }
+
       return data[0];
     } catch (error) {
       console.error("Error creating student lesson plan:", error);

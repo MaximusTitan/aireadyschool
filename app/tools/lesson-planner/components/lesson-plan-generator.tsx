@@ -198,7 +198,7 @@ export default function LessonPlanGenerator() {
 
       <div className="mb-6 max-w-6xl mx-auto">
         <h2 className="text-xl font-semibold text-gray-800 mb-4">
-          Past Lesson Plans
+          Your Lesson Plans
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {lessonPlans.map((plan) => (
@@ -241,14 +241,16 @@ export default function LessonPlanGenerator() {
                     <BookOpen className="h-3 w-3 mr-1" />
                     View Plan
                   </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-                    onClick={() => handleDelete(plan.id)}
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {userRole !== "Student" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                      onClick={() => handleDelete(plan.id)}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               </CardContent>
             </Card>

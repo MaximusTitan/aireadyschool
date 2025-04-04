@@ -3,90 +3,27 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download, Share2 } from "lucide-react";
+import { ArrowLeft, Download } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import jsPDF from "jspdf";
-import { EditLessonContent } from "../components/edit-lesson-content";
-import { GenerateNotesDialog } from "../components/generate-notes-dialog";
-import { AddContentDropdown } from "../components/add-content-dropdown";
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from "@/utils/supabase/client";
+import {
+  LessonPlan,
+  EditContentState,
+  UploadedFile,
+  TeacherAssignment,
+  Student,
+  GeneratedNotes,
+  ScheduleItem,
+  Day,
+} from "../types";
+import { AssessmentPlanView } from "../components/assessment-plan";
+import { SessionNavigator } from "../components/session-navigator";
+import { LessonModalDialogs } from "../components/lesson-modal-dialogs";
+import { LessonContent } from "../components/lesson-content";
 
 const supabaseClient = createClient();
-
-interface ScheduleItem {
-  type: string;
-  title: string;
-  content: string;
-  timeAllocation: number;
-}
-
-interface Assignment {
-  description: string;
-  tasks: string[];
-}
-
-interface Day {
-  day: number;
-  topicHeading: string;
-  learningOutcomes: string[];
-  schedule: ScheduleItem[];
-  teachingAids: string[];
-  assignment: Assignment;
-}
-
-interface Assessment {
-  topic: string;
-  type: string;
-  description: string;
-  evaluationCriteria: string[];
-}
-
-interface AssessmentPlan {
-  formativeAssessments: Assessment[];
-  summativeAssessments: Assessment[];
-  progressTrackingSuggestions: string[];
-}
-
-interface LessonPlan {
-  id: string;
-  subject: string;
-  chapter_topic: string;
-  grade: string;
-  board: string;
-  class_duration: number;
-  number_of_days: number;
-  learning_objectives: string;
-  plan_data: {
-    days: Day[];
-    assessmentPlan: AssessmentPlan;
-  };
-}
-
-interface EditContentState {
-  isOpen: boolean;
-  type: string;
-  data: any;
-  dayIndex?: number;
-}
-
-interface GeneratedNotes {
-  [key: string]: string;
-}
-
-interface UploadedFile {
-  id: string;
-  name: string;
-  type: string;
-  url: string;
-}
-
-interface AssignLessonModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  lessonPlan: LessonPlan;
-  assessmentId: string | null;
-}
 
 export default function OutputContent() {
   const router = useRouter();
@@ -113,6 +50,17 @@ export default function OutputContent() {
   }>({
     isOpen: false,
   });
+  const [assignments, setAssignments] = useState<TeacherAssignment[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
+  const [selectedSection, setSelectedSection] = useState<string>("");
+  const [selectedStudent, setSelectedStudent] = useState<string>("");
+  const [selectedClass, setSelectedClass] = useState<string>("");
+  const [dueDate, setDueDate] = useState<Date | undefined>(undefined);
+  const [assignmentType, setAssignmentType] = useState<"class" | "student">(
+    "class"
+  );
+  const [teacherId, setTeacherId] = useState<string>("");
   const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({});
   const [uploadedFiles, setUploadedFiles] = useState<{
     [key: string]: UploadedFile[];
@@ -124,7 +72,6 @@ export default function OutputContent() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [buddyInput, setBuddyInput] = useState("");
 
-  // Check authentication state directly in component
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -141,7 +88,6 @@ export default function OutputContent() {
 
     checkAuth();
 
-    // Set up listener for auth changes
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_, session) => {
@@ -158,11 +104,22 @@ export default function OutputContent() {
     (async () => {
       try {
         const sessionCheck = await supabaseClient.auth.getSession();
-        // For example, fetch user metadata or role here
         if (sessionCheck.data?.session?.user) {
           setUserRole(
             sessionCheck.data.session.user.user_metadata?.role || null
           );
+
+          if (sessionCheck.data.session?.user) {
+            const { data: teacherData } = await supabase
+              .from("teachers")
+              .select("id")
+              .eq("user_id", sessionCheck.data.session.user.id)
+              .single();
+
+            if (teacherData) {
+              setTeacherId(teacherData.id);
+            }
+          }
         }
       } catch (error) {
         console.error("Page load role check error:", error);
@@ -177,7 +134,6 @@ export default function OutputContent() {
     }
 
     try {
-      // First verify the lesson plan exists
       const { data: lessonPlanData, error: lessonPlanError } = await supabase
         .from("lesson_plans")
         .select("*")
@@ -186,11 +142,9 @@ export default function OutputContent() {
 
       if (lessonPlanError) throw lessonPlanError;
 
-      // Set the lesson plan data immediately
       if (lessonPlanData) {
         setLessonPlan(lessonPlanData as LessonPlan);
 
-        // Check ownership only for informational purposes, don't prevent viewing
         if (
           userEmail &&
           lessonPlanData.user_email &&
@@ -202,7 +156,6 @@ export default function OutputContent() {
         setError("Lesson plan not found");
       }
 
-      // Rest of your fetch logic for notes and files remains the same
       try {
         const { data: notesData, error: notesError } = await supabase
           .from("generated_notes")
@@ -250,7 +203,6 @@ export default function OutputContent() {
     }
   }, [id, userEmail]);
 
-  // Fetch lesson plan when we have an ID, regardless of auth state
   useEffect(() => {
     if (id) {
       fetchLessonPlan();
@@ -283,7 +235,7 @@ export default function OutputContent() {
     });
   };
 
-  const handleNotesGenerated = async (notes: string) => {
+  const handleNotesGenerated = async (notes: string): Promise<void> => {
     if (generateNotesDialog.activity && lessonPlan && userEmail) {
       try {
         const { data, error } = await supabase
@@ -292,7 +244,6 @@ export default function OutputContent() {
             lesson_plan_id: lessonPlan.id,
             activity_title: generateNotesDialog.activity.title,
             content: notes,
-            // User association is maintained through lesson_plan_id foreign key
           })
           .select();
 
@@ -322,22 +273,13 @@ export default function OutputContent() {
     file: File,
     type: string,
     sectionId: string
-  ) => {
+  ): Promise<void> => {
     if (!lessonPlan) {
       console.error("No lesson plan available");
       return;
     }
 
     try {
-      // Debug logging
-      console.log("Upload attempt:", {
-        file,
-        type,
-        sectionId,
-        userEmail,
-        lessonPlanId: lessonPlan.id,
-      });
-
       if (!userEmail) {
         toast({
           title: "Authentication Required",
@@ -352,21 +294,17 @@ export default function OutputContent() {
         description: `Uploading ${file.name}`,
       });
 
-      // Create unique filename with timestamp
       const timestamp = Date.now();
       const fileName = `${timestamp}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const safeEmail = userEmail.replace(/[^a-zA-Z0-9]/g, "_");
       const filePath = `${safeEmail}/${lessonPlan.id}/${fileName}`;
 
-      console.log("Uploading to path:", filePath);
-
-      // Upload to storage
       const { data: uploadData, error: uploadError } = await supabase.storage
         .from("lesson-plan-materials")
         .upload(filePath, file, {
           cacheControl: "3600",
           contentType: file.type,
-          upsert: false, // Ensure we're not overwriting
+          upsert: false,
         });
 
       if (uploadError) {
@@ -374,16 +312,10 @@ export default function OutputContent() {
         throw uploadError;
       }
 
-      console.log("Upload successful:", uploadData);
-
-      // Get public URL
       const {
         data: { publicUrl },
       } = supabase.storage.from("lesson-plan-materials").getPublicUrl(filePath);
 
-      console.log("Public URL generated:", publicUrl);
-
-      // Save to database
       const { data: fileData, error: dbError } = await supabase
         .from("uploaded_files")
         .insert({
@@ -400,9 +332,6 @@ export default function OutputContent() {
         throw dbError;
       }
 
-      console.log("Database entry created:", fileData);
-
-      // Update UI state
       const newFile = {
         id: fileData[0].id,
         name: file.name,
@@ -415,7 +344,6 @@ export default function OutputContent() {
           ...prev,
           [sectionId]: [...(prev[sectionId] || []), newFile],
         };
-        console.log("Updated files state:", updatedFiles);
         return updatedFiles;
       });
 
@@ -436,7 +364,10 @@ export default function OutputContent() {
     }
   };
 
-  const handleDeleteFile = async (fileId: string, sectionId: string) => {
+  const handleDeleteFile = async (
+    fileId: string,
+    sectionId: string
+  ): Promise<void> => {
     try {
       const { error } = await supabase
         .from("uploaded_files")
@@ -473,7 +404,6 @@ export default function OutputContent() {
     const doc = new jsPDF();
     let yOffset = 20;
 
-    // Helper functions for PDF generation
     const addHeading = (text: string, size = 16) => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(size);
@@ -505,7 +435,6 @@ export default function OutputContent() {
       }
     };
 
-    // Title and Basic Information
     addHeading(`${lessonPlan.subject} - ${lessonPlan.chapter_topic}`, 20);
     addText(`Grade: ${lessonPlan.grade}`);
     addText(`Board: ${lessonPlan.board}`);
@@ -516,12 +445,10 @@ export default function OutputContent() {
     }
     yOffset += 10;
 
-    // Daily Plans
     lessonPlan.plan_data.days.forEach((day, index) => {
       checkNewPage();
       addHeading(`Day ${day.day}: ${day.topicHeading}`, 16);
 
-      // Learning Outcomes
       addHeading("Learning Outcomes:", 14);
       day.learningOutcomes.forEach((outcome) => {
         checkNewPage();
@@ -529,7 +456,6 @@ export default function OutputContent() {
       });
       yOffset += 5;
 
-      // Schedule
       checkNewPage();
       addHeading("Schedule:", 14);
       day.schedule.forEach((item) => {
@@ -542,12 +468,10 @@ export default function OutputContent() {
       yOffset += 10;
     });
 
-    // Assessment Plan
     checkNewPage();
     addHeading("Assessment Plan", 16);
     yOffset += 5;
 
-    // Formative Assessments
     addHeading("Formative Assessments:", 14);
     lessonPlan.plan_data.assessmentPlan.formativeAssessments.forEach(
       (assessment) => {
@@ -563,7 +487,6 @@ export default function OutputContent() {
       }
     );
 
-    // Summative Assessments
     checkNewPage();
     addHeading("Summative Assessments:", 14);
     lessonPlan.plan_data.assessmentPlan.summativeAssessments.forEach(
@@ -580,7 +503,6 @@ export default function OutputContent() {
       }
     );
 
-    // Progress Tracking
     checkNewPage();
     addHeading("Progress Tracking Suggestions:", 14);
     lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.forEach(
@@ -590,7 +512,6 @@ export default function OutputContent() {
       }
     );
 
-    // Save the PDF
     const fileName =
       `${lessonPlan.subject}_${lessonPlan.chapter_topic}_Grade${lessonPlan.grade}.pdf`
         .replace(/[^a-z0-9]/gi, "_")
@@ -605,12 +526,20 @@ export default function OutputContent() {
     setIsAssigning(true);
     try {
       if (!assessmentId) {
-        // If no assessmentId, open assign modal
-        setAssignLessonModal({ isOpen: true });
+        if (teacherId) {
+          await fetchTeacherAssignments(teacherId);
+          setAssignLessonModal({ isOpen: true });
+        } else {
+          toast({
+            title: "Error",
+            description: "Teacher information not found. Please try again.",
+            variant: "destructive",
+          });
+        }
+        setIsAssigning(false);
         return;
       }
 
-      // If we have an assessmentId, update the assigned_assessment record directly
       const { error } = await supabase
         .from("assigned_assessments")
         .update({
@@ -651,6 +580,181 @@ export default function OutputContent() {
       });
     } finally {
       setIsAssigning(false);
+    }
+  };
+
+  const fetchTeacherAssignments = async (teacherId: string) => {
+    try {
+      const { data: assignmentData } = await supabase
+        .from("teacher_assignments")
+        .select(
+          `
+          grade_id,
+          section_id,
+          grades (name),
+          sections (name)
+        `
+        )
+        .eq("teacher_id", teacherId);
+
+      if (assignmentData) {
+        const unique = Array.from(
+          new Map(
+            (assignmentData as any[]).map((item) => [
+              `${item.grade_id}-${item.section_id}`,
+              {
+                grade_id: item.grade_id,
+                section_id: item.section_id,
+                grade_name: item.grades?.name,
+                section_name: item.sections?.name,
+              } as TeacherAssignment,
+            ])
+          ).values()
+        );
+        setAssignments(unique as TeacherAssignment[]);
+
+        const { data: studentData } = await supabase.from("school_students")
+          .select(`
+            id,
+            user_id,
+            grade_id,
+            section_id
+          `);
+
+        if (studentData) {
+          const studentsWithEmail = await Promise.all(
+            studentData
+              .filter((stu: any) =>
+                unique.some(
+                  (a) =>
+                    a.grade_id === stu.grade_id &&
+                    a.section_id === stu.section_id
+                )
+              )
+              .map(async (stu: any) => {
+                const { data: userData } = await supabase
+                  .from("users")
+                  .select("email")
+                  .eq("user_id", stu.user_id)
+                  .single();
+                return {
+                  id: stu.id,
+                  email: userData?.email || "No email",
+                  grade_id: stu.grade_id,
+                  section_id: stu.section_id,
+                };
+              })
+          );
+          setStudents(studentsWithEmail);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching teacher assignments:", error);
+    }
+  };
+
+  const createStudentLessonPlan = async (studentEmail: string) => {
+    if (!lessonPlan) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from("lesson_plans")
+        .insert({
+          subject: lessonPlan.subject,
+          chapter_topic: lessonPlan.chapter_topic,
+          grade: lessonPlan.grade,
+          board: lessonPlan.board,
+          class_duration: lessonPlan.class_duration,
+          number_of_days: lessonPlan.number_of_days,
+          learning_objectives: lessonPlan.learning_objectives,
+          plan_data: lessonPlan.plan_data,
+          user_email: studentEmail,
+        })
+        .select();
+
+      if (error) throw error;
+      return data[0];
+    } catch (error) {
+      console.error("Error creating student lesson plan:", error);
+      return null;
+    }
+  };
+
+  const handleConfirmAssignment = async (
+    assignType: string,
+    selectedValue: string,
+    assignDueDate: Date
+  ) => {
+    if (!lessonPlan || !teacherId) return;
+
+    try {
+      if (assignType === "class") {
+        const assignmentObj = JSON.parse(selectedValue) as TeacherAssignment;
+        const filteredStudents = students.filter(
+          (student) =>
+            student.grade_id === assignmentObj.grade_id &&
+            student.section_id === assignmentObj.section_id
+        );
+
+        if (filteredStudents.length === 0) {
+          toast({
+            title: "No Students",
+            description: "No students found for the selected class.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const results = await Promise.all(
+          filteredStudents.map(async (student) => {
+            const studentPlan = await createStudentLessonPlan(student.email);
+            return studentPlan;
+          })
+        );
+
+        const successCount = results.filter(Boolean).length;
+        toast({
+          title: "Success",
+          description: `Lesson plan assigned to ${successCount} students.`,
+        });
+      } else {
+        const studentEmail = students.find(
+          (s) => s.id === selectedValue
+        )?.email;
+
+        if (!studentEmail) {
+          toast({
+            title: "Error",
+            description: "Student email not found.",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        const studentPlan = await createStudentLessonPlan(studentEmail);
+
+        if (studentPlan) {
+          toast({
+            title: "Success",
+            description: "Lesson plan assigned to student successfully.",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to assign lesson plan.",
+            variant: "destructive",
+          });
+        }
+      }
+
+      setAssignLessonModal({ isOpen: false });
+    } catch (error) {
+      console.error("Error confirming assignment:", error);
+      toast({
+        title: "Error",
+        description: "Failed to assign lesson plan. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -736,278 +840,6 @@ export default function OutputContent() {
     );
   }
 
-  const renderDayContent = (day: Day) => (
-    <div className="space-y-6">
-      <div className="mb-8">
-        <h2 className="text-2xl font-semibold text-gray-800">
-          Session {day.day}: {day.topicHeading}
-        </h2>
-        <p className="text-gray-600 mt-4">
-          {day.schedule.find((item) => item.type === "introduction")?.content ||
-            "This session focuses on key concepts related to the topic."}
-        </p>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6 mt-6">
-        <h3 className="text-lg font-semibold mb-4">Learning Outcomes</h3>
-        <ul className="space-y-2">
-          {day.learningOutcomes.map((outcome, index) => (
-            <li key={index} className="flex items-start">
-              <span className="inline-flex items-center justify-center rounded-full border border-gray-300 p-1 mr-3 mt-1">
-                <span className="h-2 w-2 rounded-full bg-gray-500"></span>
-              </span>
-              <span>{outcome}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6 mt-6">
-        <h3 className="text-lg font-semibold mb-4">Lesson Objectives</h3>
-        <ul className="space-y-2">
-          {day.schedule
-            .filter(
-              (item) => item.type === "mainContent" || item.type === "activity"
-            )
-            .slice(0, 2)
-            .map((item, index) => (
-              <li key={index} className="flex items-start">
-                <span className="inline-flex items-center justify-center rounded-full border border-gray-300 p-1 mr-3 mt-1">
-                  <span className="h-2 w-2 rounded-full bg-gray-500"></span>
-                </span>
-                <span>{item.title}</span>
-              </li>
-            ))}
-        </ul>
-      </div>
-
-      <div className="border-t border-gray-200 pt-6 mt-6">
-        <h3 className="text-lg font-semibold mb-4">Lesson Plan</h3>
-        <div className="border rounded-md overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-24">
-                  Duration
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500">
-                  Activities
-                </th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-gray-500 w-64">
-                  Materials
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {day.schedule.map((item, index) => (
-                <tr key={index}>
-                  <td className="px-4 py-4 text-sm text-gray-500">
-                    {String(item.timeAllocation).padStart(2, "0")}:
-                    {String(0).padStart(2, "0")}
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="font-medium text-gray-900">
-                      {item.title || item.type}
-                    </div>
-                    <div className="mt-1 text-sm text-gray-500">
-                      {item.content}
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="text-sm">
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="font-medium">Lesson Content</div>
-                        {userRole !== "Student" && (
-                          <AddContentDropdown
-                            onUpload={(file, type) =>
-                              handleFileUpload(
-                                file,
-                                type,
-                                `material-${day.day}-${index}`
-                              )
-                            }
-                          />
-                        )}
-                      </div>
-                      <div className="text-gray-500">{item.title}</div>
-                      {userRole === "Student" ? (
-                        <button
-                          onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                            e.preventDefault();
-                            handleChatWithBuddy(item, day);
-                          }}
-                          className="text-blue-500 hover:text-blue-600 text-sm mt-1 flex items-center gap-1"
-                        >
-                          Chat with Buddy
-                        </button>
-                      ) : (
-                        <button
-                          className="text-rose-500 hover:text-rose-600 text-sm mt-1 flex items-center gap-1"
-                          onClick={() =>
-                            handleGenerateNotes(item.title, item.content)
-                          }
-                        >
-                          {generatedNotes[item.title]
-                            ? "See the content"
-                            : "Generate"}
-                        </button>
-                      )}
-                      {uploadedFiles[`material-${day.day}-${index}`]?.map(
-                        (file, fileIndex) => {
-                          // Generate standardized file name based on type and count
-                          const displayName = `${file.type}_${fileIndex + 1}`;
-
-                          return (
-                            <div key={file.id} className="mt-2 text-sm">
-                              <a
-                                href={file.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="text-blue-600 hover:underline flex items-center gap-1"
-                                title={file.name} // Show original filename on hover
-                              >
-                                {displayName}
-                              </a>
-                              <button
-                                className="text-red-500 hover:text-red-600 text-sm ml-2"
-                                onClick={() =>
-                                  handleDeleteFile(
-                                    file.id,
-                                    `material-${day.day}-${index}`
-                                  )
-                                }
-                              >
-                                Delete
-                              </button>
-                            </div>
-                          );
-                        }
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderAssessmentPlan = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold">Assessment Plan</h2>
-        {userRole !== "Student" && (
-          <AddContentDropdown
-            onUpload={(file, type) =>
-              handleFileUpload(file, type, "assessment-plan")
-            }
-          />
-        )}
-      </div>
-
-      {uploadedFiles["assessment-plan"]?.length > 0 && (
-        <div className="border-t border-gray-200 pt-4 mt-4">
-          <h3 className="font-semibold mb-2">Uploaded Materials</h3>
-          <div className="space-y-2">
-            {uploadedFiles["assessment-plan"].map((file) => (
-              <div key={file.id} className="flex items-center gap-2">
-                <a
-                  href={file.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-blue-600 hover:underline"
-                >
-                  {file.type}: {file.name}
-                </a>
-                <button
-                  className="text-red-500 hover:text-red-600 text-sm ml-2"
-                  onClick={() => handleDeleteFile(file.id, "assessment-plan")}
-                >
-                  Delete
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div className="space-y-6">
-        <div>
-          <h3 className="font-semibold mb-4">Formative Assessments</h3>
-          <div className="space-y-4">
-            {lessonPlan.plan_data.assessmentPlan.formativeAssessments.map(
-              (assessment, index) => (
-                <div key={index} className="border-b pb-4">
-                  <div className="font-medium mb-2">{assessment.topic}</div>
-                  <p className="text-gray-600 mb-2">{assessment.description}</p>
-                  <div className="text-sm text-gray-500">
-                    Type: {assessment.type}
-                  </div>
-                  <div className="mt-2">
-                    <div className="font-medium text-sm mb-1">
-                      Evaluation Criteria:
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {assessment.evaluationCriteria.map((criteria, idx) => (
-                        <li key={idx} className="text-gray-600">
-                          {criteria}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-4">Summative Assessments</h3>
-          <div className="space-y-4">
-            {lessonPlan.plan_data.assessmentPlan.summativeAssessments.map(
-              (assessment, index) => (
-                <div key={index} className="border-b pb-4">
-                  <div className="font-medium mb-2">{assessment.topic}</div>
-                  <p className="text-gray-600 mb-2">{assessment.description}</p>
-                  <div className="text-sm text-gray-500">
-                    Type: {assessment.type}
-                  </div>
-                  <div className="mt-2">
-                    <div className="font-medium text-sm mb-1">
-                      Evaluation Criteria:
-                    </div>
-                    <ul className="list-disc pl-5 space-y-1">
-                      {assessment.evaluationCriteria.map((criteria, idx) => (
-                        <li key={idx} className="text-gray-600">
-                          {criteria}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              )
-            )}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-semibold mb-2">Progress Tracking Suggestions</h3>
-          <ul className="list-disc pl-5 space-y-1">
-            {lessonPlan.plan_data.assessmentPlan.progressTrackingSuggestions.map(
-              (suggestion, index) => (
-                <li key={index} className="text-gray-600">
-                  {suggestion}
-                </li>
-              )
-            )}
-          </ul>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div className="min-h-screen bg-backgroundApp">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
@@ -1033,46 +865,41 @@ export default function OutputContent() {
               </p>
             </div>
 
-            <div className="mb-8">
-              <h2 className="text-xl font-semibold mb-4">Sessions</h2>
-              <div className="space-y-2">
-                {lessonPlan.plan_data.days.map((day) => (
-                  <div
-                    key={`session-${day.day}`}
-                    className="border rounded-md p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                    onClick={() => setActiveTab(`day-${day.day}`)}
-                  >
-                    <div className="flex">
-                      <div className="w-1 bg-rose-500 mr-4"></div>
-                      <div>
-                        <span className="font-medium">Session {day.day}</span>:{" "}
-                        {day.topicHeading}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                <div
-                  className="border rounded-md p-4 cursor-pointer hover:bg-gray-50 transition-colors"
-                  onClick={() => setActiveTab("assessment")}
-                >
-                  <div className="flex">
-                    <div className="w-1 bg-rose-500 mr-4"></div>
-                    <div>
-                      <span className="font-medium">Assessment Plan</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <SessionNavigator
+              days={lessonPlan.plan_data.days}
+              activeTab={activeTab}
+              onTabChange={setActiveTab}
+            />
 
             <div className="bg-white rounded-lg border p-6">
-              {activeTab.startsWith("day-") &&
-                renderDayContent(
-                  lessonPlan.plan_data.days[
-                    Number.parseInt(activeTab.split("-")[1]) - 1
-                  ]
-                )}
-              {activeTab === "assessment" && renderAssessmentPlan()}
+              {activeTab.startsWith("day-") && (
+                <LessonContent
+                  day={
+                    lessonPlan.plan_data.days[
+                      Number.parseInt(activeTab.split("-")[1]) - 1
+                    ]
+                  }
+                  userRole={userRole}
+                  generatedNotes={generatedNotes}
+                  uploadedFiles={uploadedFiles}
+                  onEdit={handleEdit}
+                  onGenerateNotes={handleGenerateNotes}
+                  onFileUpload={handleFileUpload}
+                  onDeleteFile={handleDeleteFile}
+                  onChatWithBuddy={handleChatWithBuddy}
+                />
+              )}
+
+              {activeTab === "assessment" && (
+                <AssessmentPlanView
+                  assessmentPlan={lessonPlan.plan_data.assessmentPlan}
+                  userRole={userRole}
+                  uploadedFiles={uploadedFiles}
+                  onEdit={handleEdit}
+                  onFileUpload={handleFileUpload}
+                  onDeleteFile={handleDeleteFile}
+                />
+              )}
             </div>
 
             <div className="mt-6 flex gap-4">
@@ -1088,7 +915,6 @@ export default function OutputContent() {
               {userRole !== "Student" && renderAssignButton()}
             </div>
 
-            {/* Add the new form here */}
             <form onSubmit={handleRedirectToBuddy} className="mt-4 flex gap-2">
               <input
                 type="text"
@@ -1104,28 +930,34 @@ export default function OutputContent() {
           </>
         )}
 
-        {generateNotesDialog.activity && (
-          <GenerateNotesDialog
-            isOpen={generateNotesDialog.isOpen}
-            onClose={() =>
-              setGenerateNotesDialog({ isOpen: false, activity: null })
-            }
-            activity={generateNotesDialog.activity}
-            storedNotes={
-              generatedNotes[generateNotesDialog.activity.title] || null
-            }
-            onNotesGenerated={handleNotesGenerated}
-          />
-        )}
-        {editContent.isOpen && (
-          <EditLessonContent
-            isOpen={editContent.isOpen}
-            onClose={() => setEditContent({ ...editContent, isOpen: false })}
-            onSave={handleSave}
-            content={editContent}
-            lessonPlanId={lessonPlan.id}
-          />
-        )}
+        <LessonModalDialogs
+          editContent={editContent}
+          onEditClose={() => setEditContent({ ...editContent, isOpen: false })}
+          onEditSave={handleSave}
+          generateNotesDialog={generateNotesDialog}
+          onGenerateNotesClose={() =>
+            setGenerateNotesDialog({ isOpen: false, activity: null })
+          }
+          onNotesGenerated={handleNotesGenerated}
+          assignLessonModal={assignLessonModal}
+          onAssignModalClose={() => setAssignLessonModal({ isOpen: false })}
+          assignments={assignments}
+          students={students}
+          selectedGrade={selectedGrade}
+          setSelectedGrade={setSelectedGrade}
+          selectedSection={selectedSection}
+          setSelectedSection={setSelectedSection}
+          selectedStudent={selectedStudent}
+          setSelectedStudent={setSelectedStudent}
+          selectedClass={selectedClass}
+          setSelectedClass={setSelectedClass}
+          dueDate={dueDate}
+          setDueDate={setDueDate}
+          assignmentType={assignmentType}
+          setAssignmentType={setAssignmentType}
+          onConfirmAssignment={handleConfirmAssignment}
+          lessonPlanId={lessonPlan.id}
+        />
       </div>
     </div>
   );

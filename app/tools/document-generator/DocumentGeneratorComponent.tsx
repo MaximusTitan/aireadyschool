@@ -210,7 +210,6 @@ function FloatingAIMenu({
           )}
           Enhance Selected
         </Button>
-      
       </div>
     </div>
   );
@@ -870,12 +869,10 @@ const DocumentGeneratorContent = ({
   useEffect(() => {
     const loadDocument = async () => {
       const id = searchParams.get("id");
-      const mode = searchParams.get("mode");
-      if (!id || !editor) return;
+      if (!id || embedded) return;
 
       try {
         setLoading(true);
-
         const { data, error } = await supabase
           .from("document_generator")
           .select("*")
@@ -887,13 +884,7 @@ const DocumentGeneratorContent = ({
         if (data) {
           setDocumentId(data.id);
           setDocumentTitle(data.title);
-          editor.commands.setContent(data.content);
-
-          // Set view mode if specified
-          if (mode === "view") {
-            setIsViewMode(true);
-            editor.setEditable(false);
-          }
+          editor?.commands.setContent(data.content);
         }
       } catch (error) {
         console.error("Error loading document:", error);
@@ -906,7 +897,7 @@ const DocumentGeneratorContent = ({
     if (editor) {
       loadDocument();
     }
-  }, [editor, searchParams, supabase]);
+  }, [editor, searchParams]);
 
   // Updated save document function
   const saveDocument = async () => {
@@ -997,23 +988,30 @@ const DocumentGeneratorContent = ({
     return null;
   }
 
-  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  const sleep = (ms: number) =>
+    new Promise((resolve) => setTimeout(resolve, ms));
 
-  const typeText = async (editor: any, text: string, startPos: number, endPos: number) => {
+  const typeText = async (
+    editor: any,
+    text: string,
+    startPos: number,
+    endPos: number
+  ) => {
     // First, clear the selected text
-    editor.chain()
+    editor
+      .chain()
       .focus()
       .setTextSelection({ from: startPos, to: endPos })
       .deleteSelection()
       .run();
-    
+
     // Then type out the new text character by character
-    const words = text.split(' ');
+    const words = text.split(" ");
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
       editor.chain().focus().insertContent(word).run();
       if (i < words.length - 1) {
-        editor.chain().focus().insertContent(' ').run();
+        editor.chain().focus().insertContent(" ").run();
       }
       await sleep(20); // Adjust typing speed here
     }
@@ -1022,18 +1020,18 @@ const DocumentGeneratorContent = ({
   // Update the enhanceSelectedText function
   const enhanceSelectedText = async () => {
     if (!selectedText || !editor) return;
-  
+
     try {
       setIsProcessing(true);
       const startPos = editor.state.selection.from;
       const endPos = editor.state.selection.to;
-  
+
       const response = await fetch("/api/enhance-text", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           text: selectedText,
-          mode: "enhance"
+          mode: "enhance",
         }),
       });
 
@@ -1387,9 +1385,9 @@ const DocumentGeneratorContent = ({
             <div className="space-y-4">
               <div className="border-b pb-2">
                 <h4 className="font-medium mb-2">Add Image</h4>
-                <Button 
-                  variant="outline" 
-                  className="w-full justify-start" 
+                <Button
+                  variant="outline"
+                  className="w-full justify-start"
                   onClick={triggerFileInput}
                 >
                   <Upload className="h-4 w-4 mr-2" />
@@ -1403,7 +1401,7 @@ const DocumentGeneratorContent = ({
                   accept="image/*"
                 />
               </div>
-              
+
               <div className="space-y-2">
                 <h4 className="font-medium">Generate with AI</h4>
                 <Input
@@ -1438,7 +1436,7 @@ const DocumentGeneratorContent = ({
                         className="object-cover"
                       />
                       <div className="absolute bottom-0 left-0 right-0 p-2  flex justify-end gap-2">
-                        <Button size="sm"  onClick={regenerateImage}>
+                        <Button size="sm" onClick={regenerateImage}>
                           Regenerate
                         </Button>
                         <Button size="sm" onClick={addGeneratedImage}>
@@ -1454,7 +1452,6 @@ const DocumentGeneratorContent = ({
         </Popover>
 
         {/* Remove the separate AI image generation button */}
-        
       </div>
 
       {/* Editor Content */}

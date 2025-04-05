@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AddContentDropdown } from "./add-content-dropdown";
 import { FileViewer } from "./file-viewer";
@@ -23,6 +24,8 @@ interface LessonContentProps {
   onFileUpload: (file: File, type: string, sectionId: string) => Promise<void>;
   onDeleteFile: (fileId: string, sectionId: string) => Promise<void>;
   onChatWithBuddy: (item: ScheduleItem, day: Day) => void;
+  showDocumentGenerator?: boolean;
+  setShowDocumentGenerator?: (show: boolean) => void;
 }
 
 export function LessonContent({
@@ -35,6 +38,8 @@ export function LessonContent({
   onFileUpload,
   onDeleteFile,
   onChatWithBuddy,
+  showDocumentGenerator,
+  setShowDocumentGenerator,
 }: LessonContentProps) {
   return (
     <div className="space-y-6">
@@ -155,15 +160,6 @@ export function LessonContent({
                             }
                           />
                         )}
-                        {/* {userRole === "Student" ? (
-                          <Button
-                            onClick={() => onChatWithBuddy(item, day)}
-                            variant="default"
-                            size="sm"
-                          >
-                            Chat with Buddy
-                          </Button>
-                        ) : ( */}
                         {userRole !== "Student" && (
                           <Button
                             size="sm"
@@ -180,7 +176,6 @@ export function LessonContent({
                       </div>
                     </td>
                   </tr>
-                  {/* Content below the row */}
                   {(generatedNotes[item.title] ||
                     uploadedFiles[`material-${day.day}-${index}`]?.length >
                       0) && (
@@ -193,7 +188,6 @@ export function LessonContent({
                             </AccordionTrigger>
                             <AccordionContent>
                               <div className="space-y-4 pt-2">
-                                {/* Generated Notes */}
                                 {generatedNotes[item.title] && (
                                   <div className="bg-white rounded-lg border p-4">
                                     <h4 className="font-medium text-gray-900 mb-2">
@@ -206,8 +200,6 @@ export function LessonContent({
                                     </div>
                                   </div>
                                 )}
-
-                                {/* Uploaded Files */}
                                 {uploadedFiles[`material-${day.day}-${index}`]
                                   ?.length > 0 && (
                                   <div className="space-y-2">
@@ -306,6 +298,18 @@ export function LessonContent({
               <li key={index}>{task}</li>
             ))}
           </ul>
+          {userRole === "Student" &&
+            day.assignment &&
+            showDocumentGenerator !== undefined && (
+              <Button
+                onClick={() =>
+                  setShowDocumentGenerator?.(!showDocumentGenerator)
+                }
+                className="mt-2"
+              >
+                {showDocumentGenerator ? "Hide" : "Open"} Document Generator
+              </Button>
+            )}
         </div>
       </div>
     </div>

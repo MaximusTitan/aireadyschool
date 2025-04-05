@@ -16,6 +16,7 @@ import {
 import { SessionNavigator } from "../components/session-navigator";
 import { LessonContent } from "../components/lesson-content";
 import { AssessmentPlanView } from "../components/assessment-plan";
+import DocumentGenerator from "../../document-generator/DocumentGeneratorComponent";
 
 const supabase = createClient();
 
@@ -35,6 +36,7 @@ export default function StudentOutputContent() {
   }>({});
   const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({});
   const [buddyInput, setBuddyInput] = useState("");
+  const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -206,7 +208,7 @@ export default function StudentOutputContent() {
 
   return (
     <div className="min-h-screen bg-backgroundApp">
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className=" mx-auto px-4 py-8">
         <Button
           variant="outline"
           className="mb-6"
@@ -233,26 +235,48 @@ export default function StudentOutputContent() {
           onTabChange={setActiveTab}
         />
 
-        <div className="bg-white rounded-lg border p-6">
-          {activeTab.startsWith("day-") && (
-            <LessonContent
-              day={
-                lessonPlan.plan_data.days[
-                  Number.parseInt(activeTab.split("-")[1]) - 1
-                ]
-              }
-              userRole={userRole}
-              generatedNotes={generatedNotes}
-              uploadedFiles={uploadedFiles}
-              onEdit={() => {}}
-              onGenerateNotes={() => {}}
-              onFileUpload={async () => {}}
-              onDeleteFile={async () => {}}
-              onChatWithBuddy={handleChatWithBuddy}
-            />
-          )}
+        {activeTab.startsWith("day-") ? (
+          <div className="flex gap-6">
+            <div className="flex-1 bg-white rounded-lg border p-6">
+              <LessonContent
+                day={
+                  lessonPlan.plan_data.days[
+                    Number.parseInt(activeTab.split("-")[1]) - 1
+                  ]
+                }
+                userRole={userRole}
+                generatedNotes={generatedNotes}
+                uploadedFiles={uploadedFiles}
+                onEdit={() => {}}
+                onGenerateNotes={() => {}}
+                onFileUpload={async () => {}}
+                onDeleteFile={async () => {}}
+                onChatWithBuddy={handleChatWithBuddy}
+                showDocumentGenerator={showDocumentGenerator}
+                setShowDocumentGenerator={setShowDocumentGenerator}
+              />
+            </div>
 
-          {activeTab === "assessment" && (
+            {showDocumentGenerator && userRole === "Student" && (
+              <div className="flex-1 bg-white rounded-lg border p-6">
+                <DocumentGenerator
+                  initialContent={
+                    lessonPlan.plan_data.days[
+                      Number.parseInt(activeTab.split("-")[1]) - 1
+                    ].assignment?.description || ""
+                  }
+                  initialTitle={`${
+                    lessonPlan.plan_data.days[
+                      Number.parseInt(activeTab.split("-")[1]) - 1
+                    ].topicHeading
+                  } - Assignment`}
+                  embedded={true}
+                />
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="bg-white rounded-lg border p-6">
             <AssessmentPlanView
               assessmentPlan={lessonPlan.plan_data.assessmentPlan}
               userRole={userRole}
@@ -261,8 +285,8 @@ export default function StudentOutputContent() {
               onFileUpload={async () => {}}
               onDeleteFile={async () => {}}
             />
-          )}
-        </div>
+          </div>
+        )}
 
         <form onSubmit={handleRedirectToBuddy} className="mt-4 flex gap-2">
           <input

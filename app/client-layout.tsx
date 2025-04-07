@@ -67,6 +67,7 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
     !isCanvasViewMode &&
     pathname !== "/dat/school-registration" &&
     !pathname.startsWith("/dat/register/student/") &&
+    !pathname.startsWith("/dat/school/register") &&
     (pathname.startsWith("/tools") ||
       pathname.startsWith("/dashboard") ||
       pathname.startsWith("/chatbot") ||

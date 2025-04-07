@@ -522,5 +522,161 @@ export const categories: CategoryTools = {
         isHot: true,
       },
     ]
+  },
+  dat_student: {
+    Learning: [],
+    Research: [
+      {
+        title: "Research Assistant",
+        description: "Get help with your research",
+        route: "/tools/research",
+        icon: Search
+      },
+      {
+        title: "YouTube Summary",
+        description: "Video summaries and questions",
+        route: "/tools/youtube-assistant",
+        icon: Youtube
+      },
+      {
+        title: "Text Tools",
+        description: "Rewrite, proofread, translate, generate questions",
+        route: "/tools/text-tools",
+        icon: Type
+      }
+    ],
+    Creative: [
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
+      },
+      {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+        icon: BookText
+      }
+    ],
+    Tech: [],
+    Marketing: []
+  },
+  dat_school: {
+    Learning: [],
+    Research: [
+      {
+        title: "Research Assistant",
+        description: "Get help with your research",
+        route: "/tools/research",
+        icon: Search
+      },
+      {
+        title: "YouTube Summary",
+        description: "Video summaries and questions",
+        route: "/tools/youtube-assistant",
+        icon: Youtube
+      },
+      {
+        title: "Text Tools",
+        description: "Rewrite, proofread, translate, generate questions",
+        route: "/tools/text-tools",
+        icon: Type
+      }
+    ],
+    Creative: [
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
+      },
+      {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+        icon: BookText
+      }
+    ],
+    Tech: [],
+    Marketing: []
+  },
+  dat_judge: {
+    Learning: [],
+    Research: [
+      {
+        title: "Research Assistant",
+        description: "Get help with your research",
+        route: "/tools/research",
+        icon: Search
+      },
+      {
+        title: "YouTube Summary",
+        description: "Video summaries and questions",
+        route: "/tools/youtube-assistant",
+        icon: Youtube
+      },
+      {
+        title: "Text Tools",
+        description: "Rewrite, proofread, translate, generate questions",
+        route: "/tools/text-tools",
+        icon: Type
+      }
+    ],
+    Creative: [
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
+      },
+      {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+        icon: BookText
+      }
+    ],
+    Tech: [],
+    Marketing: []
+  },
+  dat_admin: {
+    Learning: [],
+    Research: [
+      {
+        title: "Research Assistant",
+        description: "Get help with your research",
+        route: "/tools/research",
+        icon: Search
+      },
+      {
+        title: "YouTube Summary",
+        description: "Video summaries and questions",
+        route: "/tools/youtube-assistant",
+        icon: Youtube
+      },
+      {
+        title: "Text Tools",
+        description: "Rewrite, proofread, translate, generate questions",
+        route: "/tools/text-tools",
+        icon: Type
+      }
+    ],
+    Creative: [
+      {
+        title:"Document Generator",
+        description:"Generate documents",
+        route:"/tools/document-generator",
+        icon: FileText
+      },
+      {
+        title: "Story Generator",
+        description: "Generate stories from prompts",
+        route: "/tools/story-generator",
+        icon: BookText
+      }
+    ],
+    Tech: [],
+    Marketing: []
   }
 };

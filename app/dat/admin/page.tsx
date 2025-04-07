@@ -96,7 +96,7 @@ export default function AdminDashboard() {
     paymentRequired: boolean
   ) => {
     setLoadingApproval(schoolId);
-    const registrationLink = `${window.location.origin}/register/student/${schoolId}`;
+    const registrationLink = `${window.location.origin}/dat/register/student/${schoolId}`;
 
     const { error } = await supabase
       .from("dat_school_details")

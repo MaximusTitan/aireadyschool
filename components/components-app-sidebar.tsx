@@ -82,49 +82,57 @@ export function AppSidebar() {
   // Define navigation data based on user role
   const navData = {
     navMain: [
-      ...(["dat_student", "dat_school", "dat_judge", "dat_admin"].includes(userRole || "") 
-      ? [
-          { 
-            title: "Home", 
-            url: userRole === "dat_student" ? "/dat/student" :
-                 userRole === "dat_school" ? "/dat/school" :
-                 userRole === "dat_judge" ? "/dat/judge" :
-                 userRole === "dat_admin" ? "/dat/admin" : "/dashboard",
-            icon: Map 
-          },
-          {
-            title: "AI Apps",
-            url: "/tools",
-            icon: SquareTerminal,
-            isActive: true,
-          },
-          {
-            title: "Learn AI",
-            url: "/learn-ai",
-            icon: BrainCircuit,
-          },
-        ]
-      : [
-          { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
-          { title: "Dashboard", url: "/dashboard", icon: Map },
-          { title: "Lesson Plan", url: "/tools/lesson-planner", icon: Book },
-          {
-            title: "AI Apps",
-            url: "/tools",
-            icon: SquareTerminal,
-            isActive: true,
-          },
-          {
-            title: "Learn AI",
-            url: "/learn-ai",
-            icon: BrainCircuit,
-          },
-          {
-            title: "Guide",
-            url: "/guide",
-            icon: Frame,
-          },
-        ]),
+      ...(["dat_student", "dat_school", "dat_judge", "dat_admin"].includes(
+        userRole || ""
+      )
+        ? [
+            {
+              title: "Dashboard",
+              url:
+                userRole === "dat_student"
+                  ? "/dat/student"
+                  : userRole === "dat_school"
+                    ? "/dat/school"
+                    : userRole === "dat_judge"
+                      ? "/dat/judge"
+                      : userRole === "dat_admin"
+                        ? "/dat/admin"
+                        : "/dashboard",
+              icon: Map,
+            },
+            {
+              title: "AI Apps",
+              url: "/tools",
+              icon: SquareTerminal,
+              isActive: true,
+            },
+            {
+              title: "Learn AI",
+              url: "/learn-ai",
+              icon: BrainCircuit,
+            },
+          ]
+        : [
+            { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
+            { title: "Dashboard", url: "/dashboard", icon: Map },
+            { title: "Lesson Plan", url: "/tools/lesson-planner", icon: Book },
+            {
+              title: "AI Apps",
+              url: "/tools",
+              icon: SquareTerminal,
+              isActive: true,
+            },
+            {
+              title: "Learn AI",
+              url: "/learn-ai",
+              icon: BrainCircuit,
+            },
+            {
+              title: "Guide",
+              url: "/guide",
+              icon: Frame,
+            },
+          ]),
 
       ...(userRole === "Admin"
         ? [

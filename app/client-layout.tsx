@@ -65,6 +65,8 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
   const showSidebar =
     !isCanvasViewMode &&
+    pathname !== "/dat/school-registration" &&
+    !pathname.startsWith("/dat/register/student/") &&
     (pathname.startsWith("/tools") ||
       pathname.startsWith("/dashboard") ||
       pathname.startsWith("/chatbot") ||

@@ -37,7 +37,7 @@ interface Student {
   group: string | null;
   admission_no: string;
   school_id: string;
-  ideas?: {
+  dat_ideas?: {
     title?: string;
     status:
       | "not_submitted"
@@ -210,8 +210,11 @@ function getDisplayStatus(student: Student): {
   }
 
   // Check idea status
-  if (student.ideas?.status && student.ideas.status !== "not_submitted") {
-    const status = student.ideas.status;
+  if (
+    student.dat_ideas?.status &&
+    student.dat_ideas.status !== "not_submitted"
+  ) {
+    const status = student.dat_ideas.status;
     switch (status) {
       case "approved":
         return {
@@ -278,15 +281,15 @@ const GROUP_GRADE_RANGES = {
 const STATUS_MAPPING = {
   // Idea statuses
   idea_not_submitted: (student: Student) =>
-    student.ideas?.status === "not_submitted",
+    student.dat_ideas?.status === "not_submitted",
   idea_review_pending: (student: Student) =>
-    student.ideas?.status === "review_pending",
+    student.dat_ideas?.status === "review_pending",
   idea_update_needed: (student: Student) =>
-    student.ideas?.status === "update_needed",
+    student.dat_ideas?.status === "update_needed",
   idea_review_updated: (student: Student) =>
-    student.ideas?.status === "review_updated",
-  idea_rejected: (student: Student) => student.ideas?.status === "rejected",
-  idea_approved: (student: Student) => student.ideas?.status === "approved",
+    student.dat_ideas?.status === "review_updated",
+  idea_rejected: (student: Student) => student.dat_ideas?.status === "rejected",
+  idea_approved: (student: Student) => student.dat_ideas?.status === "approved",
 
   // Presentation statuses
   presentation_not_submitted: (student: Student) =>
@@ -599,7 +602,7 @@ function StudentsListContent() {
   const fetchStudents = useCallback(async () => {
     setLoading(true);
     try {
-      // First fetch students with their ideas
+      // First fetch students with their dat_ideas
       let query = supabase.from("dat_student_details").select(
         `
           id,
@@ -612,7 +615,7 @@ function StudentsListContent() {
           admission_no,
           school_id,
           photo,
-          ideas!ideas_student_id_fkey (
+          dat_ideas!dat_ideas_student_id_fkey (
             status,
             title
           )
@@ -698,11 +701,11 @@ function StudentsListContent() {
             group: student.group,
             admission_no: student.admission_no,
             school_id: student.school_id,
-            ideas:
-              Array.isArray(student.ideas) && student.ideas.length > 0
+            dat_ideas:
+              Array.isArray(student.dat_ideas) && student.dat_ideas.length > 0
                 ? {
-                    title: student.ideas[0].title,
-                    status: student.ideas[0].status || "not_submitted",
+                    title: student.dat_ideas[0].title,
+                    status: student.dat_ideas[0].status || "not_submitted",
                   }
                 : { title: undefined, status: "not_submitted" },
             presentation: presentationMap.has(student.id)
@@ -1566,7 +1569,7 @@ function StudentsListContent() {
                       onClick={() => handleIdeaClick(student.id)}
                       className="hover:text-rose-600 text-left"
                     >
-                      {student.ideas?.title || "Not submitted"}
+                      {student.dat_ideas?.title || "Not submitted"}
                     </button>
                   </td>
                   <td className="px-4 py-2 text-sm">

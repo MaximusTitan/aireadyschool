@@ -32,7 +32,7 @@ interface Student {
   grade: string | null;
   admission_no: string;
   group: string | null;
-  ideas?: {
+  dat_ideas?: {
     title?: string;
     status: string | null;
   };
@@ -142,8 +142,11 @@ function getDisplayStatus(student: Student): {
   }
 
   // Check idea status
-  if (student.ideas?.status && student.ideas.status !== "not_submitted") {
-    const status = student.ideas.status;
+  if (
+    student.dat_ideas?.status &&
+    student.dat_ideas.status !== "not_submitted"
+  ) {
+    const status = student.dat_ideas.status;
     switch (status) {
       case "approved":
         return {
@@ -210,15 +213,15 @@ const GROUP_GRADE_RANGES = {
 const STATUS_MAPPING = {
   // Idea statuses
   idea_not_submitted: (student: Student) =>
-    student.ideas?.status === "not_submitted",
+    student.dat_ideas?.status === "not_submitted",
   idea_review_pending: (student: Student) =>
-    student.ideas?.status === "review_pending",
+    student.dat_ideas?.status === "review_pending",
   idea_update_needed: (student: Student) =>
-    student.ideas?.status === "update_needed",
+    student.dat_ideas?.status === "update_needed",
   idea_review_updated: (student: Student) =>
-    student.ideas?.status === "review_updated",
-  idea_rejected: (student: Student) => student.ideas?.status === "rejected",
-  idea_approved: (student: Student) => student.ideas?.status === "approved",
+    student.dat_ideas?.status === "review_updated",
+  idea_rejected: (student: Student) => student.dat_ideas?.status === "rejected",
+  idea_approved: (student: Student) => student.dat_ideas?.status === "approved",
 
   // Presentation statuses
   presentation_not_submitted: (student: Student) =>
@@ -407,7 +410,7 @@ function SchoolStudentsListContent() {
           "group",
           admission_no,
           school_id,
-          ideas!ideas_student_id_fkey (
+          dat_ideas!dat_ideas_student_id_fkey (
             status,
             title
           )
@@ -478,11 +481,11 @@ function SchoolStudentsListContent() {
             grade: student.grade,
             group: student.group,
             admission_no: student.admission_no,
-            ideas:
-              Array.isArray(student.ideas) && student.ideas.length > 0
+            dat_ideas:
+              Array.isArray(student.dat_ideas) && student.dat_ideas.length > 0
                 ? {
-                    title: student.ideas[0].title,
-                    status: student.ideas[0].status || "not_submitted",
+                    title: student.dat_ideas[0].title,
+                    status: student.dat_ideas[0].status || "not_submitted",
                   }
                 : { title: undefined, status: "not_submitted" },
             presentation: presentationMap.has(student.id)
@@ -826,7 +829,7 @@ function SchoolStudentsListContent() {
                   </td>
                   {/* Add Idea Title cell */}
                   <td className="px-4 py-2 text-sm text-gray-700">
-                    {student.ideas?.title || "Not submitted"}
+                    {student.dat_ideas?.title || "Not submitted"}
                   </td>
                   <td className="px-4 py-2 text-sm">
                     {(() => {

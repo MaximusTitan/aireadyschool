@@ -21,6 +21,7 @@ interface StudentDetails {
   assessments?: AssessmentData[];
   study_plans?: StudyPlanData[];
   lesson_contents?: LessonContentData[];
+  lesson_plans?: LessonPlanData[];
 }
 
 interface GradeData {
@@ -82,6 +83,22 @@ interface LessonContentData {
   created_at: string;
 }
 
+interface LessonPlanData {
+  id: string;
+  subject: string;
+  chapter_topic: string;
+  grade: string;
+  board: string | null;
+  class_duration: number;
+  number_of_days: number;
+  learning_objectives: string | null;
+  lesson_objectives: string | null;
+  additional_instructions: string | null;
+  plan_data: any;
+  created_at: string;
+  user_email: string;
+}
+
 interface AssignedAssessment {
   id: string;
   assessment_id: string;
@@ -110,6 +127,8 @@ export default function StudentDetailsPage({
   const [lessonContentsError, setLessonContentsError] = useState<string | null>(
     null
   );
+  const [lessonPlansLoading, setLessonPlansLoading] = useState(true);
+  const [lessonPlansError, setLessonPlansError] = useState<string | null>(null);
   const [assignedAssessments, setAssignedAssessments] = useState<
     AssignedAssessment[]
   >([]);
@@ -234,17 +253,34 @@ export default function StudentDetailsPage({
               : null
           );
           setLessonContentsLoading(false);
+
+          const { data: lessonPlans, error: lessonPlansError } = await supabase
+            .from("lesson_plans")
+            .select("*")
+            .eq("user_email", userData.email)
+            .order("created_at", { ascending: false });
+
+          if (lessonPlansError) {
+            throw new Error("Failed to fetch lesson plans");
+          }
+
+          setStudent((prevStudent) =>
+            prevStudent ? { ...prevStudent, lesson_plans: lessonPlans } : null
+          );
+          setLessonPlansLoading(false);
         } catch (dataErr) {
           console.error("Error loading data:", dataErr);
           setChatThreadsError("Failed to load chat history");
           setAssessmentsError("Failed to load assessments");
           setStudyPlansError("Failed to load study plans");
           setLessonContentsError("Failed to load lesson contents");
+          setLessonPlansError("Failed to load lesson plans");
         } finally {
           setChatThreadsLoading(false);
           setAssessmentsLoading(false);
           setStudyPlansLoading(false);
           setLessonContentsLoading(false);
+          setLessonPlansLoading(false);
         }
       } catch (err) {
         console.error("Error loading student details:", err);
@@ -283,7 +319,6 @@ export default function StudentDetailsPage({
     router.push(`/tools/lesson-content-generator?lesson=${lessonId}`);
   };
 
-  // Update the createLessonPlan function to accept assessment details
   const createLessonPlan = () => {
     if (student) {
       router.push(
@@ -292,7 +327,6 @@ export default function StudentDetailsPage({
     }
   };
 
-  // Create a new function to handle creating lesson plan from assessment
   const createLessonPlanFromAssessment = (
     assessmentId: string,
     subject: string,
@@ -305,6 +339,11 @@ export default function StudentDetailsPage({
         `/tools/lesson-planner/create?studentId=${student.id}&studentName=${encodeURIComponent(student.name)}&assessmentId=${encodeURIComponent(assessmentId)}&grade=${encodeURIComponent(student.grade_name)}&email=${encodeURIComponent(student.email)}&subject=${encodeURIComponent(subject)}&title=${encodeURIComponent(title)}&board=${encodeURIComponent(board || "CBSE")}`
       );
     }
+  };
+
+  const viewLessonPlan = (planId: string) => {
+    const route = `/tools/lesson-planner/output?id=${planId}`;
+    router.push(route);
   };
 
   if (loading) {
@@ -410,8 +449,8 @@ export default function StudentDetailsPage({
           error={assessmentsError}
           assignedAssessments={assignedAssessments}
           viewAssessment={viewAssessment}
-          studentEmail={student.email} // added new prop
-          createLessonPlanFromAssessment={createLessonPlanFromAssessment} // Add the new prop
+          studentEmail={student.email}
+          createLessonPlanFromAssessment={createLessonPlanFromAssessment}
         />
 
         <DashboardCard title="Study Plan History">
@@ -583,6 +622,78 @@ export default function StudentDetailsPage({
             ) : (
               <p className="text-center text-gray-500">
                 No lesson content history available
+              </p>
+            )}
+          </div>
+        </DashboardCard>
+
+        <DashboardCard title="Lesson Plans">
+          <div className="p-6">
+            {lessonPlansLoading ? (
+              <div className="animate-pulse text-center py-4">
+                Loading lesson plans...
+              </div>
+            ) : lessonPlansError ? (
+              <div className="text-red-500 text-center py-4">
+                {lessonPlansError}
+              </div>
+            ) : student.lesson_plans && student.lesson_plans.length > 0 ? (
+              <div className="relative w-full overflow-auto max-h-[400px] scrollbar-thin">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
+                        Subject
+                      </th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
+                        Topic
+                      </th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
+                        Duration
+                      </th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
+                        Days
+                      </th>
+                      <th className="h-12 px-4 text-left align-middle font-medium text-gray-500">
+                        Date
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {student.lesson_plans.map((plan) => (
+                      <tr
+                        key={plan.id}
+                        className="border-b transition-colors hover:bg-gray-100 cursor-pointer"
+                        onClick={() => viewLessonPlan(plan.id)}
+                      >
+                        <td className="p-4 align-middle">{plan.subject}</td>
+                        <td className="p-4 align-middle truncate max-w-[300px]">
+                          {plan.chapter_topic}
+                        </td>
+                        <td className="p-4 align-middle">
+                          {plan.class_duration} mins
+                        </td>
+                        <td className="p-4 align-middle">
+                          {plan.number_of_days}
+                        </td>
+                        <td className="p-4 align-middle">
+                          {new Date(plan.created_at).toLocaleDateString(
+                            "en-GB",
+                            {
+                              day: "2-digit",
+                              month: "short",
+                              year: "2-digit",
+                            }
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-center text-gray-500">
+                No lesson plans available
               </p>
             )}
           </div>

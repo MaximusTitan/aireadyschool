@@ -185,6 +185,7 @@ interface DocumentGeneratorProps {
   embedded?: boolean;
   initialDocumentId?: string | null;
   onDocumentSave?: (documentId: string) => void;
+  readOnly?: boolean; // Add this line
 }
 
 function FloatingAIMenu({
@@ -223,6 +224,7 @@ const DocumentGeneratorContent = ({
   embedded = false,
   initialDocumentId = null,
   onDocumentSave,
+  readOnly = false, // Add this line
 }: DocumentGeneratorProps) => {
   const router = useRouter(); // Add this near other hooks
   const [documentTitle, setDocumentTitle] = useState(initialTitle);
@@ -356,6 +358,12 @@ const DocumentGeneratorContent = ({
       handleTextSelection();
     },
   });
+
+  useEffect(() => {
+    if (editor && readOnly) {
+      editor.setEditable(false);
+    }
+  }, [editor, readOnly]);
 
   // Focus editor on page load
   useEffect(() => {
@@ -1099,365 +1107,376 @@ const DocumentGeneratorContent = ({
             value={documentTitle}
             onChange={(e) => setDocumentTitle(e.target.value)}
             className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
-            readOnly={isViewMode}
+            readOnly={readOnly} // Add this line
           />
         </div>
 
-        <div className="flex items-center gap-4">
-          <Button
-            variant="ghost"
-            onClick={() => router.push("/tools/document-generator/list")}
-            className="flex items-center gap-2"
-          >
-            <FileText size={16} />
-            My Documents
-          </Button>
-
-          {!isViewMode ? (
+        {/* Only show these buttons if not readOnly */}
+        {!readOnly && (
+          <div className="flex items-center gap-4">
             <Button
-              variant="default"
-              className="flex items-center gap-1"
-              onClick={saveDocument}
-              disabled={isSaving}
+              variant="ghost"
+              onClick={() => router.push("/tools/document-generator/list")}
+              className="flex items-center gap-2"
             >
-              {isSaving ? (
+              <FileText size={16} />
+              My Documents
+            </Button>
+
+            {!isViewMode ? (
+              <Button
+                variant="default"
+                className="flex items-center gap-1"
+                onClick={saveDocument}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save
+                    size={16}
+                    className={hasUnsavedChanges ? "text-yellow-500" : ""}
+                  />
+                )}
+                {hasUnsavedChanges ? "Save*" : "Save"}
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                onClick={() => {
+                  router.push(
+                    `/tools/document-generator?id=${documentId}&mode=edit`
+                  );
+                  setIsViewMode(false);
+                  editor?.setEditable(true);
+                }}
+              >
+                <Edit size={16} className="mr-2" />
+                Edit Document
+              </Button>
+            )}
+
+            <Button
+              variant="outline"
+              className="flex items-center gap-1"
+              onClick={exportAsPDF}
+              disabled={exportingPdf || hasUnsavedChanges}
+            >
+              {exportingPdf ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Save
-                  size={16}
-                  className={hasUnsavedChanges ? "text-yellow-500" : ""}
-                />
+                <FileDown size={16} />
               )}
-              {hasUnsavedChanges ? "Save*" : "Save"}
+              Export as PDF
             </Button>
-          ) : (
-            <Button
-              variant="default"
-              onClick={() => {
-                router.push(
-                  `/tools/document-generator?id=${documentId}&mode=edit`
-                );
-                setIsViewMode(false);
-                editor?.setEditable(true);
-              }}
-            >
-              <Edit size={16} className="mr-2" />
-              Edit Document
-            </Button>
-          )}
-
-          <Button
-            variant="outline"
-            className="flex items-center gap-1"
-            onClick={exportAsPDF}
-            disabled={exportingPdf || hasUnsavedChanges}
-          >
-            {exportingPdf ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <FileDown size={16} />
-            )}
-            Export as PDF
-          </Button>
-        </div>
+          </div>
+        )}
       </div>
 
-      {/* Enhanced Toolbar */}
-      <div className="p-2 border-b flex flex-wrap gap-1 bg-white sticky top-0 z-10 shadow-sm">
-        {/* Font Family Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1 min-w-[120px]">
-              <span className="truncate">
-                {fontFamilies.find((f) => f.value === currentFontFamily)
-                  ?.name || "Font"}
-              </span>
-              <ChevronDown size={14} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            {fontFamilies.map((font) => (
-              <DropdownMenuItem
-                key={font.value}
-                onClick={() => handleFontFamilyChange(font.value)}
-                className="cursor-pointer"
-                style={{ fontFamily: font.value }}
+      {/* Only show toolbar if not readOnly */}
+      {!readOnly && (
+        <div className="p-2 border-b flex flex-wrap gap-1 bg-white sticky top-0 z-10 shadow-sm">
+          {/* Font Family Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1 min-w-[120px]"
               >
-                {font.name}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Font Size Dropdown */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-1 w-[60px]">
-              {currentFontSize}
-              <ChevronDown size={14} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>
-            <div className="px-2 py-2">
-              <Input
-                placeholder="Custom size..."
-                value={customFontSize}
-                onChange={handleCustomFontSizeChange}
-                onKeyDown={handleCustomFontSizeSubmit}
-                className="mb-2 h-8"
-              />
-            </div>
-            <DropdownMenuSeparator />
-            {fontSizes.map((size) => (
-              <DropdownMenuItem
-                key={size}
-                onClick={() => handleFontSizeChange(size.toString())}
-                className="cursor-pointer"
-              >
-                {size}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Debug button */}
-
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Formatting Options */}
-        <Button
-          size="icon"
-          variant={editor.isActive("bold") ? "default" : "ghost"}
-          onClick={() => editor.chain().focus().toggleBold().run()}
-        >
-          <Bold size={18} />
-        </Button>
-        <Button
-          size="icon"
-          variant={editor.isActive("italic") ? "default" : "ghost"}
-          onClick={() => editor.chain().focus().toggleItalic().run()}
-        >
-          <Italic size={18} />
-        </Button>
-        <Button
-          size="icon"
-          variant={editor.isActive("underline") ? "default" : "ghost"}
-          onClick={() => editor.chain().focus().toggleUnderline().run()}
-        >
-          <UnderlineIcon size={18} />
-        </Button>
-
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Text Color */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="icon" variant="ghost" className="relative">
-              <span className="flex items-center justify-center w-4 h-4 bg-current rounded-full" />
-              <span className="sr-only">Text color</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64">
-            <div className="flex flex-col gap-2">
-              <h3 className="font-medium">Text Color</h3>
-              <div className="grid grid-cols-6 gap-1">
-                {colors.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => handleTextColorChange(color.value)}
-                    className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center"
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
-                  />
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        {/* Highlight */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="icon" variant="ghost">
-              <Paintbrush size={18} />
-              <span className="sr-only">Highlight</span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-64">
-            <div className="flex flex-col gap-2">
-              <h3 className="font-medium">Highlight Color</h3>
-              <div className="grid grid-cols-6 gap-1">
-                {highlightColors.map((color) => (
-                  <button
-                    key={color.value}
-                    onClick={() => handleHighlightChange(color.value)}
-                    className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center"
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
-                  />
-                ))}
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
-
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Heading buttons */}
-        <Button
-          size="icon"
-          variant={
-            editor.isActive("heading", { level: 1 }) ? "default" : "ghost"
-          }
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 1 }).run()
-          }
-        >
-          <Heading1 size={18} />
-        </Button>
-        <Button
-          size="icon"
-          variant={
-            editor.isActive("heading", { level: 2 }) ? "default" : "ghost"
-          }
-          onClick={() =>
-            editor.chain().focus().toggleHeading({ level: 2 }).run()
-          }
-        >
-          <Heading2 size={18} />
-        </Button>
-
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Alignment buttons */}
-        <Button
-          size="icon"
-          variant={editor.isActive({ textAlign: "left" }) ? "default" : "ghost"}
-          onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        >
-          <AlignLeft size={18} />
-        </Button>
-        <Button
-          size="icon"
-          variant={
-            editor.isActive({ textAlign: "center" }) ? "default" : "ghost"
-          }
-          onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        >
-          <AlignCenter size={18} />
-        </Button>
-        <Button
-          size="icon"
-          variant={
-            editor.isActive({ textAlign: "right" }) ? "default" : "ghost"
-          }
-          onClick={() => editor.chain().focus().setTextAlign("right").run()}
-        >
-          <AlignRight size={18} />
-        </Button>
-
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* List buttons */}
-        <Button
-          size="icon"
-          variant={editor.isActive("bulletList") ? "default" : "ghost"}
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
-        >
-          <List size={18} />
-        </Button>
-        <Button
-          size="icon"
-          variant={editor.isActive("orderedList") ? "default" : "ghost"}
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
-        >
-          <ListOrdered size={18} />
-        </Button>
-
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Replace the separate image buttons with a single Image Popover */}
-        <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-        {/* Combined Image Upload and Generation Popover */}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button size="icon" variant="ghost">
-              <ImageIcon size={18} />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-80">
-            <div className="space-y-4">
-              <div className="border-b pb-2">
-                <h4 className="font-medium mb-2">Add Image</h4>
-                <Button
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={triggerFileInput}
+                <span className="truncate">
+                  {fontFamilies.find((f) => f.value === currentFontFamily)
+                    ?.name || "Font"}
+                </span>
+                <ChevronDown size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {fontFamilies.map((font) => (
+                <DropdownMenuItem
+                  key={font.value}
+                  onClick={() => handleFontFamilyChange(font.value)}
+                  className="cursor-pointer"
+                  style={{ fontFamily: font.value }}
                 >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload from Computer
-                </Button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageUpload}
-                  className="hidden"
-                  accept="image/*"
-                />
-              </div>
+                  {font.name}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
-              <div className="space-y-2">
-                <h4 className="font-medium">Generate with AI</h4>
+          {/* Font Size Dropdown */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1 w-[60px]">
+                {currentFontSize}
+                <ChevronDown size={14} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <div className="px-2 py-2">
                 <Input
-                  placeholder="Describe the image..."
-                  value={imagePrompt}
-                  onChange={(e) => setImagePrompt(e.target.value)}
+                  placeholder="Custom size..."
+                  value={customFontSize}
+                  onChange={handleCustomFontSizeChange}
+                  onKeyDown={handleCustomFontSizeSubmit}
+                  className="mb-2 h-8"
                 />
-                <Button
-                  onClick={generateImage}
-                  disabled={!imagePrompt || generatingImage}
-                  className="w-full"
+              </div>
+              <DropdownMenuSeparator />
+              {fontSizes.map((size) => (
+                <DropdownMenuItem
+                  key={size}
+                  onClick={() => handleFontSizeChange(size.toString())}
+                  className="cursor-pointer"
                 >
-                  {generatingImage ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Generate Image
-                    </>
-                  )}
-                </Button>
-                {generatedImageUrl && (
-                  <div className="mt-4">
-                    <div className="relative aspect-video rounded-lg overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={generatedImageUrl}
-                        alt="Generated"
-                        className="object-cover"
-                      />
-                      <div className="absolute bottom-0 left-0 right-0 p-2  flex justify-end gap-2">
-                        <Button size="sm" onClick={regenerateImage}>
-                          Regenerate
-                        </Button>
-                        <Button size="sm" onClick={addGeneratedImage}>
-                          Add to Document
-                        </Button>
+                  {size}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {/* Debug button */}
+
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* Formatting Options */}
+          <Button
+            size="icon"
+            variant={editor.isActive("bold") ? "default" : "ghost"}
+            onClick={() => editor.chain().focus().toggleBold().run()}
+          >
+            <Bold size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant={editor.isActive("italic") ? "default" : "ghost"}
+            onClick={() => editor.chain().focus().toggleItalic().run()}
+          >
+            <Italic size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant={editor.isActive("underline") ? "default" : "ghost"}
+            onClick={() => editor.chain().focus().toggleUnderline().run()}
+          >
+            <UnderlineIcon size={18} />
+          </Button>
+
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* Text Color */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="icon" variant="ghost" className="relative">
+                <span className="flex items-center justify-center w-4 h-4 bg-current rounded-full" />
+                <span className="sr-only">Text color</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="flex flex-col gap-2">
+                <h3 className="font-medium">Text Color</h3>
+                <div className="grid grid-cols-6 gap-1">
+                  {colors.map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => handleTextColorChange(color.value)}
+                      className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center"
+                      style={{ backgroundColor: color.value }}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Highlight */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="icon" variant="ghost">
+                <Paintbrush size={18} />
+                <span className="sr-only">Highlight</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64">
+              <div className="flex flex-col gap-2">
+                <h3 className="font-medium">Highlight Color</h3>
+                <div className="grid grid-cols-6 gap-1">
+                  {highlightColors.map((color) => (
+                    <button
+                      key={color.value}
+                      onClick={() => handleHighlightChange(color.value)}
+                      className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center"
+                      style={{ backgroundColor: color.value }}
+                      title={color.name}
+                    />
+                  ))}
+                </div>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* Heading buttons */}
+          <Button
+            size="icon"
+            variant={
+              editor.isActive("heading", { level: 1 }) ? "default" : "ghost"
+            }
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 1 }).run()
+            }
+          >
+            <Heading1 size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant={
+              editor.isActive("heading", { level: 2 }) ? "default" : "ghost"
+            }
+            onClick={() =>
+              editor.chain().focus().toggleHeading({ level: 2 }).run()
+            }
+          >
+            <Heading2 size={18} />
+          </Button>
+
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* Alignment buttons */}
+          <Button
+            size="icon"
+            variant={
+              editor.isActive({ textAlign: "left" }) ? "default" : "ghost"
+            }
+            onClick={() => editor.chain().focus().setTextAlign("left").run()}
+          >
+            <AlignLeft size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant={
+              editor.isActive({ textAlign: "center" }) ? "default" : "ghost"
+            }
+            onClick={() => editor.chain().focus().setTextAlign("center").run()}
+          >
+            <AlignCenter size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant={
+              editor.isActive({ textAlign: "right" }) ? "default" : "ghost"
+            }
+            onClick={() => editor.chain().focus().setTextAlign("right").run()}
+          >
+            <AlignRight size={18} />
+          </Button>
+
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* List buttons */}
+          <Button
+            size="icon"
+            variant={editor.isActive("bulletList") ? "default" : "ghost"}
+            onClick={() => editor.chain().focus().toggleBulletList().run()}
+          >
+            <List size={18} />
+          </Button>
+          <Button
+            size="icon"
+            variant={editor.isActive("orderedList") ? "default" : "ghost"}
+            onClick={() => editor.chain().focus().toggleOrderedList().run()}
+          >
+            <ListOrdered size={18} />
+          </Button>
+
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* Replace the separate image buttons with a single Image Popover */}
+          <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+          {/* Combined Image Upload and Generation Popover */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button size="icon" variant="ghost">
+                <ImageIcon size={18} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-80">
+              <div className="space-y-4">
+                <div className="border-b pb-2">
+                  <h4 className="font-medium mb-2">Add Image</h4>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start"
+                    onClick={triggerFileInput}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Upload from Computer
+                  </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <h4 className="font-medium">Generate with AI</h4>
+                  <Input
+                    placeholder="Describe the image..."
+                    value={imagePrompt}
+                    onChange={(e) => setImagePrompt(e.target.value)}
+                  />
+                  <Button
+                    onClick={generateImage}
+                    disabled={!imagePrompt || generatingImage}
+                    className="w-full"
+                  >
+                    {generatingImage ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Generating...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="h-4 w-4 mr-2" />
+                        Generate Image
+                      </>
+                    )}
+                  </Button>
+                  {generatedImageUrl && (
+                    <div className="mt-4">
+                      <div className="relative aspect-video rounded-lg overflow-hidden">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={generatedImageUrl}
+                          alt="Generated"
+                          className="object-cover"
+                        />
+                        <div className="absolute bottom-0 left-0 right-0 p-2  flex justify-end gap-2">
+                          <Button size="sm" onClick={regenerateImage}>
+                            Regenerate
+                          </Button>
+                          <Button size="sm" onClick={addGeneratedImage}>
+                            Add to Document
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
 
-        {/* Remove the separate AI image generation button */}
-      </div>
+          {/* Remove the separate AI image generation button */}
+        </div>
+      )}
 
       {/* Editor Content */}
       <div className="flex-grow overflow-auto p-6 flex justify-center">
@@ -1504,6 +1523,7 @@ export default function DocumentGenerator({
   embedded,
   initialDocumentId,
   onDocumentSave,
+  readOnly, // Add this line
 }: DocumentGeneratorProps) {
   return (
     <Suspense fallback={<DocumentGeneratorLoading />}>
@@ -1513,6 +1533,7 @@ export default function DocumentGenerator({
         embedded={embedded}
         initialDocumentId={initialDocumentId}
         onDocumentSave={onDocumentSave}
+        readOnly={readOnly} // Add this line
       />
     </Suspense>
   );

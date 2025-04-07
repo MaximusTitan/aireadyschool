@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Download } from "lucide-react";
+import { ArrowLeft, Download, X } from "lucide-react";
 import jsPDF from "jspdf";
 import { useToast } from "@/components/ui/use-toast";
 import { createClient } from "@/utils/supabase/client";
@@ -21,6 +21,7 @@ import { AssessmentPlanView } from "../components/assessment-plan";
 import { SessionNavigator } from "../components/session-navigator";
 import { LessonModalDialogs } from "../components/lesson-modal-dialogs";
 import { LessonContent } from "../components/lesson-content";
+import DocumentGenerator from "../../document-generator/DocumentGeneratorComponent";
 
 const supabase = createClient();
 
@@ -70,6 +71,7 @@ export default function TeacherOutputContent() {
   const [isAssigning, setIsAssigning] = useState(false);
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
+  const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -395,8 +397,6 @@ export default function TeacherOutputContent() {
     const doc = new jsPDF();
     let yOffset = 20;
 
-    // PDF generation code from the original component
-    // ... [PDF generation logic] ...
     const addHeading = (text: string, size = 16) => {
       doc.setFont("helvetica", "bold");
       doc.setFontSize(size);
@@ -439,7 +439,6 @@ export default function TeacherOutputContent() {
     }
     yOffset += 10;
 
-    // Generate content for each day
     lessonPlan.plan_data.days.forEach((day) => {
       checkNewPage();
       addHeading(`Day ${day.day}: ${day.topicHeading}`, 16);
@@ -463,7 +462,6 @@ export default function TeacherOutputContent() {
       yOffset += 10;
     });
 
-    // Assessment plan
     checkNewPage();
     addHeading("Assessment Plan", 16);
     yOffset += 5;
@@ -670,10 +668,8 @@ export default function TeacherOutputContent() {
 
       if (error) throw error;
 
-      // Copy all generated notes to the student's lesson plan
       const studentLessonPlanId = data[0].id;
 
-      // Transfer generated notes
       for (const [activityTitle, content] of Object.entries(generatedNotes)) {
         await supabase.from("generated_notes").insert({
           lesson_plan_id: studentLessonPlanId,
@@ -682,7 +678,6 @@ export default function TeacherOutputContent() {
         });
       }
 
-      // Transfer uploaded files
       for (const [sectionId, files] of Object.entries(uploadedFiles)) {
         for (const file of files) {
           await supabase.from("uploaded_files").insert({
@@ -854,7 +849,7 @@ export default function TeacherOutputContent() {
 
   return (
     <div className="min-h-screen bg-backgroundApp">
-      <div className="container mx-auto px-4 py-8 max-w-5xl">
+      <div className="mx-auto px-4 py-8">
         <Button
           variant="outline"
           className="mb-6"
@@ -894,36 +889,74 @@ export default function TeacherOutputContent() {
               onTabChange={setActiveTab}
             />
 
-            <div className="bg-white rounded-lg border p-6">
-              {activeTab.startsWith("day-") && (
-                <LessonContent
-                  day={
-                    lessonPlan.plan_data.days[
-                      Number.parseInt(activeTab.split("-")[1]) - 1
-                    ]
-                  }
-                  userRole={userRole}
-                  generatedNotes={generatedNotes}
-                  uploadedFiles={uploadedFiles}
-                  onEdit={handleEdit}
-                  onGenerateNotes={handleGenerateNotes}
-                  onFileUpload={handleFileUpload}
-                  onDeleteFile={handleDeleteFile}
-                  onChatWithBuddy={handleChatWithBuddy}
-                />
-              )}
+            {activeTab.startsWith("day-") ? (
+              <div className="flex gap-6">
+                <div
+                  className={`${
+                    showDocumentGenerator ? "flex-1" : "w-full"
+                  } bg-white rounded-lg border p-6`}
+                >
+                  <LessonContent
+                    day={
+                      lessonPlan.plan_data.days[
+                        Number.parseInt(activeTab.split("-")[1]) - 1
+                      ]
+                    }
+                    userRole={userRole}
+                    generatedNotes={generatedNotes}
+                    uploadedFiles={uploadedFiles}
+                    onEdit={handleEdit}
+                    onGenerateNotes={handleGenerateNotes}
+                    onFileUpload={handleFileUpload}
+                    onDeleteFile={handleDeleteFile}
+                    onChatWithBuddy={handleChatWithBuddy}
+                    showDocumentGenerator={showDocumentGenerator}
+                    setShowDocumentGenerator={setShowDocumentGenerator}
+                  />
+                </div>
 
-              {activeTab === "assessment" && (
-                <AssessmentPlanView
-                  assessmentPlan={lessonPlan.plan_data.assessmentPlan}
-                  userRole={userRole}
-                  uploadedFiles={uploadedFiles}
-                  onEdit={handleEdit}
-                  onFileUpload={handleFileUpload}
-                  onDeleteFile={handleDeleteFile}
-                />
-              )}
-            </div>
+                {showDocumentGenerator && userRole === "Teacher" && (
+                  <div className="flex-1 bg-white rounded-lg border p-6 relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={() => setShowDocumentGenerator(false)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                    <DocumentGenerator
+                      initialContent=""
+                      initialTitle={`${
+                        lessonPlan.plan_data.days[
+                          Number.parseInt(activeTab.split("-")[1]) - 1
+                        ].topicHeading
+                      } - Assignment`}
+                      embedded={true}
+                      initialDocumentId={
+                        lessonPlan.plan_data.days[
+                          Number.parseInt(activeTab.split("-")[1]) - 1
+                        ].assignment?.document_id
+                      }
+                      readOnly={true}
+                    />
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="bg-white rounded-lg border p-6">
+                {activeTab === "assessment" && (
+                  <AssessmentPlanView
+                    assessmentPlan={lessonPlan.plan_data.assessmentPlan}
+                    userRole={userRole}
+                    uploadedFiles={uploadedFiles}
+                    onEdit={handleEdit}
+                    onFileUpload={handleFileUpload}
+                    onDeleteFile={handleDeleteFile}
+                  />
+                )}
+              </div>
+            )}
           </>
         )}
 

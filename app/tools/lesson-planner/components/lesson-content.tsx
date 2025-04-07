@@ -13,6 +13,7 @@ import {
 import ReactMarkdown from "react-markdown";
 import { Day, ScheduleItem, GeneratedNotes, UploadedFile } from "../types";
 import { Fragment } from "react";
+import DocumentGenerator from "../../document-generator/DocumentGeneratorComponent";
 
 interface LessonContentProps {
   day: Day;
@@ -298,18 +299,24 @@ export function LessonContent({
               <li key={index}>{task}</li>
             ))}
           </ul>
-          {userRole === "Student" &&
-            day.assignment &&
-            showDocumentGenerator !== undefined && (
-              <Button
-                onClick={() =>
-                  setShowDocumentGenerator?.(!showDocumentGenerator)
-                }
-                className="mt-2"
-              >
-                {showDocumentGenerator ? "Hide" : "Open"} Document Generator
-              </Button>
-            )}
+          {userRole === "Student" && day.assignment && (
+            <Button
+              onClick={() => setShowDocumentGenerator?.(true)}
+              className="w-full justify-center mt-2"
+            >
+              {day.assignment.document_id
+                ? "Open Document"
+                : "Start Assignment"}
+            </Button>
+          )}
+          {userRole === "Teacher" && day.assignment?.document_id && (
+            <Button
+              onClick={() => setShowDocumentGenerator?.(true)}
+              className="w-full justify-center mt-2"
+            >
+              View Document
+            </Button>
+          )}
         </div>
       </div>
     </div>

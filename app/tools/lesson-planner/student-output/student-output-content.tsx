@@ -17,6 +17,7 @@ import { SessionNavigator } from "../components/session-navigator";
 import { LessonContent } from "../components/lesson-content";
 import { AssessmentPlanView } from "../components/assessment-plan";
 import DocumentGenerator from "../../document-generator/DocumentGeneratorComponent";
+import { X } from "lucide-react";
 
 const supabase = createClient();
 
@@ -297,7 +298,15 @@ export default function StudentOutputContent() {
             </div>
 
             {showDocumentGenerator && userRole === "Student" && (
-              <div className="flex-1 bg-white rounded-lg border p-6">
+              <div className="flex-1 bg-white rounded-lg border p-6 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => setShowDocumentGenerator(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
                 <DocumentGenerator
                   initialContent={
                     lessonPlan.plan_data.days[

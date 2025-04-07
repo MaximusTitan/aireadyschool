@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, FormEvent } from "react";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client"; // Replace supabase import
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { User, Pencil, Sparkles, Brain, ChevronLeft } from "lucide-react";
@@ -38,9 +38,11 @@ export default function StudentIdeaPage() {
 
   useEffect(() => {
     const fetchProfileAndIdea = async () => {
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user?.email) {
         const { data: profileData, error } = await supabase
           .from("dat_student_details")
@@ -78,6 +80,8 @@ export default function StudentIdeaPage() {
   const handleIdeaSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!profile?.id) return;
+    const supabase = createClient(); // Initialize Supabase client
+
     if (!isEditing) {
       const { data, error } = await supabase
         .from("dat_ideas")

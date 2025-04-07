@@ -1032,16 +1032,29 @@ function StudentsListContent() {
   ) => {
     try {
       const table =
-        type === "presentation" ? "presentation_links" : "prototype_links";
+        type === "presentation" ? "dat_presentation_links" : "dat_prototype_links";
+      const supabase = createClient();
       const { error } = await supabase
         .from(table)
         .update({ status: newStatus })
         .eq("student_id", studentId);
 
       if (error) throw error;
+
       await fetchStudents(); // Refresh the list and winner/runner-up states
     } catch (error) {
-      console.error("Error updating status:", error);
+      // More detailed error logging
+      console.error("Error updating status:", {
+        error,
+        context: {
+          studentId,
+          type,
+          newStatus
+        }
+      });
+      
+      // Show error toast or alert to user
+      alert(`Failed to update status: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 

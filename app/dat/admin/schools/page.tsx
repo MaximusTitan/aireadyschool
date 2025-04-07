@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { supabase } from "@/app/dat/utils/supabaseClient";
+import Link from "next/link";
 
 const ITEMS_PER_PAGE = 8;
 
@@ -187,62 +188,63 @@ export default function ApprovedSchoolsList() {
 
         <div className="grid md:grid-cols-3 gap-6">
           {getCurrentPageSchools().map((school) => (
-            <Card
+            <Link
               key={school.id}
-              className="hover:shadow-lg transition-shadow cursor-pointer border-rose-100"
+              href={`/dat/admin/students?schoolId=${school.id}&fromSchool=true`}
             >
-              <CardContent className="p-4">
-                <h3 className="text-lg font-bold text-gray-900 mb-3">
-                  {school.school_name}
-                </h3>
-                <div className="space-y-2">
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <Users className={iconClasses} />
-                    <span className="truncate">{school.contact_name}</span>
-                  </div>
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <Globe className={iconClasses} />
-                    <span className="truncate">
-                      {school.website_address || "No website provided"}
-                    </span>
-                  </div>
-                  <div className="flex items-center text-gray-600 text-sm">
-                    <Building2 className={iconClasses} />
-                    <span className="truncate">
-                      {school.area}, {school.city}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between pt-2 border-t mt-2">
-                    <label
-                      htmlFor={`payment-${school.id}`}
-                      className="text-sm text-gray-600"
-                    >
-                      Registration Fee Required
-                    </label>
-                    <Switch
-                      id={`payment-${school.id}`}
-                      checked={school.payment_required}
-                      onCheckedChange={async (checked) => {
-                        const success = await handlePaymentToggle(
-                          school.id,
-                          checked,
-                          school.school_name
-                        );
-                        if (!success) {
-                          // Only revert on failure
-                          const switchElement = document.getElementById(
-                            `payment-${school.id}`
-                          ) as HTMLButtonElement;
-                          if (switchElement) {
-                            switchElement.click();
+              <Card className="hover:shadow-lg transition-shadow border-rose-100">
+                <CardContent className="p-4">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">
+                    {school.school_name}
+                  </h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Users className={iconClasses} />
+                      <span className="truncate">{school.contact_name}</span>
+                    </div>
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Globe className={iconClasses} />
+                      <span className="truncate">
+                        {school.website_address || "No website provided"}
+                      </span>
+                    </div>
+                    <div className="flex items-center text-gray-600 text-sm">
+                      <Building2 className={iconClasses} />
+                      <span className="truncate">
+                        {school.area}, {school.city}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t mt-2" onClick={(e) => e.preventDefault()}>
+                      <label
+                        htmlFor={`payment-${school.id}`}
+                        className="text-sm text-gray-600"
+                      >
+                        Registration Fee Required
+                      </label>
+                      <Switch
+                        id={`payment-${school.id}`}
+                        checked={school.payment_required}
+                        onCheckedChange={async (checked) => {
+                          const success = await handlePaymentToggle(
+                            school.id,
+                            checked,
+                            school.school_name
+                          );
+                          if (!success) {
+                            const switchElement = document.getElementById(
+                              `payment-${school.id}`
+                            ) as HTMLButtonElement;
+                            if (switchElement) {
+                              switchElement.click();
+                            }
                           }
-                        }
-                      }}
-                    />
+                        }}
+                      />
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </Link>
           ))}
         </div>
 

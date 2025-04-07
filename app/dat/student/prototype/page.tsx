@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect, FormEvent } from "react";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client"; // Replace supabase import
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft, User } from "lucide-react";
@@ -13,6 +13,7 @@ export default function PrototypeLinkPage() {
   // Fetch the existing prototype link for the current user
   useEffect(() => {
     const fetchExistingLink = async () => {
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -41,6 +42,7 @@ export default function PrototypeLinkPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
       } = await supabase.auth.getUser();

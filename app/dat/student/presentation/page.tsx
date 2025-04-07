@@ -3,7 +3,7 @@ import React, { useState, useEffect, FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { ChevronLeft, User, ExternalLink } from "lucide-react";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client"; // Replace supabase import
 
 export default function PresentationLinkPage() {
   const [presentationLink, setPresentationLink] = useState<string>("");
@@ -33,6 +33,7 @@ export default function PresentationLinkPage() {
   // On mount, fetch existing presentation link for the student.
   useEffect(() => {
     const fetchPresentationLink = async () => {
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -69,6 +70,7 @@ export default function PresentationLinkPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     try {
+      const supabase = createClient(); // Initialize Supabase client
       // Get current user info
       const {
         data: { user },

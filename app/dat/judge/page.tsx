@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
@@ -96,6 +96,7 @@ export default function JudgeDashboard() {
 
   const fetchJudgeDetailsAndStudents = useCallback(async () => {
     try {
+      const supabase = createClient();
       const {
         data: { user },
         error: userError,
@@ -332,6 +333,7 @@ export default function JudgeDashboard() {
   }, [fetchJudgeDetailsAndStudents]);
 
   const handleLogout = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/sign-in");
   };
@@ -343,7 +345,8 @@ export default function JudgeDashboard() {
   const handleRatingSubmit = async (studentId: string) => {
     const rating = ratings[studentId];
     if (!rating || !judgeId) return;
-
+    
+    const supabase = createClient();
     const newRating = {
       student_id: studentId,
       judge_id: judgeId,

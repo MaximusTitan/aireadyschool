@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useCallback, Suspense, useMemo } from "react";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -373,9 +373,11 @@ function SchoolStudentsListContent() {
   // Get the current school ID from the authenticated user
   useEffect(() => {
     const getSchoolId = async () => {
+      const supabase = createClient(); // Initialize client
       const {
         data: { user },
       } = await supabase.auth.getUser();
+      
       if (user) {
         const { data } = await supabase
           .from("dat_school_details")
@@ -392,12 +394,14 @@ function SchoolStudentsListContent() {
     getSchoolId();
   }, []);
 
-  // Modify the fetchStudents function to use the school ID
+  // Modify the fetchStudents function to use createClient
   const fetchStudents = useCallback(async () => {
     if (!schoolId) return;
 
     setLoading(true);
     try {
+      const supabase = createClient(); // Initialize client
+
       // First fetch students with their ideas
       let query = supabase
         .from("dat_student_details")
@@ -733,14 +737,14 @@ function SchoolStudentsListContent() {
       <div className="container mx-auto p-6">
         <div className="flex justify-between items-start mb-8">
           <div className="flex items-center">
-            <Link href="/school" className="mr-4">
+            <Link href="/dat/school" className="mr-4">
               <Button variant="outline" size="sm" className="hover:bg-gray-100">
                 <ChevronLeft className="h-4 w-4 mr-2" />
               </Button>
             </Link>
             <h1 className="text-3xl font-bold text-rose-600">All Students</h1>
           </div>
-          <Link href="/school/profile">
+          <Link href="/dat/school/profile">
             <Button
               variant="outline"
               size="icon"
@@ -844,7 +848,7 @@ function SchoolStudentsListContent() {
                     })()}
                   </td>
                   <td className="px-4 py-2">
-                    <Link href={`/school/students/${student.id}/ideas`}>
+                    <Link href={`/dat/school/students/${student.id}/ideas`}>
                       <Button variant="outline" size="sm">
                         View Submission
                       </Button>

@@ -238,7 +238,7 @@ export default function StudentIdeasSchool() {
       style={{ backgroundColor: "#F7F1EF" }}
     >
       <div className="flex items-center mb-8">
-        <Link href="/school/students" className="mr-4">
+        <Link href="/dat/school/students" className="mr-4">
           <Button
             variant="outline"
             size="sm"

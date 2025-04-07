@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client"; // Replace supabase import
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image"; // Add this import
@@ -66,6 +66,7 @@ export default function StudentDashboard() {
 
   const notifyPresentationChanges = async () => {
     if (profile?.id) {
+      const supabase = createClient();
       try {
         const { data, error } = await supabase
           .from("dat_presentation_links")
@@ -95,6 +96,7 @@ export default function StudentDashboard() {
   // Update the notifyPrototypeChanges function
   const notifyPrototypeChanges = async () => {
     if (profile?.id) {
+      const supabase = createClient();
       try {
         const { data, error } = await supabase
           .from("dat_prototype_links")
@@ -125,6 +127,7 @@ export default function StudentDashboard() {
 
   const notifyIdeaChanges = async () => {
     if (idea?.id) {
+      const supabase = createClient();
       try {
         const { data, error } = await supabase
           .from("dat_ideas")
@@ -150,9 +153,11 @@ export default function StudentDashboard() {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user?.email) {
         const { data, error } = await supabase
           .from("dat_student_details")
@@ -172,6 +177,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchIdea = async () => {
       if (profile?.id) {
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("dat_ideas")
           .select("id, status, title, admin_suggestions, updated")
@@ -189,6 +195,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchPresentation = async () => {
       if (profile?.id) {
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("dat_presentation_links")
           .select("*") // Change from just "status" to "*" to fetch all fields
@@ -207,6 +214,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     const fetchPrototype = async () => {
       if (profile?.id) {
+        const supabase = createClient();
         const { data, error } = await supabase
           .from("dat_prototype_links")
           .select("*") // Select all fields
@@ -226,6 +234,7 @@ export default function StudentDashboard() {
     const checkInstructionGuide = async () => {
       if (!profile?.id) return;
 
+      const supabase = createClient();
       const { data: guideData } = await supabase
         .from("dat_instruction_guides")
         .select("*")

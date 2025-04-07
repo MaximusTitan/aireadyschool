@@ -1,10 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
+import { createClient } from "@/utils/supabase/client"; // Replace supabase import
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link as LinkIcon, CircleUser, BookOpen } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/app/dat/utils/supabaseClient";
 
 export default function SchoolDashboard() {
   const [registrationLink, setRegistrationLink] = useState<string>("");
@@ -20,9 +20,11 @@ export default function SchoolDashboard() {
 
   useEffect(() => {
     const fetchSchoolData = async () => {
+      const supabase = createClient(); // Initialize Supabase client
       const {
         data: { user },
       } = await supabase.auth.getUser();
+
       if (user?.email) {
         const { data: schoolData } = await supabase
           .from("dat_school_details")

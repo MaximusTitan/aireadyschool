@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { supabase } from "@/app/dat/utils/supabaseClient";
+import { createClient } from "@/utils/supabase/client";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { StudentProfile } from "@/app/dat/types/profile";
@@ -15,6 +15,7 @@ const StudentProfilePage: React.FC = () => {
 
   useEffect(() => {
     const fetchProfile = async () => {
+      const supabase = createClient();
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -34,6 +35,7 @@ const StudentProfilePage: React.FC = () => {
   }, []);
 
   const handleLogout = async () => {
+    const supabase = createClient();
     await supabase.auth.signOut();
     window.location.href = "/sign-in";
   };

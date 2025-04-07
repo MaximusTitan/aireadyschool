@@ -33,6 +33,7 @@ export interface ScheduleItem {
 export interface HomeworkAssignment {
   description: string;
   tasks: string[];
+  document_id?: string | null; // Add this line
 }
 
 export interface Day {

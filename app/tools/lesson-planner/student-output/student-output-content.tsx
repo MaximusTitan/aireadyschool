@@ -37,6 +37,7 @@ export default function StudentOutputContent() {
   const [generatedNotes, setGeneratedNotes] = useState<GeneratedNotes>({});
   const [buddyInput, setBuddyInput] = useState("");
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
+  const [documentId, setDocumentId] = useState<string | null>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -174,6 +175,44 @@ export default function StudentOutputContent() {
     }
   };
 
+  const handleDocumentSave = async (newDocId: string) => {
+    if (!lessonPlan || !activeTab.startsWith("day-")) return;
+
+    const dayIndex = parseInt(activeTab.split("-")[1]) - 1;
+    const updatedPlanData = { ...lessonPlan.plan_data };
+    updatedPlanData.days[dayIndex].assignment.document_id = newDocId;
+
+    try {
+      const { error } = await supabase
+        .from("lesson_plans")
+        .update({
+          plan_data: updatedPlanData,
+        })
+        .eq("id", lessonPlan.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setLessonPlan({
+        ...lessonPlan,
+        plan_data: updatedPlanData,
+      });
+
+      toast({
+        title: "Success",
+        description: "Assignment progress saved",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error saving document reference:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to save assignment progress",
+      });
+    }
+  };
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
@@ -263,7 +302,11 @@ export default function StudentOutputContent() {
                   initialContent={
                     lessonPlan.plan_data.days[
                       Number.parseInt(activeTab.split("-")[1]) - 1
-                    ].assignment?.description || ""
+                    ].assignment?.document_id
+                      ? ""
+                      : lessonPlan.plan_data.days[
+                          Number.parseInt(activeTab.split("-")[1]) - 1
+                        ].assignment?.description || ""
                   }
                   initialTitle={`${
                     lessonPlan.plan_data.days[
@@ -271,6 +314,12 @@ export default function StudentOutputContent() {
                     ].topicHeading
                   } - Assignment`}
                   embedded={true}
+                  initialDocumentId={
+                    lessonPlan.plan_data.days[
+                      Number.parseInt(activeTab.split("-")[1]) - 1
+                    ].assignment?.document_id
+                  }
+                  onDocumentSave={handleDocumentSave}
                 />
               </div>
             )}

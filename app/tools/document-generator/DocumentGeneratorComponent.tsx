@@ -183,6 +183,8 @@ interface DocumentGeneratorProps {
   initialContent?: string;
   initialTitle?: string;
   embedded?: boolean;
+  initialDocumentId?: string | null;
+  onDocumentSave?: (documentId: string) => void;
 }
 
 function FloatingAIMenu({
@@ -219,6 +221,8 @@ const DocumentGeneratorContent = ({
   initialContent = "",
   initialTitle = "Untitled Document",
   embedded = false,
+  initialDocumentId = null,
+  onDocumentSave,
 }: DocumentGeneratorProps) => {
   const router = useRouter(); // Add this near other hooks
   const [documentTitle, setDocumentTitle] = useState(initialTitle);
@@ -868,8 +872,9 @@ const DocumentGeneratorContent = ({
   // Load document if ID is provided in URL
   useEffect(() => {
     const loadDocument = async () => {
-      const id = searchParams.get("id");
-      if (!id || embedded) return;
+      // Use initialDocumentId instead of URL params for embedded mode
+      const id = embedded ? initialDocumentId : searchParams.get("id");
+      if (!id) return;
 
       try {
         setLoading(true);
@@ -897,7 +902,7 @@ const DocumentGeneratorContent = ({
     if (editor) {
       loadDocument();
     }
-  }, [editor, searchParams]);
+  }, [editor, searchParams, initialDocumentId, embedded]);
 
   // Updated save document function
   const saveDocument = async () => {
@@ -926,7 +931,7 @@ const DocumentGeneratorContent = ({
         email: user.email,
         title: documentTitle,
         content: content,
-        id: documentId || undefined,
+        id: documentId || initialDocumentId || undefined,
       });
 
       if (result.error) {
@@ -936,11 +941,7 @@ const DocumentGeneratorContent = ({
 
       if (result.data) {
         setDocumentId(result.data.id);
-      }
-
-      // Update documentId if this was a new document
-      if (!documentId && result.data) {
-        setDocumentId(result.data.id);
+        onDocumentSave?.(result.data.id);
       }
 
       // Reset unsaved changes flag after successful save
@@ -984,8 +985,12 @@ const DocumentGeneratorContent = ({
     }, [hasUnsavedChanges]);
   }
 
-  if (!editor) {
-    return null;
+  if (!editor || loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   const sleep = (ms: number) =>
@@ -1497,6 +1502,8 @@ export default function DocumentGenerator({
   initialContent,
   initialTitle,
   embedded,
+  initialDocumentId,
+  onDocumentSave,
 }: DocumentGeneratorProps) {
   return (
     <Suspense fallback={<DocumentGeneratorLoading />}>
@@ -1504,6 +1511,8 @@ export default function DocumentGenerator({
         initialContent={initialContent}
         initialTitle={initialTitle}
         embedded={embedded}
+        initialDocumentId={initialDocumentId}
+        onDocumentSave={onDocumentSave}
       />
     </Suspense>
   );

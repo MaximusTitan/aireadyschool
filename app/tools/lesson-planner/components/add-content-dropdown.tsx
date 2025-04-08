@@ -11,6 +11,7 @@ import {
   ChevronRight,
   Image,
   Download,
+  Youtube,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -56,6 +57,7 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
   const [selectedType, setSelectedType] = React.useState<string>("");
   const [selectedFile, setSelectedFile] = React.useState<File | null>(null);
   const [presentationUrl, setPresentationUrl] = React.useState<string>("");
+  const [videoUrl, setVideoUrl] = React.useState<string>("");
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   // State for presentation creation
@@ -97,9 +99,11 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
     setIsUploadOpen(true);
     setSelectedFile(null);
     setPresentationUrl("");
+    setVideoUrl("");
     setPresentationTopic("");
     setPresentationGenerated(false);
     setGeneratedSlides([]);
+    setCurrentTab("upload");
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -109,6 +113,10 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setPresentationUrl(e.target.value);
+  };
+
+  const handleVideoUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setVideoUrl(e.target.value);
   };
 
   // Generate AI presentation content
@@ -247,6 +255,13 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
         } catch (error) {
           console.error("Error uploading URL:", error);
         }
+      }
+    } else if (selectedType === "video" && currentTab === "url" && videoUrl) {
+      try {
+        await onUpload(new File([], videoUrl), selectedType, videoUrl);
+        setIsUploadOpen(false);
+      } catch (error) {
+        console.error("Error uploading video URL:", error);
       }
     } else if (selectedFile) {
       try {
@@ -682,6 +697,68 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
                 </div>
               )}
             </>
+          ) : selectedType === "video" ? (
+            <Tabs
+              defaultValue="upload"
+              value={currentTab}
+              onValueChange={setCurrentTab}
+              className="w-full"
+            >
+              <TabsList>
+                <TabsTrigger value="upload">Upload</TabsTrigger>
+                <TabsTrigger value="url">YouTube URL</TabsTrigger>
+              </TabsList>
+              <TabsContent value="upload">
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="file">Choose video file</Label>
+                    <Input
+                      id="file"
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="video/*"
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              <TabsContent value="url">
+                <div className="grid gap-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="videoUrl">YouTube URL</Label>
+                    <Input
+                      id="videoUrl"
+                      type="url"
+                      placeholder="https://www.youtube.com/watch?v=..."
+                      value={videoUrl}
+                      onChange={handleVideoUrlChange}
+                    />
+                  </div>
+                </div>
+              </TabsContent>
+              <div className="mt-4">
+                <Button
+                  onClick={handleUpload}
+                  disabled={
+                    (currentTab === "upload" && !selectedFile) ||
+                    (currentTab === "url" && !videoUrl)
+                  }
+                  className="w-full"
+                >
+                  {currentTab === "upload" ? (
+                    <>
+                      <Upload className="mr-2 h-4 w-4" />
+                      Upload Video
+                    </>
+                  ) : (
+                    <>
+                      <Youtube className="mr-2 h-4 w-4" />
+                      Add YouTube Video
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Tabs>
           ) : (
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
@@ -692,13 +769,11 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
                   ref={fileInputRef}
                   onChange={handleFileChange}
                   accept={
-                    selectedType === "video"
-                      ? "video/*"
-                      : selectedType === "worksheet"
-                        ? ".doc,.docx,.pdf"
-                        : selectedType === "quiz"
-                          ? ".pdf,.doc,.docx"
-                          : undefined
+                    selectedType === "worksheet"
+                      ? ".doc,.docx,.pdf"
+                      : selectedType === "quiz"
+                        ? ".pdf,.doc,.docx"
+                        : undefined
                   }
                 />
               </div>
@@ -706,7 +781,7 @@ export function AddContentDropdown({ onUpload }: AddContentDropdownProps) {
           )}
 
           <DialogFooter>
-            {selectedType !== "presentation" && (
+            {selectedType !== "presentation" && selectedType !== "video" && (
               <Button onClick={handleUpload} disabled={!selectedFile}>
                 Upload
               </Button>

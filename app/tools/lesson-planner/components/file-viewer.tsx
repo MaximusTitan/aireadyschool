@@ -14,11 +14,46 @@ export function FileViewer({ file, onDelete, canDelete }: FileViewerProps) {
   const isGoogleSlides =
     file.url.includes("docs.google.com/presentation") ||
     file.name.includes("docs.google.com/presentation");
-  const embedUrl = isGoogleSlides
-    ? `${isGoogleSlides ? (file.name.includes("docs.google.com/presentation") ? file.name : file.url) : ""}/embed`
-    : isOfficeFile
-      ? `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.url)}`
-      : file.url;
+  const isYouTube =
+    file.url.includes("youtube.com") ||
+    file.url.includes("youtu.be") ||
+    file.name.includes("youtube.com") ||
+    file.name.includes("youtu.be");
+
+  let embedUrl = "";
+
+  if (isGoogleSlides) {
+    embedUrl = `${file.name.includes("docs.google.com/presentation") ? file.name : file.url}/embed`;
+  } else if (isYouTube) {
+    // Convert YouTube URLs to embed format
+    const url =
+      file.name.includes("youtube.com") || file.name.includes("youtu.be")
+        ? file.name
+        : file.url;
+
+    // Handle youtube.com/watch?v= format
+    if (url.includes("youtube.com/watch")) {
+      const videoId = new URL(url).searchParams.get("v");
+      if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
+    // Handle youtu.be/ format
+    else if (url.includes("youtu.be")) {
+      const videoId = url.split("youtu.be/")[1]?.split("?")[0];
+      if (videoId) embedUrl = `https://www.youtube.com/embed/${videoId}`;
+    }
+    // If it's already an embed URL, use it directly
+    else if (url.includes("youtube.com/embed")) {
+      embedUrl = url;
+    }
+    // Fallback
+    else {
+      embedUrl = url;
+    }
+  } else if (isOfficeFile) {
+    embedUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(file.url)}`;
+  } else {
+    embedUrl = file.url;
+  }
 
   return (
     <div className="bg-white border rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow">
@@ -40,12 +75,13 @@ export function FileViewer({ file, onDelete, canDelete }: FileViewerProps) {
         )}
       </div>
 
-      {isOfficeFile || isGoogleSlides ? (
+      {isOfficeFile || isGoogleSlides || isYouTube ? (
         <div className="aspect-video w-full">
           <iframe
             src={embedUrl}
             className="w-full h-full border-0"
             title={file.name}
+            allowFullScreen={isYouTube}
           />
         </div>
       ) : (

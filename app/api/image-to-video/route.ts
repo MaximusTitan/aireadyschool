@@ -27,6 +27,23 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     try {
+        const { scenes, story } = await request.json();
+  
+        if (!scenes || scenes.length === 0) {
+            return NextResponse.json(
+                { message: "No scenes provided" },
+                { status: 400 }
+            );
+        }
+
+        // Remove base64 validation since we're using direct URLs
+        if (!scenes[0].imageUrl) {
+            return NextResponse.json(
+                { message: "Image URL is required" },
+                { status: 400 }
+            );
+        }
+
         const supabaseClient = await supabase;
         const { data: { user } } = await supabaseClient.auth.getUser();
 
@@ -37,22 +54,10 @@ export async function POST(request: Request): Promise<NextResponse> {
             );
         }
 
-        const { prompt, imageUrl }: ImageToVideoRequest = await request.json();
-
-        if (!prompt || !imageUrl) {
-            return NextResponse.json(
-                { message: "Prompt and image URL are required" },
-                { status: 400 }
-            );
-        }
-
-        // Validate base64 image
-        if (!imageUrl.startsWith('data:image/')) {
-            return NextResponse.json(
-                { message: "Invalid image format. Please provide a valid image." },
-                { status: 400 }
-            );
-        }
+        // Create a combined prompt that includes story context
+        const combinedPrompt = `Story context: ${story.slice(0, 200)}...
+Scene description: ${scenes[0].description}
+Visual details: ${scenes[0].visualDetails}`;
 
         const client = new RunwayML({ apiKey: process.env.RUNWAYML_API_SECRET });
 
@@ -64,8 +69,8 @@ export async function POST(request: Request): Promise<NextResponse> {
             .from('generated_videos')
             .insert({
                 user_id: user.id,
-                input_text: prompt,
-                image_url: imageUrl,
+                input_text: combinedPrompt,
+                image_url: scenes[0].imageUrl,
                 video_url: tempUrl, // Add temporary URL to satisfy not-null constraint
                 status: 'processing',
                 duration: 5 // 5 seconds default
@@ -77,8 +82,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         const imageToVideo = await client.imageToVideo.create({
             model: "gen3a_turbo",
-            promptImage: imageUrl,
-            promptText: prompt,
+            promptImage: scenes[0].imageUrl,
+            promptText: combinedPrompt,
             duration: 5,
             watermark: false,
             ratio: "1280:768",

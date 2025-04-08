@@ -1,6 +1,5 @@
 import { anthropic } from '@ai-sdk/anthropic';
-// import { openai } from '@ai-sdk/openai';
-import { streamText, smoothStream, Message, CreateMessage, APICallError } from 'ai';
+import { streamText, smoothStream, CreateMessage } from 'ai';
 import { tools } from '@/app/tools/gen-chat/utils/tools';
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { createClient } from "@/utils/supabase/server";
@@ -21,36 +20,27 @@ import {
 // Import token estimation utility
 import { encodingForModel } from "js-tiktoken";
 
-// Add this utility function at the top level
-function estimateTokens(text: string): number {
-  try {
-    // Claude uses cl100k_base encoding
-    const encoding = encodingForModel("gpt-4");
-    const tokens = encoding.encode(text);
-    return tokens.length;
-  } catch (error) {
-    console.warn("Error estimating tokens:", error);
-    // Fallback to character-based estimation (rough approximation)
-    return Math.ceil(text.length / 4);
-  }
-}
-
-// Token usage logging and limits
-const TOKEN_USAGE_LIMIT = 4000; // Set a reasonable limit
-
-// System prompt cache to avoid regenerating for similar requests
-const systemPromptCache = new Map<string, {prompt: string, tokens: number}>();
-
-// Cache key generator for system prompts
-function getSystemPromptCacheKey(subject: string, userRole: string, language: string, teachingMode: boolean): string {
-  return `${subject}-${userRole}-${language}-${teachingMode}`;
-}
-
-// export const runtime = 'edge';
+//-----------------------------------------------------
+// TYPE DEFINITIONS
+//-----------------------------------------------------
 
 type Subject = 'science' | 'math' | 'english' | 'generic';
 type Language = 'english' | 'hindi';
 
+//-----------------------------------------------------
+// CONFIGURATION AND CONSTANTS
+//-----------------------------------------------------
+
+// Token limits
+const TOKEN_USAGE_LIMIT = 4000;
+
+// System prompt cache to avoid regenerating for similar requests
+const systemPromptCache = new Map<string, {prompt: string, tokens: number}>();
+
+// Cache for student details to avoid repeated DB calls
+const studentDetailsCache = new Map<string, any>();
+
+// Mapping of prompts by language and subject
 const prompts: Record<Language, Record<Subject, string>> = {
   english: {
     science: SCIENCE_TEACHER_PROMPT,
@@ -66,6 +56,39 @@ const prompts: Record<Language, Record<Subject, string>> = {
   }
 };
 
+// Connection manager to track active connections
+const activeConnections = new Map();
+
+//-----------------------------------------------------
+// UTILITY FUNCTIONS
+//-----------------------------------------------------
+
+/**
+ * Estimates token count for a given text string
+ */
+function estimateTokens(text: string): number {
+  try {
+    // Claude uses cl100k_base encoding
+    const encoding = encodingForModel("gpt-4");
+    const tokens = encoding.encode(text);
+    return tokens.length;
+  } catch (error) {
+    console.warn("Error estimating tokens:", error);
+    // Fallback to character-based estimation (rough approximation)
+    return Math.ceil(text.length / 4);
+  }
+}
+
+/**
+ * Generates a cache key for system prompts
+ */
+function getSystemPromptCacheKey(subject: string, userRole: string, language: string, teachingMode: boolean): string {
+  return `${subject}-${userRole}-${language}-${teachingMode}`;
+}
+
+/**
+ * Detects the subject based on the message content
+ */
 function detectSubject(messages: any[]): Subject {
   const lastUserMessage = messages
     .slice()
@@ -84,47 +107,9 @@ function detectSubject(messages: any[]): Subject {
   return 'generic';
 }
 
-interface UserDetails {
-  name?: string;
-  age?: number;
-  grade?: number;
-  subjects?: string[];
-}
-
-interface ThreadMessage extends Message {
-  toolCalls?: Array<{
-    id: string;
-    tool: string;
-    parameters: Record<string, any>;
-    result?: any;
-    state?: string;
-  }>;
-}
-
-// Error interfaces
-interface StreamFinishError {
-  type: 'STREAM_FINISH_ERROR';
-  usage?: { promptTokens: number; completionTokens: number; totalTokens: number };
-  finishReason: string;
-  timestamp: string;
-}
-
-// Type guards
-function isStreamFinishError(error: unknown): error is Error {
-  return error instanceof Error && error.message.includes('STREAM_FINISH_ERROR');
-}
-
-function isTypeError(error: unknown): error is TypeError {
-  return error instanceof TypeError;
-}
-
-function isAPICallError(error: unknown): error is APICallError {
-  return APICallError.isInstance(error);
-}
-
-// Cache student details to avoid repeated DB calls
-const studentDetailsCache = new Map<string, any>();
-
+/**
+ * Retrieves student details from database or cache
+ */
 async function getStudentDetails(supabase: any, userId: string, userName: string) {
   if (studentDetailsCache.has(userId)) {
     return studentDetailsCache.get(userId);
@@ -147,7 +132,9 @@ async function getStudentDetails(supabase: any, userId: string, userName: string
   return details;
 }
 
-// Optimize the system prompt to be more concise
+/**
+ * Generates appropriate system prompt based on context
+ */
 function getSystemPrompt(
   messages: any[],
   userRole?: string,
@@ -186,16 +173,6 @@ function getSystemPrompt(
   if (userRole === 'Student' && studentDetails) {
     // Add only essential student info to reduce tokens
     prompt += `\nStudent: ${studentDetails.name || 'N/A'}, Grade: ${studentDetails.grade || 'N/A'}`;
-    
-    if (assignedAssessment?.evaluation) {
-      // Only include the most critical assessment data
-      const evalSummary = {
-        score: assignedAssessment.evaluation.score,
-        // Limit to just one improvement area to save tokens
-        area: assignedAssessment.evaluation.improvementAreas?.[0] || ''
-      };
-      prompt += `\nAssessment: ${JSON.stringify(evalSummary)}`;
-    }
   }
   
   // Cache the prompt if it doesn't contain personalized data
@@ -209,6 +186,9 @@ function getSystemPrompt(
   return prompt;
 }
 
+/**
+ * Saves tool outputs to the database
+ */
 async function saveToolOutputs(
   supabase: any,
   messageId: string,
@@ -249,31 +229,37 @@ async function saveToolOutputs(
     }
   } catch (err) {
     console.error('Failed to save tool outputs:', err);
-    // Don't throw here, just log the error so the stream can continue
   }
 }
 
-// Add this interface with the existing interfaces
-interface ScheduleData {
-  day: number;
-  topicHeading: string;
-  schedule: {
-    type: string;
-    title: string;
-    content: string;
-    timeAllocation: number;
-  };
-  learningOutcomes: string[];
+/**
+ * Periodic cleanup function for stalled connections
+ */
+function cleanupStalledConnections() {
+  const now = Date.now();
+  const timeout = 60000; // 60 seconds timeout
+  
+  activeConnections.forEach((connection, id) => {
+    if (now - (connection.lastActivity || connection.timestamp) > timeout) {
+      if (connection.controller) {
+        try {
+          connection.controller.abort();
+        } catch (err) {
+          console.error(`Error aborting controller for connection ${id}:`, err);
+        }
+      }
+      activeConnections.delete(id);
+    }
+  });
 }
 
-// Add a connection manager to track active connections
-const activeConnections = new Map();
+//-----------------------------------------------------
+// MAIN API HANDLER
+//-----------------------------------------------------
 
 export async function POST(request: Request) {
-
   // Generate a unique request ID for tracking this connection
   const requestId = crypto.randomUUID();
-
   let controller: AbortController | null = null;
   
   try {
@@ -287,23 +273,21 @@ export async function POST(request: Request) {
       status: 'processing'
     });
     
-
+    // Initialize Supabase client and verify user
     const supabase = await createClient();
     const { data: { user }, error } = await supabase.auth.getUser();
     
-
     if (error || !user) {
       return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
     }
 
     const userName = user.user_metadata?.name; 
-
-    // Get user role from metadata
     const userRole = user.user_metadata?.role;
 
+    // Parse request body
     const { messages, id: threadId, language = 'english', teachingMode = false, lessonPlanId, scheduleData } = await request.json();
 
-    // Check if the input is unreasonably large before processing
+    // Check input size
     const lastUserMessage = messages.find((m: any) => m.role === 'user')?.content || '';
     const inputTokenEstimate = estimateTokens(lastUserMessage);
     console.log(`Token estimate for user input: ${inputTokenEstimate}`);
@@ -315,7 +299,11 @@ export async function POST(request: Request) {
       }, { status: 413 });
     }
 
-    // Fetch student details if role is Student
+    //-----------------------------------------------------
+    // USER CONTEXT RETRIEVAL
+    //-----------------------------------------------------
+    
+    // Fetch student details if needed
     let studentDetails = null;
     if (userRole === 'Student' && !studentDetailsCache.has(user.id)) {
       studentDetails = await getStudentDetails(supabase, user.id, userName);
@@ -323,7 +311,7 @@ export async function POST(request: Request) {
       studentDetails = studentDetailsCache.get(user.id);
     }
 
-    // Only fetch recent assessment if needed
+    // Fetch recent assessment if needed
     if (userRole === 'Student' && !studentDetails?.assignedAssessment) {
       const { data: assignedData } = await supabase
         .from('assigned_assessments')
@@ -338,6 +326,10 @@ export async function POST(request: Request) {
       }
     }
 
+    //-----------------------------------------------------
+    // SECURITY VERIFICATION
+    //-----------------------------------------------------
+    
     // Verify thread belongs to user
     if (threadId) {
       const { data: thread, error: threadError } = await supabase
@@ -366,7 +358,7 @@ export async function POST(request: Request) {
       return Response.json({ error: 'Invalid messages array' }, { status: 400 });
     }
 
-    // Create a clean copy of messages to avoid potential issues
+    // Create clean copy of messages
     const cleanMessages = messages.map(m => ({
       role: m.role,
       content: m.content,
@@ -375,24 +367,29 @@ export async function POST(request: Request) {
       ...(m.toolCallId ? { toolCallId: m.toolCallId } : {})
     }));
 
+    //-----------------------------------------------------
+    // AI STREAM SETUP
+    //-----------------------------------------------------
+    
     // Setup for controlled stream termination
     let streamFinished = false;
     let streamError: Error | null = null;
 
+    // Generate system prompt
     let systemPrompt = getSystemPrompt(
       cleanMessages, 
       userRole, 
       language as Language, 
       teachingMode, 
       studentDetails, 
-      studentDetails?.assignedAssessment ?? undefined // Fixed: ensure null is converted to undefined
+      studentDetails?.assignedAssessment ?? undefined
     );
 
-    // Log the system prompt token usage for monitoring
+    // Log token usage
     const systemPromptTokens = estimateTokens(systemPrompt);
     console.log(`System prompt tokens: ${systemPromptTokens}`);
     
-    // Add safeguard against excessively large system prompts
+    // Safeguard against large system prompts
     if (systemPromptTokens > TOKEN_USAGE_LIMIT) {
       console.warn(`System prompt exceeds token limit: ${systemPromptTokens} tokens`);
       // Use a simplified prompt instead
@@ -401,6 +398,10 @@ export async function POST(request: Request) {
         "You are a learning buddy. Provide helpful but concise responses.";
     }
 
+    //-----------------------------------------------------
+    // STREAM HANDLER CONFIGURATION
+    //-----------------------------------------------------
+    
     const streamHandler = streamText({
       model: anthropic('claude-3-5-haiku-20241022'),
       system: systemPrompt,
@@ -408,17 +409,15 @@ export async function POST(request: Request) {
       maxSteps: 5,
       tools,
       experimental_telemetry: { isEnabled: true },
-      // Optimize token usage by limiting output length more aggressively
-      temperature: (() => {        
-        return teachingMode ? 0.3 : 0.5;
-      })(),
+      temperature: teachingMode ? 0.3 : 0.5,
       maxTokens: teachingMode ? 1000 : 400, // Reduced token limits to save tokens
       experimental_transform: smoothStream({
         delayInMs: 5,
         chunking: 'word',
       }),
+      
+      // Handle completion of each step in the AI's generation
       onStepFinish: async ({ text, toolCalls, toolResults }) => {
-    
         const connectionInfo = activeConnections.get(requestId);
         if (connectionInfo) {
           connectionInfo.status = 'stepComplete';
@@ -430,6 +429,7 @@ export async function POST(request: Request) {
         try {
           const messageId = crypto.randomUUID();
     
+          // Save the assistant's message
           const { error: messageError } = await supabase
             .from('chat_messages')
             .insert({
@@ -444,6 +444,7 @@ export async function POST(request: Request) {
             return;
           }
     
+          // Record tool calls and their results
           const toolCallsWithResults = toolCalls.map(call => {
             const result = toolResults?.find(r => r.toolCallId === call.toolCallId);
             return {
@@ -461,8 +462,9 @@ export async function POST(request: Request) {
           console.error('Error in onStepFinish:', err);
         }
       },
+      
+      // Handle stream completion
       onFinish: async ({ usage, finishReason }) => {
-    
         streamFinished = true;
         
         const connectionInfo = activeConnections.get(requestId);
@@ -482,10 +484,11 @@ export async function POST(request: Request) {
             })}`);
           }
         
+          // Log token usage metrics
           if (usage) {
             await logTokenUsage(
               'Learning Buddy',
-              'Claude 3.5 Sonnet',
+              'Claude 3.5 Haiku',
               usage.promptTokens || 0,
               usage.completionTokens || 0,
               user.email || undefined
@@ -496,12 +499,17 @@ export async function POST(request: Request) {
         } catch (err) {
           console.error('Error in onFinish:', err);
         } finally {
+          // Clean up connection after delay
           setTimeout(() => {
             activeConnections.delete(requestId);
           }, 5000);
         }
       },
     });
+    
+    //-----------------------------------------------------
+    // STREAM HANDLING AND ERROR MANAGEMENT
+    //-----------------------------------------------------
     
     try {
       const response = streamHandler.toDataStreamResponse();
@@ -510,11 +518,11 @@ export async function POST(request: Request) {
         throw new Error('No response stream available');
       }
       
-      // Enhanced transform stream with better error handling
+      // Transform stream with error handling
       const transformStream = new TransformStream({
         transform(chunk, controller) {
           try {
-            // Update connection activity timestamp
+            // Update connection timestamp
             const connectionInfo = activeConnections.get(requestId);
             if (connectionInfo) {
               connectionInfo.lastActivity = Date.now();
@@ -523,20 +531,17 @@ export async function POST(request: Request) {
             if (chunk.type === 'error') {
               console.error('Stream chunk error:', chunk.error);
               
-              // For any errors, try to handle them gracefully
+              // Handle errors gracefully
               controller.enqueue({
                 type: 'text',
                 text: '\n\nI apologize, but I encountered an issue while processing your request. Please try again or rephrase your question.\n\n'
               });
-              
-              // Instead of calling controller.error(), we'll try to continue the stream
               return;
             }
             
             controller.enqueue(chunk);
           } catch (err) {
             console.error(`Request ${requestId}: Transform error:`, err);
-            // Don't call controller.error() here either
             controller.enqueue({
               type: 'text',
               text: '\n\nSorry, there was an error processing part of this response.\n\n'
@@ -544,13 +549,13 @@ export async function POST(request: Request) {
           }
         },
         flush(controller) {
-          // Make sure the stream ends gracefully
+          // Ensure stream ends properly
           try {
             controller.terminate();
           } catch (err) {
             console.error(`Request ${requestId}: Error terminating controller:`, err);
           } finally {
-            // Ensure connection is cleaned up
+            // Clean up connection
             setTimeout(() => {
               activeConnections.delete(requestId);
             }, 1000);
@@ -560,7 +565,7 @@ export async function POST(request: Request) {
 
       const stream = response.body.pipeThrough(transformStream);
 
-      // Create a response with the transformed stream
+      // Return the response with the transformed stream
       return new Response(stream, {
         status: response.status,
         headers: {
@@ -568,10 +573,15 @@ export async function POST(request: Request) {
           'Connection': 'keep-alive',
           'Cache-Control': 'no-cache',
           'Content-Type': 'text/event-stream',
-          'X-Request-ID': requestId // Add request ID to response headers
+          'X-Request-ID': requestId // Include request ID in headers
         },
         statusText: response.statusText,
       });
+      
+    //-----------------------------------------------------
+    // STREAM ERROR HANDLING
+    //-----------------------------------------------------
+    
     } catch (streamErr: unknown) {
       console.error(`Request ${requestId}: Detailed stream error:`, {
         error: streamErr,
@@ -580,87 +590,23 @@ export async function POST(request: Request) {
         stack: streamErr instanceof Error ? streamErr.stack : undefined
       });
 
-      // Clean up the controller if there was an error
-      if (controller && !streamFinished) {
-        try {
-          controller.abort();
-        } catch (abortErr) {
-          console.error(`Request ${requestId}: Error aborting controller:`, abortErr);
-        }
-      }
-
-      // Remove from active connections map
+      // Remove from connections map
       activeConnections.delete(requestId);
 
-      // Handle stream finish errors
-      if (isStreamFinishError(streamErr)) {
-        try {
-          const errorMessage = streamErr.message;
-          const jsonStartIndex = errorMessage.indexOf('{');
-          if (jsonStartIndex >= 0) {
-            const errorData = JSON.parse(errorMessage.substring(jsonStartIndex)) as StreamFinishError;
-            return Response.json({
-              error: 'AI Stream Error',
-              details: 'The AI stream ended unexpectedly',
-              code: 'STREAM_FINISH_ERROR',
-              usage: errorData.usage || { promptTokens: 0, completionTokens: 0 },
-              timestamp: errorData.timestamp || new Date().toISOString(),
-              finishReason: errorData.finishReason || 'error',
-              recoverable: true
-            }, { status: 500 });
-          }
-        } catch (parseErr) {
-          console.error('Error parsing stream finish error:', parseErr);
-          // Fallback for parsing errors
-          return Response.json({
-            error: 'AI Stream Error',
-            details: 'The AI stream ended unexpectedly (parsing error)',
-            code: 'STREAM_FINISH_ERROR',
-            message: streamErr.message,
-            recoverable: true
-          }, { status: 500 });
-        }
-      }
-
-      // Classify stream errors
-      if (isTypeError(streamErr)) {
-        return Response.json({
-          error: 'Stream processing error',
-          details: streamErr.message,
-          code: 'STREAM_TYPE_ERROR',
-          recoverable: false
-        }, { status: 500 });
-      }
-      
-      if (isAPICallError(streamErr)) {
-        return Response.json({
-          error: 'AI API error during streaming',
-          details: streamErr.message,
-          code: 'STREAM_AI_ERROR',
-          statusCode: streamErr.statusCode,
-          recoverable: streamErr.isRetryable
-        }, { status: streamErr.statusCode || 500 });
-      }
-
-      // Handle reported streamError specifically
-      if (streamError) {
-        return Response.json({
-          error: 'AI Stream Error',
-          details: 'The AI stream reported an error during processing',
-          code: 'STREAM_REPORTED_ERROR',
-          message: streamError as any,
-          recoverable: true
-        }, { status: 500 });
-      }
-
+      // Default stream error response
       return Response.json({
         error: 'Stream error',
-        details: streamErr instanceof Error ? (streamErr as any).message : String(streamErr), // modified line
+        details: streamErr instanceof Error ? (streamErr as any).message : String(streamErr),
         code: 'STREAM_ERROR',
         recoverable: true,
         message: 'Please try your request again.'
       }, { status: 500 });
     }
+    
+  //-----------------------------------------------------
+  // GENERAL ERROR HANDLING
+  //-----------------------------------------------------
+  
   } catch (err: any) {
     console.error(`Request ${requestId}: General error in POST /api/gen-chat:`, err);
     console.error('COMPREHENSIVE ERROR LOGGING:', {
@@ -670,7 +616,7 @@ export async function POST(request: Request) {
       errorCode: err.code
     });
     
-    // Clean up the controller if there was an error
+    // Clean up controller
     if (controller) {
       try {
         controller.abort();
@@ -679,62 +625,8 @@ export async function POST(request: Request) {
       }
     }
     
-    // Remove from active connections map
+    // Remove from connections map
     activeConnections.delete(requestId);
-    
-    // Enhanced error classification
-    if (err instanceof TypeError) {
-      return Response.json({
-        error: 'Invalid request or parameters',
-        details: err.message,
-        code: 'TYPE_ERROR'
-      }, { status: 400 });
-    }
-
-    // Handle AI API Call errors
-    if (APICallError.isInstance(err)) {
-      return Response.json({
-        error: 'AI API Call Error',
-        details: err.message,
-        code: 'AI_API_ERROR',
-        statusCode: err.statusCode,
-        url: err.url,
-        isRetryable: err.isRetryable,
-        responseBody: err.responseBody,
-      }, { status: err.statusCode || 500 });
-    }
-
-    // Handle message processing errors
-    if (err.messageId && typeof err.messageId === 'string') {
-      return Response.json({
-        error: 'Message processing error',
-        messageId: err.messageId,
-        details: err.message || 'Error processing message',
-        code: 'MESSAGE_ERROR'
-      }, { status: 400 });
-    }
-
-    // Enhance finish reason error handling in the general catch block
-    if (err.finishReason === 'error') {
-      return Response.json({
-        error: 'AI model error',
-        details: 'The AI model encountered an error during processing',
-        usage: err.usage || { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-        code: 'MODEL_ERROR',
-        finishReason: err.finishReason,
-        recoverable: true
-      }, { status: 500 });
-    }
-
-    // Handle connection reset errors
-    if (err.code === 'ECONNRESET') {
-      return Response.json({
-        error: 'Connection reset',
-        details: 'The connection was reset while streaming the response',
-        code: 'ECONNRESET',
-        recoverable: true
-      }, { status: 500 });
-    }
 
     // Default error response
     return Response.json({
@@ -746,26 +638,11 @@ export async function POST(request: Request) {
   }
 }
 
-// Add a cleanup function for stalled connections (can be called periodically)
-function cleanupStalledConnections() {
-  const now = Date.now();
-  const timeout = 60000; // 60 seconds timeout
-  
-  activeConnections.forEach((connection, id) => {
-    if (now - (connection.lastActivity || connection.timestamp) > timeout) {
-      if (connection.controller) {
-        try {
-          connection.controller.abort();
-        } catch (err) {
-          console.error(`Error aborting controller for connection ${id}:`, err);
-        }
-      }
-      activeConnections.delete(id);
-    }
-  });
-}
+//-----------------------------------------------------
+// SCHEDULED TASKS
+//-----------------------------------------------------
 
-// Optional: Set up periodic cleanup
+// Set up periodic cleanup of stalled connections
 if (typeof setInterval !== 'undefined') {
   // Only run in environments that support setInterval
   setInterval(cleanupStalledConnections, 30000); // Check every 30 seconds

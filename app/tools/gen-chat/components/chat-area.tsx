@@ -9,6 +9,10 @@ import { ChatAreaProps } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { ToolRenderer } from "./ToolRenderer";
 
+/**
+ * ChatArea component that displays messages and tools in a split-screen layout
+ * Handles message rendering, audio playback, and tool interactions
+ */
 export const ChatArea = ({
   messages,
   input,
@@ -37,12 +41,21 @@ export const ChatArea = ({
   generatedAssessments,
   pendingAssessments,
   handleAssessmentGeneration,
-  assessmentIds, // Add this line
+  assessmentIds,
 }: ChatAreaProps) => {
+  // Refs for managing DOM elements and state
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const toolsContentRef = useRef<HTMLDivElement>(null);
+  const ttsControllerRef = useRef<AbortController | null>(null);
+  const activeFetchRequests = useRef<AbortController[]>([]);
+  const prevIsLoadingRef = useRef(isLoading);
+
+  // State management
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
   const [isTalking, setIsTalking] = useState(false);
   const [playingMessageId, setPlayingMessageId] = useState<string | null>(null);
+
+  // Custom hooks for audio functionality
   const { stop: stopAudio, play: playAudio } = useNowPlaying();
   const {
     isAudioEnabled,
@@ -50,19 +63,13 @@ export const ChatArea = ({
     hasUserInteracted,
     markUserInteraction,
   } = useAudioSettings();
-  const toolsContentRef = useRef<HTMLDivElement>(null);
-  const ttsControllerRef = useRef<AbortController | null>(null);
-  // Add a ref to track active fetch requests
-  const activeFetchRequests = useRef<AbortController[]>([]);
 
-  // Add ref to track previous isLoading state
-  const prevIsLoadingRef = useRef(isLoading);
-
+  // Extract tool invocations from all messages
   const toolInvocations = messages.flatMap(
     (message) => message.toolInvocations || []
   );
 
-  // Clean up all active requests when component unmounts
+  // Cleanup function for component unmount
   useEffect(() => {
     return () => {
       // Clean up TTS controller if active
@@ -97,7 +104,7 @@ export const ChatArea = ({
     }
   }, [toolInvocations.length]);
 
-  // Handle talking state
+  // Handle talking state animation
   useEffect(() => {
     if (messages.length > 0) {
       setLastMessageTime(Date.now());
@@ -107,12 +114,12 @@ export const ChatArea = ({
     }
   }, [messages]);
 
-  // Scroll to bottom on new messages
+  // Auto-scroll chat to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Add event listeners to capture user interaction with the page
+  // Set up event listeners for user interaction detection
   useEffect(() => {
     const handleUserInteraction = () => {
       markUserInteraction();
@@ -132,7 +139,31 @@ export const ChatArea = ({
     };
   }, [markUserInteraction]);
 
-  // Handle text-to-speech with improved request management
+  // Watch for loading state changes to trigger TTS when assistant stops generating
+  useEffect(() => {
+    if (
+      prevIsLoadingRef.current &&
+      !isLoading &&
+      messages.length > 0 &&
+      isAudioEnabled &&
+      hasUserInteracted
+    ) {
+      const lastMessage = messages[messages.length - 1];
+      if (
+        lastMessage.role === "assistant" &&
+        typeof lastMessage.content === "string" &&
+        !lastMessage.fromHistory
+      ) {
+        handleTTS(lastMessage.id, lastMessage.content);
+      }
+    }
+    prevIsLoadingRef.current = isLoading;
+  }, [isLoading, messages, isAudioEnabled, hasUserInteracted]);
+
+  /**
+   * Handles text-to-speech functionality for assistant messages
+   * Manages playing and stopping audio with proper request cleanup
+   */
   const handleTTS = async (messageId: string, text: string) => {
     try {
       if (playingMessageId === messageId) {
@@ -152,7 +183,7 @@ export const ChatArea = ({
         return;
       }
 
-      // Clean text for TTS
+      // Clean text for TTS - remove markdown formatting
       const cleanText = text
         .replace(/\[.*?\]/g, "") // Remove markdown links
         .replace(/\*\*(.*?)\*\*/g, "$1") // Remove bold
@@ -211,31 +242,16 @@ export const ChatArea = ({
     }
   };
 
-  // Watch for loading state changes to trigger TTS only when finishing text generation.
-  useEffect(() => {
-    if (
-      prevIsLoadingRef.current &&
-      !isLoading &&
-      messages.length > 0 &&
-      isAudioEnabled &&
-      hasUserInteracted
-    ) {
-      const lastMessage = messages[messages.length - 1];
-      if (
-        lastMessage.role === "assistant" &&
-        typeof lastMessage.content === "string" &&
-        !lastMessage.fromHistory
-      ) {
-        handleTTS(lastMessage.id, lastMessage.content);
-      }
-    }
-    prevIsLoadingRef.current = isLoading;
-  }, [isLoading, messages, isAudioEnabled, hasUserInteracted]);
-
+  /**
+   * Updates the generated videos state when a video is completed
+   */
   const handleVideoComplete = (toolCallId: string, videoUrl: string) => {
     setGeneratedVideos({ ...generatedVideos, [toolCallId]: videoUrl });
   };
 
+  /**
+   * Toggles audio on/off and handles stopping any playing audio
+   */
   const handleAudioToggle = () => {
     if (isAudioEnabled && playingMessageId) {
       stopAudio();
@@ -244,6 +260,10 @@ export const ChatArea = ({
     toggleAudio();
   };
 
+  /**
+   * Handles example prompts from the welcome screen
+   * Sets the input value and triggers form submission
+   */
   const handleExampleClick = async (examplePrompt: string) => {
     onInputChange(examplePrompt);
     // Allow state to update before submitting
@@ -259,6 +279,9 @@ export const ChatArea = ({
     }, 10);
   };
 
+  /**
+   * Renders an individual message with proper styling based on role
+   */
   const renderMessage = (message: any) => (
     <div
       key={message.id}
@@ -305,7 +328,7 @@ export const ChatArea = ({
 
   return (
     <div className="flex w-full h-screen">
-      {/* Chat Panel */}
+      {/* Chat Panel - Left side */}
       <div className="w-[50%] flex-shrink-0 flex flex-col h-full border-x">
         <div className="flex items-center justify-between flex-shrink-0 px-4 py-2 border-b bg-white sticky top-0 z-10">
           <div className="flex items-center gap-2">
@@ -416,12 +439,12 @@ export const ChatArea = ({
             onInputChange={onInputChange}
             onSubmit={onSubmit}
             isOwner={isOwner}
-            isTeachingMode={isTeachingMode} // Add this line to pass the prop
+            isTeachingMode={isTeachingMode}
           />
         </div>
       </div>
 
-      {/* Tools Panel */}
+      {/* Tools Panel - Right side */}
       <div className="w-[50%] h-full flex-shrink-0 border-l bg-white overflow-hidden">
         <div className="h-full flex flex-col">
           <h2 className="flex-shrink-0 text-lg font-semibold p-4 border-b bg-white sticky top-0 z-10">
@@ -451,7 +474,7 @@ export const ChatArea = ({
                 generatedAssessments={generatedAssessments}
                 pendingAssessments={pendingAssessments}
                 handleAssessmentGeneration={handleAssessmentGeneration}
-                assessmentIds={assessmentIds} // Add this line
+                assessmentIds={assessmentIds}
               />
             ))}
           </div>

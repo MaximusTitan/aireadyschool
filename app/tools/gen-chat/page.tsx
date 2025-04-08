@@ -1,8 +1,8 @@
 "use client";
 
-import { useChat } from "ai/react";
+import { useChat } from "@ai-sdk/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useRef, useState, useCallback, useEffect, Suspense } from "react"; // Add Suspense import
+import { useRef, useState, useCallback, useEffect, Suspense } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import { ChatArea } from "./components/chat-area";
 import { useChatThread } from "@/app/tools/gen-chat/hooks/useChatThread";
@@ -14,10 +14,16 @@ import { useLanguageSettings } from "@/app/tools/gen-chat/hooks/useLanguageSetti
 import { useTools } from "@/app/tools/gen-chat/hooks/useTools";
 import { createClient } from "@/utils/supabase/client";
 
+/**
+ * Main component for the chat page content
+ * Manages state and functionality for the chat interface
+ */
 function ChatPageContent() {
   const router = useRouter();
   const { setOpen } = useSidebar();
   const { language } = useLanguageSettings();
+
+  // Thread management hooks and state
   const {
     threadId,
     threads,
@@ -30,8 +36,11 @@ function ChatPageContent() {
     setCurrentMessages,
     isOwner,
   } = useChatThread();
+
+  // User role state
   const [userRole, setUserRole] = useState<string | null>(null);
 
+  // Fetch user data on component mount
   useEffect(() => {
     const fetchUser = async () => {
       const supabase = createClient();
@@ -47,15 +56,19 @@ function ChatPageContent() {
     fetchUser();
   }, []);
 
-  // Replace direct window usage with useSearchParams to avoid "window is not defined"
+  // Extract URL parameters
   const searchParams = useSearchParams();
   const lessonPlanIdParam = searchParams.get("lessonPlanId");
   const scheduleDataParam = searchParams.get("scheduleData");
   const teachingModeParam = searchParams.get("teachingMode") === "true";
   const userInputParam = searchParams.get("userInput");
-  const userInputInitRef = useRef(false);
 
-  // State management
+  // References to track initialization states
+  const userInputInitRef = useRef(false);
+  const initializationRef = useRef(false);
+  const threadInitRef = useRef(false);
+
+  // UI state
   const [showCommands, setShowCommands] = useState(false);
   const [lastGeneratedImage, setLastGeneratedImage] = useState<string | null>(
     null
@@ -63,21 +76,20 @@ function ChatPageContent() {
   const [simulationCode, setSimulationCode] = useState<string | null>(null);
   const simulationCodeRef = useRef<string | null>(null);
   const chatRef = useRef<any>(null);
-  // Replace initial state with URL value:
   const [isTeachingMode, setIsTeachingMode] = useState(teachingModeParam);
 
-  // Add this function to handle teaching mode
+  // Toggle teaching mode handler
   const handleTeachingModeToggle = () => {
     setIsTeachingMode(!isTeachingMode);
   };
 
-  // Initialize tools hook
+  // Initialize tools for chat functionality
   const tools = useTools({
     lastGeneratedImage,
     setLastGeneratedImage,
   });
 
-  // Add lessonPlanId to chat body
+  // Set up chat with AI backend
   const chat = useChat({
     api: "/api/gen-chat",
     id: threadId,
@@ -91,10 +103,11 @@ function ChatPageContent() {
       id: threadId,
       language,
       teachingMode: isTeachingMode,
-      lessonPlanId: lessonPlanIdParam, // Add this line
+      lessonPlanId: lessonPlanIdParam,
     },
     onFinish: useCallback(
       async (message: Message) => {
+        // Save completed message to the database
         const messageToSave: ChatMessage = {
           id: String(Date.now()),
           role: message.role as ChatMessage["role"],
@@ -114,15 +127,11 @@ function ChatPageContent() {
     ),
   });
 
-  // Store chat instance in ref
+  // Store chat reference and extract chat functions
   chatRef.current = chat;
   const { messages, input, setInput, append, isLoading, setMessages } = chat;
 
-  // Add initialization control
-  const initializationRef = useRef(false);
-  const threadInitRef = useRef(false);
-
-  // Side effects
+  // Initialize sidebar state and handle URL thread parameter
   useEffect(() => {
     if (initializationRef.current) return;
     initializationRef.current = true;
@@ -135,6 +144,7 @@ function ChatPageContent() {
     }
   }, [setOpen]);
 
+  // Update messages when currentMessages changes
   useEffect(() => {
     if (currentMessages) {
       setMessages(
@@ -148,7 +158,9 @@ function ChatPageContent() {
     }
   }, [currentMessages, setMessages]);
 
-  // Add this helper function
+  /**
+   * Format lesson plan data into a chat message
+   */
   const formatLessonPlanMessage = (lessonPlan: any) => {
     return (
       `Hey buddy, "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} (I'm from grade ${lessonPlan.grade}).\n\n` +
@@ -161,7 +173,7 @@ function ChatPageContent() {
     );
   };
 
-  // Modify the lesson plan initialization effect
+  // Initialize lesson plan when URL parameters are present
   useEffect(() => {
     const initializeLessonPlan = async () => {
       if (threadInitRef.current || !lessonPlanIdParam || messages.length > 0)
@@ -187,13 +199,10 @@ function ChatPageContent() {
         let messageContent;
 
         if (userInputParam) {
-          // If userInput is present, use it directly
           messageContent = userInputParam;
         } else {
-          // Otherwise use the formatted lesson plan message
           messageContent = formatLessonPlanMessage(lessonPlan);
 
-          // Add schedule-specific context if available
           if (scheduleDataParam) {
             const scheduleData = JSON.parse(
               decodeURIComponent(scheduleDataParam)
@@ -234,9 +243,10 @@ function ChatPageContent() {
     router,
     isTeachingMode,
     saveMessage,
-    userInputParam, // Add userInputParam to dependencies
+    userInputParam,
   ]);
 
+  // Handle user input from URL parameter
   useEffect(() => {
     if (userInputInitRef.current || !userInputParam) return;
     userInputInitRef.current = true;
@@ -251,7 +261,9 @@ function ChatPageContent() {
     ]);
   }, [userInputParam, setMessages]);
 
-  // Update handleThreadSelect to handle 'new' thread parameter
+  /**
+   * Handle thread selection and loading
+   */
   const handleThreadSelect = async (selectedThreadId: string) => {
     if (selectedThreadId === "new") {
       const newThreadId = await startNewThread();
@@ -274,6 +286,9 @@ function ChatPageContent() {
     }
   };
 
+  /**
+   * Handle thread deletion
+   */
   const handleDeleteThread = async (threadId: string) => {
     if (confirm("Are you sure you want to delete this chat?")) {
       try {
@@ -289,6 +304,9 @@ function ChatPageContent() {
     }
   };
 
+  /**
+   * Create a new chat thread
+   */
   const handleNewThread = async () => {
     try {
       const newThreadId = await startNewThread();
@@ -299,9 +317,10 @@ function ChatPageContent() {
     }
   };
 
-  // Handle direct commands from the user
+  /**
+   * Process direct command (commands that start with /)
+   */
   const processDirectCommand = async (command: string) => {
-    // Ensure thread exists
     if (!threadId) {
       const newThreadId = await createThread();
       await new Promise((resolve) => setTimeout(resolve, 100));
@@ -317,7 +336,9 @@ function ChatPageContent() {
     }
   };
 
-  // Handle message submission
+  /**
+   * Handle message submission from the chat input
+   */
   const handleMessageSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim()) return;
@@ -335,7 +356,6 @@ function ChatPageContent() {
         return;
       }
 
-      // Create message content once
       const messageContent = isTeachingMode
         ? `Teach me about: ${input}`
         : input;
@@ -366,13 +386,12 @@ function ChatPageContent() {
         } else {
           await chatRef.current?.append({
             ...userMessage,
-            content: messageContent, // Use the same content
+            content: messageContent,
           });
         }
 
         setInput("");
         if (isTeachingMode) {
-          // Automatically switch to interactive mode after generating the lesson
           setIsTeachingMode(false);
         }
       } catch (error) {
@@ -383,7 +402,9 @@ function ChatPageContent() {
     }
   };
 
-  // Process tool answers
+  /**
+   * Process tool answers and add them to the chat
+   */
   const processToolAnswer = async (answer: any) => {
     await append(answer);
   };
@@ -440,12 +461,16 @@ function ChatPageContent() {
   );
 }
 
-// Create a loading component
+/**
+ * Loading component displayed while the main content is loading
+ */
 function Loading() {
   return <div className="p-4">Loading...</div>;
 }
 
-// Main page component with Suspense boundary
+/**
+ * Main page component with Suspense for better loading experience
+ */
 export default function Page() {
   return (
     <Suspense fallback={<Loading />}>

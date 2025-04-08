@@ -13,7 +13,8 @@ import {
 import ReactMarkdown from "react-markdown";
 import { Day, ScheduleItem, GeneratedNotes, UploadedFile } from "../types";
 import { Fragment } from "react";
-import DocumentGenerator from "../../document-generator/DocumentGeneratorComponent";
+import { Textarea } from "@/components/ui/textarea";
+import { Edit2 } from "lucide-react";
 
 interface LessonContentProps {
   day: Day;
@@ -27,6 +28,7 @@ interface LessonContentProps {
   onChatWithBuddy: (item: ScheduleItem, day: Day) => void;
   showDocumentGenerator?: boolean;
   setShowDocumentGenerator?: (show: boolean) => void;
+  onNotesEdit?: (activityTitle: string, notes: string) => void;
 }
 
 export function LessonContent({
@@ -41,7 +43,29 @@ export function LessonContent({
   onChatWithBuddy,
   showDocumentGenerator,
   setShowDocumentGenerator,
+  onNotesEdit = () => {},
 }: LessonContentProps) {
+  const [editingNotes, setEditingNotes] = useState<{
+    [key: string]: { editing: boolean; content: string };
+  }>({});
+
+  const handleEditNotes = (activityTitle: string, currentNotes: string) => {
+    setEditingNotes((prev) => ({
+      ...prev,
+      [activityTitle]: { editing: true, content: currentNotes },
+    }));
+  };
+
+  const handleSaveNotes = (activityTitle: string) => {
+    if (editingNotes[activityTitle]) {
+      onNotesEdit?.(activityTitle, editingNotes[activityTitle].content);
+      setEditingNotes((prev) => ({
+        ...prev,
+        [activityTitle]: { ...prev[activityTitle], editing: false },
+      }));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="mb-8">
@@ -170,7 +194,7 @@ export function LessonContent({
                             }
                           >
                             {generatedNotes[item.title]
-                              ? "See Notes"
+                              ? "Generate More Notes"
                               : "Generate Notes"}
                           </Button>
                         )}
@@ -191,14 +215,58 @@ export function LessonContent({
                               <div className="space-y-4 pt-2">
                                 {generatedNotes[item.title] && (
                                   <div className="bg-white rounded-lg border p-4">
-                                    <h4 className="font-medium text-gray-900 mb-2">
-                                      Generated Notes
-                                    </h4>
-                                    <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                                      <ReactMarkdown>
-                                        {generatedNotes[item.title]}
-                                      </ReactMarkdown>
+                                    <div className="flex justify-between items-center mb-2">
+                                      <h4 className="font-medium text-gray-900">
+                                        Generated Notes
+                                      </h4>
+                                      {userRole !== "Student" && (
+                                        <Button
+                                          size="sm"
+                                          variant="ghost"
+                                          onClick={() =>
+                                            handleEditNotes(
+                                              item.title,
+                                              generatedNotes[item.title]
+                                            )
+                                          }
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                      )}
                                     </div>
+                                    {editingNotes[item.title]?.editing ? (
+                                      <div className="space-y-2">
+                                        <Textarea
+                                          value={
+                                            editingNotes[item.title].content
+                                          }
+                                          onChange={(e) =>
+                                            setEditingNotes((prev) => ({
+                                              ...prev,
+                                              [item.title]: {
+                                                ...prev[item.title],
+                                                content: e.target.value,
+                                              },
+                                            }))
+                                          }
+                                          className="min-h-[200px]"
+                                        />
+                                        <Button
+                                          size="sm"
+                                          onClick={() =>
+                                            handleSaveNotes(item.title)
+                                          }
+                                        >
+                                          Save Notes
+                                        </Button>
+                                      </div>
+                                    ) : (
+                                      <div className="text-sm text-gray-600 whitespace-pre-wrap">
+                                        <ReactMarkdown>
+                                          {generatedNotes[item.title]}
+                                        </ReactMarkdown>
+                                      </div>
+                                    )}
                                   </div>
                                 )}
                                 {uploadedFiles[`material-${day.day}-${index}`]
@@ -302,7 +370,7 @@ export function LessonContent({
           {userRole === "Student" && day.assignment && (
             <Button
               onClick={() => setShowDocumentGenerator?.(true)}
-              className="w-full justify-center mt-2"
+              className="w-fit justify-center mt-2"
             >
               {day.assignment.document_id
                 ? "Open Document"
@@ -312,7 +380,7 @@ export function LessonContent({
           {userRole === "Teacher" && day.assignment?.document_id && (
             <Button
               onClick={() => setShowDocumentGenerator?.(true)}
-              className="w-full justify-center mt-2"
+              className="w-fit justify-center mt-2"
             >
               View Document
             </Button>

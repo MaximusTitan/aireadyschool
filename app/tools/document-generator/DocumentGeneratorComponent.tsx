@@ -72,9 +72,8 @@ import { useSearchParams } from "next/navigation";
 import { saveDocumentToDatabase } from "@/lib/db";
 import { Node } from "@tiptap/core";
 import { createClient } from "@/utils/supabase/client";
-import { useRouter } from "next/navigation"; // Add this import at the top
+import { useRouter } from "next/navigation";
 
-// Create a custom fontSize extension based on TextStyle
 const FontSize = Extension.create({
   name: "fontSize",
 
@@ -125,7 +124,6 @@ const FontSize = Extension.create({
   },
 });
 
-// Fix ResizableImageExtension definition
 const ResizableImageExtension = TiptapImage.extend({
   name: "resizableImage",
   inline: true,
@@ -184,8 +182,13 @@ interface DocumentGeneratorProps {
   initialTitle?: string;
   embedded?: boolean;
   initialDocumentId?: string | null;
-  onDocumentSave?: (documentId: string) => void;
-  readOnly?: boolean; // Add this line
+  onDocumentSave?: (docId: string) => void;
+  onDocumentSubmit?: (docId: string) => void;
+  readOnly?: boolean;
+  submitted?: boolean;
+  hiddenUntilSubmitted?: boolean;
+  isTeacherView?: boolean;
+  showSubmissionStatus?: boolean;
 }
 
 function FloatingAIMenu({
@@ -224,9 +227,14 @@ const DocumentGeneratorContent = ({
   embedded = false,
   initialDocumentId = null,
   onDocumentSave,
-  readOnly = false, // Add this line
+  onDocumentSubmit,
+  readOnly = false,
+  submitted = false,
+  hiddenUntilSubmitted = false,
+  isTeacherView = false,
+  showSubmissionStatus = false,
 }: DocumentGeneratorProps) => {
-  const router = useRouter(); // Add this near other hooks
+  const router = useRouter();
   const [documentTitle, setDocumentTitle] = useState(initialTitle);
   const [loading, setLoading] = useState(false);
   const [aiPromptVisible, setAiPromptVisible] = useState(false);
@@ -279,7 +287,7 @@ const DocumentGeneratorContent = ({
       TextStyle.configure(),
       FontFamily.configure(),
       Color,
-      FontSize, // Add our custom FontSize extension
+      FontSize,
       Underline,
       TextAlign.configure({
         types: ["heading", "paragraph"],
@@ -293,7 +301,6 @@ const DocumentGeneratorContent = ({
         },
       }),
       Placeholder.configure({
-        // Only show placeholder in first paragraph when document is empty
         placeholder: ({ node, pos }) => {
           if (node.type.name === "paragraph" && pos === 0) {
             return "Start typing...";
@@ -315,14 +322,11 @@ const DocumentGeneratorContent = ({
         spellcheck: "false",
       },
       handleDOMEvents: {
-        // Add DOM event handlers for image resizing
         mousedown: (view, event) => {
           const target = event.target as HTMLElement;
           if (target.tagName === "IMG") {
-            // Make the image selected
             const pos = view.posAtDOM(target, 0);
             if (pos) {
-              // Use the imported NodeSelection directly
               view.dispatch(
                 view.state.tr.setSelection(
                   NodeSelection.create(view.state.doc, pos)
@@ -336,19 +340,16 @@ const DocumentGeneratorContent = ({
       },
     },
     onUpdate: ({ editor }) => {
-      // Get current marks for updating UI
       const marks = editor.getAttributes("textStyle");
       if (marks.fontFamily) {
         setCurrentFontFamily(marks.fontFamily);
       }
 
       if (marks.fontSize) {
-        // Remove 'px' if it exists
         const size = marks.fontSize.replace(/px$/, "");
         setCurrentFontSize(size);
       }
 
-      // Show AI generation button if content exists
       const content = editor.getText();
       if (content && content.trim().length > 0 && !aiPromptVisible) {
         setAiPromptVisible(true);
@@ -365,17 +366,14 @@ const DocumentGeneratorContent = ({
     }
   }, [editor, readOnly]);
 
-  // Focus editor on page load
   useEffect(() => {
     if (editor) {
-      // Set focus when editor is ready
       setTimeout(() => {
         editor.commands.focus("end");
       }, 10);
     }
   }, [editor]);
 
-  // Handle click anywhere on the document area to focus editor
   const handleContainerClick = useCallback(
     (e: React.MouseEvent) => {
       if (editor && e.target === e.currentTarget) {
@@ -385,36 +383,14 @@ const DocumentGeneratorContent = ({
     [editor]
   );
 
-  // Debug function to check applied marks
-  const debugMarks = () => {
-    if (editor) {
-      console.log("Current marks:", editor.getAttributes("textStyle"));
-      console.log(
-        "Selected text:",
-        editor.state.selection.content().content.firstChild?.text
-      );
-
-      // Try applying a basic mark first to test selection
-      editor.chain().focus().toggleBold().run();
-
-      // Then try with fontSize
-      const fontSize = "24px";
-      editor.chain().focus().setMark("textStyle", { fontSize }).run();
-    }
-  };
-
-  // Improved font size change handler that properly applies the fontSize
   const handleFontSizeChange = (size: string) => {
     if (editor) {
       setCurrentFontSize(size);
-      // Make sure the size has px if it's just a number
       const fontSize = /^\d+$/.test(size) ? `${size}px` : size;
-      // Apply fontSize to the selected text or current position
       editor.chain().focus().setMark("textStyle", { fontSize }).run();
     }
   };
 
-  // Handle custom font size input
   const handleCustomFontSizeChange = (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -430,7 +406,6 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Handle font family change - Fixed version
   const handleFontFamilyChange = (fontFamily: string) => {
     if (editor) {
       setCurrentFontFamily(fontFamily);
@@ -438,21 +413,18 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Handle text color change
   const handleTextColorChange = (color: string) => {
     if (editor) {
       editor.chain().focus().setColor(color).run();
     }
   };
 
-  // Handle highlight color change
   const handleHighlightChange = (color: string) => {
     if (editor) {
       editor.chain().focus().toggleHighlight({ color }).run();
     }
   };
 
-  // Handle file upload for images with resizing
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file && editor) {
@@ -490,31 +462,26 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Function to trigger file input click
   const triggerFileInput = () => {
     fileInputRef.current?.click();
   };
 
-  // Modified function to generate document with AI
   const generateDocument = async () => {
     if (!editor) return;
 
     try {
       setLoading(true);
 
-      // Get current document content
       const currentContent = editor.getHTML();
       const contentText = editor.getText();
       const title = documentTitle;
 
-      // Only send request if there's actual content
       if (!contentText || contentText.trim() === "") {
         alert("Please add some content to the document first.");
         setLoading(false);
         return;
       }
 
-      // Call our API route that uses Groq with current content
       const response = await fetch("/api/generate-document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -530,7 +497,6 @@ const DocumentGeneratorContent = ({
       }
       const data = await response.json();
 
-      // Insert generated content
       if (data.content) {
         editor.commands.setContent(data.content);
       }
@@ -543,7 +509,6 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Function to generate and insert image with better error handling
   const generateImage = async () => {
     if (!imagePrompt || !editor) return;
 
@@ -551,7 +516,6 @@ const DocumentGeneratorContent = ({
       setGeneratingImage(true);
       setGeneratedImageUrl(null);
 
-      // Call our updated API endpoint
       const response = await fetch("/api/generate-image", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -561,10 +525,8 @@ const DocumentGeneratorContent = ({
       const data = await response.json();
 
       if (data.imageUrl) {
-        // Show the generated image
         setGeneratedImageUrl(data.imageUrl);
 
-        // Show fallback message if using fallback image
         if (data.fallback) {
           alert(
             "Using a placeholder image as AI image generation failed. You can try again or use this placeholder."
@@ -581,7 +543,6 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Enhanced image insertion with resizable capabilities
   const addGeneratedImage = () => {
     if (generatedImageUrl && editor) {
       const img = new Image();
@@ -615,17 +576,14 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Regenerate image with same prompt
   const regenerateImage = () => {
     if (imagePrompt) {
       generateImage();
     }
   };
 
-  // Add new state for tracking changes
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Modify the editor's onUpdate to track changes
   useEffect(() => {
     if (editor) {
       editor.on("update", ({ editor }) => {
@@ -634,7 +592,6 @@ const DocumentGeneratorContent = ({
     }
   }, [editor]);
 
-  // Function to export document as PDF with improved formatting
   const exportAsPDF = async () => {
     if (!editor || !editorRef.current) {
       toast.error("Cannot export: editor not initialized");
@@ -650,7 +607,6 @@ const DocumentGeneratorContent = ({
       setExportingPdf(true);
       toast.info("Preparing PDF export...");
 
-      // Define margins in millimeters for A4 page
       const margins = {
         top: 15,
         right: 10,
@@ -658,16 +614,14 @@ const DocumentGeneratorContent = ({
         left: 10,
       };
 
-      // Create a temporary container
       const container = document.createElement("div");
       container.style.position = "fixed";
       container.style.top = "0";
       container.style.left = "0";
-      container.style.width = "794px"; // A4 width at 96 DPI
+      container.style.width = "794px";
       container.style.background = "white";
       container.style.zIndex = "-9999";
 
-      // Create content div with styles
       const contentDiv = document.createElement("div");
       contentDiv.innerHTML = editor.getHTML();
       contentDiv.style.padding = `${margins.top}mm ${margins.right}mm ${margins.bottom}mm ${margins.left}mm`;
@@ -677,10 +631,8 @@ const DocumentGeneratorContent = ({
       contentDiv.style.fontFamily = "Arial, sans-serif";
       contentDiv.style.fontSize = "12pt";
 
-      // Apply styles to all elements
       contentDiv.querySelectorAll("*").forEach((element) => {
         if (element instanceof HTMLElement) {
-          // Copy computed styles from editor elements
           const editorElement = editor.view.dom.querySelector(
             `[data-node-type="${element.getAttribute("data-node-type")}"]`
           );
@@ -689,7 +641,6 @@ const DocumentGeneratorContent = ({
             element.style.cssText = styles.cssText;
           }
 
-          // Preserve specific styles
           if (element.style.fontWeight)
             element.style.fontWeight = element.style.fontWeight;
           if (element.style.fontStyle)
@@ -702,7 +653,6 @@ const DocumentGeneratorContent = ({
           if (element.style.textAlign)
             element.style.textAlign = element.style.textAlign;
 
-          // Handle specific element types
           switch (element.tagName.toLowerCase()) {
             case "h1":
               element.style.fontSize = "24pt";
@@ -736,11 +686,9 @@ const DocumentGeneratorContent = ({
         }
       });
 
-      // Add content to container and container to document
       container.appendChild(contentDiv);
       document.body.appendChild(container);
 
-      // Wait for images to load
       await Promise.all(
         Array.from(container.getElementsByTagName("img")).map(
           (img) =>
@@ -751,7 +699,6 @@ const DocumentGeneratorContent = ({
         )
       );
 
-      // Create PDF
       const pdf = new jsPDF({
         orientation: "portrait",
         unit: "mm",
@@ -759,7 +706,6 @@ const DocumentGeneratorContent = ({
         compress: true,
       });
 
-      // Use html2canvas with better settings
       const canvas = await html2canvas(contentDiv, {
         scale: 2,
         useCORS: true,
@@ -768,7 +714,6 @@ const DocumentGeneratorContent = ({
         backgroundColor: "#FFFFFF",
         imageTimeout: 15000,
         onclone: (clonedDoc) => {
-          // Ensure styles are copied to cloned document
           const styleSheets = Array.from(document.styleSheets);
           styleSheets.forEach((sheet) => {
             try {
@@ -787,23 +732,18 @@ const DocumentGeneratorContent = ({
         },
       });
 
-      // Remove temporary elements
       document.body.removeChild(container);
 
-      // Calculate dimensions
-      const imgWidth = 210 - margins.left - margins.right; // A4 width in mm minus margins
+      const imgWidth = 210 - margins.left - margins.right;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      // Add image to PDF
-      const pageHeight = 297 - margins.top - margins.bottom; // A4 height in mm minus margins
+      const pageHeight = 297 - margins.top - margins.bottom;
 
       if (imgHeight > pageHeight) {
-        // Multi-page handling
         let remainingHeight = canvas.height;
         let position = 0;
 
         while (remainingHeight > 0) {
-          // Add page content
           const currentHeight = Math.min(
             canvas.width * (pageHeight / imgWidth),
             remainingHeight
@@ -847,7 +787,6 @@ const DocumentGeneratorContent = ({
           position += currentHeight;
         }
       } else {
-        // Single page
         pdf.addImage(
           canvas.toDataURL("image/jpeg", 1.0),
           "JPEG",
@@ -860,7 +799,6 @@ const DocumentGeneratorContent = ({
         );
       }
 
-      // Save the PDF
       pdf.save(`${documentTitle || "Document"}.pdf`);
       toast.success("PDF exported successfully!");
     } catch (error) {
@@ -871,16 +809,12 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Function to export document as DOCX
   const exportAsDOCX = () => {
-    // Implement DOCX export logic here
     alert("DOCX export functionality will be implemented here");
   };
 
-  // Load document if ID is provided in URL
   useEffect(() => {
     const loadDocument = async () => {
-      // Use initialDocumentId instead of URL params for embedded mode
       const id = embedded ? initialDocumentId : searchParams.get("id");
       if (!id) return;
 
@@ -912,7 +846,6 @@ const DocumentGeneratorContent = ({
     }
   }, [editor, searchParams, initialDocumentId, embedded]);
 
-  // Updated save document function
   const saveDocument = async () => {
     if (!editor) {
       console.error("Editor not initialized");
@@ -952,7 +885,6 @@ const DocumentGeneratorContent = ({
         onDocumentSave?.(result.data.id);
       }
 
-      // Reset unsaved changes flag after successful save
       setHasUnsavedChanges(false);
       toast.success("Document saved successfully!");
     } catch (error) {
@@ -963,7 +895,6 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  // Add warning when leaving with unsaved changes
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (hasUnsavedChanges) {
@@ -976,10 +907,8 @@ const DocumentGeneratorContent = ({
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedChanges]);
 
-  // In embedded mode, modify some behaviors
   if (embedded) {
     useEffect(() => {
-      // Disable router navigation in embedded mode
       const handleBeforeUnload = (e: BeforeUnloadEvent) => {
         if (hasUnsavedChanges) {
           e.preventDefault();
@@ -1010,7 +939,6 @@ const DocumentGeneratorContent = ({
     startPos: number,
     endPos: number
   ) => {
-    // First, clear the selected text
     editor
       .chain()
       .focus()
@@ -1018,7 +946,6 @@ const DocumentGeneratorContent = ({
       .deleteSelection()
       .run();
 
-    // Then type out the new text character by character
     const words = text.split(" ");
     for (let i = 0; i < words.length; i++) {
       const word = words[i];
@@ -1026,11 +953,10 @@ const DocumentGeneratorContent = ({
       if (i < words.length - 1) {
         editor.chain().focus().insertContent(" ").run();
       }
-      await sleep(20); // Adjust typing speed here
+      await sleep(20);
     }
   };
 
-  // Update the enhanceSelectedText function
   const enhanceSelectedText = async () => {
     if (!selectedText || !editor) return;
 
@@ -1097,419 +1023,470 @@ const DocumentGeneratorContent = ({
     }
   };
 
-  return (
-    <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
-      {/* Document Header */}
-      <div className="p-4 border-b bg-white flex items-center justify-between">
-        <div className="flex-1">
-          <input
-            type="text"
-            value={documentTitle}
-            onChange={(e) => setDocumentTitle(e.target.value)}
-            className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
-            readOnly={readOnly} // Add this line
-          />
+  if (hiddenUntilSubmitted && isTeacherView) {
+    if (!submitted) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-4">
+          <p className="text-gray-500">Awaiting student submission...</p>
+          <Button disabled className="opacity-50">
+            View Document
+          </Button>
         </div>
+      );
+    }
 
-        {/* Only show these buttons if not readOnly */}
-        {!readOnly && (
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              onClick={() => router.push("/tools/document-generator/list")}
-              className="flex items-center gap-2"
-            >
-              <FileText size={16} />
-              My Documents
-            </Button>
-
-            {!isViewMode ? (
-              <Button
-                variant="default"
-                className="flex items-center gap-1"
-                onClick={saveDocument}
-                disabled={isSaving}
-              >
-                {isSaving ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Save
-                    size={16}
-                    className={hasUnsavedChanges ? "text-yellow-500" : ""}
-                  />
-                )}
-                {hasUnsavedChanges ? "Save*" : "Save"}
-              </Button>
-            ) : (
-              <Button
-                variant="default"
-                onClick={() => {
-                  router.push(
-                    `/tools/document-generator?id=${documentId}&mode=edit`
-                  );
-                  setIsViewMode(false);
-                  editor?.setEditable(true);
-                }}
-              >
-                <Edit size={16} className="mr-2" />
-                Edit Document
-              </Button>
-            )}
-
-            <Button
-              variant="outline"
-              className="flex items-center gap-1"
-              onClick={exportAsPDF}
-              disabled={exportingPdf || hasUnsavedChanges}
-            >
-              {exportingPdf ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <FileDown size={16} />
-              )}
-              Export as PDF
-            </Button>
+    return (
+      <div className="h-full">
+        <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+          <div className="p-4 border-b bg-white flex items-center justify-between">
+            <div className="flex-1">
+              <input
+                type="text"
+                value={documentTitle}
+                onChange={(e) => setDocumentTitle(e.target.value)}
+                className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
+                readOnly={readOnly}
+              />
+            </div>
           </div>
-        )}
-      </div>
 
-      {/* Only show toolbar if not readOnly */}
-      {!readOnly && (
-        <div className="p-2 border-b flex flex-wrap gap-1 bg-white sticky top-0 z-10 shadow-sm">
-          {/* Font Family Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          <div className="flex-grow overflow-auto p-6 flex justify-center">
+            <div className="w-full max-w-[816px]">
+              <div
+                ref={editorRef}
+                className="min-h-[1056px] bg-white shadow-md rounded border border-gray-300 mx-auto cursor-text"
+                style={{
+                  paddingLeft: "72px",
+                  paddingRight: "72px",
+                  paddingTop: "60px",
+                  paddingBottom: "60px",
+                }}
+                onClick={handleContainerClick}
+              >
+                <EditorContent editor={editor} className="h-full caret-black" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full">
+      <div className="flex flex-col h-screen bg-gray-100 overflow-hidden">
+        <div className="p-4 border-b bg-white flex items-center justify-between">
+          <div className="flex-1">
+            <input
+              type="text"
+              value={documentTitle}
+              onChange={(e) => setDocumentTitle(e.target.value)}
+              className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
+              readOnly={readOnly}
+            />
+          </div>
+
+          {!readOnly && (
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => router.push("/tools/document-generator/list")}
+                className="flex items-center gap-2"
+              >
+                <FileText size={16} />
+                My Documents
+              </Button>
+
+              {!isViewMode ? (
+                <Button
+                  variant="default"
+                  className="flex items-center gap-1"
+                  onClick={saveDocument}
+                  disabled={isSaving}
+                >
+                  {isSaving ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save
+                      size={16}
+                      className={hasUnsavedChanges ? "text-yellow-500" : ""}
+                    />
+                  )}
+                  {hasUnsavedChanges ? "Save*" : "Save"}
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    router.push(
+                      `/tools/document-generator?id=${documentId}&mode=edit`
+                    );
+                    setIsViewMode(false);
+                    editor?.setEditable(true);
+                  }}
+                >
+                  <Edit size={16} className="mr-2" />
+                  Edit Document
+                </Button>
+              )}
+
               <Button
                 variant="outline"
-                size="sm"
-                className="gap-1 min-w-[120px]"
+                className="flex items-center gap-1"
+                onClick={exportAsPDF}
+                disabled={exportingPdf || hasUnsavedChanges}
               >
-                <span className="truncate">
-                  {fontFamilies.find((f) => f.value === currentFontFamily)
-                    ?.name || "Font"}
-                </span>
-                <ChevronDown size={14} />
+                {exportingPdf ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown size={16} />
+                )}
+                Export as PDF
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              {fontFamilies.map((font) => (
-                <DropdownMenuItem
-                  key={font.value}
-                  onClick={() => handleFontFamilyChange(font.value)}
-                  className="cursor-pointer"
-                  style={{ fontFamily: font.value }}
+            </div>
+          )}
+        </div>
+
+        {!readOnly && (
+          <div className="p-2 border-b flex flex-wrap gap-1 bg-white sticky top-0 z-10 shadow-sm">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-1 min-w-[120px]"
                 >
-                  {font.name}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Font Size Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1 w-[60px]">
-                {currentFontSize}
-                <ChevronDown size={14} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <div className="px-2 py-2">
-                <Input
-                  placeholder="Custom size..."
-                  value={customFontSize}
-                  onChange={handleCustomFontSizeChange}
-                  onKeyDown={handleCustomFontSizeSubmit}
-                  className="mb-2 h-8"
-                />
-              </div>
-              <DropdownMenuSeparator />
-              {fontSizes.map((size) => (
-                <DropdownMenuItem
-                  key={size}
-                  onClick={() => handleFontSizeChange(size.toString())}
-                  className="cursor-pointer"
-                >
-                  {size}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Debug button */}
-
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* Formatting Options */}
-          <Button
-            size="icon"
-            variant={editor.isActive("bold") ? "default" : "ghost"}
-            onClick={() => editor.chain().focus().toggleBold().run()}
-          >
-            <Bold size={18} />
-          </Button>
-          <Button
-            size="icon"
-            variant={editor.isActive("italic") ? "default" : "ghost"}
-            onClick={() => editor.chain().focus().toggleItalic().run()}
-          >
-            <Italic size={18} />
-          </Button>
-          <Button
-            size="icon"
-            variant={editor.isActive("underline") ? "default" : "ghost"}
-            onClick={() => editor.chain().focus().toggleUnderline().run()}
-          >
-            <UnderlineIcon size={18} />
-          </Button>
-
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* Text Color */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size="icon" variant="ghost" className="relative">
-                <span className="flex items-center justify-center w-4 h-4 bg-current rounded-full" />
-                <span className="sr-only">Text color</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <div className="flex flex-col gap-2">
-                <h3 className="font-medium">Text Color</h3>
-                <div className="grid grid-cols-6 gap-1">
-                  {colors.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => handleTextColorChange(color.value)}
-                      className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center"
-                      style={{ backgroundColor: color.value }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Highlight */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size="icon" variant="ghost">
-                <Paintbrush size={18} />
-                <span className="sr-only">Highlight</span>
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64">
-              <div className="flex flex-col gap-2">
-                <h3 className="font-medium">Highlight Color</h3>
-                <div className="grid grid-cols-6 gap-1">
-                  {highlightColors.map((color) => (
-                    <button
-                      key={color.value}
-                      onClick={() => handleHighlightChange(color.value)}
-                      className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center"
-                      style={{ backgroundColor: color.value }}
-                      title={color.name}
-                    />
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* Heading buttons */}
-          <Button
-            size="icon"
-            variant={
-              editor.isActive("heading", { level: 1 }) ? "default" : "ghost"
-            }
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 1 }).run()
-            }
-          >
-            <Heading1 size={18} />
-          </Button>
-          <Button
-            size="icon"
-            variant={
-              editor.isActive("heading", { level: 2 }) ? "default" : "ghost"
-            }
-            onClick={() =>
-              editor.chain().focus().toggleHeading({ level: 2 }).run()
-            }
-          >
-            <Heading2 size={18} />
-          </Button>
-
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* Alignment buttons */}
-          <Button
-            size="icon"
-            variant={
-              editor.isActive({ textAlign: "left" }) ? "default" : "ghost"
-            }
-            onClick={() => editor.chain().focus().setTextAlign("left").run()}
-          >
-            <AlignLeft size={18} />
-          </Button>
-          <Button
-            size="icon"
-            variant={
-              editor.isActive({ textAlign: "center" }) ? "default" : "ghost"
-            }
-            onClick={() => editor.chain().focus().setTextAlign("center").run()}
-          >
-            <AlignCenter size={18} />
-          </Button>
-          <Button
-            size="icon"
-            variant={
-              editor.isActive({ textAlign: "right" }) ? "default" : "ghost"
-            }
-            onClick={() => editor.chain().focus().setTextAlign("right").run()}
-          >
-            <AlignRight size={18} />
-          </Button>
-
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* List buttons */}
-          <Button
-            size="icon"
-            variant={editor.isActive("bulletList") ? "default" : "ghost"}
-            onClick={() => editor.chain().focus().toggleBulletList().run()}
-          >
-            <List size={18} />
-          </Button>
-          <Button
-            size="icon"
-            variant={editor.isActive("orderedList") ? "default" : "ghost"}
-            onClick={() => editor.chain().focus().toggleOrderedList().run()}
-          >
-            <ListOrdered size={18} />
-          </Button>
-
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* Replace the separate image buttons with a single Image Popover */}
-          <div className="w-px h-6 bg-gray-300 mx-1"></div>
-
-          {/* Combined Image Upload and Generation Popover */}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button size="icon" variant="ghost">
-                <ImageIcon size={18} />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-80">
-              <div className="space-y-4">
-                <div className="border-b pb-2">
-                  <h4 className="font-medium mb-2">Add Image</h4>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={triggerFileInput}
+                  <span className="truncate">
+                    {fontFamilies.find((f) => f.value === currentFontFamily)
+                      ?.name || "Font"}
+                  </span>
+                  <ChevronDown size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {fontFamilies.map((font) => (
+                  <DropdownMenuItem
+                    key={font.value}
+                    onClick={() => handleFontFamilyChange(font.value)}
+                    className="cursor-pointer"
+                    style={{ fontFamily: font.value }}
                   >
-                    <Upload className="h-4 w-4 mr-2" />
-                    Upload from Computer
-                  </Button>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                </div>
+                    {font.name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
-                <div className="space-y-2">
-                  <h4 className="font-medium">Generate with AI</h4>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-1 w-[60px]">
+                  {currentFontSize}
+                  <ChevronDown size={14} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <div className="px-2 py-2">
                   <Input
-                    placeholder="Describe the image..."
-                    value={imagePrompt}
-                    onChange={(e) => setImagePrompt(e.target.value)}
+                    placeholder="Custom size..."
+                    value={customFontSize}
+                    onChange={handleCustomFontSizeChange}
+                    onKeyDown={handleCustomFontSizeSubmit}
+                    className="mb-2 h-8"
                   />
-                  <Button
-                    onClick={generateImage}
-                    disabled={!imagePrompt || generatingImage}
-                    className="w-full"
+                </div>
+                <DropdownMenuSeparator />
+                {fontSizes.map((size) => (
+                  <DropdownMenuItem
+                    key={size}
+                    onClick={() => handleFontSizeChange(size.toString())}
+                    className="cursor-pointer"
                   >
-                    {generatingImage ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Generating...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-4 w-4 mr-2" />
-                        Generate Image
-                      </>
-                    )}
-                  </Button>
-                  {generatedImageUrl && (
-                    <div className="mt-4">
-                      <div className="relative aspect-video rounded-lg overflow-hidden">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
-                          src={generatedImageUrl}
-                          alt="Generated"
-                          className="object-cover"
-                        />
-                        <div className="absolute bottom-0 left-0 right-0 p-2  flex justify-end gap-2">
-                          <Button size="sm" onClick={regenerateImage}>
-                            Regenerate
-                          </Button>
-                          <Button size="sm" onClick={addGeneratedImage}>
-                            Add to Document
-                          </Button>
+                    {size}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <Button
+              size="icon"
+              variant={editor.isActive("bold") ? "default" : "ghost"}
+              onClick={() => editor.chain().focus().toggleBold().run()}
+            >
+              <Bold size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant={editor.isActive("italic") ? "default" : "ghost"}
+              onClick={() => editor.chain().focus().toggleItalic().run()}
+            >
+              <Italic size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant={editor.isActive("underline") ? "default" : "ghost"}
+              onClick={() => editor.chain().focus().toggleUnderline().run()}
+            >
+              <UnderlineIcon size={18} />
+            </Button>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="icon" variant="ghost" className="relative">
+                  <span className="flex items-center justify-center w-4 h-4 bg-current rounded-full" />
+                  <span className="sr-only">Text color</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64">
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-medium">Text Color</h3>
+                  <div className="grid grid-cols-6 gap-1">
+                    {colors.map((color) => (
+                      <button
+                        key={color.value}
+                        onClick={() => handleTextColorChange(color.value)}
+                        className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center"
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Paintbrush size={18} />
+                  <span className="sr-only">Highlight</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-64">
+                <div className="flex flex-col gap-2">
+                  <h3 className="font-medium">Highlight Color</h3>
+                  <div className="grid grid-cols-6 gap-1">
+                    {highlightColors.map((color) => (
+                      <button
+                        key={color.value}
+                        onClick={() => handleHighlightChange(color.value)}
+                        className="w-8 h-8 rounded border border-gray-200 flex items-center justify-center"
+                        style={{ backgroundColor: color.value }}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <Button
+              size="icon"
+              variant={
+                editor.isActive("heading", { level: 1 }) ? "default" : "ghost"
+              }
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 1 }).run()
+              }
+            >
+              <Heading1 size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant={
+                editor.isActive("heading", { level: 2 }) ? "default" : "ghost"
+              }
+              onClick={() =>
+                editor.chain().focus().toggleHeading({ level: 2 }).run()
+              }
+            >
+              <Heading2 size={18} />
+            </Button>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <Button
+              size="icon"
+              variant={
+                editor.isActive({ textAlign: "left" }) ? "default" : "ghost"
+              }
+              onClick={() => editor.chain().focus().setTextAlign("left").run()}
+            >
+              <AlignLeft size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant={
+                editor.isActive({ textAlign: "center" }) ? "default" : "ghost"
+              }
+              onClick={() =>
+                editor.chain().focus().setTextAlign("center").run()
+              }
+            >
+              <AlignCenter size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant={
+                editor.isActive({ textAlign: "right" }) ? "default" : "ghost"
+              }
+              onClick={() => editor.chain().focus().setTextAlign("right").run()}
+            >
+              <AlignRight size={18} />
+            </Button>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <Button
+              size="icon"
+              variant={editor.isActive("bulletList") ? "default" : "ghost"}
+              onClick={() => editor.chain().focus().toggleBulletList().run()}
+            >
+              <List size={18} />
+            </Button>
+            <Button
+              size="icon"
+              variant={editor.isActive("orderedList") ? "default" : "ghost"}
+              onClick={() => editor.chain().focus().toggleOrderedList().run()}
+            >
+              <ListOrdered size={18} />
+            </Button>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <div className="w-px h-6 bg-gray-300 mx-1"></div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <ImageIcon size={18} />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80">
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h4 className="font-medium mb-2">Add Image</h4>
+                    <Button
+                      variant="outline"
+                      className="w-full justify-start"
+                      onClick={triggerFileInput}
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload from Computer
+                    </Button>
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <h4 className="font-medium">Generate with AI</h4>
+                    <Input
+                      placeholder="Describe the image..."
+                      value={imagePrompt}
+                      onChange={(e) => setImagePrompt(e.target.value)}
+                    />
+                    <Button
+                      onClick={generateImage}
+                      disabled={!imagePrompt || generatingImage}
+                      className="w-full"
+                    >
+                      {generatingImage ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Generate Image
+                        </>
+                      )}
+                    </Button>
+                    {generatedImageUrl && (
+                      <div className="mt-4">
+                        <div className="relative aspect-video rounded-lg overflow-hidden">
+                          <img
+                            src={generatedImageUrl}
+                            alt="Generated"
+                            className="object-cover"
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 p-2  flex justify-end gap-2">
+                            <Button size="sm" onClick={regenerateImage}>
+                              Regenerate
+                            </Button>
+                            <Button size="sm" onClick={addGeneratedImage}>
+                              Add to Document
+                            </Button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  )}
+                    )}
+                  </div>
                 </div>
-              </div>
-            </PopoverContent>
-          </Popover>
-
-          {/* Remove the separate AI image generation button */}
-        </div>
-      )}
-
-      {/* Editor Content */}
-      <div className="flex-grow overflow-auto p-6 flex justify-center">
-        <div className="w-full max-w-[816px]">
-          <div
-            ref={editorRef}
-            className="min-h-[1056px] bg-white shadow-md rounded border border-gray-300 mx-auto cursor-text"
-            style={{
-              paddingLeft: "72px",
-              paddingRight: "72px",
-              paddingTop: "60px",
-              paddingBottom: "60px",
-            }}
-            onClick={handleContainerClick}
-          >
-            <EditorContent editor={editor} className="h-full caret-black" />
+              </PopoverContent>
+            </Popover>
           </div>
+        )}
+
+        <div className="flex-grow overflow-auto p-6 flex justify-center">
+          <div className="w-full max-w-[816px]">
+            <div
+              ref={editorRef}
+              className="min-h-[1056px] bg-white shadow-md rounded border border-gray-300 mx-auto cursor-text"
+              style={{
+                paddingLeft: "72px",
+                paddingRight: "72px",
+                paddingTop: "60px",
+                paddingBottom: "60px",
+              }}
+              onClick={handleContainerClick}
+            >
+              <EditorContent editor={editor} className="h-full caret-black" />
+            </div>
+          </div>
+
+          {showAIMenu && (
+            <FloatingAIMenu
+              onRewriteSelected={enhanceSelectedText}
+              onRewriteAll={rewriteEntireDocument}
+              isProcessing={isProcessing}
+            />
+          )}
         </div>
 
-        {/* Replace the existing AI button with this */}
-        {showAIMenu && (
-          <FloatingAIMenu
-            onRewriteSelected={enhanceSelectedText}
-            onRewriteAll={rewriteEntireDocument}
-            isProcessing={isProcessing}
-          />
+        {!readOnly && !submitted && onDocumentSubmit && (
+          <Button
+            onClick={() => {
+              if (initialDocumentId) {
+                onDocumentSubmit(initialDocumentId);
+              }
+            }}
+            className="mt-4 bg-green-600 hover:bg-green-700 text-white"
+          >
+            Submit Assignment
+          </Button>
+        )}
+
+        {submitted && !isTeacherView && (
+          <div className="mt-4 p-2 bg-green-100 text-green-800 rounded">
+            Assignment submitted successfully
+          </div>
         )}
       </div>
     </div>
   );
 };
 
-// Create loading component
 const DocumentGeneratorLoading = () => {
   return (
     <div className="flex h-screen items-center justify-center">
@@ -1517,13 +1494,19 @@ const DocumentGeneratorLoading = () => {
     </div>
   );
 };
+
 export default function DocumentGenerator({
-  initialContent,
-  initialTitle,
-  embedded,
-  initialDocumentId,
+  initialContent = "",
+  initialTitle = "Untitled Document",
+  embedded = false,
+  initialDocumentId = null,
   onDocumentSave,
-  readOnly, // Add this line
+  onDocumentSubmit,
+  readOnly = false,
+  submitted = false,
+  hiddenUntilSubmitted = false,
+  isTeacherView = false,
+  showSubmissionStatus = false,
 }: DocumentGeneratorProps) {
   return (
     <Suspense fallback={<DocumentGeneratorLoading />}>
@@ -1533,7 +1516,12 @@ export default function DocumentGenerator({
         embedded={embedded}
         initialDocumentId={initialDocumentId}
         onDocumentSave={onDocumentSave}
-        readOnly={readOnly} // Add this line
+        onDocumentSubmit={onDocumentSubmit}
+        readOnly={readOnly}
+        submitted={submitted}
+        hiddenUntilSubmitted={hiddenUntilSubmitted}
+        isTeacherView={isTeacherView}
+        showSubmissionStatus={showSubmissionStatus}
       />
     </Suspense>
   );

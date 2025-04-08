@@ -39,6 +39,7 @@ export default function StudentOutputContent() {
   const [buddyInput, setBuddyInput] = useState("");
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
+  const [documentSubmitted, setDocumentSubmitted] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -214,6 +215,31 @@ export default function StudentOutputContent() {
     }
   };
 
+  const handleDocumentSubmit = async (docId: string) => {
+    try {
+      const { error } = await supabase
+        .from("document_generator")
+        .update({ submitted: true })
+        .eq("id", docId);
+
+      if (error) throw error;
+
+      setDocumentSubmitted(true);
+      toast({
+        title: "Success",
+        description: "Assignment submitted successfully",
+        variant: "default",
+      });
+    } catch (error) {
+      console.error("Error submitting document:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to submit assignment",
+      });
+    }
+  };
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-gray-50/50 flex items-center justify-center">
@@ -329,6 +355,8 @@ export default function StudentOutputContent() {
                     ].assignment?.document_id
                   }
                   onDocumentSave={handleDocumentSave}
+                  onDocumentSubmit={handleDocumentSubmit}
+                  submitted={documentSubmitted}
                 />
               </div>
             )}

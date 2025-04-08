@@ -72,6 +72,7 @@ export default function TeacherOutputContent() {
   const [userRole, setUserRole] = useState<string | null>(null);
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
+  const [documentSubmitted, setDocumentSubmitted] = useState(false);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -202,6 +203,33 @@ export default function TeacherOutputContent() {
     fetchLessonPlan();
   }, [fetchLessonPlan]);
 
+  useEffect(() => {
+    const checkSubmissionStatus = async (docId: string) => {
+      if (!docId) return;
+
+      const { data, error } = await supabase
+        .from("document_generator")
+        .select("submitted")
+        .eq("id", docId)
+        .single();
+
+      if (error) {
+        console.error("Error checking submission status:", error);
+        return;
+      }
+
+      setDocumentSubmitted(!!data?.submitted);
+    };
+
+    if (lessonPlan && activeTab.startsWith("day-")) {
+      const dayIndex = Number.parseInt(activeTab.split("-")[1]) - 1;
+      const docId = lessonPlan.plan_data.days[dayIndex].assignment?.document_id;
+      if (docId) {
+        checkSubmissionStatus(docId);
+      }
+    }
+  }, [lessonPlan, activeTab]);
+
   const handleEdit = (type: string, data: any, dayIndex?: number) => {
     setEditContent({
       isOpen: true,
@@ -256,6 +284,40 @@ export default function TeacherOutputContent() {
         toast({
           title: "Error",
           description: "Failed to save notes. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }
+  };
+
+  const handleNotesEdit = async (activityTitle: string, notes: string) => {
+    if (lessonPlan && userEmail) {
+      try {
+        const { error } = await supabase
+          .from("generated_notes")
+          .upsert({
+            lesson_plan_id: lessonPlan.id,
+            activity_title: activityTitle,
+            content: notes,
+          })
+          .select();
+
+        if (error) throw error;
+
+        setGeneratedNotes((prev) => ({
+          ...prev,
+          [activityTitle]: notes,
+        }));
+
+        toast({
+          title: "Success",
+          description: "Notes updated successfully",
+        });
+      } catch (error) {
+        console.error("Error updating notes:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update notes. Please try again.",
           variant: "destructive",
         });
       }
@@ -912,6 +974,7 @@ export default function TeacherOutputContent() {
                     onChatWithBuddy={handleChatWithBuddy}
                     showDocumentGenerator={showDocumentGenerator}
                     setShowDocumentGenerator={setShowDocumentGenerator}
+                    onNotesEdit={handleNotesEdit}
                   />
                 </div>
 
@@ -939,6 +1002,10 @@ export default function TeacherOutputContent() {
                         ].assignment?.document_id
                       }
                       readOnly={true}
+                      submitted={documentSubmitted}
+                      hiddenUntilSubmitted={true}
+                      isTeacherView={true}
+                      showSubmissionStatus={true}
                     />
                   </div>
                 )}

@@ -865,7 +865,7 @@ export default function TeacherOutputContent() {
     return (
       <Button
         onClick={handleAssignLesson}
-        className="bg-rose-400 hover:bg-rose-500 text-black"
+        className="bg-rose-500 hover:bg-rose-600 text-white"
         disabled={isAssigning}
       >
         {isAssigning
@@ -911,150 +911,158 @@ export default function TeacherOutputContent() {
 
   return (
     <div className="min-h-screen bg-backgroundApp">
-      <div className="mx-auto px-4 py-8">
-        <Button
-          variant="outline"
-          className="mb-6"
-          onClick={() => router.push("/tools/lesson-planner")}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+      <div className="px-4 py-8">
+        <div className="mx-auto max-w-7xl">
+          <Button
+            variant="outline"
+            className="mb-6"
+            onClick={() => router.push("/tools/lesson-planner")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
 
-        {lessonPlan && (
-          <>
-            <div className="mb-8">
-              <h1 className="text-3xl font-bold text-gray-800">
-                Lesson Plan: {lessonPlan.chapter_topic}
-              </h1>
-              <p className="text-gray-600 mt-2">
-                {lessonPlan.grade} Grade | {lessonPlan.board} |{" "}
-                {lessonPlan.number_of_days} Sessions -{" "}
-                {lessonPlan.class_duration} Minutes Each
-              </p>
-            </div>
-
-            <div className="flex gap-4 mb-6">
-              <Button onClick={handleChatWithBuddyNoArgs} variant="default">
-                Chat with Buddy
-              </Button>
-              <Button variant="outline" onClick={handleDownload}>
-                <Download className="mr-2 h-4 w-4" />
-                Download PDF
-              </Button>
-              {renderAssignButton()}
-            </div>
-
-            <SessionNavigator
-              days={lessonPlan.plan_data.days}
-              activeTab={activeTab}
-              onTabChange={setActiveTab}
-            />
-
-            {activeTab.startsWith("day-") ? (
-              <div className="flex gap-6">
-                <div
-                  className={`${
-                    showDocumentGenerator ? "flex-1" : "w-full"
-                  } bg-white rounded-lg border p-6`}
-                >
-                  <LessonContent
-                    day={
-                      lessonPlan.plan_data.days[
-                        Number.parseInt(activeTab.split("-")[1]) - 1
-                      ]
-                    }
-                    userRole={userRole}
-                    generatedNotes={generatedNotes}
-                    uploadedFiles={uploadedFiles}
-                    onEdit={handleEdit}
-                    onGenerateNotes={handleGenerateNotes}
-                    onFileUpload={handleFileUpload}
-                    onDeleteFile={handleDeleteFile}
-                    onChatWithBuddy={handleChatWithBuddy}
-                    showDocumentGenerator={showDocumentGenerator}
-                    setShowDocumentGenerator={setShowDocumentGenerator}
-                    onNotesEdit={handleNotesEdit}
-                  />
-                </div>
-
-                {showDocumentGenerator && userRole === "Teacher" && (
-                  <div className="flex-1 bg-white rounded-lg border p-6 relative">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-2 right-2"
-                      onClick={() => setShowDocumentGenerator(false)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                    <DocumentGenerator
-                      initialContent=""
-                      initialTitle={`${
-                        lessonPlan.plan_data.days[
-                          Number.parseInt(activeTab.split("-")[1]) - 1
-                        ].topicHeading
-                      } - Assignment`}
-                      embedded={true}
-                      initialDocumentId={
-                        lessonPlan.plan_data.days[
-                          Number.parseInt(activeTab.split("-")[1]) - 1
-                        ].assignment?.document_id
-                      }
-                      readOnly={true}
-                      submitted={documentSubmitted}
-                      hiddenUntilSubmitted={true}
-                      isTeacherView={true}
-                      showSubmissionStatus={true}
-                    />
-                  </div>
-                )}
+          {lessonPlan && (
+            <>
+              <div className="mb-8">
+                <h1 className="text-3xl font-bold text-gray-800">
+                  Lesson Plan: {lessonPlan.chapter_topic}
+                </h1>
+                <p className="text-gray-600 mt-2">
+                  {lessonPlan.grade} Grade | {lessonPlan.board} |{" "}
+                  {lessonPlan.number_of_days} Sessions -{" "}
+                  {lessonPlan.class_duration} Minutes Each
+                </p>
               </div>
-            ) : (
-              <div className="bg-white rounded-lg border p-6">
-                {activeTab === "assessment" && (
-                  <AssessmentPlanView
-                    assessmentPlan={lessonPlan.plan_data.assessmentPlan}
-                    userRole={userRole}
-                    uploadedFiles={uploadedFiles}
-                    onEdit={handleEdit}
-                    onFileUpload={handleFileUpload}
-                    onDeleteFile={handleDeleteFile}
-                  />
-                )}
+
+              <div className="flex gap-4 mb-6">
+                {/* <Button onClick={handleChatWithBuddyNoArgs} variant="default">
+                  Chat with Buddy
+                </Button> */}
+                <Button variant="outline" onClick={handleDownload}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </Button>
+                {renderAssignButton()}
+              </div>
+
+              <SessionNavigator
+                days={lessonPlan.plan_data.days}
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+              />
+            </>
+          )}
+        </div>
+
+        {activeTab.startsWith("day-") ? (
+          <div
+            className={`${showDocumentGenerator ? "flex gap-6 px-4" : "mx-auto max-w-7xl"}`}
+          >
+            <div
+              className={`${showDocumentGenerator ? "flex-1 w-1/2" : "w-full"} bg-white rounded-lg border p-6`}
+            >
+              <LessonContent
+                day={
+                  lessonPlan.plan_data.days[
+                    Number.parseInt(activeTab.split("-")[1]) - 1
+                  ]
+                }
+                userRole={userRole}
+                generatedNotes={generatedNotes}
+                uploadedFiles={uploadedFiles}
+                onEdit={handleEdit}
+                onGenerateNotes={handleGenerateNotes}
+                onFileUpload={handleFileUpload}
+                onDeleteFile={handleDeleteFile}
+                onChatWithBuddy={handleChatWithBuddy}
+                showDocumentGenerator={showDocumentGenerator}
+                setShowDocumentGenerator={setShowDocumentGenerator}
+                onNotesEdit={handleNotesEdit}
+              />
+            </div>
+
+            {showDocumentGenerator && userRole === "Teacher" && (
+              <div className="flex-1 w-1/2 bg-white rounded-lg border p-6 relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2"
+                  onClick={() => setShowDocumentGenerator(false)}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+                <DocumentGenerator
+                  initialContent=""
+                  initialTitle={`${
+                    lessonPlan.plan_data.days[
+                      Number.parseInt(activeTab.split("-")[1]) - 1
+                    ].topicHeading
+                  } - Assignment`}
+                  embedded={true}
+                  initialDocumentId={
+                    lessonPlan.plan_data.days[
+                      Number.parseInt(activeTab.split("-")[1]) - 1
+                    ].assignment?.document_id
+                  }
+                  readOnly={true}
+                  submitted={documentSubmitted}
+                  hiddenUntilSubmitted={true}
+                  isTeacherView={true}
+                  showSubmissionStatus={true}
+                />
               </div>
             )}
-          </>
+          </div>
+        ) : (
+          <div className="mx-auto max-w-7xl">
+            <div className="bg-white rounded-lg border p-6">
+              {activeTab === "assessment" && (
+                <AssessmentPlanView
+                  assessmentPlan={lessonPlan.plan_data.assessmentPlan}
+                  userRole={userRole}
+                  uploadedFiles={uploadedFiles}
+                  onEdit={handleEdit}
+                  onFileUpload={handleFileUpload}
+                  onDeleteFile={handleDeleteFile}
+                />
+              )}
+            </div>
+          </div>
         )}
 
-        <LessonModalDialogs
-          editContent={editContent}
-          onEditClose={() => setEditContent({ ...editContent, isOpen: false })}
-          onEditSave={handleSave}
-          generateNotesDialog={generateNotesDialog}
-          onGenerateNotesClose={() =>
-            setGenerateNotesDialog({ isOpen: false, activity: null })
-          }
-          onNotesGenerated={handleNotesGenerated}
-          assignLessonModal={assignLessonModal}
-          onAssignModalClose={() => setAssignLessonModal({ isOpen: false })}
-          assignments={assignments}
-          students={students}
-          selectedGrade={selectedGrade}
-          setSelectedGrade={setSelectedGrade}
-          selectedSection={selectedSection}
-          setSelectedSection={setSelectedSection}
-          selectedStudent={selectedStudent}
-          setSelectedStudent={setSelectedStudent}
-          selectedClass={selectedClass}
-          setSelectedClass={setSelectedClass}
-          dueDate={dueDate}
-          setDueDate={setDueDate}
-          assignmentType={assignmentType}
-          setAssignmentType={setAssignmentType}
-          onConfirmAssignment={handleConfirmAssignment}
-          lessonPlanId={lessonPlan.id}
-        />
+        <div className="mx-auto max-w-7xl">
+          <LessonModalDialogs
+            editContent={editContent}
+            onEditClose={() =>
+              setEditContent({ ...editContent, isOpen: false })
+            }
+            onEditSave={handleSave}
+            generateNotesDialog={generateNotesDialog}
+            onGenerateNotesClose={() =>
+              setGenerateNotesDialog({ isOpen: false, activity: null })
+            }
+            onNotesGenerated={handleNotesGenerated}
+            assignLessonModal={assignLessonModal}
+            onAssignModalClose={() => setAssignLessonModal({ isOpen: false })}
+            assignments={assignments}
+            students={students}
+            selectedGrade={selectedGrade}
+            setSelectedGrade={setSelectedGrade}
+            selectedSection={selectedSection}
+            setSelectedSection={setSelectedSection}
+            selectedStudent={selectedStudent}
+            setSelectedStudent={setSelectedStudent}
+            selectedClass={selectedClass}
+            setSelectedClass={setSelectedClass}
+            dueDate={dueDate}
+            setDueDate={setDueDate}
+            assignmentType={assignmentType}
+            setAssignmentType={setAssignmentType}
+            onConfirmAssignment={handleConfirmAssignment}
+            lessonPlanId={lessonPlan.id}
+          />
+        </div>
       </div>
     </div>
   );

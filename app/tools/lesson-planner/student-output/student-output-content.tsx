@@ -274,36 +274,73 @@ export default function StudentOutputContent() {
 
   return (
     <div className="min-h-screen bg-backgroundApp">
-      <div className=" mx-auto px-4 py-8">
-        <Button
-          variant="outline"
-          className="mb-6"
-          onClick={() => router.push("/tools/lesson-planner")}
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
+      <div className="px-4 py-8">
+        <div className="mx-auto max-w-7xl">
+          <Button
+            variant="outline"
+            className="mb-6 hover:scale-105 transition-transform"
+            onClick={() => router.push("/tools/lesson-planner")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to My Lessons
+          </Button>
 
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">
-            Lesson Plan: {lessonPlan.chapter_topic}
-          </h1>
-          <p className="text-gray-600 mt-2">
-            {lessonPlan.grade} Grade | {lessonPlan.board} |{" "}
-            {lessonPlan.number_of_days} Sessions - {lessonPlan.class_duration}{" "}
-            Minutes Each
-          </p>
+          <div className="mb-8 bg-white p-6 rounded-lg shadow-sm border">
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">
+              {lessonPlan.chapter_topic}
+            </h1>
+            <div className="flex items-center gap-2 text-gray-600">
+              <span className="px-3 py-1 bg-blue-100 rounded-full">
+                Grade {lessonPlan.grade}
+              </span>
+              <span className="px-3 py-1 bg-green-100 rounded-full">
+                {lessonPlan.board}
+              </span>
+              <span className="px-3 py-1 bg-purple-100 rounded-full">
+                {lessonPlan.number_of_days} Sessions (
+                {lessonPlan.class_duration} mins each)
+              </span>
+            </div>
+          </div>
+
+          {/* Progress bar */}
+          <div className="mb-6 bg-white p-4 rounded-lg shadow-sm border">
+            <div className="flex items-center gap-2 mb-2">
+              <h3 className="font-semibold">Your Progress</h3>
+              <span className="text-sm text-gray-600">
+                Session {activeTab.split("-")[1]} of {lessonPlan.number_of_days}
+              </span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2.5">
+              <div
+                className="bg-blue-600 h-2.5 rounded-full transition-all duration-300"
+                style={{
+                  width: `${
+                    (parseInt(activeTab.split("-")[1]) /
+                      lessonPlan.number_of_days) *
+                    100
+                  }%`,
+                }}
+              ></div>
+            </div>
+          </div>
+
+          <SessionNavigator
+            days={lessonPlan.plan_data.days}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
         </div>
 
-        <SessionNavigator
-          days={lessonPlan.plan_data.days}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-        />
-
         {activeTab.startsWith("day-") ? (
-          <div className="flex gap-6">
-            <div className="flex-1 bg-white rounded-lg border p-6">
+          <div
+            className={`${showDocumentGenerator ? "flex gap-6 px-4" : "mx-auto max-w-7xl"}`}
+          >
+            <div
+              className={`${
+                showDocumentGenerator ? "flex-1 w-1/2" : "w-full"
+              } bg-white rounded-lg border p-6 shadow-sm`}
+            >
               <LessonContent
                 day={
                   lessonPlan.plan_data.days[
@@ -324,7 +361,7 @@ export default function StudentOutputContent() {
             </div>
 
             {showDocumentGenerator && userRole === "Student" && (
-              <div className="flex-1 bg-white rounded-lg border p-6 relative">
+              <div className="flex-1 w-1/2 bg-white rounded-lg border p-6 relative shadow-sm">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -362,30 +399,50 @@ export default function StudentOutputContent() {
             )}
           </div>
         ) : (
-          <div className="bg-white rounded-lg border p-6">
-            <AssessmentPlanView
-              assessmentPlan={lessonPlan.plan_data.assessmentPlan}
-              userRole={userRole}
-              uploadedFiles={uploadedFiles}
-              onEdit={() => {}}
-              onFileUpload={async () => {}}
-              onDeleteFile={async () => {}}
-            />
+          <div className="mx-auto max-w-7xl">
+            <div className="bg-white rounded-lg border p-6 shadow-sm">
+              <AssessmentPlanView
+                assessmentPlan={lessonPlan.plan_data.assessmentPlan}
+                userRole={userRole}
+                uploadedFiles={uploadedFiles}
+                onEdit={() => {}}
+                onFileUpload={async () => {}}
+                onDeleteFile={async () => {}}
+              />
+            </div>
           </div>
         )}
 
-        <form onSubmit={handleRedirectToBuddy} className="mt-4 flex gap-2">
-          <input
-            type="text"
-            value={buddyInput}
-            onChange={(e) => setBuddyInput(e.target.value)}
-            placeholder="Enter your question for buddy..."
-            className="flex-1 px-4 py-2 border rounded-md"
-          />
-          <Button type="submit" variant="default">
-            Ask Buddy
-          </Button>
-        </form>
+        {/* Improved Buddy Chat */}
+        <div className="mx-auto max-w-7xl">
+          <div className="mt-6 bg-white rounded-lg border p-6 shadow-sm">
+            <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+              <span role="img" aria-label="robot">
+                🤖
+              </span>{" "}
+              Ask Your Study Buddy
+            </h3>
+            <form onSubmit={handleRedirectToBuddy} className="flex gap-2">
+              <input
+                type="text"
+                value={buddyInput}
+                onChange={(e) => setBuddyInput(e.target.value)}
+                placeholder="What would you like to learn more about?"
+                className="flex-1 px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <Button
+                type="submit"
+                variant="default"
+                className="hover:scale-105 transition-transform flex items-center gap-2"
+              >
+                <span role="img" aria-label="speech">
+                  💭
+                </span>
+                Ask Buddy
+              </Button>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
   );

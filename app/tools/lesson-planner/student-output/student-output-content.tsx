@@ -155,11 +155,16 @@ export default function StudentOutputContent() {
     notes?: string
   ) => {
     if (lessonPlan) {
-      // Encode the notes to be safely included in a URL
       const encodedNotes = notes ? encodeURIComponent(notes) : "";
-      // Redirect to gen-chat with the notes as assistantMessage parameter
+      // Gather materials for the current day based on section IDs starting with "material-{day.day}-"
+      const materials = Object.entries(uploadedFiles)
+        .filter(([sectionId]) => sectionId.startsWith(`material-${day.day}-`))
+        .flatMap(([, files]) => files)
+        .map((file) => ({ id: file.id, name: file.name, url: file.url }));
+      const encodedMaterials = encodeURIComponent(JSON.stringify(materials));
+      // Append both assistantMessage (notes) and materials parameters to the URL
       router.push(
-        `/tools/gen-chat?thread=new&teachingMode=true&assistantMessage=${encodedNotes}`
+        `/tools/gen-chat?thread=new&teachingMode=true&assistantMessage=${encodedNotes}&materials=${encodedMaterials}`
       );
     }
   };

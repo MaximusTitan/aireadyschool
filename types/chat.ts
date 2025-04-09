@@ -83,7 +83,6 @@ export type ChatAreaProps = {
   isOwner?: boolean;
   isTeachingMode?: boolean;
   onTeachingModeToggle?: () => void;
-  // Add these new properties for assessments
   generatedAssessments: Record<string, any>;
   pendingAssessments: Set<string>;
   handleAssessmentGeneration: (
@@ -98,4 +97,5 @@ export type ChatAreaProps = {
     }
   ) => Promise<void>;
   assessmentIds: Record<string, number>;
+  materials?: { id: string; name: string; url: string }[];
 };

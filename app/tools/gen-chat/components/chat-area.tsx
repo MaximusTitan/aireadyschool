@@ -8,6 +8,7 @@ import { useAudioSettings } from "@/app/tools/gen-chat/hooks/useAudioSettings";
 import { ChatAreaProps } from "@/types/chat";
 import { Button } from "@/components/ui/button";
 import { ToolRenderer } from "./ToolRenderer";
+import { FileViewer } from "@/app/tools/lesson-planner/components/file-viewer";
 
 /**
  * ChatArea component that displays messages and tools in a split-screen layout
@@ -42,6 +43,7 @@ export const ChatArea = ({
   pendingAssessments,
   handleAssessmentGeneration,
   assessmentIds,
+  materials,
 }: ChatAreaProps) => {
   // Refs for managing DOM elements and state
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -477,6 +479,20 @@ export const ChatArea = ({
                 assessmentIds={assessmentIds}
               />
             ))}
+            {materials && materials.length > 0 && (
+              <div className="mt-6 border-t pt-4">
+                <h3 className="text-lg font-semibold mb-2">Materials</h3>
+                <div className="grid gap-4">
+                  {materials.map((mat) => (
+                    <FileViewer
+                      key={mat.id}
+                      file={{ ...mat, type: "material" }} // add a default type property
+                      canDelete={false} // disable deletion in Gen-Chat
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

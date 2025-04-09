@@ -61,6 +61,22 @@ function ChatPageContent() {
   const teachingModeParam = searchParams.get("teachingMode") === "true";
   const userInputParam = searchParams.get("userInput");
   const assistantMessageParam = searchParams.get("assistantMessage");
+  // NEW: Remove direct materials extraction and use state instead
+  const [materialsState, setMaterialsState] = useState<
+    { id: string; name: string; url: string }[] | undefined
+  >(undefined);
+
+  useEffect(() => {
+    const materialsParam = searchParams.get("materials");
+    if (materialsParam && !materialsState) {
+      try {
+        const parsedMaterials = JSON.parse(decodeURIComponent(materialsParam));
+        setMaterialsState(parsedMaterials);
+      } catch (err) {
+        console.error("Failed to parse materials:", err);
+      }
+    }
+  }, [materialsState, searchParams]);
 
   // References to track initialization states
   const userInputInitRef = useRef(false);
@@ -426,6 +442,8 @@ function ChatPageContent() {
           pendingAssessments={tools.pendingAssessments}
           handleAssessmentGeneration={tools.handleAssessmentGeneration}
           assessmentIds={tools.assessmentIds}
+          // NEW: Pass the state-held materials for persistent debug display
+          materials={materialsState}
         />
       </div>
     </TooltipProvider>

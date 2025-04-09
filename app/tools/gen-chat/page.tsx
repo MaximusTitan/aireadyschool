@@ -58,13 +58,13 @@ function ChatPageContent() {
 
   // Extract URL parameters
   const searchParams = useSearchParams();
-  const lessonPlanIdParam = searchParams.get("lessonPlanId");
-  const scheduleDataParam = searchParams.get("scheduleData");
   const teachingModeParam = searchParams.get("teachingMode") === "true";
   const userInputParam = searchParams.get("userInput");
+  const assistantMessageParam = searchParams.get("assistantMessage");
 
   // References to track initialization states
   const userInputInitRef = useRef(false);
+  const assistantMessageInitRef = useRef(false);
   const initializationRef = useRef(false);
   const threadInitRef = useRef(false);
 
@@ -103,7 +103,6 @@ function ChatPageContent() {
       id: threadId,
       language,
       teachingMode: isTeachingMode,
-      lessonPlanId: lessonPlanIdParam,
     },
     onFinish: useCallback(
       async (message: Message) => {
@@ -158,94 +157,6 @@ function ChatPageContent() {
     }
   }, [currentMessages, setMessages]);
 
-  /**
-   * Format lesson plan data into a chat message
-   */
-  const formatLessonPlanMessage = (lessonPlan: any) => {
-    return (
-      `Hey buddy, "${lessonPlan.chapter_topic}" in ${lessonPlan.subject} (I'm from grade ${lessonPlan.grade}).\n\n` +
-      `Class Details:\n` +
-      `- Duration: ${lessonPlan.class_duration} minutes\n` +
-      `- Number of sessions: ${lessonPlan.number_of_days}\n` +
-      `- Board: ${lessonPlan.board || "Not specified"}\n\n` +
-      `Learning Objectives:\n${lessonPlan.learning_objectives || "Not specified"}\n\n` +
-      `Please help me understand the key concepts for this lesson.`
-    );
-  };
-
-  // Initialize lesson plan when URL parameters are present
-  useEffect(() => {
-    const initializeLessonPlan = async () => {
-      if (threadInitRef.current || !lessonPlanIdParam || messages.length > 0)
-        return;
-      threadInitRef.current = true;
-
-      try {
-        let activeThreadId = threadId;
-        if (!activeThreadId) {
-          activeThreadId = await createThread();
-          await router.push(
-            `/tools/gen-chat?thread=${activeThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}${
-              scheduleDataParam ? `&scheduleData=${scheduleDataParam}` : ""
-            }`
-          );
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-
-        const response = await fetch(`/api/lesson-plans/${lessonPlanIdParam}`);
-        if (!response.ok) throw new Error("Failed to fetch lesson plan");
-
-        const lessonPlan = await response.json();
-        let messageContent;
-
-        if (userInputParam) {
-          messageContent = userInputParam;
-        } else {
-          messageContent = formatLessonPlanMessage(lessonPlan);
-
-          if (scheduleDataParam) {
-            const scheduleData = JSON.parse(
-              decodeURIComponent(scheduleDataParam)
-            );
-            messageContent += `\n\nLet's focus on Day ${scheduleData.day}: ${scheduleData.topicHeading}\n`;
-            messageContent += `Activity: ${scheduleData.schedule.type} - ${scheduleData.schedule.title}\n`;
-            messageContent += `Content: ${scheduleData.schedule.content}\n`;
-            messageContent += `Duration: ${scheduleData.schedule.timeAllocation} minutes\n\n`;
-            messageContent +=
-              "Please help me understand this specific part of the lesson.";
-          }
-        }
-
-        const userMessage: ChatMessage = {
-          id: String(Date.now()),
-          role: "user",
-          content: messageContent,
-          createdAt: new Date(),
-        };
-
-        await saveMessage(userMessage, activeThreadId);
-        await append(userMessage);
-
-        router.replace(`/tools/gen-chat?thread=${activeThreadId}`);
-      } catch (error) {
-        console.error("Error initializing lesson plan chat:", error);
-      }
-    };
-
-    initializeLessonPlan();
-  }, [
-    lessonPlanIdParam,
-    scheduleDataParam,
-    messages.length,
-    append,
-    threadId,
-    createThread,
-    router,
-    isTeachingMode,
-    saveMessage,
-    userInputParam,
-  ]);
-
   // Handle user input from URL parameter
   useEffect(() => {
     if (userInputInitRef.current || !userInputParam) return;
@@ -261,6 +172,66 @@ function ChatPageContent() {
     ]);
   }, [userInputParam, setMessages]);
 
+  // Handle assistant message from URL parameter
+  useEffect(() => {
+    if (assistantMessageInitRef.current || !assistantMessageParam) return;
+    assistantMessageInitRef.current = true;
+
+    // Function to add the assistant message
+    const addAssistantMessage = async (threadIdToUse: string) => {
+      // Get decoded content
+      const decodedContent = decodeURIComponent(assistantMessageParam);
+
+      // Create message object
+      const assistantMsg = {
+        id: String(Date.now()),
+        role: "assistant" as const,
+        content: decodedContent,
+        createdAt: new Date(),
+        fromHistory: false, // Mark as not from history to enable TTS if applicable
+      };
+
+      // Add to UI
+      setMessages((prevMessages: ChatMessage[]) => [
+        ...prevMessages,
+        assistantMsg,
+      ]);
+
+      // Save to database
+      try {
+        await saveMessage(assistantMsg, threadIdToUse);
+      } catch (error) {
+        console.error("Failed to save initial assistant message:", error);
+      }
+    };
+
+    // If we already have a thread ID, use it
+    if (threadId) {
+      addAssistantMessage(threadId);
+    } else {
+      // Otherwise, create a new thread then add the message
+      (async () => {
+        try {
+          const newThreadId = await startNewThread();
+          await addAssistantMessage(newThreadId);
+          router.push(
+            `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}`
+          );
+        } catch (error) {
+          console.error("Error creating thread for assistant message:", error);
+        }
+      })();
+    }
+  }, [
+    assistantMessageParam,
+    setMessages,
+    threadId,
+    saveMessage,
+    startNewThread,
+    isTeachingMode,
+    router,
+  ]);
+
   /**
    * Handle thread selection and loading
    */
@@ -268,7 +239,7 @@ function ChatPageContent() {
     if (selectedThreadId === "new") {
       const newThreadId = await startNewThread();
       router.push(
-        `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}`
+        `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}`
       );
       return;
     }
@@ -281,7 +252,7 @@ function ChatPageContent() {
       console.error("Failed to load thread:", error);
       const newThreadId = await startNewThread();
       router.push(
-        `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}&lessonPlanId=${lessonPlanIdParam}`
+        `/tools/gen-chat?thread=${newThreadId}&teachingMode=${isTeachingMode}`
       );
     }
   };

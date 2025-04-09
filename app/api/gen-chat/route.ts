@@ -141,7 +141,6 @@ function getSystemPrompt(
   language: Language = 'english',
   teachingMode = false,
   studentDetails?: any,
-  assignedAssessment?: { evaluation: any; lesson_plan: any }
 ): string {
   const subject = detectSubject(messages);
   
@@ -281,11 +280,11 @@ export async function POST(request: Request) {
       return Response.json({ error: error?.message || 'User not found' }, { status: 401 });
     }
 
-    const userName = user.user_metadata?.name; 
+    const userName = user.user_metadata?.name;
     const userRole = user.user_metadata?.role;
 
     // Parse request body
-    const { messages, id: threadId, language = 'english', teachingMode = false, lessonPlanId, scheduleData } = await request.json();
+    const { messages, id: threadId, language = 'english', teachingMode = false } = await request.json();
 
     // Check input size
     const lastUserMessage = messages.find((m: any) => m.role === 'user')?.content || '';
@@ -309,21 +308,6 @@ export async function POST(request: Request) {
       studentDetails = await getStudentDetails(supabase, user.id, userName);
     } else if (userRole === 'Student') {
       studentDetails = studentDetailsCache.get(user.id);
-    }
-
-    // Fetch recent assessment if needed
-    if (userRole === 'Student' && !studentDetails?.assignedAssessment) {
-      const { data: assignedData } = await supabase
-        .from('assigned_assessments')
-        .select('evaluation, lesson_plan')
-        .eq('student_email', user.email)
-        .order('assigned_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (assignedData) {
-        studentDetails.assignedAssessment = assignedData;
-      }
     }
 
     //-----------------------------------------------------
@@ -382,7 +366,6 @@ export async function POST(request: Request) {
       language as Language, 
       teachingMode, 
       studentDetails, 
-      studentDetails?.assignedAssessment ?? undefined
     );
 
     // Log token usage

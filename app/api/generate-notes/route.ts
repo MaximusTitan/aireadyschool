@@ -13,21 +13,18 @@ export async function POST(req: Request) {
     }
 
     const prompt = `
-    As an expert educator, generate detailed and informative notes for the following lesson activity:
+    As an expert educator, provide a simple class explanation for the following lesson:
 
     Title: ${title}
     Content: ${content}
 
-    Please structure your response as follows:
+    Please provide a concise markdown-formatted explanation that:
+    - Summarizes the main topic in 1-2 paragraphs
+    - Lists 3-4 key points students should understand
+    - Includes 1-2 simple examples to illustrate the concept
 
-    1. Key Concepts: List and briefly explain 3-5 main concepts related to this topic.
-    2. Background Information: Provide relevant background information or context for this topic.
-    3. Important Elements: Mention and describe 2-3 significant elements (e.g., people, places, theories, equations) related to this topic.
-    4. Examples or Applications: Give 2-3 specific examples or real-world applications that illustrate the main points.
-    5. Analysis: Offer a short analysis of the topic's significance or impact in its field.
-    6. Practice Questions: Provide 3-5 thought-provoking questions that test understanding of the material.
-
-    Ensure all content is factual, relevant to ${title}, and appropriate for the grade level implied by the activity. Adapt the structure as needed to best fit the subject matter.
+    Use markdown formatting (bullet points, bold for emphasis, etc.) to make the explanation clear and readable.
+    Keep the language appropriate for the grade level implied by the activity.
     `
 
     const { text } = await generateText({

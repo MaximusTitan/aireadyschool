@@ -25,7 +25,7 @@ interface LessonContentProps {
   onGenerateNotes: (activityTitle: string, activityContent: string) => void;
   onFileUpload: (file: File, type: string, sectionId: string) => Promise<void>;
   onDeleteFile: (fileId: string, sectionId: string) => Promise<void>;
-  onChatWithBuddy: (item: ScheduleItem, day: Day) => void;
+  onChatWithBuddy: (item: ScheduleItem, day: Day, notes?: string) => void;
   showDocumentGenerator?: boolean;
   setShowDocumentGenerator?: (show: boolean) => void;
   onNotesEdit?: (activityTitle: string, notes: string) => void;
@@ -168,9 +168,11 @@ export function LessonContent({
                       <div className="font-medium text-gray-900">
                         {item.title || item.type}
                       </div>
-                      <div className="mt-1 text-sm text-gray-500">
-                        {item.content}
-                      </div>
+                      {userRole !== "Student" && (
+                        <div className="mt-1 text-sm text-gray-500">
+                          {item.content}
+                        </div>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-2">
@@ -185,6 +187,23 @@ export function LessonContent({
                             }
                           />
                         )}
+                        {userRole === "Student" &&
+                          generatedNotes[item.title] && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
+                              onClick={() =>
+                                onChatWithBuddy(
+                                  item,
+                                  day,
+                                  generatedNotes[item.title]
+                                )
+                              }
+                            >
+                              Chat with Buddy
+                            </Button>
+                          )}
                         {userRole !== "Student" && (
                           <Button
                             size="sm"

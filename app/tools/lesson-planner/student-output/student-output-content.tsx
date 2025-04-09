@@ -149,19 +149,17 @@ export default function StudentOutputContent() {
     }
   }, [isAuthorized, id, fetchLessonPlan]);
 
-  const handleChatWithBuddy = (item: ScheduleItem, day: Day) => {
+  const handleChatWithBuddy = (
+    item: ScheduleItem,
+    day: Day,
+    notes?: string
+  ) => {
     if (lessonPlan) {
-      const scheduleData = {
-        day: day.day,
-        topicHeading: day.topicHeading,
-        schedule: item,
-        learningOutcomes: day.learningOutcomes,
-      };
-
+      // Encode the notes to be safely included in a URL
+      const encodedNotes = notes ? encodeURIComponent(notes) : "";
+      // Redirect to gen-chat with the notes as assistantMessage parameter
       router.push(
-        `/tools/gen-chat?thread=new&teachingMode=true&lessonPlanId=${lessonPlan.id}&scheduleData=${encodeURIComponent(
-          JSON.stringify(scheduleData)
-        )}`
+        `/tools/gen-chat?thread=new&teachingMode=true&assistantMessage=${encodedNotes}`
       );
     }
   };
@@ -170,9 +168,7 @@ export default function StudentOutputContent() {
     e.preventDefault();
     if (lessonPlan) {
       router.push(
-        `/tools/gen-chat?thread=new&teachingMode=false&lessonPlanId=${
-          lessonPlan.id
-        }&userInput=${encodeURIComponent(buddyInput)}`
+        `/tools/gen-chat?thread=new&teachingMode=false&userInput=${encodeURIComponent(buddyInput)}`
       );
     }
   };
@@ -334,7 +330,9 @@ export default function StudentOutputContent() {
 
         {activeTab.startsWith("day-") ? (
           <div
-            className={`${showDocumentGenerator ? "flex gap-6 px-4" : "mx-auto max-w-7xl"}`}
+            className={`${
+              showDocumentGenerator ? "flex gap-6 px-4" : "mx-auto max-w-7xl"
+            }`}
           >
             <div
               className={`${

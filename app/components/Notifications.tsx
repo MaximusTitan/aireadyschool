@@ -3,12 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { Bell } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface Notification {
   id: string;
   title: string;
   timestamp: string;
   read: boolean;
+  document_id?: string; // Add document_id field
 }
 
 export default function Notifications() {
@@ -17,6 +19,22 @@ export default function Notifications() {
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const supabase = createClient();
+  const router = useRouter();
+
+  // Fetch notifications from DB on mount
+  useEffect(() => {
+    async function fetchNotifications() {
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("timestamp", { ascending: false });
+      if (!error && data) {
+        setNotifications(data);
+        setUnreadCount(data.filter((n: Notification) => !n.read).length);
+      }
+    }
+    fetchNotifications();
+  }, [supabase]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -50,7 +68,18 @@ export default function Notifications() {
             title: `New submission: ${payload.new.title}`,
             timestamp: new Date().toISOString(),
             read: false,
+            document_id: payload.new.id, // Store document ID for navigation
           };
+          // Insert notification into DB using an async function and array format for the record
+          (async () => {
+            const { error } = await supabase
+              .from("notifications")
+              .insert([newNotification]);
+            if (error) {
+              console.error("Error inserting notification:", error);
+            }
+          })();
+          // Update local state
           setNotifications((prev) => [newNotification, ...prev]);
           setUnreadCount((count) => count + 1);
         }
@@ -62,7 +91,21 @@ export default function Notifications() {
     };
   }, [supabase]);
 
-  const markAsRead = (id: string) => {
+  const handleNotificationClick = async (notification: Notification) => {
+    // Mark as read
+    await markAsRead(notification.id);
+
+    // Navigate to document generator with ID if available
+    if (notification.document_id) {
+      setIsOpen(false); // Close notification panel
+      router.push(`/tools/document-generator?id=${notification.document_id}`);
+    }
+  };
+
+  const markAsRead = async (id: string) => {
+    // Update notification in DB
+    await supabase.from("notifications").update({ read: true }).eq("id", id);
+    // Update local state
     setNotifications((prev) =>
       prev.map((notif) => (notif.id === id ? { ...notif, read: true } : notif))
     );
@@ -100,7 +143,7 @@ export default function Notifications() {
                   className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
                     !notification.read ? "bg-blue-50" : ""
                   }`}
-                  onClick={() => markAsRead(notification.id)}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <p className="text-sm font-medium">{notification.title}</p>
                   <p className="text-xs text-gray-500 mt-1">

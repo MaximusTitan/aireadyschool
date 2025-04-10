@@ -148,7 +148,7 @@ export function AppSidebar() {
             },
             {
               title: "Schools",
-              url: "/schools",
+              url: "/school",
               icon: School,
             },
             {

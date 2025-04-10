@@ -832,6 +832,17 @@ const DocumentGeneratorContent = ({
           setDocumentId(data.id);
           setDocumentTitle(data.title);
           editor?.commands.setContent(data.content);
+
+          // New code: Check if current user owns the document
+          const { data: authData } = await supabase.auth.getUser();
+          if (
+            authData?.user &&
+            data.email && // assumed document record contains the owner's email in 'email'
+            authData.user.email !== data.email
+          ) {
+            setIsViewMode(true);
+            editor?.setEditable(false);
+          }
         }
       } catch (error) {
         console.error("Error loading document:", error);
@@ -1082,11 +1093,11 @@ const DocumentGeneratorContent = ({
               value={documentTitle}
               onChange={(e) => setDocumentTitle(e.target.value)}
               className="text-xl font-medium bg-transparent border-none focus:outline-none focus:ring-0 w-[300px]"
-              readOnly={readOnly}
+              readOnly={readOnly || isViewMode}
             />
           </div>
 
-          {!readOnly && (
+          {!readOnly && !isViewMode && (
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"
@@ -1097,38 +1108,22 @@ const DocumentGeneratorContent = ({
                 My Documents
               </Button>
 
-              {!isViewMode ? (
-                <Button
-                  variant="default"
-                  className="flex items-center gap-1"
-                  onClick={saveDocument}
-                  disabled={isSaving}
-                >
-                  {isSaving ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Save
-                      size={16}
-                      className={hasUnsavedChanges ? "text-yellow-500" : ""}
-                    />
-                  )}
-                  {hasUnsavedChanges ? "Save*" : "Save"}
-                </Button>
-              ) : (
-                <Button
-                  variant="default"
-                  onClick={() => {
-                    router.push(
-                      `/tools/document-generator?id=${documentId}&mode=edit`
-                    );
-                    setIsViewMode(false);
-                    editor?.setEditable(true);
-                  }}
-                >
-                  <Edit size={16} className="mr-2" />
-                  Edit Document
-                </Button>
-              )}
+              <Button
+                variant="default"
+                className="flex items-center gap-1"
+                onClick={saveDocument}
+                disabled={isSaving}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Save
+                    size={16}
+                    className={hasUnsavedChanges ? "text-yellow-500" : ""}
+                  />
+                )}
+                {hasUnsavedChanges ? "Save*" : "Save"}
+              </Button>
 
               <Button
                 variant="outline"
@@ -1145,9 +1140,27 @@ const DocumentGeneratorContent = ({
               </Button>
             </div>
           )}
+
+          {isViewMode && (
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                className="flex items-center gap-1"
+                onClick={exportAsPDF}
+                disabled={exportingPdf}
+              >
+                {exportingPdf ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FileDown size={16} />
+                )}
+                Export as PDF
+              </Button>
+            </div>
+          )}
         </div>
 
-        {!readOnly && (
+        {!readOnly && !isViewMode && (
           <div className="p-2 border-b flex flex-wrap gap-1 bg-white sticky top-0 z-10 shadow-sm">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -1455,7 +1468,7 @@ const DocumentGeneratorContent = ({
             </div>
           </div>
 
-          {showAIMenu && (
+          {showAIMenu && !isViewMode && (
             <FloatingAIMenu
               onRewriteSelected={enhanceSelectedText}
               onRewriteAll={rewriteEntireDocument}
@@ -1464,7 +1477,7 @@ const DocumentGeneratorContent = ({
           )}
         </div>
 
-        {!readOnly && !submitted && onDocumentSubmit && (
+        {!readOnly && !submitted && onDocumentSubmit && !isViewMode && (
           <Button
             onClick={() => {
               if (initialDocumentId) {

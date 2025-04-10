@@ -204,6 +204,17 @@ const ToolsPage = () => {
       : [];
   }, [userRole, getAllToolsWithCategories]);
 
+  // Add this new useMemo for role-based search tools
+  const searchTools = useMemo(() => {
+    if (userRole === "Admin") {
+      // For Admin, return all tools from all categories
+      return getAllToolsWithCategories;
+    }
+
+    // For other roles, return only their specific categories
+    return userRole ? categories[userRole] : {};
+  }, [userRole, getAllToolsWithCategories]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<CategoryName | "All">(
     "All"
@@ -442,11 +453,11 @@ const ToolsPage = () => {
                 <CommandInput placeholder="Search tools..." />
                 <CommandList>
                   <CommandEmpty>No tools found.</CommandEmpty>
-                  {Object.entries(getAllToolsWithCategories).map(
-                    ([category, tools]) =>
-                      tools.length > 0 && (
+                  {Object.entries(searchTools).map(
+                    ([category, categoryTools]) =>
+                      (categoryTools as Tool[]).length > 0 && (
                         <CommandGroup key={category} heading={category}>
-                          {tools.map((tool) => (
+                          {(categoryTools as Tool[]).map((tool) => (
                             <CommandItem
                               key={tool.route}
                               onSelect={() => handleSelect(tool.route)}

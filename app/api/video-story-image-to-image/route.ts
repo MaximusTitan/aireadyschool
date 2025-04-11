@@ -69,6 +69,7 @@ export async function POST(req: Request) {
         prompt: finalPrompt,
         image_size: "landscape_16_9",
         num_images: 1,
+        num_inference_steps: 10,
       }
     });
 

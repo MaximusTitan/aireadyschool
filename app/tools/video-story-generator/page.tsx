@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, memo, useCallback } from 'react'
+import { useState, useEffect, memo, useCallback, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Poppins } from 'next/font/google'
 import { Inter } from 'next/font/google'
@@ -40,6 +40,7 @@ interface Scene {
   };
   storyboardImageUrl: string;
   generatedImageUrl?: string;
+  videoUrl?: string;
 }
 
 interface ParsedScene extends Scene {
@@ -92,6 +93,31 @@ interface ApiResponse {
   scenes?: ParsedScene[];
   error?: string;
 }
+
+interface StoryInputs {
+  storyTitle: string;
+  mainCharacters: string;
+  storyGenre: string;
+  storyLocation: string;
+  openingScene: string;
+  storyDuration: '15' | '30' | '60';
+}
+
+const genreOptions = [
+  { value: 'funny', label: 'Funny' },
+  { value: 'adventure', label: 'Adventure' },
+  { value: 'mystery', label: 'Mystery' },
+  { value: 'scifi', label: 'Sci-fi' },
+  { value: 'historical', label: 'Historical' },
+  { value: 'fantasy', label: 'Fantasy' },
+  { value: 'sliceoflife', label: 'Slice of Life' }
+];
+
+const durationOptions = [
+  { value: '15', label: '15 Seconds' },
+  { value: '30', label: '30 Seconds' },
+  { value: '60', label: '60 Seconds' }
+];
 
 const fadeIn = {
   hidden: { opacity: 0 },
@@ -383,9 +409,34 @@ const SceneContainer = memo(({
     shotType: ''
   });
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isEnhancing, setIsEnhancing] = useState(false);
 
   const handleInputChange = (field: keyof SceneInputs, value: string) => {
     setInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEnhancePrompt = async () => {
+    if (!inputs.imageDescription) return;
+    
+    setIsEnhancing(true);
+    try {
+      const response = await fetch('/api/enhance-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt: inputs.imageDescription })
+      });
+
+      if (!response.ok) throw new Error('Failed to enhance prompt');
+
+      const data = await response.json();
+      if (data.enhancedPrompt) {
+        handleInputChange('imageDescription', data.enhancedPrompt);
+      }
+    } catch (error) {
+      console.error('Error enhancing prompt:', error);
+    } finally {
+      setIsEnhancing(false);
+    }
   };
 
   const handleGenerate = async () => {
@@ -423,17 +474,47 @@ const SceneContainer = memo(({
             />
           </div>
 
-          <div>
+          <div className="relative">
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Image Description
             </label>
+            <button
+              onClick={handleEnhancePrompt}
+              disabled={isEnhancing || !inputs.imageDescription}
+              className="absolute top-0 right-0 flex items-center text-rose-500 hover:text-rose-600 transition-colors disabled:opacity-40"
+            >
+              {isEnhancing ? (
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-4 border-2 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm">Enhancing...</span>
+                </div>
+              ) : (
+                <>
+                  <span className="mr-1">✨</span>
+                  <span className="text-sm">Enhance with AI</span>
+                </>
+              )}
+            </button>
             <textarea
               value={inputs.imageDescription}
               onChange={(e) => handleInputChange('imageDescription', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              className={`w-full p-2 border border-gray-300 rounded-md text-sm mt-2 transition-all duration-300 ${
+                isEnhancing ? 'opacity-50' : ''
+              }`}
               rows={4}
               placeholder="Add specific details about how you want this scene to look..."
+              disabled={isEnhancing}
             />
+            {isEnhancing && (
+              <div className="absolute inset-0 flex items-center justify-center bg-white/50">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-8 h-8 border-4 border-rose-500 border-t-transparent rounded-full animate-spin" />
+                  <span className="text-sm font-medium text-rose-500">
+                    AI is enhancing your prompt...
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div>
@@ -765,6 +846,395 @@ const ProgressBar = memo(({
 
 ProgressBar.displayName = 'ProgressBar';
 
+const StoryInputForm = memo(({ onSubmit, isLoading }: { 
+  onSubmit: (inputs: StoryInputs) => void;
+  isLoading: boolean;
+}) => {
+  const [inputs, setInputs] = useState<StoryInputs>({
+    storyTitle: '',
+    mainCharacters: '',
+    storyGenre: '',
+    storyLocation: '',
+    openingScene: '',
+    storyDuration: '30'
+  });
+
+  const handleChange = (field: keyof StoryInputs, value: string) => {
+    setInputs(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSubmit(inputs);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Story Title
+          </label>
+          <input
+            type="text"
+            value={inputs.storyTitle}
+            onChange={(e) => handleChange('storyTitle', e.target.value)}
+            placeholder="Enter your story title (e.g., The Whispering Forest)"
+            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Main Characters
+          </label>
+          <textarea
+            value={inputs.mainCharacters}
+            onChange={(e) => handleChange('mainCharacters', e.target.value)}
+            placeholder="List main characters and their traits (e.g., Lena – brave, Zeke – loyal)"
+            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            rows={3}
+            required
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Story Genre
+            </label>
+            <select
+              value={inputs.storyGenre}
+              onChange={(e) => handleChange('storyGenre', e.target.value)}
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+              required
+            >
+              <option value="">Select Genre</option>
+              {genreOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Story Duration
+            </label>
+            <select
+              value={inputs.storyDuration}
+              onChange={(e) => handleChange('storyDuration', e.target.value as '15' | '30' | '60')}
+              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+              required
+            >
+              {durationOptions.map(option => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Story Setting / Location
+          </label>
+          <textarea
+            value={inputs.storyLocation}
+            onChange={(e) => handleChange('storyLocation', e.target.value)}
+            placeholder="Describe the setting (e.g., In an ancient jungle temple...)"
+            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            rows={3}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-1">
+            Opening Scene
+          </label>
+          <textarea
+            value={inputs.openingScene}
+            onChange={(e) => handleChange('openingScene', e.target.value)}
+            placeholder="Describe how the story starts (e.g., A strange box arrives at their door...)"
+            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            rows={3}
+            required
+          />
+        </div>
+      </div>
+
+      <motion.button
+        type="submit"
+        disabled={isLoading}
+        className={`w-full px-6 py-3 rounded-xl font-medium text-white 
+          bg-rose-400 hover:bg-rose-500
+          transition-all duration-200 ease-in-out
+          disabled:opacity-50 disabled:cursor-not-allowed
+          shadow-lg hover:shadow-xl`}
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
+      >
+        {isLoading ? (
+          <div className="flex items-center justify-center gap-2">
+            <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin" />
+            <span>Enhancing Story...</span>
+          </div>
+        ) : (
+          'Create Story'
+        )}
+      </motion.button>
+    </form>
+  );
+});
+
+StoryInputForm.displayName = 'StoryInputForm';
+
+const formatStory = (story: string) => {
+  // Clean the story text and ensure proper paragraph spacing
+  const cleanedStory = story
+    .trim()
+    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newline
+    .split('\n\n')
+    .filter(paragraph => paragraph.trim())
+    .join('\n\n');
+
+  return cleanedStory;
+};
+
+// Add new interfaces
+interface AudioResult {
+  url: string;
+  script: string;
+}
+
+interface AudioSceneInputs {
+  script: string;
+}
+
+// Add AudioContainer component
+const AudioContainer = memo(({ 
+  scene,
+  generatedAudio,
+  onGenerateAudio,
+  setGeneratedAudios 
+}: { 
+  scene: Scene;
+  generatedAudio?: AudioResult;
+  onGenerateAudio: (script: string) => Promise<void>;
+  setGeneratedAudios: React.Dispatch<React.SetStateAction<Record<string, AudioResult>>>;
+}) => {
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [scriptError, setScriptError] = useState<string | null>(null);
+  const [audioScript, setAudioScript] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handleGenerateScript = async () => {
+    setIsGeneratingScript(true);
+    setScriptError(null);
+    try {
+      const response = await fetch('/api/generate-audio-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageDescription: scene.imagePrompt,
+          sceneDescription: scene.text
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate script');
+      
+      const data = await response.json();
+      setAudioScript(data.audioScript);
+    } catch (error) {
+      setScriptError('Failed to generate script');
+      console.error('Script generation error:', error);
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  };
+
+  const handleGenerateAudio = async () => {
+    if (!audioScript) return;
+    setIsGeneratingAudio(true);
+    try {
+      await onGenerateAudio(audioScript);
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const fetchExistingAudio = async () => {
+    try {
+      const { data: audioRecord } = await (await supabase)
+        .from('scene_audio')
+        .select('audio_url, script')
+        .eq('scene_id', scene.id)
+        .maybeSingle();
+
+      if (audioRecord) {
+        setGeneratedAudios(prev => ({
+          ...prev,
+          [scene.id]: {
+            url: audioRecord.audio_url,
+            script: audioRecord.script
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching existing audio:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchExistingAudio();
+  }, [scene.id]);
+
+  const handlePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      audioElement.onended = () => setIsPlaying(false);
+      audioElement.onpause = () => setIsPlaying(false);
+      audioElement.onplay = () => setIsPlaying(true);
+    }
+  }, []);
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6 mb-6 flex gap-6">
+      <div className="w-1/2 relative">
+        <video
+          controls
+          className="w-full aspect-video rounded-lg"
+          src={scene.videoUrl}
+        >
+          Your browser does not support video playback.
+        </video>
+      </div>
+
+      <div className="w-1/2 flex flex-col h-[400px]">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-4 custom-scrollbar">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="block text-sm font-semibold text-gray-700">
+                Narration Script
+              </label>
+              <button
+                onClick={handleGenerateScript}
+                disabled={isGeneratingScript}
+                className="px-3 py-1 text-sm bg-rose-100 text-rose-600 rounded hover:bg-rose-200 transition-colors"
+              >
+                {isGeneratingScript ? 'Generating...' : 'Generate Script'}
+              </button>
+            </div>
+            {audioScript ? (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">{audioScript}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  {audioScript.length} characters
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">
+                No script generated yet.
+              </p>
+            )}
+          </div>
+
+          {audioScript && (
+            <button
+              onClick={handleGenerateAudio}
+              disabled={isGeneratingAudio || !audioScript}
+              className="w-full mt-4 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors disabled:opacity-50"
+            >
+              {isGeneratingAudio ? 'Generating Audio...' : 'Generate Audio'}
+            </button>
+          )}
+
+          {generatedAudio?.script && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Audio Script
+              </label>
+              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                {generatedAudio.script}
+              </p>
+            </div>
+          )}
+
+          {generatedAudio?.url && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Generated Audio
+              </label>
+              <div className="w-full">
+                <audio
+                  controls
+                  src={generatedAudio.url}
+                  className="w-full"
+                >
+                  Your browser does not support audio playback.
+                </audio>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+AudioContainer.displayName = 'AudioContainer';
+
+// Add AudioBoard component
+const AudioBoard = memo(({ 
+  scenes,
+  generatedAudios,
+  onGenerateAudio,
+  setGeneratedAudios 
+}: { 
+  scenes: Scene[];
+  generatedAudios: Record<string, AudioResult>;
+  onGenerateAudio: (sceneId: string) => Promise<void>;
+  setGeneratedAudios: React.Dispatch<React.SetStateAction<Record<string, AudioResult>>>;
+}) => {
+  return (
+    <div className="bg-white rounded-2xl shadow-xl p-8">
+      <h2 className="text-2xl font-bold text-gray-800 mb-6">
+        Audio Generation Board
+      </h2>
+      <div className="space-y-6">
+        {scenes.map((scene) => (
+          <AudioContainer
+            key={scene.id}
+            scene={scene}
+            generatedAudio={generatedAudios[scene.id]}
+            onGenerateAudio={(script) => onGenerateAudio(scene.id)}
+            setGeneratedAudios={setGeneratedAudios}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+
+AudioBoard.displayName = 'AudioBoard';
+
 export default function VideoStoryGenerator() {
   const [story, setStory] = useState('')
   const [loading, setLoading] = useState(false)
@@ -784,6 +1254,54 @@ export default function VideoStoryGenerator() {
   const [currentStep, setCurrentStep] = useState('story');
   const [storyId, setStoryId] = useState<number | null>(null);
   const [generatedVideos, setGeneratedVideos] = useState<Record<string, { url: string }>>({});
+  const [storyInputs, setStoryInputs] = useState<StoryInputs | null>(null);
+  const [generatedAudios, setGeneratedAudios] = useState<Record<string, AudioResult>>({});
+  
+  const handleGenerateSceneAudio = async (sceneId: string) => {
+    try {
+      const scene = scenes.find(s => s.id === sceneId);
+      if (!scene) return;
+
+      // Generate audio script
+      const scriptResponse = await fetch('/api/generate-audio-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageDescription: scene.imagePrompt,
+          sceneDescription: scene.text
+        })
+      });
+
+      if (!scriptResponse.ok) throw new Error('Failed to generate audio script');
+      
+      const scriptData = await scriptResponse.json();
+      
+      // Generate audio
+      const audioResponse = await fetch('/api/generate-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          script: scriptData.audioScript,
+          sceneId: scene.id
+        })
+      });
+
+      if (!audioResponse.ok) throw new Error('Failed to generate audio');
+      
+      const audioData = await audioResponse.json();
+      
+      setGeneratedAudios(prev => ({
+        ...prev,
+        [sceneId]: { 
+          url: audioData.audioUrl,
+          script: scriptData.audioScript
+        }
+      }));
+
+    } catch (error) {
+      console.error('Error generating audio:', error);
+    }
+  };
 
   const countWords = (text: string) => {
     return text.trim().split(/\s+/).filter(Boolean).length
@@ -793,34 +1311,37 @@ export default function VideoStoryGenerator() {
     setWordCount(countWords(story))
   }, [story])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
+  const handleStorySubmit = async (inputs: StoryInputs) => {
+    setLoading(true);
     try {
       const response = await fetch('/api/video-story-generator', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ story })
-      })
-      const data = await response.json()
-      setGeneratedStory(data.refinedStory)
-      setIsEditing(false)
-      setShowStoryboard(false)
-      setScenes([])
-      setHasAnimationPlayed(false)
+        body: JSON.stringify({ 
+          inputs,
+          generateScenes: false 
+        })
+      });
+      
+      const data = await response.json();
+      setGeneratedStory(data.refinedStory);
+      setStoryInputs(inputs); // Save inputs for scene generation
+      setIsEditing(false);
+      setShowStoryboard(false);
+      setScenes([]);
+      setHasAnimationPlayed(false);
     } catch (error) {
-      console.error('Error:', error)
+      console.error('Error:', error);
     }
-    setLoading(false)
-  }
+    setLoading(false);
+  };
 
   const handleGenerateStoryboard = async () => {
-    if (!generatedStory) {
-      console.error('No story to generate storyboard from')
-      return
-    }
-
-    setStoryboardLoading(true)
+    if (!generatedStory || !storyInputs) return;
+    
+    const numScenes = Math.floor(parseInt(storyInputs.storyDuration) / 5);
+    
+    setStoryboardLoading(true);
     try {
       const { data: storyData, error: storyError } = await supabase
         .from('video_stories')
@@ -842,8 +1363,10 @@ export default function VideoStoryGenerator() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          story: generatedStory, 
-          generateScenes: true 
+          story: generatedStory,
+          generateScenes: true,
+          numScenes,
+          inputs: storyInputs
         })
       });
 
@@ -1012,7 +1535,7 @@ export default function VideoStoryGenerator() {
   }
 
   const handleRegenerate = () => {
-    handleSubmit(new Event('submit') as any)
+    handleStorySubmit(storyInputs as StoryInputs)
   }
 
   const handleGenerateAllImages = async () => {
@@ -1151,14 +1674,22 @@ export default function VideoStoryGenerator() {
       const scene = scenes.find(s => s.id === sceneId);
       if (!scene) return;
 
+      const videoPrompt = `Scene Description: ${scene.text}
+Video Motion: ${inputs.videoMotion}
+Camera Movement: ${inputs.cameraMovement}`;
+
       const response = await fetch('/api/image-to-video', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          imageUrl: scene.generatedImageUrl || scene.imageUrl,
-          sceneDescription: scene.text,
-          videoMotion: inputs.videoMotion,
-          cameraMovement: inputs.cameraMovement
+          scenes: [{
+            imageUrl: scene.generatedImageUrl || scene.imageUrl,
+            description: scene.text,
+            videoMotion: inputs.videoMotion,
+            cameraMovement: inputs.cameraMovement,
+            prompt: videoPrompt
+          }],
+          story: generatedStory
         })
       });
 
@@ -1168,10 +1699,17 @@ export default function VideoStoryGenerator() {
 
       const data = await response.json();
       
+      // Update both generatedVideos and scenes with video URL
       setGeneratedVideos(prev => ({
         ...prev,
         [sceneId]: { url: data.videoUrl }
       }));
+
+      setScenes(prev => 
+        prev.map(s => 
+          s.id === sceneId ? { ...s, videoUrl: data.videoUrl } : s
+        )
+      );
 
     } catch (error) {
       console.error('Error generating video:', error);
@@ -1261,6 +1799,14 @@ export default function VideoStoryGenerator() {
       completed: !!videoResult, 
       current: currentStep === 'video',
       enabled: generatedImages.length > 0 
+    },
+    { 
+      id: 'audio', 
+      label: 'Audio Board', 
+      number: 6,
+      completed: Object.keys(generatedAudios).length > 0, 
+      current: currentStep === 'audio',
+      enabled: Object.keys(generatedVideos).length > 0 
     }
   ];
 
@@ -1323,60 +1869,18 @@ export default function VideoStoryGenerator() {
                 exit="hidden"
                 className="bg-white rounded-2xl shadow-xl p-8 backdrop-blur-lg border border-white/20"
               >
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <h2 className="text-2xl font-bold text-rose-500">
-                        Bring your Story into Reality
-                      </h2>
-                      <p className="text-lg font-medium text-rose-500">
-                        Give a small Gist of your Story
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <textarea
-                        value={story}
-                        onChange={(e) => setStory(e.target.value)}
-                        className="w-full h-52 p-4 border-2 border-gray-200 rounded-xl 
-                          focus:border-rose-400 focus:ring-2 focus:ring-rose-200 
-                          transition-all duration-200 ease-in-out text-gray-800 
-                          placeholder-gray-500 resize-none text-lg"
-                        placeholder="Once upon a time..."
-                        required
-                        style={{ fontSize: '1.1rem', lineHeight: '1.6' }}
-                      />
-                      
-                      <div className="flex justify-between items-center px-1">
-                        <span className={`text-base font-medium ${
-                          wordCount < 50 ? 'text-red-500' : 'text-green-600'
-                        }`}>
-                          {wordCount}/50 words
-                        </span>
-                        <motion.button
-                          type="submit"
-                          disabled={loading || wordCount < 50}
-                          className={`px-6 py-2 rounded-xl font-medium text-white 
-                            bg-rose-400 hover:bg-rose-500
-                            transition-all duration-200 ease-in-out
-                            disabled:opacity-50 disabled:cursor-not-allowed
-                            shadow-lg hover:shadow-xl`}
-                          whileHover={{ scale: 1.02 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {loading ? (
-                            <div className="flex items-center gap-2">
-                              <div className="w-4 h-4 border-t-2 border-white rounded-full animate-spin" />
-                              <span>Enhancing...</span>
-                            </div>
-                          ) : (
-                            'Enhance your Story'
-                          )}
-                        </motion.button>
-                      </div>
-                    </div>
-                  </div>
-                </form>
+                <div className="mb-6">
+                  <h2 className="text-2xl font-bold text-rose-500">
+                    Create Your Story
+                  </h2>
+                  <p className="text-lg font-medium text-rose-500 mt-2">
+                    Fill in the details below to create your video story
+                  </p>
+                </div>
+                <StoryInputForm 
+                  onSubmit={handleStorySubmit}
+                  isLoading={loading}
+                />
               </motion.div>
             )}
 
@@ -1414,10 +1918,10 @@ export default function VideoStoryGenerator() {
                     className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:ring-2 focus:ring-pink-200 transition-all duration-200"
                   />
                 ) : (
-                  <div className="prose max-w-none text-gray-700 leading-relaxed">
+                  <div className="prose max-w-none text-center text-gray-700 leading-relaxed px-8">
                     {!hasAnimationPlayed ? (
                       <Typewriter
-                        words={[generatedStory]}
+                        words={[formatStory(generatedStory)]}
                         cursor={false}
                         typeSpeed={1}
                         onType={(step) => {
@@ -1427,7 +1931,7 @@ export default function VideoStoryGenerator() {
                         }}
                       />
                     ) : (
-                      generatedStory
+                      formatStory(generatedStory)
                     )}
                   </div>
                 )}
@@ -1560,6 +2064,15 @@ export default function VideoStoryGenerator() {
                 scenes={scenes}
                 generatedVideos={generatedVideos}
                 onGenerateVideo={handleGenerateSceneVideo}
+              />
+            )}
+
+            {currentStep === 'audio' && (
+              <AudioBoard
+                scenes={scenes}
+                generatedAudios={generatedAudios}
+                onGenerateAudio={handleGenerateSceneAudio}
+                setGeneratedAudios={setGeneratedAudios}
               />
             )}
           </AnimatePresence>

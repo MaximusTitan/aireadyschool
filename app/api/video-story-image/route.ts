@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     // Enhanced prompt specifically for manga-style images
-    const enhancedPrompt = `${prompt}. Style: professional manga illustration, black and white anime art, detailed manga linework, Studio Ghibli inspired, dramatic shading, clean ink lines, dynamic composition, expressive characters, screentone shading, manga panel aesthetic, Japanese comic style, high contrast manga, white background. Use techniques like: cross-hatching, speed lines, dramatic angles, emotive expressions, detailed backgrounds with architectural lines`;
+    const enhancedPrompt = `${prompt}. Style:  Style: Black and white line art, Grayscale Image.'`;
 
     // First store the grayscale placeholder
     const { data: sceneRecord, error: insertError } = await (await supabase)

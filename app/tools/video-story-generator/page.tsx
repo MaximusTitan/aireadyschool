@@ -9,6 +9,15 @@ import { Share2, Download, Film } from 'lucide-react'
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { createClient } from '@supabase/supabase-js';
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -268,19 +277,19 @@ const StoryboardScene = memo(({
 
         <div className="space-y-2">
           <label className="block text-sm font-medium text-gray-700">Scene Description</label>
-          <textarea
+          <Textarea
             value={localText}
             onChange={(e) => setLocalText(e.target.value)}
             className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200 transition-all duration-200 min-h-[100px] text-gray-700"
             placeholder="Describe what happens in this scene..."
           />
           <div className="flex justify-end">
-            <button
+            <Button
               onClick={handleSave}
               className="px-4 py-2 bg-rose-500 text-white rounded-lg font-medium hover:bg-rose-600 transition-colors"
             >
               Save Description
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -296,7 +305,7 @@ const StoryboardScene = memo(({
           </div>
           {isEditingPrompt ? (
             <div className="space-y-3">
-              <textarea
+              <Textarea
                 value={localPrompt}
                 onChange={(e) => setLocalPrompt(e.target.value)}
                 className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200 transition-all duration-200"
@@ -304,7 +313,7 @@ const StoryboardScene = memo(({
                 placeholder="Describe how you want this scene to look..."
               />
               <div className="flex gap-2">
-                <button
+                <Button
                   onClick={enhancePrompt}
                   disabled={isEnhancingPrompt || !localPrompt}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-rose-400 to-rose-600 text-white rounded-lg font-medium hover:from-rose-500 hover:to-rose-700 disabled:opacity-50 transition-all duration-300"
@@ -317,13 +326,13 @@ const StoryboardScene = memo(({
                   ) : (
                     'Enhance with AI'
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handlePromptSave}
                   className="px-4 py-2 border-2 border-rose-500 text-rose-500 rounded-lg font-medium hover:bg-rose-50 transition-colors"
                 >
                   Save
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -361,7 +370,7 @@ const VideoPromptSection = memo(({
       <label className="block text-sm font-medium text-gray-700">
         Scene Motion Description
       </label>
-      <textarea
+      <Textarea
         value={prompt}
         onChange={(e) => setPrompt(e.target.value)}
         placeholder="Describe the motion for this scene (e.g., 'The camera zooms into the hero's face as fire burns in the background.')"
@@ -369,7 +378,7 @@ const VideoPromptSection = memo(({
         rows={3}
       />
       <div className="flex justify-between gap-2">
-        <button
+        <Button
           onClick={() => onEnhance()}
           disabled={isEnhancing}
           className="flex-1 px-4 py-2 bg-gradient-to-r from-rose-400 to-rose-600 text-white rounded-lg font-medium hover:from-rose-500 hover:to-rose-700 disabled:opacity-50"
@@ -382,13 +391,13 @@ const VideoPromptSection = memo(({
           ) : (
             'Enhance with AI'
           )}
-        </button>
-        <button
+        </Button>
+        <Button
           onClick={() => onSave(prompt)}
           className="px-4 py-2 border-2 border-rose-500 text-rose-500 rounded-lg font-medium hover:bg-rose-50"
         >
           Save Motion
-        </button>
+        </Button>
       </div>
     </motion.div>
   );
@@ -466,7 +475,7 @@ const SceneContainer = memo(({
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Scene Description
             </label>
-            <textarea
+            <Textarea
               value={inputs.sceneDescription}
               onChange={(e) => handleInputChange('sceneDescription', e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-md text-sm"
@@ -495,7 +504,7 @@ const SceneContainer = memo(({
                 </>
               )}
             </button>
-            <textarea
+            <Textarea
               value={inputs.imageDescription}
               onChange={(e) => handleInputChange('imageDescription', e.target.value)}
               className={`w-full p-2 border border-gray-300 rounded-md text-sm mt-2 transition-all duration-300 ${
@@ -521,25 +530,29 @@ const SceneContainer = memo(({
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Shot Type
             </label>
-            <select
+            <Select
               value={inputs.shotType}
-              onChange={(e) => handleInputChange('shotType', e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md text-sm"
+              onValueChange={(value) => handleInputChange('shotType', value)}
             >
-              <option value="">Select shot type...</option>
-              <option value="close-up">Close-up Shot</option>
-              <option value="medium">Medium Shot</option>
-              <option value="long">Long Shot</option>
-              <option value="extreme-close-up">Extreme Close-up</option>
-              <option value="wide">Wide Shot</option>
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select shot type..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="close-up">Close-up Shot</SelectItem>
+                <SelectItem value="medium">Medium Shot</SelectItem>
+                <SelectItem value="long">Long Shot</SelectItem>
+                <SelectItem value="extreme-close-up">Extreme Close-up</SelectItem>
+                <SelectItem value="wide">Wide Shot</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
-        <button
+        <Button
           onClick={handleGenerate}
           disabled={isGenerating}
-          className="mt-4 w-full px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors disabled:opacity-50"
+          className="mt-4 w-full"
+          variant="default"
         >
           {isGenerating ? (
             <span className="flex items-center justify-center gap-2">
@@ -549,7 +562,7 @@ const SceneContainer = memo(({
           ) : (
             'Generate Image'
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -719,7 +732,7 @@ const VideoContainer = memo(({
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Video Motion
             </label>
-            <textarea
+            <Textarea
               value={inputs.videoMotion}
               onChange={(e) => handleInputChange('videoMotion', e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-md text-sm"
@@ -732,7 +745,7 @@ const VideoContainer = memo(({
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Camera Movement
             </label>
-            <textarea
+            <Textarea
               value={inputs.cameraMovement}
               onChange={(e) => handleInputChange('cameraMovement', e.target.value)}
               className="w-full p-2 border border-gray-300 rounded-md text-sm"
@@ -742,10 +755,11 @@ const VideoContainer = memo(({
           </div>
         </div>
 
-        <button
+        <Button
           onClick={handleGenerate}
           disabled={isGenerating || !inputs.videoMotion || !inputs.cameraMovement}
-          className="mt-4 w-full px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors disabled:opacity-50"
+          className="mt-4 w-full"
+          variant="default"
         >
           {isGenerating ? (
             <span className="flex items-center justify-center gap-2">
@@ -755,7 +769,7 @@ const VideoContainer = memo(({
           ) : (
             'Generate Video'
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -804,41 +818,27 @@ const ProgressBar = memo(({
 }) => {
   return (
     <div className="w-full max-w-5xl mx-auto mb-8">
-      <div className="flex justify-between items-center relative">
-        <div className="absolute h-1 bg-gray-200 top-1/2 left-0 right-0 -translate-y-1/2 z-0" />
-        <div 
-          className="absolute h-1 bg-rose-400 top-1/2 left-0 -translate-y-1/2 z-0 transition-all duration-300"
-          style={{ 
-            width: `${(steps.findIndex(s => s.id === currentStep) / (steps.length - 1)) * 100}%` 
-          }} 
-        />
-
-        <div className="flex justify-between relative z-10 w-full">
-          {steps.map((step) => (
-            <button
-              key={step.id}
-              onClick={() => step.enabled && onStepClick(step.id)}
-              disabled={!step.enabled}
-              className={`flex flex-col items-center space-y-2 ${
-                step.enabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
-              }`}
-            >
-              <div className={`
-                w-8 h-8 rounded-full flex items-center justify-center
-                transition-all duration-300
-                ${step.current ? 'bg-rose-400 text-white scale-110' :
-                  step.completed ? 'bg-rose-400/20 text-rose-500' : 'bg-gray-200 text-gray-400'}
-              `}>
-                {step.completed ? '✓' : step.number}
-              </div>
-              <span className={`text-sm font-medium ${
-                step.current ? 'text-rose-500' : 'text-gray-500'
-              }`}>
-                {step.label}
-              </span>
-            </button>
-          ))}
-        </div>
+      <div className="flex justify-between items-center gap-2">
+        {steps.map((step) => (
+          <button
+            key={step.id}
+            onClick={() => step.enabled && onStepClick(step.id)}
+            disabled={!step.enabled}
+            className={`
+              flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200
+              ${step.enabled 
+                ? 'cursor-pointer hover:bg-rose-50' 
+                : 'cursor-not-allowed opacity-50'
+              }
+              ${step.current 
+                ? 'border-2 border-rose-500 text-rose-500 bg-rose-50' 
+                : 'border border-gray-200 text-gray-600'
+              }
+            `}
+          >
+            {step.label}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -875,12 +875,12 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Story Title
           </label>
-          <input
+          <Input
             type="text"
             value={inputs.storyTitle}
             onChange={(e) => handleChange('storyTitle', e.target.value)}
             placeholder="Enter your story title (e.g., The Whispering Forest)"
-            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+            className="w-full"
             required
           />
         </div>
@@ -889,12 +889,11 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Main Characters
           </label>
-          <textarea
+          <Textarea
             value={inputs.mainCharacters}
             onChange={(e) => handleChange('mainCharacters', e.target.value)}
             placeholder="List main characters and their traits (e.g., Lena – brave, Zeke – loyal)"
-            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
-            rows={3}
+            className="min-h-[100px]"
             required
           />
         </div>
@@ -904,37 +903,42 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Story Genre
             </label>
-            <select
+            <Select
               value={inputs.storyGenre}
-              onChange={(e) => handleChange('storyGenre', e.target.value)}
-              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
-              required
+              onValueChange={(value) => handleChange('storyGenre', value)}
             >
-              <option value="">Select Genre</option>
-              {genreOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Genre" />
+              </SelectTrigger>
+              <SelectContent>
+                {genreOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-1">
               Story Duration
             </label>
-            <select
+            <Select
               value={inputs.storyDuration}
-              onChange={(e) => handleChange('storyDuration', e.target.value as '15' | '30' | '60')}
-              className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
-              required
+              onValueChange={(value) => handleChange('storyDuration', value as '15' | '30' | '60')}
             >
-              {durationOptions.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger>
+                <SelectValue placeholder="Select Duration" />
+              </SelectTrigger>
+              <SelectContent>
+                {durationOptions.map(option => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
@@ -942,12 +946,11 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Story Setting / Location
           </label>
-          <textarea
+          <Textarea
             value={inputs.storyLocation}
             onChange={(e) => handleChange('storyLocation', e.target.value)}
             placeholder="Describe the setting (e.g., In an ancient jungle temple...)"
-            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
-            rows={3}
+            className="min-h-[100px]"
             required
           />
         </div>
@@ -956,27 +959,21 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
           <label className="block text-sm font-semibold text-gray-700 mb-1">
             Opening Scene
           </label>
-          <textarea
+          <Textarea
             value={inputs.openingScene}
             onChange={(e) => handleChange('openingScene', e.target.value)}
             placeholder="Describe how the story starts (e.g., A strange box arrives at their door...)"
-            className="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
-            rows={3}
+            className="min-h-[100px]"
             required
           />
         </div>
       </div>
 
-      <motion.button
+      <Button
         type="submit"
         disabled={isLoading}
-        className={`w-full px-6 py-3 rounded-xl font-medium text-white 
-          bg-rose-400 hover:bg-rose-500
-          transition-all duration-200 ease-in-out
-          disabled:opacity-50 disabled:cursor-not-allowed
-          shadow-lg hover:shadow-xl`}
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        className="w-full"
+        variant="default"
       >
         {isLoading ? (
           <div className="flex items-center justify-center gap-2">
@@ -986,7 +983,7 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
         ) : (
           'Create Story'
         )}
-      </motion.button>
+      </Button>
     </form>
   );
 });
@@ -1134,13 +1131,13 @@ const AudioContainer = memo(({
               <label className="block text-sm font-semibold text-gray-700">
                 Narration Script
               </label>
-              <button
+              <Button
                 onClick={handleGenerateScript}
                 disabled={isGeneratingScript}
                 className="px-3 py-1 text-sm bg-rose-100 text-rose-600 rounded hover:bg-rose-200 transition-colors"
               >
                 {isGeneratingScript ? 'Generating...' : 'Generate Script'}
-              </button>
+              </Button>
             </div>
             {audioScript ? (
               <div className="p-4 bg-gray-50 rounded-lg">
@@ -1157,13 +1154,13 @@ const AudioContainer = memo(({
           </div>
 
           {audioScript && (
-            <button
+            <Button
               onClick={handleGenerateAudio}
               disabled={isGeneratingAudio || !audioScript}
               className="w-full mt-4 px-4 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors disabled:opacity-50"
             >
               {isGeneratingAudio ? 'Generating Audio...' : 'Generate Audio'}
-            </button>
+            </Button>
           )}
 
           {generatedAudio?.script && (
@@ -1774,11 +1771,11 @@ Camera Movement: ${inputs.cameraMovement}`;
       number: 2,
       completed: !!generatedStory, 
       current: currentStep === 'enhanced',
-      enabled: !!story 
+      enabled: !!generatedStory  // Enable if story exists
     },
     { 
       id: 'storyboard', 
-      label: 'Story Board', 
+      label: 'Storyboard', // Shortened from 'Story Board'
       number: 3,
       completed: scenes.length > 0, 
       current: currentStep === 'storyboard',
@@ -1786,7 +1783,7 @@ Camera Movement: ${inputs.cameraMovement}`;
     },
     { 
       id: 'images', 
-      label: 'Image Board', 
+      label: 'Images', // Shortened from 'Image Board'
       number: 4,
       completed: generatedImages.length > 0, 
       current: currentStep === 'images',
@@ -1794,7 +1791,7 @@ Camera Movement: ${inputs.cameraMovement}`;
     },
     { 
       id: 'video', 
-      label: 'Video Board', 
+      label: 'Videos', // Shortened from 'Video Board'
       number: 5,
       completed: !!videoResult, 
       current: currentStep === 'video',
@@ -1802,7 +1799,7 @@ Camera Movement: ${inputs.cameraMovement}`;
     },
     { 
       id: 'audio', 
-      label: 'Audio Board', 
+      label: 'Audio', // Shortened from 'Audio Board'
       number: 6,
       completed: Object.keys(generatedAudios).length > 0, 
       current: currentStep === 'audio',
@@ -1896,30 +1893,33 @@ Camera Movement: ${inputs.cameraMovement}`;
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800">Your Story</h2>
                   <div className="space-x-3">
-                    <button
+                    <Button
                       onClick={() => isEditing ? handleSaveEdit() : setIsEditing(true)}
-                      className="px-4 py-2 rounded-lg border-2 border-gray-200 hover:border-pink-400 transition-colors duration-200"
+                      variant="outline"
+                      className="border-2 hover:border-pink-400 transition-colors duration-200"
                     >
                       {isEditing ? 'Save' : 'Edit'}
-                    </button>
-                    <button
-                      onClick={handleGenerateStoryboard}
-                      disabled={storyboardLoading}
-                      className="px-4 py-2 rounded-lg bg-gradient-to-r from-rose-400 to-rose-500 text-white hover:from-rose-500 hover:to-rose-600 transition-all duration-200"
-                    >
-                      {storyboardLoading ? 'Generating...' : 'Create Storyboard'}
-                    </button>
+                    </Button>
+                    {currentStep === 'enhanced' && (
+                      <Button
+                        onClick={handleGenerateStoryboard}
+                        disabled={storyboardLoading}
+                        className="bg-gradient-to-r from-rose-400 to-rose-500 text-white hover:from-rose-500 hover:to-rose-600"
+                      >
+                        {storyboardLoading ? 'Generating...' : 'Create Storyboard'}
+                      </Button>
+                    )}
                   </div>
                 </div>
                 {isEditing ? (
-                  <textarea
+                  <Textarea
                     value={generatedStory}
                     onChange={(e) => setGeneratedStory(e.target.value)}
                     className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-pink-400 focus:ring-2 focus:ring-pink-200 transition-all duration-200"
                   />
                 ) : (
-                  <div className="prose max-w-none text-center text-gray-700 leading-relaxed px-8">
-                    {!hasAnimationPlayed ? (
+                  <div className="prose max-w-none text-justify text-gray-700 leading-relaxed px-8">
+                    {!hasAnimationPlayed && currentStep === 'enhanced' ? (
                       <Typewriter
                         words={[formatStory(generatedStory)]}
                         cursor={false}
@@ -2004,7 +2004,7 @@ Camera Movement: ${inputs.cameraMovement}`;
 
                       <div className="p-4 space-y-4">
                         <div className="space-y-2">
-                          <textarea
+                          <Textarea
                             value={scene.text}
                             onChange={(e) => handleSceneTextChange(scene.id, e.target.value)}
                             className="w-full p-3 min-h-[100px] text-sm text-neutral-700 border border-neutral-200 
@@ -2015,7 +2015,7 @@ Camera Movement: ${inputs.cameraMovement}`;
                         </div>
 
                         <div className="flex items-center justify-between pt-2">
-                          <button
+                          <Button
                             onClick={() => handleRegenerateStoryboardImage(scene.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium 
                               text-neutral-600 hover:text-neutral-800 bg-neutral-100 
@@ -2027,9 +2027,9 @@ Camera Movement: ${inputs.cameraMovement}`;
                               />
                             </svg>
                             Regenerate
-                          </button>
+                          </Button>
                           
-                          <button
+                          <Button
                             onClick={() => handleDeleteScene(scene.id)}
                             className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium 
                               text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md 
@@ -2041,7 +2041,7 @@ Camera Movement: ${inputs.cameraMovement}`;
                               />
                             </svg>
                             Delete
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </motion.div>

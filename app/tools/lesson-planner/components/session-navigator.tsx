@@ -20,7 +20,11 @@ export function SessionNavigator({
         {days.map((day) => (
           <div
             key={`session-${day.day}`}
-            className="border rounded-md p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+            className={`border rounded-md p-4 cursor-pointer ${
+              activeTab === `day-${day.day}`
+                ? "bg-rose-50"
+                : "bg-white hover:bg-gray-50"
+            } transition-colors`}
             onClick={() => onTabChange(`day-${day.day}`)}
           >
             <div className="flex">
@@ -33,7 +37,11 @@ export function SessionNavigator({
           </div>
         ))}
         <div
-          className="border rounded-md p-4 cursor-pointer hover:bg-gray-50 transition-colors"
+          className={`border rounded-md p-4 cursor-pointer ${
+            activeTab === "assessment"
+              ? "bg-rose-50"
+              : "bg-white hover:bg-gray-50"
+          } transition-colors`}
           onClick={() => onTabChange("assessment")}
         >
           <div className="flex">

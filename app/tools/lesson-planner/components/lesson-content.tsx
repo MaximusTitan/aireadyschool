@@ -406,6 +406,40 @@ export function LessonContent({
           )}
         </div>
       </div>
+
+      {day.assessment && (
+        <div className="border-t border-gray-200 pt-6 mt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Assessment</h3>
+            {userRole !== "Student" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  onEdit(
+                    "assessment",
+                    day.assessment || { topic: "", learningObjectives: [] },
+                    day.day - 1
+                  )
+                }
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+          <div className="p-4 bg-gray-50 rounded-md">
+            <h4 className="font-medium mb-2">{day.assessment.topic}</h4>
+            <p className="mb-3">Learning Objectives:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              {(day.assessment.learningObjectives || []).map(
+                (objective, index) => (
+                  <li key={index}>{objective}</li>
+                )
+              )}
+            </ul>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/utils/supabase/server"; // Ensure this import exists
+import { createClient } from "@/utils/supabase/server";
 
-// Define interfaces
 interface RequestBody {
-    text: string;
-    story: string;
+    script: string;  // Changed from text to script
+    sceneId: string; // Added sceneId
 }
 
 interface ElevenLabsError {
@@ -22,11 +21,11 @@ interface StoryGenerationRecord {
 }
 
 export async function POST(request: Request): Promise<NextResponse> {
-    const { text, story }: RequestBody = await request.json();
+    const { script, sceneId }: RequestBody = await request.json();
 
-    if (!text || !story) {
+    if (!script || !sceneId) {
         return NextResponse.json(
-            { error: "Text and story are required" },
+            { error: "Script and sceneId are required" },
             { status: 400 }
         );
     }
@@ -46,7 +45,7 @@ export async function POST(request: Request): Promise<NextResponse> {
                     "xi-api-key": apiKey,
                 },
                 body: JSON.stringify({
-                    text: text,
+                    text: script,
                 }),
             }
         );
@@ -57,100 +56,53 @@ export async function POST(request: Request): Promise<NextResponse> {
         }
 
         const audioBlob: Blob = await response.blob();
-
         const timestamp: number = Date.now();
-        const filename: string = `audio_${timestamp}.mp3`;
+        const filename: string = `scene_${sceneId}_${timestamp}.mp3`;
 
-        const { data: uploadData, error: uploadError } = await supabase.storage
-            .from("generated-audio")
+        console.log('Attempting to upload audio file:', filename);
+        
+        // Upload to storage with more detailed error handling
+        const { data: uploadData, error: uploadError } = await (await supabase).storage
+            .from('audio')
             .upload(filename, audioBlob, {
-                cacheControl: "3600",
-                upsert: false,
-                contentType: "audio/mpeg",
+                contentType: 'audio/mpeg',
+                upsert: true,
+                cacheControl: '3600'
             });
 
         if (uploadError) {
-            console.error("Error uploading audio to storage:", uploadError.message);
-            throw new Error("Failed to upload audio to storage.");
+            console.error('Storage upload error:', uploadError);
+            throw new Error(`Failed to upload audio: ${uploadError.message}`);
         }
 
-        const { data } = supabase.storage
-            .from("generated-audio")
+        console.log('Audio upload successful, getting public URL');
+
+        // Get public URL with proper error handling
+        const { data: urlData } = await (await supabase).storage
+            .from('audio')
             .getPublicUrl(filename);
 
-        if (!data.publicUrl) {
-            console.error(
-                "Error getting public URL:",
-                "publicUrl is undefined"
-            );
-            throw new Error("Failed to retrieve public URL for audio.");
+        if (!urlData?.publicUrl) {
+            throw new Error('Failed to get public URL for uploaded audio');
         }
 
-        const publicURL: string = data.publicUrl;
+        const publicURL = urlData.publicUrl;
+        console.log('Generated public URL:', publicURL);
 
-        console.log("Public URL obtained:", publicURL);
+        // Database operation with proper error handling
+        const { error: dbError } = await (await supabase)
+            .from('scene_audio')
+            .upsert({
+                scene_id: sceneId,
+                audio_url: publicURL,
+                script: script,
+                updated_at: new Date().toISOString()
+            });
 
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-
-        if (userError || !userData.user) {
-            throw new Error("User not authenticated.");
-        }
-
-        const userEmail: string = userData.user.email!;
-
-        const { data: currentData, error: fetchError } = await supabase
-            .from("story_generations")
-            .select("generated_audio")
-            .eq("user_email", userEmail)
-            .eq("story", story)
-            .single();
-
-        if (fetchError) {
-            console.error(
-                "Error fetching current generated_audio:",
-                fetchError.message
-            );
-            throw new Error("Failed to fetch current generated_audio.");
-        }
-
-        const existingAudio: string[] = currentData.generated_audio
-            ? currentData.generated_audio.filter((url: string | null) => url !== null)
-            : [];
-
-        const updatedAudio: string[] = [...existingAudio, publicURL];
-
-        console.log("Updated generated_audio:", updatedAudio);
-
-        if (story) {
-            const { data: currentData, error: fetchError } = await supabase
-                .from("story_generations")
-                .select("generated_audio")
-                .eq("user_email", userEmail)
-                .eq("story", story)
-                .single();
-
-            if (fetchError) {
-                console.error(
-                    "Error fetching current generated_audio:",
-                    fetchError.message
-                );
-                throw new Error("Failed to fetch current generated_audio.");
-            }
-
-            const existingAudio: string[] = currentData.generated_audio || [];
-            const updatedAudio: string[] = [...existingAudio, publicURL];
-
-            const { error: updateError } = await supabase
-                .from("story_generations")
-                .update({
-                    generated_audio: updatedAudio,
-                })
-                .eq("user_email", userEmail)
-                .eq("story", story);
-
-            if (updateError) {
-                console.error("Error updating generated audio:", updateError.message);
-            }
+        if (dbError) {
+            // Cleanup on db error
+            await supabase.storage.from("audio").remove([filename]);
+            throw new Error("Failed to save audio to database");
         }
 
         return NextResponse.json({ audioUrl: publicURL }, { status: 200 });
@@ -158,8 +110,7 @@ export async function POST(request: Request): Promise<NextResponse> {
         console.error("Error generating audio:", error);
         return NextResponse.json(
             {
-                error:
-                    "Failed to generate audio: " +
+                error: "Failed to generate audio: " +
                     (error instanceof Error ? error.message : error),
             },
             { status: 500 }

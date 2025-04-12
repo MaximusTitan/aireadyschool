@@ -7,24 +7,21 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { story, generateScenes } = await req.json()
+    const { inputs, generateScenes, numScenes } = await req.json();
 
     if (generateScenes) {
-      // More specific prompt to ensure consistent formatting
-      const prompt = `Break this story into exactly 4 scenes for a video storyboard. For each scene:
-1. Describe the main action or event
-2. Specify visual details (camera angle, lighting, setting)
-3. List key elements to focus on
+      const prompt = `Create exactly ${numScenes} scenes for a ${inputs.storyDuration}-second video storyboard.
+Genre: ${inputs.storyGenre}
+Setting: ${inputs.storyLocation}
+Characters: ${inputs.mainCharacters}
 
-Story: ${story}
+Story: ${inputs.story}
 
 Follow this EXACT format for each scene (maintain the exact symbols and spacing):
 Scene 1: [Main action happening] | Visual: [camera angle, lighting, setting details] | Focus: [key elements]
-Scene 2: [Next key moment] | Visual: [visual details] | Focus: [key elements]
-Scene 3: [Another key moment] | Visual: [visual details] | Focus: [key elements]
-Scene 4: [Final/climactic moment] | Visual: [visual details] | Focus: [key elements]
+...continue for all ${numScenes} scenes...
 
-Make each scene description clear and cinematic.`
+Make each scene approximately 5 seconds long and ensure they flow naturally.`;
 
       console.log("Sending prompt to GPT:", prompt);
 
@@ -55,9 +52,9 @@ Make each scene description clear and cinematic.`
         throw new Error('Scene parsing failed - no scenes detected');
       }
 
-      if (scenes.length < 4) {
+      if (scenes.length < numScenes) {
         console.error(`Only ${scenes.length} scenes generated. Raw text:`, sceneText);
-        throw new Error(`Insufficient scenes generated (${scenes.length}/4)`);
+        throw new Error(`Insufficient scenes generated (${scenes.length}/${numScenes})`);
       }
 
       return NextResponse.json({
@@ -70,26 +67,35 @@ Make each scene description clear and cinematic.`
       });
     }
 
-    // Modified story enhancement prompt
-    const prompt = `Create a short, engaging story from the following input. The story should:
-    - Be written in natural prose format (not screenplay)
-    - Be descriptive and vivid but concise
-    - Focus on narrative flow and emotional connection
-    - Avoid technical directions or camera instructions
-    - Be suitable for visual adaptation
-    - Be between 200-300 words
-    
-    Input story: ${story}
+    // Updated story generation prompt
+    const prompt = `Create an engaging ${inputs.storyDuration}-second story following these requirements:
 
-    Write the story in a clear, engaging style that a general audience can easily follow.`;
+Title: ${inputs.storyTitle}
+Genre: ${inputs.storyGenre}
+Main Characters: ${inputs.mainCharacters}
+Setting: ${inputs.storyLocation}
+Opening Scene: ${inputs.openingScene}
+
+Write a complete, detailed story that:
+1. Has a clear beginning, middle, and end
+2. Fits the ${inputs.storyDuration}-second duration when told
+3. Focuses on character development and vivid descriptions
+4. Matches the ${inputs.storyGenre} genre style
+5. Incorporates all main characters meaningfully
+6. Uses rich, descriptive language
+7. Creates immersive scenes and atmosphere
+8. Avoids any screenplay formatting or dialogue markers
+9. Flows naturally as a narrative story
+10. Has approximately ${Math.floor(inputs.storyDuration * 4)} words (averaging 4 words per second)
+
+Write in a clear, engaging narrative style. Do not include any stage directions, camera angles, or screenplay elements.
+Format the story as continuous paragraphs with proper spacing.`;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o",
       messages: [{ role: "user", content: prompt }],
       temperature: 0.7,
-      max_tokens: 1000,
-      presence_penalty: 0.2,
-      frequency_penalty: 0.3
+      max_tokens: 2000, // Increased for longer stories
     });
 
     const refinedStory = completion.choices[0].message.content;
@@ -123,7 +129,7 @@ function parseScenes(sceneText: string) {
     const focusElements = match[4].trim();
 
     // Updated manga-style prompt
-    const imagePrompt = `Professional manga illustration of: ${description}. Scene details: ${visualDetails}. Key focus: ${focusElements}. Style: high-quality manga art, black and white anime style, detailed linework, Studio Ghibli inspired composition, dramatic shading techniques, clean ink lines, dynamic manga panel layout, expressive anime characters, classic Japanese comic aesthetics with strong inking and contrast, white background. Add: cross-hatching, speed lines for movement, dramatic camera angles, emotive facial expressions, detailed architectural backgrounds`;
+    const imagePrompt = `Professional line-art illustration of: ${description}. Scene details: ${visualDetails}. Style: Black and white line art, Grayscale Image.`;
 
     scenes.push({
       id: `scene-${sceneNumber}`,

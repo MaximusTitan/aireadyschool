@@ -29,20 +29,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     try {
         const { scenes, story } = await request.json();
   
-        if (!scenes || scenes.length === 0) {
+        if (!scenes || scenes.length === 0 || !scenes[0].prompt) {
             return NextResponse.json(
-                { message: "No scenes provided" },
+                { message: "Scene description and prompt are required" },
                 { status: 400 }
             );
         }
 
-        // Remove base64 validation since we're using direct URLs
-        if (!scenes[0].imageUrl) {
-            return NextResponse.json(
-                { message: "Image URL is required" },
-                { status: 400 }
-            );
-        }
+        const scene = scenes[0]; // We're processing one scene at a time
 
         const supabaseClient = await supabase;
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -54,26 +48,18 @@ export async function POST(request: Request): Promise<NextResponse> {
             );
         }
 
-        // Create a combined prompt that includes story context
-        const combinedPrompt = `Story context: ${story.slice(0, 200)}...
-Scene description: ${scenes[0].description}
-Visual details: ${scenes[0].visualDetails}`;
-
         const client = new RunwayML({ apiKey: process.env.RUNWAYML_API_SECRET });
-
-        // Generate a temporary URL or placeholder
-        const tempUrl = `pending_${Date.now()}`;
 
         // Store initial record with temporary URL
         const { data: videoRecord, error: insertError } = await (await supabase)
             .from('generated_videos')
             .insert({
                 user_id: user.id,
-                input_text: combinedPrompt,
-                image_url: scenes[0].imageUrl,
-                video_url: tempUrl, // Add temporary URL to satisfy not-null constraint
+                input_text: scene.prompt,
+                image_url: scene.imageUrl,
+                video_url: `pending_${Date.now()}`,
                 status: 'processing',
-                duration: 5 // 5 seconds default
+                duration: 5
             })
             .select()
             .single();
@@ -82,8 +68,8 @@ Visual details: ${scenes[0].visualDetails}`;
 
         const imageToVideo = await client.imageToVideo.create({
             model: "gen3a_turbo",
-            promptImage: scenes[0].imageUrl,
-            promptText: combinedPrompt,
+            promptImage: scene.imageUrl,
+            promptText: scene.prompt,
             duration: 5,
             watermark: false,
             ratio: "1280:768",

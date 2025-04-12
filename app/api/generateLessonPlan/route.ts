@@ -1,49 +1,42 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/utils/supabase/server";
-import { generateText } from "ai";
+import { generateObject } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { logTokenUsage } from '@/utils/logTokenUsage';
 import { z } from "zod";
 
-// Define the lesson plan schema
+// Define the lesson plan schema with Zod
+const scheduleItemSchema = z.object({
+  type: z.enum(["introduction", "mainContent", "activity", "conclusion", "review", "assessment"]),
+  title: z.string(),
+  content: z.string(),
+  timeAllocation: z.number(),
+});
+
+const daySchema = z.object({
+  day: z.number(),
+  topicHeading: z.string(),
+  learningOutcomes: z.array(z.string()),
+  schedule: z.array(scheduleItemSchema),
+  teachingAids: z.array(z.string()),
+  assignment: z.object({
+    description: z.string(),
+    tasks: z.array(z.string()),
+  }),
+});
+
+const assessmentSchema = z.object({
+  topic: z.string(),
+  type: z.string(),
+  description: z.string(),
+  evaluationCriteria: z.array(z.string()),
+});
+
 const lessonPlanSchema = z.object({
-  days: z.array(
-    z.object({
-      day: z.number(),
-      topicHeading: z.string(),
-      learningOutcomes: z.array(z.string()),
-      schedule: z.array(
-        z.object({
-          type: z.enum(["introduction", "mainContent", "activity", "conclusion", "review", "assessment"]),
-          title: z.string(),
-          content: z.string(),
-          timeAllocation: z.number(),
-        })
-      ),
-      teachingAids: z.array(z.string()),
-      assignment: z.object({
-        description: z.string(),
-        tasks: z.array(z.string()),
-      }),
-    })
-  ),
+  days: z.array(daySchema),
   assessmentPlan: z.object({
-    formativeAssessments: z.array(
-      z.object({
-        topic: z.string(),
-        type: z.string(),
-        description: z.string(),
-        evaluationCriteria: z.array(z.string()),
-      })
-    ),
-    summativeAssessments: z.array(
-      z.object({
-        topic: z.string(),
-        type: z.string(),
-        description: z.string(),
-        evaluationCriteria: z.array(z.string()),
-      })
-    ),
+    formativeAssessments: z.array(assessmentSchema),
+    summativeAssessments: z.array(assessmentSchema),
     progressTrackingSuggestions: z.array(z.string()),
   }),
   remedialStrategies: z.array(
@@ -114,86 +107,30 @@ Lesson Objectives: ${lessonObjectives || "To be determined based on the topic"}
 Learning Objectives: ${learningObjectives || "To be determined based on the topic"}
 ${additionalInstructions ? `Additional Instructions: ${additionalInstructions}` : ""}
 
-Include all days in the plan. Return ONLY a complete, valid JSON object with no comments or additional text.`;
+Include all days in the plan with detailed content for each session.`;
 
-    // Define the system prompt
-  // Construct system prompt
-  const systemPrompt = `You are a professional curriculum developer. Create detailed lesson plans following this exact JSON structure and the provided dynamic lesson plan structure. DO NOT include any comments or explanations in your response - return ONLY valid JSON:\n\n{
-    "days": [
-      {
-        "day": number,
-        "topicHeading": string,
-        "learningOutcomes": string[],
-        "schedule": [
-          {
-            "type": "introduction" | "mainContent" | "activity" | "conclusion" | "review" | "assessment",
-            "title": string,
-            "content": string,
-            "timeAllocation": number
-          }
-        ]
-      }
-    ],
-    "assessmentPlan": {
-      "formativeAssessments": [
-        {
-          "topic": string,
-          "type": string,
-          "description": string,
-          "evaluationCriteria": string[]
-        }
-      ],
-      "summativeAssessments": [
-        {
-          "topic": string,
-          "type": string,
-          "description": string,
-          "evaluationCriteria": string[]
-        }
-      ],
-      "progressTrackingSuggestions": string[]
-    }
-}\n\nIMPORTANT GUIDELINES:\n1. Provide EXTENSIVE and DETAILED content for each activity. Each activity's "content" field should contain at least 50-100 words with specific teaching instructions, examples, questions to ask students, and detailed explanations.\n2. For each activity, include step-by-step instructions that a teacher could follow directly.\n3. Include age-appropriate examples, analogies, and real-world connections in the content.\n4. Ensure learning outcomes are specific, measurable, and aligned with educational standards.\n5. Make assignments challenging but achievable, with clear instructions and expectations.\n6. Include a variety of assessment types (quizzes, projects, discussions, etc.)\n7. DO NOT include any comments or explanations outside the JSON structure.\n8. Return ONLY valid JSON with no additional text.`;
-
-   // Generate the lesson plan
-    const { text: rawResponse, usage } = await generateText({
-      model: openai("gpt-4o"),
-      system: systemPrompt,
+    // Generate the lesson plan using structured output with Zod schema
+    const result = await generateObject({
+      model: openai("gpt-4o", {
+        structuredOutputs: true,
+      }),
+      schema: lessonPlanSchema,
       prompt: prompt,
-      temperature: 0.7,
-      maxTokens: 4000
+      schemaName: 'lessonPlan',
+      schemaDescription: 'A complete, detailed lesson plan structure for teaching a specific subject and topic.'
     });
 
+    // Get the generated lesson plan directly from the structured output
+    const lessonPlan = result.object;
+    
     // Log token usage if available
-    if (usage) {
+    if (result.usage) {
       await logTokenUsage(
         'Lesson Planner',
         'GPT-4o',
-        usage.promptTokens,
-        usage.completionTokens,
+        result.usage.promptTokens,
+        result.usage.completionTokens,
         user.email
-      );
-    }
-
-    // Process the response
-    let lessonPlan;
-    try {
-      // Extract JSON from the response
-      const jsonStartIndex = rawResponse.indexOf("{");
-      const jsonEndIndex = rawResponse.lastIndexOf("}");
-      
-      if (jsonStartIndex === -1 || jsonEndIndex === -1) {
-        throw new Error("Could not find valid JSON in the response");
-      }
-      
-      const jsonContent = rawResponse.slice(jsonStartIndex, jsonEndIndex + 1);
-      lessonPlan = JSON.parse(jsonContent);
-    } catch (parseError) {
-      console.error("Error parsing AI response. Original content:", rawResponse);
-      console.error("Parse error:", parseError);
-      return NextResponse.json(
-        { error: "Failed to parse lesson plan response" },
-        { status: 500 }
       );
     }
 

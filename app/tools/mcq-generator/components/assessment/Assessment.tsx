@@ -4,6 +4,13 @@ import React, { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 import MCQQuestion from "../questions/MCQQuestion";
 import TrueFalseQuestion from "../questions/TrueFalseQuestion";
 import FillInTheBlankQuestion from "../questions/FillInTheBlankQuestion";
@@ -12,6 +19,7 @@ import MixedAssessmentQuestion from "../questions/MixedAssessmentQuestion";
 import { downloadAssessment } from "@/utils/exportAssessment";
 import { Download, Edit, Save, Upload } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { createClient } from "@/utils/supabase/client";
 
 interface AssessmentProps {
   assessment: any[];
@@ -22,6 +30,8 @@ interface AssessmentProps {
   assessmentId?: string;
   topic: string;
   readOnly?: boolean;
+  hideSubmitButton?: boolean; // New prop to hide submit button
+  isTeacher?: boolean; // New prop to check if user is a teacher
 }
 
 export default function Assessment({
@@ -33,14 +43,17 @@ export default function Assessment({
   assessmentId,
   topic,
   readOnly = false,
+  hideSubmitButton = false, // Default to false to maintain backward compatibility
+  isTeacher = false, // Default to false assuming most users are students
 }: AssessmentProps) {
-  // New state for the full assessment record fetched from backend
   const [assessmentRecord, setAssessmentRecord] = useState<any>(null);
-
-  // States for questions, answers, and images
   const [answers, setAnswers] = useState<any[]>(
-    userAnswers.length > 0 ? userAnswers : new Array(assessment.length).fill(null)
+    userAnswers.length > 0
+      ? userAnswers
+      : new Array(assessment.length).fill(null)
   );
+  const [localShowResults, setLocalShowResults] =
+    useState<boolean>(showResults);
   const [editedAssessment, setEditedAssessment] = useState(assessment);
   const [uploadedImages, setUploadedImages] = useState<(string | null)[]>(
     new Array(assessment.length).fill(null)
@@ -56,18 +69,29 @@ export default function Assessment({
   const [editMode, setEditMode] = useState(false);
   const [isLoadingAnalysis, setIsLoadingAnalysis] = useState(false);
   const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [userIsTeacher, setUserIsTeacher] = useState<boolean>(isTeacher);
 
   const fileInputRefs = useRef<(HTMLInputElement | null)[]>([]);
   const autoSaveTimeoutRef = useRef<number | null>(null);
 
-  // Helper: Convert an object of options to a sorted array
-  const transformObjectToArray = (optionsObject: Record<string, string>): string[] => {
+  const supabase = createClient();
+
+  const transformObjectToArray = (
+    optionsObject: Record<string, string>
+  ): string[] => {
     return Object.keys(optionsObject)
       .sort()
       .map((key) => optionsObject[key]);
   };
 
-  // Fetch the full assessment record if an assessmentId is provided.
+  const indexToLetter = (index: number): string => {
+    return String.fromCharCode(65 + index); // 65 is ASCII for 'A'
+  };
+
+  const letterToIndex = (letter: string): number => {
+    return letter.toUpperCase().charCodeAt(0) - 65; // Convert 'A' to 0, 'B' to 1, etc.
+  };
+
   useEffect(() => {
     if (assessmentId) {
       const fetchAssessmentRecord = async () => {
@@ -81,7 +105,6 @@ export default function Assessment({
           const data = await res.json();
           setAssessmentRecord(data);
 
-          // Parse que_img_url because it comes as a string.
           let images: (string | null)[] = [];
           if (data.que_img_url) {
             try {
@@ -109,7 +132,6 @@ export default function Assessment({
     }
   }, [assessmentId, userAnswers]);
 
-  // Fallback initialization if no assessmentRecord is fetched.
   useEffect(() => {
     if (!assessmentRecord) {
       setAnswers(
@@ -123,8 +145,6 @@ export default function Assessment({
     }
   }, [assessment, userAnswers, assessmentRecord]);
 
-  // Convert MCQ options from object to array once,
-  // so that editedAssessment always has options as an array.
   useEffect(() => {
     if (editedAssessment && editedAssessment.length > 0) {
       const newAssessment = editedAssessment.map((q: any) => {
@@ -139,11 +159,8 @@ export default function Assessment({
       });
       setEditedAssessment(newAssessment);
     }
-    // We run this effect only when the initial assessment data is set.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assessment]);
 
-  // Evaluate short answers for both pure shortanswer and mixedassessment
   useEffect(() => {
     if (
       showResults &&
@@ -152,30 +169,59 @@ export default function Assessment({
       evaluateShortAnswers();
     }
   }, [showResults, editedAssessment, answers, assessmentType]);
-  
+
+  useEffect(() => {
+    setLocalShowResults(showResults);
+  }, [showResults]);
+
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          // Check if user has teacher role in metadata
+          const userMetadata = user.user_metadata;
+          const userRole = userMetadata?.role || "";
+
+          if (
+            userRole.toLowerCase() === "teacher" ||
+            userRole.toLowerCase() === "admin"
+          ) {
+            setUserIsTeacher(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user role:", error);
+      }
+    };
+
+    checkUserRole();
+  }, [supabase]);
+
   const evaluateShortAnswers = async () => {
     try {
-      // 1. Identify which questions are short-answer:
       const shortAnswerIndices = editedAssessment
         .map((q, i) => ({ ...q, index: i }))
         .filter((q) => {
           const type = q.questionType?.toLowerCase();
           return type === "shortanswer" || type === "short answer";
         });
-  
+
       if (shortAnswerIndices.length === 0) {
-        return; // No short-answer questions
+        return;
       }
-  
-      // 2. Build a payload for the API
-      const payload = shortAnswerIndices.map(({ question, correctAnswer, answer, index }) => ({
-        question: question,
-        // Use correctAnswer if present, otherwise answer
-        correctAnswer: correctAnswer ?? answer,
-        userAnswer: answers[index] || "",
-      }));
-  
-      // 3. Make the API request
+
+      const payload = shortAnswerIndices.map(
+        ({ question, correctAnswer, answer, index }) => ({
+          question: question,
+          correctAnswer: correctAnswer ?? answer,
+          userAnswer: answers[index] || "",
+        })
+      );
+
       const res = await fetch("/api/evaluate-short-answer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -185,8 +231,7 @@ export default function Assessment({
         }),
       });
       const data = await res.json();
-  
-      // 4. Create a full array of scores aligned with all questions
+
       if (data.scores && Array.isArray(data.scores)) {
         const newScores = new Array(editedAssessment.length).fill(0);
         shortAnswerIndices.forEach((item, i) => {
@@ -199,8 +244,6 @@ export default function Assessment({
     }
   };
 
-  // Removed duplicate mixedassessment useEffect for evaluating short answers
-
   const handleAnswerChange = (questionIndex: number, answer: any) => {
     if (readOnly) return;
 
@@ -212,10 +255,10 @@ export default function Assessment({
     }
     setAnswers(newAnswers);
 
-    // Save answer to DB
     if (assessmentId) {
       if (assessmentType === "shortanswer") {
-        if (autoSaveTimeoutRef.current) clearTimeout(autoSaveTimeoutRef.current);
+        if (autoSaveTimeoutRef.current)
+          clearTimeout(autoSaveTimeoutRef.current);
         autoSaveTimeoutRef.current = window.setTimeout(() => {
           fetch("/api/save-answer", {
             method: "PUT",
@@ -251,6 +294,7 @@ export default function Assessment({
     if (readOnly) return;
     await onSubmit(answers);
     await handleSaveResults();
+    setLocalShowResults(true);
   };
 
   const calculateScore = () => {
@@ -258,65 +302,58 @@ export default function Assessment({
       console.error("Answers is not an array:", answers);
       return 0;
     }
-  
+
     return answers.reduce((score, answer, index) => {
       const question = editedAssessment[index];
       if (!question) return score;
-  
-      // ----------------------------
-      // 1) For pure single-type assessments
-      // ----------------------------
+
       if (assessmentType !== "mixedassessment") {
         if (assessmentType === "mcq" && question.correctAnswer !== undefined) {
           return score + (answer === question.correctAnswer ? 1 : 0);
-  
-        } else if (assessmentType === "truefalse" && question.correctAnswer !== undefined) {
+        } else if (
+          assessmentType === "truefalse" &&
+          question.correctAnswer !== undefined
+        ) {
           return score + (answer === question.correctAnswer ? 1 : 0);
-  
         } else if (assessmentType === "fillintheblank" && question.answer) {
-          return score + (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0);
-  
+          return (
+            score +
+            (answer?.toLowerCase() === question.answer.toLowerCase() ? 1 : 0)
+          );
         } else if (assessmentType === "shortanswer") {
-          // Use shortAnswerScores
           return score + (shortAnswerScores[index] || 0);
         }
-  
-        // Fallback if none of the above
+
         return score;
       }
-  
-      // ----------------------------
-      // 2) For "mixedassessment" only
-      // ----------------------------
+
       const type = question.questionType?.toLowerCase();
-  
+
       if (type === "mcq") {
         let correctIndex = 0;
         if (typeof question.correctAnswer === "string") {
-          // Convert letter "A"/"B"/"C" to 0/1/2, etc.
-          correctIndex = question.correctAnswer.toUpperCase().charCodeAt(0) - "A".charCodeAt(0);
+          correctIndex =
+            question.correctAnswer.toUpperCase().charCodeAt(0) -
+            "A".charCodeAt(0);
         } else {
           correctIndex = question.correctAnswer;
         }
         return score + (answer === correctIndex ? 1 : 0);
-  
       } else if (type === "truefalse" || type === "true/false") {
         return score + (answer === question.correctAnswer ? 1 : 0);
-  
       } else if (type === "fillintheblank" || type === "fill in the blanks") {
-        return score + (answer?.toLowerCase() === question.answer?.toLowerCase() ? 1 : 0);
-  
+        return (
+          score +
+          (answer?.toLowerCase() === question.answer?.toLowerCase() ? 1 : 0)
+        );
       } else if (type === "shortanswer" || type === "short answer") {
-        // Use shortAnswerScores
         return score + (shortAnswerScores[index] || 0);
       }
-  
-      // Fallback if question type is unrecognized
+
       return score;
     }, 0);
   };
-  
- 
+
   const handleImageUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
     index: number
@@ -347,10 +384,13 @@ export default function Assessment({
     }
 
     try {
-      const response = await fetch("/api/generate-assessment/que-image-upload", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "/api/generate-assessment/que-image-upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
       const contentType = response.headers.get("content-type");
       let data: any;
       if (contentType && contentType.includes("application/json")) {
@@ -421,37 +461,147 @@ export default function Assessment({
                 className="mb-2"
               />
               {(assessmentType === "mcq" ||
-              (assessmentType === "mixedassessment" &&
-                question.questionType?.trim().toLowerCase() === "mcq")) && (
-              <div>
-                {(() => {
-                  const optionsArray =
-                    Array.isArray(question.options)
+                (assessmentType === "mixedassessment" &&
+                  question.questionType?.trim().toLowerCase() === "mcq")) && (
+                <div>
+                  {(() => {
+                    const optionsArray = Array.isArray(question.options)
                       ? question.options
                       : question.options
-                      ? transformObjectToArray(question.options)
-                      : [];
-                  return optionsArray.map((option: string, optionIndex: number) => (
-                    <Input
-                      key={optionIndex}
-                      value={option}
-                      onChange={(e) => handleOptionEdit(index, optionIndex, e.target.value)}
-                      className="mb-1"
-                    />
-                  ));
-                })()}
-              </div>
-            )}
+                        ? transformObjectToArray(question.options)
+                        : [];
+                    return optionsArray.map(
+                      (option: string, optionIndex: number) => (
+                        <div
+                          key={optionIndex}
+                          className="flex items-center mb-1"
+                        >
+                          <span className="w-6 text-center font-medium mr-1">
+                            {indexToLetter(optionIndex)}:
+                          </span>
+                          <Input
+                            value={option}
+                            onChange={(e) =>
+                              handleOptionEdit(
+                                index,
+                                optionIndex,
+                                e.target.value
+                              )
+                            }
+                            className="flex-1"
+                          />
+                        </div>
+                      )
+                    );
+                  })()}
+
+                  <div className="mt-3 border-t pt-3">
+                    <label className="block text-sm font-medium mb-1 text-rose-600">
+                      Correct Answer:
+                    </label>
+                    <Select
+                      value={
+                        typeof question.correctAnswer === "number"
+                          ? indexToLetter(question.correctAnswer)
+                          : typeof question.correctAnswer === "string" &&
+                              !isNaN(Number(question.correctAnswer))
+                            ? indexToLetter(Number(question.correctAnswer))
+                            : "A"
+                      }
+                      onValueChange={(letter) => {
+                        const correctIndex = letterToIndex(letter);
+                        handleEdit(index, "correctAnswer", correctIndex);
+                      }}
+                    >
+                      <SelectTrigger className="max-w-[150px] border-rose-300">
+                        <SelectValue placeholder="Select answer" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.isArray(question.options) &&
+                          question.options.map(
+                            (_: string, optionIndex: number) => (
+                              <SelectItem
+                                key={optionIndex}
+                                value={indexToLetter(optionIndex)}
+                              >
+                                Option {indexToLetter(optionIndex)}
+                              </SelectItem>
+                            )
+                          )}
+                        {!Array.isArray(question.options) && (
+                          <>
+                            <SelectItem value="A">Option A</SelectItem>
+                            <SelectItem value="B">Option B</SelectItem>
+                            <SelectItem value="C">Option C</SelectItem>
+                            <SelectItem value="D">Option D</SelectItem>
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
               {(assessmentType === "truefalse" ||
-                assessmentType === "fillintheblank" ||
-                assessmentType === "shortanswer" ||
                 (assessmentType === "mixedassessment" &&
-                  question.questionType === "Short Answer")) && (
-                <Input
-                  value={question.answer}
-                  onChange={(e) => handleEdit(index, "answer", e.target.value)}
-                  className="mt-2"
-                />
+                  (question.questionType?.toLowerCase() === "truefalse" ||
+                    question.questionType?.toLowerCase() ===
+                      "true/false"))) && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium mb-1 text-rose-600">
+                    Correct Answer:
+                  </label>
+                  <Select
+                    value={question.correctAnswer?.toString() || "true"}
+                    onValueChange={(value) =>
+                      handleEdit(index, "correctAnswer", value === "true")
+                    }
+                  >
+                    <SelectTrigger className="max-w-[150px] border-rose-300">
+                      <SelectValue placeholder="Select answer" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="true">True</SelectItem>
+                      <SelectItem value="false">False</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {(assessmentType === "fillintheblank" ||
+                (assessmentType === "mixedassessment" &&
+                  (question.questionType?.toLowerCase() === "fillintheblank" ||
+                    question.questionType?.toLowerCase() ===
+                      "fill in the blanks"))) && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium mb-1 text-rose-600">
+                    Correct Answer:
+                  </label>
+                  <Input
+                    value={question.answer || ""}
+                    onChange={(e) =>
+                      handleEdit(index, "answer", e.target.value)
+                    }
+                    className="border-rose-300"
+                  />
+                </div>
+              )}
+              {(assessmentType === "shortanswer" ||
+                (assessmentType === "mixedassessment" &&
+                  (question.questionType?.toLowerCase() === "shortanswer" ||
+                    question.questionType?.toLowerCase() ===
+                      "short answer"))) && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium mb-1 text-rose-600">
+                    Model Answer (for grading):
+                  </label>
+                  <Textarea
+                    value={question.answer || question.correctAnswer || ""}
+                    onChange={(e) => {
+                      handleEdit(index, "answer", e.target.value);
+                      handleEdit(index, "correctAnswer", e.target.value);
+                    }}
+                    className="border-rose-300"
+                  />
+                </div>
               )}
             </div>
             {imageUploadComponent(index)}
@@ -469,7 +619,7 @@ export default function Assessment({
               index={index}
               userAnswer={answers[index]}
               onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
+              showResults={localShowResults || showResults}
             />
           );
           break;
@@ -481,7 +631,7 @@ export default function Assessment({
               index={index}
               userAnswer={answers[index]}
               onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
+              showResults={localShowResults || showResults}
             />
           );
           break;
@@ -493,7 +643,7 @@ export default function Assessment({
               index={index}
               userAnswer={answers[index]}
               onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
+              showResults={localShowResults || showResults}
             />
           );
           break;
@@ -505,7 +655,7 @@ export default function Assessment({
               index={index}
               userAnswer={answers[index]}
               onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
+              showResults={localShowResults || showResults}
               evaluatedScore={shortAnswerScores[index]}
             />
           );
@@ -518,8 +668,8 @@ export default function Assessment({
               index={index}
               userAnswer={answers[index]}
               onChange={(answer) => handleAnswerChange(index, answer)}
-              showResults={showResults}
-              shortAnswerScore={shortAnswerScores[index]} // Pass the actual score here
+              showResults={localShowResults || showResults}
+              shortAnswerScore={shortAnswerScores[index]}
             />
           );
           break;
@@ -527,7 +677,10 @@ export default function Assessment({
           questionComponent = null;
       }
       return (
-        <div key={index} className="border rounded-lg p-4 mb-4 bg-white shadow-sm">
+        <div
+          key={index}
+          className="border rounded-lg p-4 mb-4 bg-white shadow-sm"
+        >
           <div className="flex gap-4 items-stretch justify-between">
             <div className="flex-[0.8]">{questionComponent}</div>
             {uploadedImages[index] && (
@@ -613,7 +766,9 @@ export default function Assessment({
     }
   };
 
-  const fetchSummaryExplanation = async (followUpMessage?: string): Promise<void> => {
+  const fetchSummaryExplanation = async (
+    followUpMessage?: string
+  ): Promise<void> => {
     try {
       if (followUpMessage) {
         setIsLoadingChat(true);
@@ -661,7 +816,7 @@ export default function Assessment({
     }
   };
 
-  const handleEdit = (index: number, field: string, value: string) => {
+  const handleEdit = (index: number, field: string, value: any) => {
     const newAssessment = [...editedAssessment];
     newAssessment[index] = { ...newAssessment[index], [field]: value };
     setEditedAssessment(newAssessment);
@@ -679,8 +834,8 @@ export default function Assessment({
       const currentOptions = Array.isArray(questionCopy.options)
         ? questionCopy.options
         : questionCopy.options
-        ? transformObjectToArray(questionCopy.options)
-        : [];
+          ? transformObjectToArray(questionCopy.options)
+          : [];
 
       const newOptions = [...currentOptions];
       newOptions[optionIndex] = newValue;
@@ -700,16 +855,19 @@ export default function Assessment({
               assessmentType,
               topic,
               "pdf",
-              showResults
+              localShowResults || showResults
             )
           }
           className="bg-neutral-900 hover:bg-neutral-700"
         >
           <Download className="mr-2 h-4 w-4" />
-          Download {showResults ? "PDF with Answers" : "Questions PDF"}
+          Download{" "}
+          {localShowResults || showResults
+            ? "PDF with Answers"
+            : "Questions PDF"}
         </Button>
 
-        {!readOnly && (
+        {(isTeacher || userIsTeacher) && (
           <Button
             onClick={() => {
               if (editMode) {
@@ -731,7 +889,9 @@ export default function Assessment({
       </div>
 
       <div>
-        {editedAssessment.map((question, index) => renderQuestion(question, index))}
+        {editedAssessment.map((question, index) =>
+          renderQuestion(question, index)
+        )}
         {editMode ? (
           <Button
             onClick={saveEdits}
@@ -741,8 +901,9 @@ export default function Assessment({
             {isSaving ? "Saving..." : "Save Edits"}
           </Button>
         ) : (
-          !showResults &&
-          !readOnly && (
+          !(localShowResults || showResults) &&
+          !readOnly &&
+          !hideSubmitButton && (
             <Button
               onClick={handleSubmit}
               className="w-full bg-rose-500 hover:bg-rose-600 text-white mt-6"
@@ -753,7 +914,7 @@ export default function Assessment({
         )}
       </div>
 
-      {showResults && !editMode && (
+      {(localShowResults || showResults) && !editMode && (
         <div className="text-center">
           <h2 className="text-2xl font-bold">
             Your Score: {calculateScore()} /{" "}

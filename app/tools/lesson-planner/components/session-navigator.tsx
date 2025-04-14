@@ -1,6 +1,6 @@
 "use client";
 
-import { Day } from "../types";
+import { Day } from "../types/index";
 
 interface SessionNavigatorProps {
   days: Day[];

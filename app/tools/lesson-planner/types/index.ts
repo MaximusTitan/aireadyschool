@@ -39,6 +39,11 @@ export interface HomeworkAssignment {
 export interface DayAssessment {
   topic: string;
   learningObjectives: string[];
+  assessmentId?: string;
+  assessmentType?: string;
+  difficulty?: string;
+  board?: string;
+  subject?: string;
 }
 
 export interface Day {
@@ -56,6 +61,14 @@ export interface Assessment {
   type: string;
   description: string;
   evaluationCriteria: string[];
+}
+
+export interface Assessment {
+  topic: string;
+  learningObjectives: string[];
+  assessmentId?: string;
+  assessmentType?: string;
+  difficulty?: string;
 }
 
 export interface AssessmentPlan {

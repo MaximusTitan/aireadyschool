@@ -12,7 +12,7 @@ import {
   GeneratedNotes,
   Day,
   ScheduleItem,
-} from "../types";
+} from "../types/index";
 import { SessionNavigator } from "../components/session-navigator";
 import { LessonContent } from "../components/lesson-content";
 import { AssessmentPlanView } from "../components/assessment-plan";
@@ -40,6 +40,7 @@ export default function StudentOutputContent() {
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const [documentId, setDocumentId] = useState<string | null>(null);
   const [documentSubmitted, setDocumentSubmitted] = useState(false);
+  const [assessmentData, setAssessmentData] = useState<any>(null);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -149,6 +150,54 @@ export default function StudentOutputContent() {
     }
   }, [isAuthorized, id, fetchLessonPlan]);
 
+  useEffect(() => {
+    if (isAuthorized && id && activeTab.startsWith("day-") && lessonPlan) {
+      const dayIndex = parseInt(activeTab.split("-")[1]) - 1;
+      const day = lessonPlan.plan_data.days[dayIndex];
+
+      if (day.assessment && day.assessment.assessmentId) {
+        fetchAssessmentData(day.assessment.assessmentId);
+      } else {
+        setAssessmentData(null);
+      }
+    }
+  }, [isAuthorized, id, activeTab, lessonPlan]);
+
+  const fetchAssessmentData = async (assessmentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", assessmentId)
+        .eq("user_email", userEmail)
+        .single();
+
+      if (error) {
+        // If we can't find a student-specific assessment, try to get the original assessment
+        const { data: originalData, error: originalError } = await supabase
+          .from("assessments")
+          .select("*")
+          .eq("id", assessmentId)
+          .single();
+
+        if (originalError) throw originalError;
+
+        setAssessmentData({
+          ...originalData,
+          completed: false,
+        });
+      } else {
+        setAssessmentData({
+          ...data,
+          completed: !!data.submitted,
+          student_answers: data.answers || [],
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching assessment data:", error);
+    }
+  };
+
   const handleChatWithBuddy = (
     item: ScheduleItem,
     day: Day,
@@ -173,7 +222,9 @@ export default function StudentOutputContent() {
     e.preventDefault();
     if (lessonPlan) {
       router.push(
-        `/tools/gen-chat?thread=new&teachingMode=false&userInput=${encodeURIComponent(buddyInput)}`
+        `/tools/gen-chat?thread=new&teachingMode=false&userInput=${encodeURIComponent(
+          buddyInput
+        )}`
       );
     }
   };
@@ -360,6 +411,7 @@ export default function StudentOutputContent() {
                 onChatWithBuddy={handleChatWithBuddy}
                 showDocumentGenerator={showDocumentGenerator}
                 setShowDocumentGenerator={setShowDocumentGenerator}
+                assessmentData={assessmentData}
               />
             </div>
 

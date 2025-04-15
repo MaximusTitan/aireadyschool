@@ -786,6 +786,13 @@ export default function Assessment({
           </div>
           {saveError && <p className="text-red-600 mt-2">{saveError}</p>}
           <div className="mt-8 border-t pt-4">
+          <Button
+              onClick={() => fetchSummaryExplanation()}
+              className="bg-rose-600 hover:bg-rose-500 text-white"
+              disabled={isLoadingAnalysis}
+            >
+              {isLoadingAnalysis ? "Loading..." : "Get Analysis"}
+            </Button>
             {explanation && (
               <div className="mt-4 p-4 border rounded bg-gray-50 text-left">
                 <h3 className="font-semibold mb-2">Summary Explanation:</h3>

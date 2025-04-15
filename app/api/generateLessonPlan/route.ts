@@ -22,7 +22,11 @@ const daySchema = z.object({
   assignment: z.object({
     description: z.string(),
     tasks: z.array(z.string()),
-  }),
+  }).required(),
+  assessment: z.object({
+    topic: z.string(),
+    learningObjectives: z.array(z.string()),
+  }).required(),
 });
 
 const assessmentSchema = z.object({

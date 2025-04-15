@@ -33,7 +33,17 @@ export interface ScheduleItem {
 export interface HomeworkAssignment {
   description: string;
   tasks: string[];
-  document_id?: string | null; // Add this line
+  document_id?: string | null;
+}
+
+export interface DayAssessment {
+  topic: string;
+  learningObjectives: string[];
+  assessmentId?: string;
+  assessmentType?: string;
+  difficulty?: string;
+  board?: string;
+  subject?: string;
 }
 
 export interface Day {
@@ -43,6 +53,7 @@ export interface Day {
   schedule: ScheduleItem[];
   teachingAids: string[];
   assignment: HomeworkAssignment;
+  assessment?: DayAssessment;
 }
 
 export interface Assessment {
@@ -50,6 +61,14 @@ export interface Assessment {
   type: string;
   description: string;
   evaluationCriteria: string[];
+}
+
+export interface Assessment {
+  topic: string;
+  learningObjectives: string[];
+  assessmentId?: string;
+  assessmentType?: string;
+  difficulty?: string;
 }
 
 export interface AssessmentPlan {

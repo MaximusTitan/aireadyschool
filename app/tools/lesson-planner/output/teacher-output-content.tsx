@@ -16,7 +16,7 @@ import {
   GeneratedNotes,
   ScheduleItem,
   Day,
-} from "../types";
+} from "../types/index";
 import { AssessmentPlanView } from "../components/assessment-plan";
 import { SessionNavigator } from "../components/session-navigator";
 import { LessonModalDialogs } from "../components/lesson-modal-dialogs";
@@ -73,6 +73,8 @@ export default function TeacherOutputContent() {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [showDocumentGenerator, setShowDocumentGenerator] = useState(false);
   const [documentSubmitted, setDocumentSubmitted] = useState(false);
+  const [assessmentData, setAssessmentData] = useState<any>(null);
+  const [isCreatingAssessment, setIsCreatingAssessment] = useState(false);
 
   useEffect(() => {
     const checkAuthentication = async () => {
@@ -229,6 +231,34 @@ export default function TeacherOutputContent() {
       }
     }
   }, [lessonPlan, activeTab]);
+
+  useEffect(() => {
+    if (isAuthorized && id && activeTab.startsWith("day-") && lessonPlan) {
+      const dayIndex = parseInt(activeTab.split("-")[1]) - 1;
+      const day = lessonPlan.plan_data.days[dayIndex];
+
+      if (day.assessment && day.assessment.assessmentId) {
+        fetchAssessmentData(day.assessment.assessmentId);
+      } else {
+        setAssessmentData(null);
+      }
+    }
+  }, [isAuthorized, id, activeTab, lessonPlan]);
+
+  const fetchAssessmentData = async (assessmentId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", assessmentId)
+        .single();
+
+      if (error) throw error;
+      setAssessmentData(data);
+    } catch (error) {
+      console.error("Error fetching assessment data:", error);
+    }
+  };
 
   const handleEdit = (type: string, data: any, dayIndex?: number) => {
     setEditContent({
@@ -713,6 +743,48 @@ export default function TeacherOutputContent() {
     if (!lessonPlan) return null;
 
     try {
+      // Create a copy of the plan data to modify for the student
+      const studentPlanData = JSON.parse(JSON.stringify(lessonPlan.plan_data));
+
+      // Handle assessment duplication for each day that has an assessment
+      for (let i = 0; i < studentPlanData.days.length; i++) {
+        const day = studentPlanData.days[i];
+        if (day.assessment && day.assessment.assessmentId) {
+          // Get the original assessment
+          const { data: originalAssessment } = await supabase
+            .from("assessments")
+            .select("*")
+            .eq("id", day.assessment.assessmentId)
+            .single();
+
+          if (originalAssessment) {
+            // Create a new assessment for the student
+            const { data: newAssessment, error } = await supabase
+              .from("assessments")
+              .insert({
+                class_level: lessonPlan.grade,
+                subject: lessonPlan.subject,
+                topic: originalAssessment.topic || day.assessment.topic,
+                assessment_type: originalAssessment.assessment_type,
+                difficulty: originalAssessment.difficulty,
+                questions: originalAssessment.questions,
+                board: lessonPlan.board,
+                learning_outcomes: originalAssessment.learning_outcomes,
+                user_email: studentEmail,
+                submitted: false,
+              })
+              .select();
+
+            if (!error && newAssessment) {
+              // Update the assessment ID in the student's plan
+              studentPlanData.days[i].assessment.assessmentId =
+                newAssessment[0].id;
+            }
+          }
+        }
+      }
+
+      // Create the student lesson plan with the modified plan data
       const { data, error } = await supabase
         .from("lesson_plans")
         .insert({
@@ -723,7 +795,7 @@ export default function TeacherOutputContent() {
           class_duration: lessonPlan.class_duration,
           number_of_days: lessonPlan.number_of_days,
           learning_objectives: lessonPlan.learning_objectives,
-          plan_data: lessonPlan.plan_data,
+          plan_data: studentPlanData, // Use the modified plan data with new assessment IDs
           user_email: studentEmail,
         })
         .select();
@@ -732,6 +804,7 @@ export default function TeacherOutputContent() {
 
       const studentLessonPlanId = data[0].id;
 
+      // Copy notes and files as before
       for (const [activityTitle, content] of Object.entries(generatedNotes)) {
         await supabase.from("generated_notes").insert({
           lesson_plan_id: studentLessonPlanId,
@@ -834,6 +907,142 @@ export default function TeacherOutputContent() {
         description: "Failed to assign lesson plan. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCreateAssessment = async (formData: any) => {
+    if (!lessonPlan || !userEmail || !activeTab.startsWith("day-")) return;
+
+    setIsCreatingAssessment(true);
+    try {
+      const dayIndex = parseInt(activeTab.split("-")[1]) - 1;
+
+      // Call the assessment generation API
+      const response = await fetch("/api/generate-assessment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          board: formData.board || lessonPlan.board,
+          classLevel: lessonPlan.grade,
+          subject: formData.subject || lessonPlan.subject,
+          topic: formData.topic,
+          assessmentType: formData.type,
+          difficulty: formData.difficulty,
+          questionCount: formData.questionCount,
+          learningOutcomes: formData.learningOutcomes,
+          model:
+            lessonPlan.board === "CAIE"
+              ? "claude-3-7-sonnet-20250219"
+              : "gpt-4o",
+          user_email: userEmail,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Assessment generation failed");
+      }
+
+      const assessmentResponse = await response.json();
+
+      // Ensure topic is always a non-empty string
+      const assessmentTopic =
+        formData.topic ||
+        lessonPlan.plan_data.days[dayIndex].assessment?.topic ||
+        lessonPlan.chapter_topic ||
+        "Assessment";
+
+      // Update the lesson plan with the assessment ID
+      const updatedPlanData = { ...lessonPlan.plan_data };
+      updatedPlanData.days[dayIndex].assessment = {
+        topic: assessmentTopic, // Always provide a string for topic
+        learningObjectives:
+          lessonPlan.plan_data.days[dayIndex].assessment?.learningObjectives ||
+          formData.learningOutcomes ||
+          [],
+        assessmentId: assessmentResponse.id,
+        assessmentType: formData.type,
+        difficulty: formData.difficulty,
+        board: formData.board || lessonPlan.board,
+        subject: formData.subject || lessonPlan.subject,
+      };
+
+      const { error } = await supabase
+        .from("lesson_plans")
+        .update({
+          plan_data: updatedPlanData,
+        })
+        .eq("id", lessonPlan.id);
+
+      if (error) throw error;
+
+      // Update local state
+      setLessonPlan({
+        ...lessonPlan,
+        plan_data: updatedPlanData,
+      });
+
+      setAssessmentData(assessmentResponse);
+
+      toast({
+        title: "Success",
+        description: "Assessment created successfully",
+      });
+    } catch (error) {
+      console.error("Error creating assessment:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: `Failed to create assessment: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`,
+      });
+    } finally {
+      setIsCreatingAssessment(false);
+    }
+  };
+
+  const handleAssignAssessmentToStudent = async (
+    studentEmail: string,
+    assessmentId: string
+  ) => {
+    try {
+      // First duplicate the assessment for this student
+      const { data: assessmentData } = await supabase
+        .from("assessments")
+        .select("*")
+        .eq("id", assessmentId)
+        .single();
+
+      if (!assessmentData) throw new Error("Assessment not found");
+
+      // Create a copy of the assessment assigned to this student
+      const { data: newAssessment, error } = await supabase
+        .from("assessments")
+        .insert({
+          ...assessmentData,
+          id: undefined, // Let Supabase generate a new ID
+          user_email: studentEmail,
+          original_assessment_id: assessmentId,
+        })
+        .select();
+
+      if (error) throw error;
+
+      toast({
+        title: "Success",
+        description: "Assessment assigned to student successfully",
+      });
+
+      return newAssessment[0];
+    } catch (error) {
+      console.error("Error assigning assessment:", error);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to assign assessment to student",
+      });
+      return null;
     }
   };
 
@@ -979,6 +1188,9 @@ export default function TeacherOutputContent() {
                 showDocumentGenerator={showDocumentGenerator}
                 setShowDocumentGenerator={setShowDocumentGenerator}
                 onNotesEdit={handleNotesEdit}
+                assessmentData={assessmentData}
+                onCreateAssessment={handleCreateAssessment}
+                isCreatingAssessment={isCreatingAssessment} // Pass loading state
               />
             </div>
 

@@ -11,10 +11,24 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import ReactMarkdown from "react-markdown";
-import { Day, ScheduleItem, GeneratedNotes, UploadedFile } from "../types";
+import {
+  Day,
+  ScheduleItem,
+  GeneratedNotes,
+  UploadedFile,
+} from "../types/index";
 import { Fragment } from "react";
 import { Textarea } from "@/components/ui/textarea";
-import { Edit2 } from "lucide-react";
+import { Edit2, PlusCircle, Check, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import Assessment from "@/app/tools/mcq-generator/components/assessment/Assessment";
 
 interface LessonContentProps {
   day: Day;
@@ -29,6 +43,10 @@ interface LessonContentProps {
   showDocumentGenerator?: boolean;
   setShowDocumentGenerator?: (show: boolean) => void;
   onNotesEdit?: (activityTitle: string, notes: string) => void;
+  onCreateAssessment?: (assessment: any) => Promise<void>;
+  onSubmitAssessment?: (answers: any[]) => Promise<void>;
+  assessmentData?: any;
+  isCreatingAssessment?: boolean;
 }
 
 export function LessonContent({
@@ -44,10 +62,24 @@ export function LessonContent({
   showDocumentGenerator,
   setShowDocumentGenerator,
   onNotesEdit = () => {},
+  onCreateAssessment,
+  onSubmitAssessment,
+  assessmentData,
+  isCreatingAssessment = false,
 }: LessonContentProps) {
   const [editingNotes, setEditingNotes] = useState<{
     [key: string]: { editing: boolean; content: string };
   }>({});
+  const [showAssessmentCreator, setShowAssessmentCreator] = useState(false);
+  const [showAssessment, setShowAssessment] = useState(false);
+  const [assessmentForm, setAssessmentForm] = useState({
+    type: "mcq",
+    topic: "",
+    difficulty: "Medium",
+    questionCount: 5,
+    board: "",
+    subject: "",
+  });
 
   const handleEditNotes = (activityTitle: string, currentNotes: string) => {
     setEditingNotes((prev) => ({
@@ -406,6 +438,252 @@ export function LessonContent({
           )}
         </div>
       </div>
+
+      {day.assessment && (
+        <div className="border-t border-gray-200 pt-6 mt-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Assessment</h3>
+            {userRole !== "Student" && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  onEdit(
+                    "assessment",
+                    day.assessment || { topic: "", learningObjectives: [] },
+                    day.day - 1
+                  )
+                }
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+          <div className="p-4 bg-gray-50 rounded-md">
+            <h4 className="font-medium mb-2">{day.assessment.topic}</h4>
+            <p className="mb-3">Learning Objectives:</p>
+            <ul className="list-disc pl-5 space-y-1">
+              {(day.assessment.learningObjectives || []).map(
+                (objective, index) => (
+                  <li key={index}>{objective}</li>
+                )
+              )}
+            </ul>
+
+            {userRole === "Teacher" && !assessmentData && (
+              <div className="mt-4">
+                {showAssessmentCreator ? (
+                  <div className="mt-4 border p-4 rounded-md bg-white space-y-4">
+                    <h4 className="font-medium">Create Assessment</h4>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Assessment Type
+                        </label>
+                        <Select
+                          value={assessmentForm.type}
+                          onValueChange={(val) =>
+                            setAssessmentForm((prev) => ({
+                              ...prev,
+                              type: val,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="mcq">Multiple Choice</SelectItem>
+                            <SelectItem value="truefalse">
+                              True/False
+                            </SelectItem>
+                            <SelectItem value="fillintheblank">
+                              Fill in the Blanks
+                            </SelectItem>
+                            <SelectItem value="shortanswer">
+                              Short Answer
+                            </SelectItem>
+                            <SelectItem value="mixedassessment">
+                              Mixed Assessment
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium mb-1">
+                          Difficulty
+                        </label>
+                        <Select
+                          value={assessmentForm.difficulty}
+                          onValueChange={(val) =>
+                            setAssessmentForm((prev) => ({
+                              ...prev,
+                              difficulty: val,
+                            }))
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select difficulty" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Easy">Easy</SelectItem>
+                            <SelectItem value="Medium">Medium</SelectItem>
+                            <SelectItem value="Hard">Hard</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Topic
+                      </label>
+                      <Input
+                        value={assessmentForm.topic || day.assessment.topic}
+                        onChange={(e) =>
+                          setAssessmentForm((prev) => ({
+                            ...prev,
+                            topic: e.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-medium mb-1">
+                        Number of Questions
+                      </label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="20"
+                        value={assessmentForm.questionCount}
+                        onChange={(e) =>
+                          setAssessmentForm((prev) => ({
+                            ...prev,
+                            questionCount: parseInt(e.target.value) || 5,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="flex gap-2 justify-end">
+                      <Button
+                        variant="outline"
+                        onClick={() => setShowAssessmentCreator(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        onClick={() => {
+                          onCreateAssessment &&
+                            onCreateAssessment({
+                              ...assessmentForm,
+                              board:
+                                day.assessment?.board || assessmentForm.board,
+                              subject:
+                                day.assessment?.subject ||
+                                assessmentForm.subject,
+                              learningOutcomes:
+                                day.assessment?.learningObjectives || [],
+                            });
+                        }}
+                        disabled={isCreatingAssessment}
+                      >
+                        {isCreatingAssessment ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Generating...
+                          </>
+                        ) : (
+                          "Generate Assessment"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    onClick={() => setShowAssessmentCreator(true)}
+                    className="mt-2 flex items-center gap-1"
+                  >
+                    <PlusCircle className="h-4 w-4" /> Create Assessment
+                  </Button>
+                )}
+              </div>
+            )}
+
+            {assessmentData && userRole === "Teacher" && (
+              <div className="mt-4 border rounded-lg p-4 bg-white">
+                <h4 className="font-medium mb-2 flex items-center">
+                  <Check className="h-4 w-4 text-green-500 mr-1" /> Assessment
+                  Created
+                </h4>
+                <p className="mb-4 text-sm text-gray-600">
+                  {assessmentData.questions?.length || 0} questions •{" "}
+                  {assessmentData.assessment_type} • {assessmentData.difficulty}{" "}
+                  difficulty
+                </p>
+                <Assessment
+                  assessment={assessmentData.questions || []}
+                  assessmentType={assessmentData.assessment_type || "mcq"}
+                  onSubmit={() => {}}
+                  showResults={false}
+                  userAnswers={[]}
+                  assessmentId={assessmentData.id || ""}
+                  topic={assessmentData.topic || day.assessment.topic}
+                  readOnly={false}
+                  hideSubmitButton={true} // Hide the submit button for teachers
+                />
+              </div>
+            )}
+
+            {assessmentData && userRole === "Student" && (
+              <div className="mt-4">
+                {!showAssessment ? (
+                  <Button
+                    onClick={() => setShowAssessment(true)}
+                    className="w-fit justify-center mt-2"
+                  >
+                    {assessmentData.submitted
+                      ? "View Assessment"
+                      : "Start Assessment"}
+                  </Button>
+                ) : (
+                  <div className="mt-4 border rounded-lg p-4 bg-white">
+                    <div className="flex justify-between items-center mb-4">
+                      <h4 className="font-medium">Assessment</h4>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowAssessment(false)}
+                      >
+                        Close
+                      </Button>
+                    </div>
+                    <p className="mb-4 text-sm text-gray-600">
+                      {assessmentData.questions?.length || 0} questions •{" "}
+                      {assessmentData.assessment_type} •{" "}
+                      {assessmentData.difficulty} difficulty
+                    </p>
+                    <Assessment
+                      assessment={assessmentData.questions || []}
+                      assessmentType={assessmentData.assessment_type || "mcq"}
+                      onSubmit={onSubmitAssessment || (() => {})}
+                      showResults={assessmentData.completed || false}
+                      userAnswers={assessmentData.student_answers || []}
+                      assessmentId={assessmentData.id || ""}
+                      topic={assessmentData.topic || day.assessment.topic}
+                      readOnly={assessmentData.completed || false} // Only set readOnly if assessment is completed
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

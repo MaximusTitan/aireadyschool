@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,78 +9,91 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/lib/supabase";
-import { toast } from "sonner"
+import { toast } from "sonner";
 
 interface EditLessonContentProps {
-  isOpen: boolean
-  onClose: () => void
-  onSave: () => void
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: () => void;
   content: {
-    type: string
-    data: any
-    dayIndex?: number
-  }
-  lessonPlanId: string
+    type: string;
+    data: any;
+    dayIndex?: number;
+  };
+  lessonPlanId: string;
 }
 
-export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlanId }: EditLessonContentProps) {
-  const [formData, setFormData] = useState(content.data)
-  const [isSaving, setIsSaving] = useState(false)
+export function EditLessonContent({
+  isOpen,
+  onClose,
+  onSave,
+  content,
+  lessonPlanId,
+}: EditLessonContentProps) {
+  const [formData, setFormData] = useState(content.data);
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setFormData(content.data);
+  }, [content.data]);
 
   const handleSave = async () => {
-    setIsSaving(true)
+    setIsSaving(true);
     try {
       const { data: currentData } = await supabase
         .from("lesson_plans")
         .select("plan_data")
         .eq("id", lessonPlanId)
-        .single()
+        .single();
 
-      if (!currentData) throw new Error("Lesson plan not found")
+      if (!currentData) throw new Error("Lesson plan not found");
 
-      const updatedPlanData = { ...currentData.plan_data }
+      const updatedPlanData = { ...currentData.plan_data };
 
       // Update the specific section based on content type
       switch (content.type) {
         case "learningOutcomes":
-          updatedPlanData.days[content.dayIndex!].learningOutcomes = formData
-          break
+          updatedPlanData.days[content.dayIndex!].learningOutcomes = formData;
+          break;
         case "schedule":
-          updatedPlanData.days[content.dayIndex!].schedule = formData
-          break
+          updatedPlanData.days[content.dayIndex!].schedule = formData;
+          break;
         case "teachingAids":
-          updatedPlanData.days[content.dayIndex!].teachingAids = formData
-          break
+          updatedPlanData.days[content.dayIndex!].teachingAids = formData;
+          break;
         case "assignment":
-          updatedPlanData.days[content.dayIndex!].assignment = formData
-          break
+          updatedPlanData.days[content.dayIndex!].assignment = formData;
+          break;
         case "assessmentPlan":
-          updatedPlanData.assessmentPlan = formData
-          break
+          updatedPlanData.assessmentPlan = formData;
+          break;
+        case "assessment":
+          updatedPlanData.days[content.dayIndex!].assessment = formData;
+          break;
       }
 
       const { error } = await supabase
         .from("lesson_plans")
         .update({ plan_data: updatedPlanData })
-        .eq("id", lessonPlanId)
+        .eq("id", lessonPlanId);
 
-      if (error) throw error
+      if (error) throw error;
 
-      toast.success("Changes saved successfully")
-      onSave()
+      toast.success("Changes saved successfully");
+      onSave();
     } catch (error) {
-      console.error("Error saving changes:", error)
-      toast.error("Failed to save changes. Please try again.")
+      console.error("Error saving changes:", error);
+      toast.error("Failed to save changes. Please try again.");
     } finally {
-      setIsSaving(false)
-      onClose()
+      setIsSaving(false);
+      onClose();
     }
-  }
+  };
 
   const renderEditForm = () => {
     switch (content.type) {
@@ -92,16 +105,18 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                 <Input
                   value={outcome}
                   onChange={(e) => {
-                    const newOutcomes = [...formData]
-                    newOutcomes[index] = e.target.value
-                    setFormData(newOutcomes)
+                    const newOutcomes = [...formData];
+                    newOutcomes[index] = e.target.value;
+                    setFormData(newOutcomes);
                   }}
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    setFormData(formData.filter((_: string, i: number) => i !== index))
+                    setFormData(
+                      formData.filter((_: string, i: number) => i !== index)
+                    );
                   }}
                 >
                   ×
@@ -111,13 +126,13 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
             <Button
               variant="outline"
               onClick={() => {
-                setFormData([...formData, ""])
+                setFormData([...formData, ""]);
               }}
             >
               Add Outcome
             </Button>
           </div>
-        )
+        );
 
       case "schedule":
         return (
@@ -130,9 +145,9 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                     <Input
                       value={item.title}
                       onChange={(e) => {
-                        const newSchedule = [...formData]
-                        newSchedule[index] = { ...item, title: e.target.value }
-                        setFormData(newSchedule)
+                        const newSchedule = [...formData];
+                        newSchedule[index] = { ...item, title: e.target.value };
+                        setFormData(newSchedule);
                       }}
                     />
                   </div>
@@ -143,9 +158,12 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                       min="1"
                       value={item.timeAllocation}
                       onChange={(e) => {
-                        const newSchedule = [...formData]
-                        newSchedule[index] = { ...item, timeAllocation: Number.parseInt(e.target.value) }
-                        setFormData(newSchedule)
+                        const newSchedule = [...formData];
+                        newSchedule[index] = {
+                          ...item,
+                          timeAllocation: Number.parseInt(e.target.value),
+                        };
+                        setFormData(newSchedule);
                       }}
                     />
                   </div>
@@ -155,9 +173,9 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                   <Textarea
                     value={item.content}
                     onChange={(e) => {
-                      const newSchedule = [...formData]
-                      newSchedule[index] = { ...item, content: e.target.value }
-                      setFormData(newSchedule)
+                      const newSchedule = [...formData];
+                      newSchedule[index] = { ...item, content: e.target.value };
+                      setFormData(newSchedule);
                     }}
                   />
                 </div>
@@ -165,7 +183,9 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                   variant="outline"
                   size="sm"
                   onClick={() => {
-                    setFormData(formData.filter((_: string, i: number) => i !== index))
+                    setFormData(
+                      formData.filter((_: string, i: number) => i !== index)
+                    );
                   }}
                 >
                   Remove Item
@@ -183,13 +203,13 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                     content: "",
                     timeAllocation: 15,
                   },
-                ])
+                ]);
               }}
             >
               Add Schedule Item
             </Button>
           </div>
-        )
+        );
 
       case "teachingAids":
         return (
@@ -199,16 +219,18 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                 <Input
                   value={aid}
                   onChange={(e) => {
-                    const newAids = [...formData]
-                    newAids[index] = e.target.value
-                    setFormData(newAids)
+                    const newAids = [...formData];
+                    newAids[index] = e.target.value;
+                    setFormData(newAids);
                   }}
                 />
                 <Button
                   variant="outline"
                   size="icon"
                   onClick={() => {
-                    setFormData(formData.filter((_: string, i: number) => i !== index))
+                    setFormData(
+                      formData.filter((_: string, i: number) => i !== index)
+                    );
                   }}
                 >
                   ×
@@ -218,13 +240,13 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
             <Button
               variant="outline"
               onClick={() => {
-                setFormData([...formData, ""])
+                setFormData([...formData, ""]);
               }}
             >
               Add Teaching Aid
             </Button>
           </div>
-        )
+        );
 
       case "assignment":
         return (
@@ -233,7 +255,9 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
               <Label>Description</Label>
               <Textarea
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
               />
             </div>
             <div>
@@ -243,17 +267,19 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                   <Input
                     value={task}
                     onChange={(e) => {
-                      const newTasks = [...formData.tasks]
-                      newTasks[index] = e.target.value
-                      setFormData({ ...formData, tasks: newTasks })
+                      const newTasks = [...formData.tasks];
+                      newTasks[index] = e.target.value;
+                      setFormData({ ...formData, tasks: newTasks });
                     }}
                   />
                   <Button
                     variant="outline"
                     size="icon"
                     onClick={() => {
-                      const newTasks = formData.tasks.filter((_: any, i: number) => i !== index)
-                      setFormData({ ...formData, tasks: newTasks })
+                      const newTasks = formData.tasks.filter(
+                        (_: any, i: number) => i !== index
+                      );
+                      setFormData({ ...formData, tasks: newTasks });
                     }}
                   >
                     ×
@@ -264,26 +290,96 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
                 variant="outline"
                 className="mt-2"
                 onClick={() => {
-                  setFormData({ ...formData, tasks: [...formData.tasks, ""] })
+                  setFormData({ ...formData, tasks: [...formData.tasks, ""] });
                 }}
               >
                 Add Task
               </Button>
             </div>
           </div>
-        )
+        );
+
+      case "assessment":
+        return (
+          <>
+            <div className="mb-4">
+              <Label>Assessment Topic</Label>
+              <Input
+                value={formData.topic || ""}
+                onChange={(e) =>
+                  setFormData({ ...formData, topic: e.target.value })
+                }
+                className="mt-1"
+              />
+            </div>
+            <div className="mb-4">
+              <Label>Learning Objectives</Label>
+              {(formData.learningObjectives || []).map(
+                (obj: string, index: number) => (
+                  <div key={index} className="flex gap-2 mt-1">
+                    <Input
+                      value={obj}
+                      onChange={(e) => {
+                        const updated = [...formData.learningObjectives];
+                        updated[index] = e.target.value;
+                        setFormData({
+                          ...formData,
+                          learningObjectives: updated,
+                        });
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const updated = [...formData.learningObjectives];
+                        updated.splice(index, 1);
+                        setFormData({
+                          ...formData,
+                          learningObjectives: updated,
+                        });
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                )
+              )}
+              <Button
+                type="button"
+                variant="outline"
+                className="mt-2"
+                onClick={() =>
+                  setFormData({
+                    ...formData,
+                    learningObjectives: [
+                      ...(formData.learningObjectives || []),
+                      "",
+                    ],
+                  })
+                }
+              >
+                Add Objective
+              </Button>
+            </div>
+          </>
+        );
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Edit {content.type.replace(/([A-Z])/g, " $1").toLowerCase()}</DialogTitle>
-          <DialogDescription>Make changes to the content below.</DialogDescription>
+          <DialogTitle>
+            Edit {content.type.replace(/([A-Z])/g, " $1").toLowerCase()}
+          </DialogTitle>
+          <DialogDescription>
+            Make changes to the content below.
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">{renderEditForm()}</div>
@@ -298,6 +394,5 @@ export function EditLessonContent({ isOpen, onClose, onSave, content, lessonPlan
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-

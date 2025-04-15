@@ -60,7 +60,6 @@ export default function StudentOutputContent() {
         const role = user.user_metadata?.role;
         if (role !== "Student") {
           setIsAuthorized(false);
-          router.push("/sign-in");
           return;
         }
 
@@ -205,13 +204,11 @@ export default function StudentOutputContent() {
   ) => {
     if (lessonPlan) {
       const encodedNotes = notes ? encodeURIComponent(notes) : "";
-      // Gather materials for the current day based on section IDs starting with "material-{day.day}-"
-      const materials = Object.entries(uploadedFiles)
-        .filter(([sectionId]) => sectionId.startsWith(`material-${day.day}-`))
-        .flatMap(([, files]) => files)
-        .map((file) => ({ id: file.id, name: file.name, url: file.url }));
-      const encodedMaterials = encodeURIComponent(JSON.stringify(materials));
-      // Append both assistantMessage (notes) and materials parameters to the URL
+      // Use only the materials associated with this activity, if provided
+      const activityMaterials = item.materials || [];
+      const encodedMaterials = encodeURIComponent(
+        JSON.stringify(activityMaterials)
+      );
       router.push(
         `/tools/gen-chat?thread=new&teachingMode=true&assistantMessage=${encodedNotes}&materials=${encodedMaterials}`
       );

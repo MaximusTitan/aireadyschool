@@ -28,6 +28,7 @@ export interface ScheduleItem {
   title: string;
   content: string;
   timeAllocation: number;
+  materials?: UploadedFile[];
 }
 
 export interface HomeworkAssignment {

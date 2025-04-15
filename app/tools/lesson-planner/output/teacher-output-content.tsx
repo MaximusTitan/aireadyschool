@@ -93,7 +93,6 @@ export default function TeacherOutputContent() {
         const role = user.user_metadata?.role;
         if (role !== "Teacher") {
           setIsAuthorized(false);
-          router.push("/sign-in");
           return;
         }
 

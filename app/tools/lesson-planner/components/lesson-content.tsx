@@ -225,13 +225,18 @@ export function LessonContent({
                               size="sm"
                               variant="outline"
                               className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
-                              onClick={() =>
+                              onClick={() => {
+                                // Retrieve only materials for this activity.
+                                const activityMaterials =
+                                  uploadedFiles[
+                                    `material-${day.day}-${index}`
+                                  ] || [];
                                 onChatWithBuddy(
-                                  item,
+                                  { ...item, materials: activityMaterials },
                                   day,
                                   generatedNotes[item.title]
-                                )
-                              }
+                                );
+                              }}
                             >
                               Learn with AI Tutor
                             </Button>

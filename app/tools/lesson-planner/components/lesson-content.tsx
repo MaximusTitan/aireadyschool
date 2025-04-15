@@ -233,7 +233,7 @@ export function LessonContent({
                                 )
                               }
                             >
-                              Chat with Buddy
+                              Learn with AI Tutor
                             </Button>
                           )}
                         {userRole !== "Student" && (

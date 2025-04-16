@@ -204,7 +204,7 @@ function ChatPageContent() {
         role: "assistant" as const,
         content: decodedContent,
         createdAt: new Date(),
-        fromHistory: false, // Mark as not from history to enable TTS if applicable
+        fromHistory: false, // Mark as not from history to enable TTS
       };
 
       // Add to UI

@@ -51,6 +51,7 @@ export const ChatArea = ({
   const ttsControllerRef = useRef<AbortController | null>(null);
   const activeFetchRequests = useRef<AbortController[]>([]);
   const prevIsLoadingRef = useRef(isLoading);
+  const initialMessageProcessedRef = useRef(false);
 
   // State management
   const [lastMessageTime, setLastMessageTime] = useState<number | null>(null);
@@ -140,6 +141,28 @@ export const ChatArea = ({
       });
     };
   }, [markUserInteraction]);
+
+  // Auto-play TTS for initial assistant message from URL parameters
+  useEffect(() => {
+    if (
+      !initialMessageProcessedRef.current &&
+      messages.length > 0 &&
+      isAudioEnabled &&
+      hasUserInteracted
+    ) {
+      const lastMessage = messages[messages.length - 1];
+
+      // Check if this is an assistant message and not from history (likely from URL parameters)
+      if (
+        lastMessage.role === "assistant" &&
+        typeof lastMessage.content === "string" &&
+        !lastMessage.fromHistory
+      ) {
+        handleTTS(lastMessage.id, lastMessage.content);
+        initialMessageProcessedRef.current = true;
+      }
+    }
+  }, [messages, isAudioEnabled, hasUserInteracted]);
 
   // Watch for loading state changes to trigger TTS when assistant stops generating
   useEffect(() => {

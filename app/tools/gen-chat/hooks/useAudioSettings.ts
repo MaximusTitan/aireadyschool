@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { useEffect } from 'react';
 
 interface AudioSettings {
   isAudioEnabled: boolean;
@@ -8,6 +9,23 @@ interface AudioSettings {
   toggleAudio: () => void;
   stopAudio: () => void;
   markUserInteraction: () => void;
+}
+
+// Create a hidden element in the DOM for user interaction marking
+export function AudioInteractionMarker() {
+  useEffect(() => {
+    // Create hidden element for tracking user interaction
+    const elem = document.createElement('div');
+    elem.id = 'audio-interaction-marker';
+    elem.style.display = 'none';
+    document.body.appendChild(elem);
+    
+    return () => {
+      document.body.removeChild(elem);
+    };
+  }, []);
+  
+  return null;
 }
 
 export const useAudioSettings = create<AudioSettings>()(

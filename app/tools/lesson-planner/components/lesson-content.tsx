@@ -225,6 +225,16 @@ export function LessonContent({
                               variant="outline"
                               className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200"
                               onClick={() => {
+                                // Mark user interaction explicitly to ensure audio can play
+                                const audioSettings = document.getElementById(
+                                  "audio-interaction-marker"
+                                );
+                                if (audioSettings) {
+                                  audioSettings.dispatchEvent(
+                                    new Event("click", { bubbles: true })
+                                  );
+                                }
+
                                 // Retrieve only materials for this activity.
                                 const activityMaterials =
                                   uploadedFiles[

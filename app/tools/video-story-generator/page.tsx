@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useRouter, useSearchParams } from 'next/navigation';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -780,17 +781,32 @@ VideoContainer.displayName = 'VideoContainer';
 const VideoBoard = memo(({ 
   scenes,
   generatedVideos,
-  onGenerateVideo 
+  onGenerateVideo,
+  setCurrentStep 
 }: { 
   scenes: Scene[];
   generatedVideos: Record<string, { url: string }>;
   onGenerateVideo: (sceneId: string, inputs: VideoSceneInputs) => Promise<void>;
+  setCurrentStep: (step: string) => void;
 }) => {
+  const router = useRouter();
+  const allVideosGenerated = scenes.every(scene => generatedVideos[scene.id]?.url);
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Video Generation Board
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Video Generation Board
+        </h2>
+        {allVideosGenerated && (
+          <Button
+            onClick={() => setCurrentStep('audio')}
+            className="bg-gradient-to-r from-rose-500 to-rose-600 text-white"
+          >
+            Add Audio
+          </Button>
+        )}
+      </div>
       <div className="space-y-6">
         {scenes.map((scene) => (
           <VideoContainer
@@ -1210,11 +1226,39 @@ const AudioBoard = memo(({
   onGenerateAudio: (sceneId: string) => Promise<void>;
   setGeneratedAudios: React.Dispatch<React.SetStateAction<Record<string, AudioResult>>>;
 }) => {
+  const router = useRouter();
+
+  const handleMergeAudioVideo = () => {
+    // Get all video and audio URLs in sequence
+    const mediaUrls = scenes.map(scene => ({
+      videoUrl: scene.videoUrl,
+      audioUrl: generatedAudios[scene.id]?.url
+    })).filter(urls => urls.videoUrl && urls.audioUrl);
+
+    // Encode URLs for passing as query parameter
+    const encodedUrls = encodeURIComponent(JSON.stringify(mediaUrls));
+    
+    // Navigate to video editor with both video and audio URLs
+    router.push(`/tools/video-editor?media=${encodedUrls}`);
+  };
+
+  const allAudiosGenerated = scenes.every(scene => generatedAudios[scene.id]?.url);
+
   return (
     <div className="bg-white rounded-2xl shadow-xl p-8">
-      <h2 className="text-2xl font-bold text-gray-800 mb-6">
-        Audio Generation Board
-      </h2>
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Audio Generation Board
+        </h2>
+        {allAudiosGenerated && (
+          <Button
+            onClick={handleMergeAudioVideo}
+            className="bg-gradient-to-r from-rose-500 to-rose-600 text-white"
+          >
+            Merge Audio & Video
+          </Button>
+        )}
+      </div>
       <div className="space-y-6">
         {scenes.map((scene) => (
           <AudioContainer
@@ -1254,12 +1298,90 @@ export default function VideoStoryGenerator() {
   const [storyInputs, setStoryInputs] = useState<StoryInputs | null>(null);
   const [generatedAudios, setGeneratedAudios] = useState<Record<string, AudioResult>>({});
   
+  const searchParams = useSearchParams();
+  const historyId = searchParams.get('history');
+
+  useEffect(() => {
+    async function loadFromHistory() {
+      if (!historyId) return;
+
+      const { data, error } = await supabase
+        .from('story_history')
+        .select('*')
+        .eq('id', historyId)
+        .single();
+
+      if (error || !data) {
+        console.error('Error loading history:', error);
+        return;
+      }
+
+      setStoryInputs(data.story_inputs);
+      setGeneratedStory(data.generated_story);
+      setScenes(data.scenes);
+      setGeneratedImages(data.generated_images);
+      setGeneratedVideos(data.generated_videos);
+      setGeneratedAudios(data.generated_audios);
+      setStoryId(data.story_id);
+      
+      if (data.generated_audios) {
+        setCurrentStep('audio');
+      } else if (data.generated_videos) {
+        setCurrentStep('video');
+      } else if (data.generated_images) {
+        setCurrentStep('images');
+      } else if (data.scenes) {
+        setCurrentStep('storyboard');
+      } else if (data.generated_story) {
+        setCurrentStep('enhanced');
+      }
+    }
+
+    loadFromHistory();
+  }, [historyId]);
+
+  const saveToHistory = async () => {
+    if (!storyInputs) return; // Early return if no story inputs
+
+    try {
+      const historyData = {
+        story_inputs: storyInputs,
+        generated_story: generatedStory,
+        scenes: scenes,
+        generated_images: generatedImages,
+        generated_videos: generatedVideos,
+        generated_audios: generatedAudios,
+        story_id: storyId
+      };
+
+      const historyId = searchParams.get('history');
+
+      // Check if history already exists and update it
+      if (historyId) {
+        const { error: updateError } = await supabase
+          .from('story_history')
+          .update(historyData)
+          .eq('id', historyId);
+
+        if (updateError) throw updateError;
+      } else {
+        // Create new history entry
+        const { error: insertError } = await supabase
+          .from('story_history')
+          .insert(historyData);
+
+        if (insertError) throw insertError;
+      }
+    } catch (error) {
+      console.error('Error saving history:', error);
+    }
+  };
+
   const handleGenerateSceneAudio = async (sceneId: string) => {
     try {
       const scene = scenes.find(s => s.id === sceneId);
       if (!scene) return;
 
-      // Generate audio script
       const scriptResponse = await fetch('/api/generate-audio-script', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1273,7 +1395,6 @@ export default function VideoStoryGenerator() {
       
       const scriptData = await scriptResponse.json();
       
-      // Generate audio
       const audioResponse = await fetch('/api/generate-audio', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1294,6 +1415,8 @@ export default function VideoStoryGenerator() {
           script: scriptData.audioScript
         }
       }));
+
+      await saveToHistory();
 
     } catch (error) {
       console.error('Error generating audio:', error);
@@ -1322,11 +1445,12 @@ export default function VideoStoryGenerator() {
       
       const data = await response.json();
       setGeneratedStory(data.refinedStory);
-      setStoryInputs(inputs); // Save inputs for scene generation
+      setStoryInputs(inputs);
       setIsEditing(false);
       setShowStoryboard(false);
       setScenes([]);
       setHasAnimationPlayed(false);
+      await saveToHistory();
     } catch (error) {
       console.error('Error:', error);
     }
@@ -1422,6 +1546,8 @@ export default function VideoStoryGenerator() {
         }
       }
 
+      await saveToHistory();
+
     } catch (error) {
       console.error('Error generating storyboard:', error)
     } finally {
@@ -1440,44 +1566,58 @@ export default function VideoStoryGenerator() {
   const handleRegenerateStoryboardImage = useCallback(async (sceneId: string) => {
     setScenes(prevScenes =>
       prevScenes.map(scene =>
-        scene.id === sceneId
-          ? { ...scene, isGenerating: true }
-          : scene
+        scene.id === sceneId ? { ...scene, isGenerating: true } : scene
       )
-    )
+    );
 
     try {
-      const scene = scenes.find(s => s.id === sceneId)
-      if (!scene) return
+      const scene = scenes.find(s => s.id === sceneId);
+      if (!scene || !storyId) {
+        throw new Error('Scene or Story ID not found');
+      }
 
+      // Use video-story-image endpoint for storyboard images
       const response = await fetch('/api/video-story-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: scene.imagePrompt })
-      })
+        body: JSON.stringify({
+          prompt: `Professional line-art illustration of: ${scene.text}. Scene details: ${scene.visualDetails || scene.text}. Style: Black and white line art, Grayscale Image.`,
+          sceneId: scene.id,
+          storyId,
+          sceneOrder: scene.number,
+          sceneDescription: scene.text
+        })
+      });
 
-      const data = await response.json()
+      if (!response.ok) {
+        throw new Error('Failed to generate image');
+      }
+
+      const data = await response.json();
       
       if (data.imageUrl) {
         setScenes(prevScenes =>
           prevScenes.map(scene =>
-            scene.id === sceneId
-              ? { ...scene, storyboardImageUrl: data.imageUrl, isGenerating: false }
-              : scene
+            scene.id === sceneId ? { 
+              ...scene, 
+              storyboardImageUrl: data.imageUrl,
+              imageUrl: data.imageUrl,
+              isGenerating: false 
+            } : scene
           )
-        )
+        );
+
+        await saveToHistory();
       }
     } catch (error) {
-      console.error('Error generating image:', error)
+      console.error('Error generating image:', error);
       setScenes(prevScenes =>
         prevScenes.map(scene =>
-          scene.id === sceneId
-            ? { ...scene, isGenerating: false }
-            : scene
+          scene.id === sceneId ? { ...scene, isGenerating: false } : scene
         )
-      )
+      );
     }
-  }, [scenes])
+  }, [scenes, storyId, saveToHistory]);
 
   const generateImagePrompt = async (sceneText: string): Promise<string> => {
     try {
@@ -1580,6 +1720,9 @@ export default function VideoStoryGenerator() {
 
         await new Promise(resolve => setTimeout(resolve, 500))
       }
+
+      await saveToHistory();
+
     } catch (error) {
       console.error('Error generating images:', error)
       setGeneratedImages(prev => prev.map(img => ({ ...img, isGenerating: false })))
@@ -1620,6 +1763,9 @@ export default function VideoStoryGenerator() {
           ? { ...img, imageUrl: data.imageUrl, isGenerating: false }
           : img
       ))
+
+      await saveToHistory();
+
     } catch (error) {
       console.error('Error regenerating image:', error)
       setGeneratedImages(prev => prev.map(img =>
@@ -1659,6 +1805,9 @@ export default function VideoStoryGenerator() {
         videoUrl: data.videoUrl,
         status: 'completed'
       });
+
+      await saveToHistory();
+
     } catch (error) {
       console.error('Error generating video:', error);
     } finally {
@@ -1696,7 +1845,6 @@ Camera Movement: ${inputs.cameraMovement}`;
 
       const data = await response.json();
       
-      // Update both generatedVideos and scenes with video URL
       setGeneratedVideos(prev => ({
         ...prev,
         [sceneId]: { url: data.videoUrl }
@@ -1707,6 +1855,8 @@ Camera Movement: ${inputs.cameraMovement}`;
           s.id === sceneId ? { ...s, videoUrl: data.videoUrl } : s
         )
       );
+
+      await saveToHistory();
 
     } catch (error) {
       console.error('Error generating video:', error);
@@ -1771,11 +1921,11 @@ Camera Movement: ${inputs.cameraMovement}`;
       number: 2,
       completed: !!generatedStory, 
       current: currentStep === 'enhanced',
-      enabled: !!generatedStory  // Enable if story exists
+      enabled: !!generatedStory 
     },
     { 
       id: 'storyboard', 
-      label: 'Storyboard', // Shortened from 'Story Board'
+      label: 'Storyboard', 
       number: 3,
       completed: scenes.length > 0, 
       current: currentStep === 'storyboard',
@@ -1783,7 +1933,7 @@ Camera Movement: ${inputs.cameraMovement}`;
     },
     { 
       id: 'images', 
-      label: 'Images', // Shortened from 'Image Board'
+      label: 'Images', 
       number: 4,
       completed: generatedImages.length > 0, 
       current: currentStep === 'images',
@@ -1791,7 +1941,7 @@ Camera Movement: ${inputs.cameraMovement}`;
     },
     { 
       id: 'video', 
-      label: 'Videos', // Shortened from 'Video Board'
+      label: 'Videos', 
       number: 5,
       completed: !!videoResult, 
       current: currentStep === 'video',
@@ -1799,7 +1949,7 @@ Camera Movement: ${inputs.cameraMovement}`;
     },
     { 
       id: 'audio', 
-      label: 'Audio', // Shortened from 'Audio Board'
+      label: 'Audio', 
       number: 6,
       completed: Object.keys(generatedAudios).length > 0, 
       current: currentStep === 'audio',
@@ -1829,11 +1979,13 @@ Camera Movement: ${inputs.cameraMovement}`;
   return (
     <main className="min-h-screen bg-backgroundApp dark:bg-neutral-950">
       <div className="container mx-auto py-8 px-4 max-w-6xl space-y-8">
-        <Link href="/tools">
-          <Button variant="outline" className="mb-2 border-neutral-500">
-            ← Back
-          </Button>
-        </Link>
+        <div className="flex justify-between items-center">
+          <Link href="/tools">
+            <Button variant="outline" className="border-neutral-500">
+              ← Back
+            </Button>
+          </Link>          
+        </div>
 
         <div className="mb-8 space-y-2">
           <h1 className="text-3xl font-bold text-rose-500">
@@ -1951,14 +2103,6 @@ Camera Movement: ${inputs.cameraMovement}`;
                   <h2 className="text-3xl font-bold text-rose-500">Storyboard</h2>
                   <div className="flex items-center gap-4">
                     <motion.button
-                      onClick={handleAddScene}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="px-6 py-3 bg-gradient-to-r from-rose-500 to-rose-600 text-white rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300"
-                    >
-                      Add New Scene
-                    </motion.button>
-                    <motion.button
                       onClick={() => {
                         setCurrentStep('images');
                         handleGenerateAllImages();
@@ -2064,6 +2208,7 @@ Camera Movement: ${inputs.cameraMovement}`;
                 scenes={scenes}
                 generatedVideos={generatedVideos}
                 onGenerateVideo={handleGenerateSceneVideo}
+                setCurrentStep={setCurrentStep}
               />
             )}
 

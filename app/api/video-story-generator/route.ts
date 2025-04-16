@@ -1,5 +1,21 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
+import { createClient } from '@supabase/supabase-js'
+
+// Check if environment variables are set
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
+}
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  {
+    auth: {
+      persistSession: false
+    }
+  }
+);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -7,7 +23,23 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { inputs, generateScenes, numScenes } = await req.json();
+    const { inputs, generateScenes, numScenes, historyId } = await req.json();
+
+    // Add handling for history loading
+    if (historyId) {
+      const { data: historyData, error } = await supabase
+        .from('story_history')
+        .select('*')
+        .eq('id', historyId)
+        .single();
+
+      if (error) throw error;
+
+      return NextResponse.json({
+        success: true,
+        ...historyData
+      });
+    }
 
     if (generateScenes) {
       const prompt = `Create exactly ${numScenes} scenes for a ${inputs.storyDuration}-second video storyboard.
@@ -37,12 +69,12 @@ Make each scene approximately 5 seconds long and ensure they flow naturally.`;
         frequency_penalty: 0.3
       });
 
-      const sceneText = completion.choices[0].message.content;
-      console.log("Received scene text:", sceneText);
-
+      const sceneText = completion.choices[0]?.message?.content;
       if (!sceneText) {
         throw new Error('No content received from GPT');
       }
+
+      console.log("Received scene text:", sceneText);
 
       const scenes = parseScenes(sceneText);
       console.log("Parsed scenes:", scenes);
@@ -98,7 +130,10 @@ Format the story as continuous paragraphs with proper spacing.`;
       max_tokens: 2000, // Increased for longer stories
     });
 
-    const refinedStory = completion.choices[0].message.content;
+    const refinedStory = completion.choices[0]?.message?.content;
+    if (!refinedStory) {
+      throw new Error('Failed to generate story content');
+    }
 
     return NextResponse.json({
       success: true,

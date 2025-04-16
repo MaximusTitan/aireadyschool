@@ -42,6 +42,7 @@ async function enhancePrompt(basePrompt: string): Promise<string> {
 
 export async function POST(req: Request) {
   const supabase = createClient();
+  let requestStoryId: number | undefined;
   
   try {
     const { 
@@ -52,6 +53,23 @@ export async function POST(req: Request) {
       storyId,
       sceneOrder 
     } = await req.json();
+
+    requestStoryId = storyId;
+
+    // Validate required parameters
+    if (!storyId) {
+      return NextResponse.json(
+        { error: 'Story ID is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!sceneDescription) {
+      return NextResponse.json(
+        { error: 'Scene description is required' },
+        { status: 400 }
+      );
+    }
 
     // Construct and enhance the prompt
     const basePrompt = `${sceneDescription || ''}${
@@ -101,7 +119,8 @@ export async function POST(req: Request) {
     return NextResponse.json(
       { 
         error: 'Failed to generate image',
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
+        storyId: requestStoryId // Use scoped variable
       },
       { status: 500 }
     );

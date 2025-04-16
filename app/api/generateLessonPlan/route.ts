@@ -71,7 +71,7 @@ export async function POST(request: Request) {
     } = await request.json();
 
     // Validate required fields
-    if (!subject || !grade || !chapterTopic || !board || !classDuration || !numberOfDays) {
+    if (!chapterTopic || !classDuration || !numberOfDays) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
@@ -106,12 +106,16 @@ export async function POST(request: Request) {
 
     // Create the user prompt
     const prompt = `Create a complete ${numberOfDays}-day lesson plan for teaching ${subject} - ${chapterTopic} for grade ${grade} (${board} board). Each class is ${classDuration} minutes long.
+                    Lesson Objectives: ${lessonObjectives || "To be determined based on the topic"}
+                    Learning Objectives: ${learningObjectives || "To be determined based on the topic"}
+                    ${additionalInstructions ? `Additional Instructions: ${additionalInstructions}` : ""}
+                    Include all days in the plan with detailed content for each session.`;
 
-Lesson Objectives: ${lessonObjectives || "To be determined based on the topic"}
-Learning Objectives: ${learningObjectives || "To be determined based on the topic"}
-${additionalInstructions ? `Additional Instructions: ${additionalInstructions}` : ""}
-
-Include all days in the plan with detailed content for each session.`;
+    const nullable_prompt = `Create a complete ${numberOfDays}-day lesson plan for teaching ${chapterTopic}. Each class is ${classDuration} minutes long.
+                    Lesson Objectives: ${lessonObjectives || "To be determined based on the topic"}
+                    Learning Objectives: ${learningObjectives || "To be determined based on the topic"}
+                    ${additionalInstructions ? `Additional Instructions: ${additionalInstructions}` : ""}
+                    Include all days in the plan with detailed content for each session.`;
 
     // Generate the lesson plan using structured output with Zod schema
     const result = await generateObject({
@@ -119,7 +123,7 @@ Include all days in the plan with detailed content for each session.`;
         structuredOutputs: true,
       }),
       schema: lessonPlanSchema,
-      prompt: prompt,
+      prompt: (!subject || !grade || !board) ? nullable_prompt : prompt,
       schemaName: 'lessonPlan',
       schemaDescription: 'A complete, detailed lesson plan structure for teaching a specific subject and topic.'
     });

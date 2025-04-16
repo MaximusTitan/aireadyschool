@@ -19,6 +19,7 @@ import { ArrowLeft } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth"; // Import the existing auth hook
+import { Switch } from "@/components/ui/switch";
 
 // Update StudentProps interface to include assessment details
 interface StudentProps {
@@ -35,6 +36,9 @@ interface StudentProps {
 interface CreateLessonPlanProps {
   studentProps?: StudentProps;
 }
+
+// Add view type
+type ViewType = "teacher" | "professional";
 
 const subjects = [
   "Mathematics",
@@ -66,6 +70,7 @@ export default function CreateLessonPlan({
   const [lessonObjectives, setLessonObjectives] = useState("");
   const [learningOutcomes, setLearningOutcomes] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
+  const [viewType, setViewType] = useState<ViewType>("teacher");
 
   // Override userEmail with studentEmail when provided (for teacher creating plan for student)
   const targetEmail = studentProps?.studentEmail || userEmail;
@@ -178,20 +183,19 @@ export default function CreateLessonPlan({
 
       // Create a proper request object to send to the API
       const requestData = {
-        subject: formData.get("subject") as string,
-        grade: formData.get("grade") as string,
+        subject: viewType === "teacher" ? formData.get("subject") as string : undefined,
+        grade: viewType === "teacher" ? formData.get("grade") as string : undefined,
+        board: viewType === "teacher" ? formData.get("board") as string : undefined,
         chapterTopic: formData.get("chapterTopic") as string,
-        board: formData.get("board") as string,
         classDuration: formData.get("classDuration") as string,
         numberOfDays: formData.get("numberOfDays") as string,
         learningObjectives: formData.get("learningObjectives") as string,
         lessonObjectives: formData.get("lessonObjectives") as string,
-        additionalInstructions:
-          (formData.get("additionalInstructions") as string) || "",
-        userEmail: targetEmail, // Use the target email (student or current user)
-        studentId: studentProps?.studentId || null, // Include student ID when applicable
-        createdByTeacher: isForStudent, // Flag to indicate if created by teacher
-        assessmentId: studentProps?.assessmentId || null, // Include assessment ID when applicable
+        additionalInstructions: (formData.get("additionalInstructions") as string) || "",
+        userEmail: targetEmail,
+        studentId: studentProps?.studentId || null,
+        createdByTeacher: isForStudent,
+        assessmentId: studentProps?.assessmentId || null,
       };
 
       console.log("Sending request to generate lesson plan:", requestData);
@@ -261,6 +265,18 @@ export default function CreateLessonPlan({
           </p>
         </div>
 
+        {/* Add view toggle */}
+        <div className="flex items-center space-x-2 mb-6">
+          <Label htmlFor="view-mode">{viewType === "teacher" ? "Teacher View" : "Professional View"}</Label>
+          <Switch
+            id="view-mode"
+            checked={viewType === "professional"}
+            onCheckedChange={(checked) =>
+              setViewType(checked ? "professional" : "teacher")
+            }
+          />
+        </div>
+
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -300,76 +316,72 @@ export default function CreateLessonPlan({
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Select
-                    name="subject"
-                    defaultValue={
-                      studentProps?.subject?.toLowerCase() || undefined
-                    }
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Subject" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subjects.map((subject) => (
-                        <SelectItem key={subject} value={subject.toLowerCase()}>
-                          {subject}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Show subject, grade, and board fields only in teacher view */}
+              {viewType === "teacher" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject</Label>
+                    <Select
+                      name="subject"
+                      defaultValue={studentProps?.subject?.toLowerCase() || undefined}
+                      required={viewType === "teacher"}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Subject" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {subjects.map((subject) => (
+                          <SelectItem key={subject} value={subject.toLowerCase()}>
+                            {subject}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="grade">Grade</Label>
-                  <Select
-                    name="grade"
-                    defaultValue={studentProps?.studentGrade || undefined}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Grade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => (
-                        <SelectItem key={i + 1} value={String(i + 1)}>
-                          Grade {i + 1}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="grade">Grade</Label>
+                    <Select
+                      name="grade"
+                      defaultValue={studentProps?.studentGrade || undefined}
+                      required={viewType === "teacher"}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Grade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => (
+                          <SelectItem key={i + 1} value={String(i + 1)}>
+                            Grade {i + 1}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="board">Board</Label>
-                  <Select
-                    name="board"
-                    defaultValue={studentProps?.board || undefined}
-                    required
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select Board" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {[
-                        "CBSE",
-                        "ICSE",
-                        "State Board",
-                        "IB",
-                        "IGCSE",
-                        "Other",
-                      ].map((board) => (
-                        <SelectItem key={board} value={board}>
-                          {board}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <div className="space-y-2">
+                    <Label htmlFor="board">Board</Label>
+                    <Select
+                      name="board"
+                      defaultValue={studentProps?.board || undefined}
+                      required={viewType === "teacher"}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select Board" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {["CBSE", "ICSE", "State Board", "IB", "IGCSE", "Other"].map(
+                          (board) => (
+                            <SelectItem key={board} value={board}>
+                              {board}
+                            </SelectItem>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="chapterTopic">Lesson Title</Label>

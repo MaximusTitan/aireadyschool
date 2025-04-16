@@ -12,10 +12,10 @@ const supabase = createClient();
 
 interface LessonPlan {
   id: string;
-  subject: string;
+  subject?: string | null;  // Make optional and nullable
   chapter_topic: string;
-  grade: string;
-  board: string;
+  grade?: string | null;    // Make optional and nullable
+  board?: string | null;    // Make optional and nullable
   created_at: string;
 }
 
@@ -171,7 +171,9 @@ export default function LessonPlanGenerator() {
     router.push(route);
   };
 
-  const getSubjectIcon = (subject: string) => {
+  const getSubjectIcon = (subject: string | null) => {
+    if (!subject) return subjectIcons["default"];
+    
     const normalizedSubject = Object.keys(subjectIcons).find((key) =>
       subject.toLowerCase().includes(key.toLowerCase())
     );
@@ -211,24 +213,28 @@ export default function LessonPlanGenerator() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 text-gray-500 mb-1">
                       <span className="text-2xl">
-                        {getSubjectIcon(plan.subject)}
+                        {getSubjectIcon(plan.subject || null)}
                       </span>
-                      <span className="font-medium">{plan.subject}</span>
+                      {plan.subject && <span className="font-medium">{plan.subject}</span>}
                     </div>
                     <h3 className="font-semibold text-base mb-1 text-gray-900 line-clamp-1">
                       {plan.chapter_topic}
                     </h3>
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 text-sm font-medium">
-                        Grade {plan.grade}
-                      </span>
+                      {plan.grade && (
+                        <span className="text-gray-600 text-sm font-medium">
+                          Grade {plan.grade}
+                        </span>
+                      )}
                       <span className="text-gray-500 text-xs">
                         {format(new Date(plan.created_at), "dd-MMM-yy")}
                       </span>
                     </div>
-                    <div className="text-gray-500 text-xs mt-1">
-                      {plan.board}
-                    </div>
+                    {plan.board && (
+                      <div className="text-gray-500 text-xs mt-1">
+                        {plan.board}
+                      </div>
+                    )}
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3 justify-end border-t pt-3">

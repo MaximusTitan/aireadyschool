@@ -519,9 +519,15 @@ export default function TeacherOutputContent() {
       }
     };
 
-    addHeading(`${lessonPlan.subject} - ${lessonPlan.chapter_topic}`, 20);
-    addText(`Grade: ${lessonPlan.grade}`);
-    addText(`Board: ${lessonPlan.board}`);
+    addHeading(`${lessonPlan.subject ? `${lessonPlan.subject} - ` : ''}${lessonPlan.chapter_topic}`, 20);
+    
+    if (lessonPlan.grade) {
+      addText(`Grade: ${lessonPlan.grade}`);
+    }
+    if (lessonPlan.board) {
+      addText(`Board: ${lessonPlan.board}`);
+    }
+    
     addText(`Duration: ${lessonPlan.class_duration} minutes`);
     addText(`Number of Days: ${lessonPlan.number_of_days}`);
 
@@ -597,10 +603,9 @@ export default function TeacherOutputContent() {
       }
     );
 
-    const fileName =
-      `${lessonPlan.subject}_${lessonPlan.chapter_topic}_Grade${lessonPlan.grade}.pdf`
-        .replace(/[^a-z0-9]/gi, "_")
-        .toLowerCase();
+    const fileName = `${lessonPlan.subject ? `${lessonPlan.subject}_` : ''}${lessonPlan.chapter_topic}${lessonPlan.grade ? `_Grade${lessonPlan.grade}` : ''}.pdf`
+      .replace(/[^a-z0-9]/gi, "_")
+      .toLowerCase();
 
     doc.save(fileName);
   };
@@ -1137,9 +1142,11 @@ export default function TeacherOutputContent() {
                   Lesson Plan: {lessonPlan.chapter_topic}
                 </h1>
                 <p className="text-gray-600 mt-2">
-                  {lessonPlan.grade} Grade | {lessonPlan.board} |{" "}
-                  {lessonPlan.number_of_days} Sessions -{" "}
-                  {lessonPlan.class_duration} Minutes Each
+                  {lessonPlan.grade && `${lessonPlan.grade} Grade`}
+                  {lessonPlan.grade && lessonPlan.board && " | "}
+                  {lessonPlan.board}
+                  {(lessonPlan.grade || lessonPlan.board) && " | "}
+                  {lessonPlan.number_of_days} Sessions - {lessonPlan.class_duration} Minutes Each
                 </p>
               </div>
 
@@ -1206,6 +1213,8 @@ export default function TeacherOutputContent() {
                 <DocumentGenerator
                   initialContent=""
                   initialTitle={`${
+                    lessonPlan.subject ? `${lessonPlan.subject} - ` : ''
+                  }${
                     lessonPlan.plan_data.days[
                       Number.parseInt(activeTab.split("-")[1]) - 1
                     ].topicHeading

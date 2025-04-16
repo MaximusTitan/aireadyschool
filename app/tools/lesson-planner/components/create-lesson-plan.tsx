@@ -20,6 +20,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth"; // Import the existing auth hook
 import { Switch } from "@/components/ui/switch";
+import { createClient } from "@/utils/supabase/client";
+
+const supabase = createClient();
 
 // Update StudentProps interface to include assessment details
 interface StudentProps {
@@ -33,8 +36,29 @@ interface StudentProps {
   assessmentId?: string; // Add assessmentId
 }
 
+interface DocumentFile {
+  id: string;
+  grade: string;
+  education_board: string;
+  subject: string;
+  file_url: string;
+}
+
 interface CreateLessonPlanProps {
   studentProps?: StudentProps;
+}
+
+interface FormData {
+  board: string;
+  classLevel: string;
+  subject: string;
+  topic: string;
+  chapterTopic: string;
+  classDuration: string;
+  numberOfDays: string;
+  learningObjectives: string;
+  lessonObjectives: string;
+  additionalInstructions: string;
 }
 
 // Add view type
@@ -71,6 +95,21 @@ export default function CreateLessonPlan({
   const [learningOutcomes, setLearningOutcomes] = useState("");
   const [additionalInstructions, setAdditionalInstructions] = useState("");
   const [viewType, setViewType] = useState<ViewType>("teacher");
+  const [documentFiles, setDocumentFiles] = useState<DocumentFile[]>([]);
+  const [isDocumentSelected, setIsDocumentSelected] = useState(false);
+  const [selectedDocument, setSelectedDocument] = useState<string | null>(null);
+  const [formState, setFormState] = useState({
+    board: studentProps?.board || "",
+    classLevel: studentProps?.studentGrade || "",
+    subject: studentProps?.subject || "",
+    topic: "",
+    chapterTopic: "",
+    classDuration: "",
+    numberOfDays: "",
+    learningObjectives: learningOutcomes,
+    lessonObjectives: lessonObjectives,
+    additionalInstructions: additionalInstructions,
+  });
 
   // Override userEmail with studentEmail when provided (for teacher creating plan for student)
   const targetEmail = studentProps?.studentEmail || userEmail;
@@ -155,6 +194,71 @@ export default function CreateLessonPlan({
     }
   }, [userEmail, isAuthChecking, redirectAttempted, router, isForStudent]);
 
+  useEffect(() => {
+    fetchUserAndData();
+  }, []);
+
+  const fetchUserAndData = async () => {
+    try {
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error("User not authenticated");
+
+      await Promise.all([
+        fetchKnowledgeBaseDocs(),
+      ]);
+    } catch (error) {
+      console.error("Error fetching user data:", error);
+      toast.error("Failed to fetch user data. Please try again or log in.");
+    }
+  };
+
+  const fetchKnowledgeBaseDocs = async () => {
+    try {
+      const { data, error } = await supabase.from("knowledge_base").select("*");
+      if (error) throw error;
+      setDocumentFiles(data || []);
+    } catch (error) {
+      console.error("Error fetching knowledge_base docs:", error);
+      toast.error("Failed to fetch documents. Please try again.");
+    }
+  };
+
+  const handleDocumentSelect = (docId: string) => {
+    const selectedDoc = documentFiles.find((doc) => doc.id === docId);
+    if (selectedDoc) {
+      setSelectedDocument(docId);
+      setFormState((prev) => ({
+        ...prev,
+        board: selectedDoc.education_board,
+        classLevel: selectedDoc.grade,
+        subject: selectedDoc.subject,
+        topic: selectedDoc.file_url,
+      }));
+      setIsDocumentSelected(true);
+    }
+  };
+
+  const handleReset = () => {
+    setSelectedDocument(null);
+    setIsDocumentSelected(false);
+    setFormState({
+      board: studentProps?.board || "",
+      classLevel: studentProps?.studentGrade || "",
+      subject: studentProps?.subject || "",
+      topic: "",
+      chapterTopic: "",
+      classDuration: "",
+      numberOfDays: "",
+      learningObjectives: "",
+      lessonObjectives: "",
+      additionalInstructions: "",
+    });
+  };
+
   // Update loading state to consider student context
   if (!isForStudent && isAuthChecking) {
     return (
@@ -183,25 +287,28 @@ export default function CreateLessonPlan({
 
       // Create a proper request object to send to the API
       const requestData = {
-        subject: viewType === "teacher" ? formData.get("subject") as string : undefined,
-        grade: viewType === "teacher" ? formData.get("grade") as string : undefined,
-        board: viewType === "teacher" ? formData.get("board") as string : undefined,
-        chapterTopic: formData.get("chapterTopic") as string,
-        classDuration: formData.get("classDuration") as string,
-        numberOfDays: formData.get("numberOfDays") as string,
-        learningObjectives: formData.get("learningObjectives") as string,
-        lessonObjectives: formData.get("lessonObjectives") as string,
-        additionalInstructions: (formData.get("additionalInstructions") as string) || "",
+        subject: viewType === "teacher" ? formState.subject : undefined,
+        grade: viewType === "teacher" ? formState.classLevel : undefined,
+        board: viewType === "teacher" ? formState.board : undefined,
+        chapterTopic: formState.chapterTopic || formData.get("chapterTopic"),
+        classDuration: formState.classDuration || formData.get("classDuration"),
+        numberOfDays: formState.numberOfDays || formData.get("numberOfDays"),
+        learningObjectives: formState.learningObjectives || formData.get("learningObjectives"),
+        lessonObjectives: formState.lessonObjectives || formData.get("lessonObjectives"),
+        additionalInstructions: formState.additionalInstructions || formData.get("additionalInstructions") || "",
         userEmail: targetEmail,
         studentId: studentProps?.studentId || null,
         createdByTeacher: isForStudent,
         assessmentId: studentProps?.assessmentId || null,
+        selectedDocument: selectedDocument,
       };
 
+      // Determine which API endpoint to use based on document selection
+      const apiEndpoint = selectedDocument ? "/api/ragLessonPlan" : "/api/generateLessonPlan";
+      console.log("Using API endpoint:", apiEndpoint);
       console.log("Sending request to generate lesson plan:", requestData);
 
-      // Call the API route instead of using the imported function
-      const response = await fetch("/api/generateLessonPlan", {
+      const response = await fetch(apiEndpoint, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -280,6 +387,45 @@ export default function CreateLessonPlan({
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Document Selection */}
+              <div className="mb-4">
+                <Label htmlFor="document-select">Select Document (Optional)</Label>
+                <Select
+                  value={selectedDocument || "_none"}
+                  onValueChange={(value) => {
+                    if (value === "_none") {
+                      handleReset();
+                    } else {
+                      handleDocumentSelect(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a document" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">None (Input manually)</SelectItem>
+                    {documentFiles.map((doc) => (
+                      <SelectItem key={doc.id} value={doc.id}>
+                        {doc.subject} - Grade {doc.grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* OR Separator */}
+              <div className="relative my-8">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-4 text-neutral-500 bg-white font-medium">
+                    OR
+                  </span>
+                </div>
+              </div>
+
               {/* Student info banner when creating for a student */}
               {isForStudent && (
                 <div className="bg-blue-50 p-4 rounded-md mb-4">
@@ -325,6 +471,7 @@ export default function CreateLessonPlan({
                       name="subject"
                       defaultValue={studentProps?.subject?.toLowerCase() || undefined}
                       required={viewType === "teacher"}
+                      disabled={isDocumentSelected}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Subject" />
@@ -345,6 +492,7 @@ export default function CreateLessonPlan({
                       name="grade"
                       defaultValue={studentProps?.studentGrade || undefined}
                       required={viewType === "teacher"}
+                      disabled={isDocumentSelected}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Grade" />
@@ -365,6 +513,7 @@ export default function CreateLessonPlan({
                       name="board"
                       defaultValue={studentProps?.board || undefined}
                       required={viewType === "teacher"}
+                      disabled={isDocumentSelected}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Board" />
@@ -389,22 +538,23 @@ export default function CreateLessonPlan({
                   id="chapterTopic"
                   name="chapterTopic"
                   placeholder="Enter the title of your lesson"
-                  defaultValue={studentProps?.title || ""}
+                  value={formState.chapterTopic}
+                  onChange={(e) => setFormState(prev => ({ ...prev, chapterTopic: e.target.value }))}
                   required
                 />
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="classDuration">
-                    Session Duration (Minutes)
-                  </Label>
+                  <Label htmlFor="classDuration">Session Duration (Minutes)</Label>
                   <Input
                     id="classDuration"
                     name="classDuration"
                     type="number"
                     min="1"
                     placeholder="Enter duration"
+                    value={formState.classDuration}
+                    onChange={(e) => setFormState(prev => ({ ...prev, classDuration: e.target.value }))}
                     required
                   />
                 </div>
@@ -418,6 +568,8 @@ export default function CreateLessonPlan({
                     min="1"
                     max="20"
                     placeholder="Enter number of sessions"
+                    value={formState.numberOfDays}
+                    onChange={(e) => setFormState(prev => ({ ...prev, numberOfDays: e.target.value }))}
                     required
                   />
                 </div>
@@ -431,8 +583,8 @@ export default function CreateLessonPlan({
                   placeholder="What are the main objectives of this lesson?"
                   rows={3}
                   required
-                  value={lessonObjectives}
-                  onChange={(e) => setLessonObjectives(e.target.value)}
+                  value={formState.lessonObjectives}
+                  onChange={(e) => setFormState(prev => ({ ...prev, lessonObjectives: e.target.value }))}
                 />
               </div>
 
@@ -444,22 +596,20 @@ export default function CreateLessonPlan({
                   placeholder="What should students be able to do after this lesson?"
                   rows={3}
                   required
-                  value={learningOutcomes}
-                  onChange={(e) => setLearningOutcomes(e.target.value)}
+                  value={formState.learningObjectives}
+                  onChange={(e) => setFormState(prev => ({ ...prev, learningObjectives: e.target.value }))}
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="additionalInstructions">
-                  Additional Instructions
-                </Label>
+                <Label htmlFor="additionalInstructions">Additional Instructions</Label>
                 <Textarea
                   id="additionalInstructions"
                   name="additionalInstructions"
                   placeholder="Any specific instructions or notes for this lesson plan?"
                   rows={3}
-                  value={additionalInstructions}
-                  onChange={(e) => setAdditionalInstructions(e.target.value)}
+                  value={formState.additionalInstructions}
+                  onChange={(e) => setFormState(prev => ({ ...prev, additionalInstructions: e.target.value }))}
                 />
               </div>
 

@@ -203,6 +203,14 @@ export default function StudentOutputContent() {
     notes?: string
   ) => {
     if (lessonPlan) {
+      // Mark that the user has interacted with the page
+      // This ensures audio can play automatically
+      const interactionEvent = new Event("click", {
+        bubbles: true,
+        cancelable: true,
+      });
+      document.dispatchEvent(interactionEvent);
+
       const encodedNotes = notes ? encodeURIComponent(notes) : "";
       // Use only the materials associated with this activity, if provided
       const activityMaterials = item.materials || [];

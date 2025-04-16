@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface ChatThread {
   id: string;
@@ -12,30 +12,39 @@ interface ChatThreadsTableProps {
   navigateToChatThread: (threadId: string) => void;
 }
 
-const ChatThreadsTable: React.FC<ChatThreadsTableProps> = ({ 
-  chatThreads, 
-  navigateToChatThread 
+const ChatThreadsTable: React.FC<ChatThreadsTableProps> = ({
+  chatThreads,
+  navigateToChatThread,
 }) => {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >
               Chat Title
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >
               Created At
             </th>
-            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+            <th
+              scope="col"
+              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+            >
               Last Updated
             </th>
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
           {chatThreads.map((thread) => (
-            <tr 
-              key={thread.id} 
+            <tr
+              key={thread.id}
               onClick={() => navigateToChatThread(thread.id)}
               className="hover:bg-gray-100 cursor-pointer"
             >

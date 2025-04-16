@@ -379,6 +379,26 @@ export default function Profile() {
               </form>
             </CardContent>
           </Card>
+
+          {userData.role === "Student" && (
+            <Card className="shadow-lg border-2">
+              <CardHeader className="border-b">
+                <CardTitle>Student Portfolio</CardTitle>
+              </CardHeader>
+              <CardContent className="p-6">
+                <div className="text-muted-foreground mb-4">
+                  View and manage your student portfolio showcasing your
+                  projects and achievements.
+                </div>
+                <Button
+                  asChild
+                  className="w-full h-11 text-base font-semibold bg-rose-500 hover:bg-rose-600"
+                >
+                  <Link href="/portfolio">Go to Portfolio</Link>
+                </Button>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
 

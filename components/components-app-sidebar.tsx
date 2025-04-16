@@ -300,6 +300,14 @@ export function AppSidebar() {
                     <span>Profile</span>
                   </Link>
                 </DropdownMenuItem>
+                {userRole === "Student" && (
+                  <DropdownMenuItem asChild>
+                    <Link href="/portfolio" className="flex items-center">
+                      <Gamepad2 className="mr-2 h-4 w-4" />
+                      <span>Portfolio</span>
+                    </Link>
+                  </DropdownMenuItem>
+                )}
                 {userRole === "Admin" && (
                   <>
                     <DropdownMenuItem asChild>

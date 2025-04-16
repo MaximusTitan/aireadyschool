@@ -4,13 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { AddContentDropdown } from "./add-content-dropdown";
 import { FileViewer } from "./file-viewer";
+import { RichTextEditor } from "./rich-text-editor";
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import ReactMarkdown from "react-markdown";
 import {
   Day,
   ScheduleItem,
@@ -18,7 +18,6 @@ import {
   UploadedFile,
 } from "../types/index";
 import { Fragment } from "react";
-import { Textarea } from "@/components/ui/textarea";
 import { Edit2, PlusCircle, Check, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -292,16 +291,16 @@ export function LessonContent({
                                     </div>
                                     {editingNotes[item.title]?.editing ? (
                                       <div className="space-y-2">
-                                        <Textarea
+                                        <RichTextEditor
                                           value={
                                             editingNotes[item.title].content
                                           }
-                                          onChange={(e) =>
+                                          onChange={(newContent) =>
                                             setEditingNotes((prev) => ({
                                               ...prev,
                                               [item.title]: {
                                                 ...prev[item.title],
-                                                content: e.target.value,
+                                                content: newContent,
                                               },
                                             }))
                                           }
@@ -317,11 +316,12 @@ export function LessonContent({
                                         </Button>
                                       </div>
                                     ) : (
-                                      <div className="text-sm text-gray-600 whitespace-pre-wrap">
-                                        <ReactMarkdown>
-                                          {generatedNotes[item.title]}
-                                        </ReactMarkdown>
-                                      </div>
+                                      <div
+                                        className="prose prose-sm max-w-none text-gray-600"
+                                        dangerouslySetInnerHTML={{
+                                          __html: generatedNotes[item.title],
+                                        }}
+                                      />
                                     )}
                                   </div>
                                 )}

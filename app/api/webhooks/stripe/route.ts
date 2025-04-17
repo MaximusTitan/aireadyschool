@@ -11,6 +11,18 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 // This is your Stripe webhook secret for testing with Stripe CLI (https://stripe.com/docs/stripe-cli)
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || "";
 
+// Helper function for safe date conversion
+function safeToISOString(timestamp: number | null): string | null {
+  if (!timestamp) return null;
+  
+  try {
+    return new Date(timestamp * 1000).toISOString();
+  } catch (error) {
+    console.error(`Invalid timestamp value: ${timestamp}`, error);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const headersList = await headers();
@@ -125,6 +137,12 @@ async function processSubscriptionChange(subscription: Stripe.Subscription, supa
     const productId = typeof price.product === 'string' ? price.product : price.product.id;
     const product = await stripe.products.retrieve(productId);
     
+    // Safely convert timestamps to ISO strings
+    const trialStart = safeToISOString(subscription.trial_start);
+    const trialEnd = safeToISOString(subscription.trial_end);
+    const currentPeriodStart = safeToISOString((subscription as any).current_period_start);
+    const currentPeriodEnd = safeToISOString((subscription as any).current_period_end);
+    
     // Update subscription in the database
     const { error } = await supabase
       .from('user_subscriptions')
@@ -134,11 +152,11 @@ async function processSubscriptionChange(subscription: Stripe.Subscription, supa
         stripe_customer_id: customerId,
         stripe_subscription_id: subscription.id,
         subscription_status: subscription.status,
-        trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000).toISOString() : null,
-        trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : null,
+        trial_start: trialStart,
+        trial_end: trialEnd,
         is_trial_used: subscription.status === 'trialing',
-        current_period_start: new Date((subscription as any).current_period_start * 1000).toISOString(),
-        current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+        current_period_start: currentPeriodStart,
+        current_period_end: currentPeriodEnd,
         price_id: priceId,
         plan_name: product.name || "Creator",
         amount: (price.unit_amount || 0) / 100, // Convert from cents to dollars
@@ -175,12 +193,15 @@ async function handleSuccessfulPayment(invoice: Stripe.Invoice, supabase: any) {
     try {
       const subscription = await stripe.subscriptions.retrieve(subscriptionId);
       
+      // Safely convert timestamp to ISO string
+      const currentPeriodEnd = safeToISOString((subscription as any).current_period_end);
+      
       // Update status in database
       await supabase
         .from('user_subscriptions')
         .update({
           subscription_status: subscription.status,
-          current_period_end: new Date((subscription as any).current_period_end * 1000).toISOString(),
+          current_period_end: currentPeriodEnd,
           updated_at: new Date().toISOString()
         })
         .eq('stripe_subscription_id', subscriptionId);

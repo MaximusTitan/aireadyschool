@@ -249,7 +249,7 @@ async function ensureSubscriptionRecord(
 
     // Check if record already exists
     const { data: existingSubscription } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .select("*")
       .eq("razorpay_subscription_id", razorpaySubscriptionId)
       .maybeSingle();
@@ -261,7 +261,7 @@ async function ensureSubscriptionRecord(
     const planId = notes.planId || "student_plan"; // Default to student plan if not specified
     
     const { data, error } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .insert({
         user_id: userId,
         plan_id: planId,
@@ -303,7 +303,7 @@ async function updateSubscriptionStatus(
 
     // First check if subscription exists
     const { data: existingSubscription } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .select("*")
       .eq("razorpay_subscription_id", razorpaySubscriptionId)
       .maybeSingle();
@@ -316,7 +316,7 @@ async function updateSubscriptionStatus(
     
     // Update the subscription
     const { data, error } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .update({ 
         status, 
         updated_at: new Date().toISOString(),
@@ -364,7 +364,7 @@ async function recordPayment(
     if (subscriptionId) {
       // Get the subscription record from the database
       const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from("user_subscriptions")
+        .from("user_subscriptions_rzp")
         .select("id")
         .eq("razorpay_subscription_id", subscriptionId)
         .maybeSingle();

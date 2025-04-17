@@ -1,38 +1,72 @@
 import { NextResponse } from "next/server";
-import Replicate from "replicate";
 
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY,
-});
-
-// Function to caption image using Replicate's BLIP image captioning model
+// Function to caption image using Replicate API directly
 const captionImage = async (imageBase64: string) => {
   try {
-    const output = await replicate.run(
-      "salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746",
-      {
+    // Create prediction
+    const response = await fetch("https://api.replicate.com/v1/predictions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        version: "2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746",
         input: {
           image: imageBase64,
         },
-      }
-    );
+      }),
+    });
 
-    let caption = Array.isArray(output) ? output[0] : output;
+    if (!response.ok) {
+      throw new Error(`Replicate API error: ${response.statusText}`);
+    }
+
+    const prediction = await response.json();
+    
+    // Poll for the result
+    const result = await pollPrediction(prediction.id);
+    let caption = Array.isArray(result) ? result[0] : result;
     
     if (!caption || typeof caption !== 'string') {
       caption = "I'm not sure what that is. Can you tell me?";
     }
     
-    // Format the caption to be more child-friendly
-    caption = formatCaption(caption);
-    
-    return caption;
+    return formatCaption(caption);
 
   } catch (error) {
     console.error("Caption error:", error);
     throw error;
   }
 };
+
+// Function to poll prediction result
+async function pollPrediction(id: string, maxAttempts = 30) {
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
+      headers: {
+        "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check prediction status');
+    }
+
+    const prediction = await response.json();
+    if (prediction.status === 'succeeded') {
+      return prediction.output;
+    } else if (prediction.status === 'failed') {
+      throw new Error('Image captioning failed');
+    }
+
+    await delay(1000);
+  }
+  
+  throw new Error('Timeout waiting for prediction');
+}
 
 // Make captions more child-friendly and concise
 const formatCaption = (caption: string): string => {

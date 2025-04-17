@@ -387,44 +387,6 @@ export default function CreateLessonPlan({
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Document Selection */}
-              <div className="mb-4">
-                <Label htmlFor="document-select">Select Document (Optional)</Label>
-                <Select
-                  value={selectedDocument || "_none"}
-                  onValueChange={(value) => {
-                    if (value === "_none") {
-                      handleReset();
-                    } else {
-                      handleDocumentSelect(value);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a document" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">None (Input manually)</SelectItem>
-                    {documentFiles.map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id}>
-                        {doc.subject} - Grade {doc.grade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* OR Separator */}
-              <div className="relative my-8">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-gray-300"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                  <span className="px-4 text-neutral-500 bg-white font-medium">
-                    OR
-                  </span>
-                </div>
-              </div>
 
               {/* Student info banner when creating for a student */}
               {isForStudent && (
@@ -531,6 +493,33 @@ export default function CreateLessonPlan({
                   </div>
                 </div>
               )}
+
+              {/* Document Selection */}
+              <div className="mb-4">
+                <Label htmlFor="document-select">Select Document (Optional)</Label>
+                <Select
+                  value={selectedDocument || "_none"}
+                  onValueChange={(value) => {
+                    if (value === "_none") {
+                      handleReset();
+                    } else {
+                      handleDocumentSelect(value);
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a document" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">None (Input manually)</SelectItem>
+                    {documentFiles.map((doc) => (
+                      <SelectItem key={doc.id} value={doc.id}>
+                        {doc.subject} - Grade {doc.grade}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
               <div className="space-y-2">
                 <Label htmlFor="chapterTopic">Lesson Title</Label>

@@ -134,30 +134,35 @@ export function AppSidebar() {
             },
           ]),
 
-      ...(userRole === "Admin"
+      ...(userRole === "Teacher"
         ? [
-            {
-              title: "Document Vault",
-              url: "/document-vault",
-              icon: Folder,
-            },
-            {
-              title: "Knowledge Base",
-              url: "/knowledge-base",
-              icon: LibraryBig,
-            },
-            {
-              title: "Schools",
-              url: "/school",
-              icon: School,
-            },
-            {
-              title: "Connect Database",
-              url: "/connect-database",
-              icon: Plugin,
-            },
+          {
+            title: "Knowledge Base",
+            url: "/knowledge-base",
+            icon: LibraryBig,
+          },
           ]
         : []),
+
+        ...(userRole === "Admin"
+          ? [
+              {
+                title: "Document Vault",
+                url: "/document-vault",
+                icon: Folder,
+              },
+              {
+                title: "Schools",
+                url: "/school",
+                icon: School,
+              },
+              {
+                title: "Connect Database",
+                url: "/connect-database",
+                icon: Plugin,
+              },
+            ]
+          : []),
 
       ...(userRole === "School"
         ? [

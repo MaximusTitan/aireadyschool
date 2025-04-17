@@ -89,7 +89,7 @@ Use markdown formatting for clear organization.`;
     }
     
     const { text, usage } = await generateText({
-      model: openai("gpt-4o"),
+      model: openai("gpt-4.1"),
       prompt,
       temperature: 0.8,
       maxTokens: 3000, // Increased token limit for more detailed responses

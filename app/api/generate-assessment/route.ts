@@ -88,7 +88,7 @@ export async function POST(req: Request) {
 
     // Log token usage with authenticated user's email
     if (usage) {
-      await logTokenUsage("Assessment Generator", "GPT-4o", usage.promptTokens, usage.completionTokens, user.email)
+      await logTokenUsage("Assessment Generator", "claude-3-7-sonnet-20250219", usage.promptTokens, usage.completionTokens, user.email)
     }
 
     // Extract JSON from the response

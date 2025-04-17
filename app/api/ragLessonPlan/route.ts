@@ -128,7 +128,7 @@ export async function POST(request: Request) {
 
     // Generate the lesson plan using structured output with Zod schema
     const result = await generateObject({
-      model: openai("gpt-4o", {
+      model: openai("gpt-4.1", {
         structuredOutputs: true,
       }),
       schema: lessonPlanSchema,
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
     if (result.usage) {
       await logTokenUsage(
         'RAG Lesson Planner',
-        'GPT-4o',
+        'GPT-4.1',
         result.usage.promptTokens,
         result.usage.completionTokens,
         user.email

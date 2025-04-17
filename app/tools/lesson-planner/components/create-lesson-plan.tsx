@@ -259,6 +259,29 @@ export default function CreateLessonPlan({
     });
   };
 
+  // Add new state for file upload
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+
+  // Add file upload handler
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      // Check file type
+      if (file.type !== 'application/pdf') {
+        toast.error('Please upload a PDF file');
+        return;
+      }
+      
+      // Check file size (20MB = 20 * 1024 * 1024 bytes)
+      if (file.size > 20 * 1024 * 1024) {
+        toast.error('File size must be less than 20MB');
+        return;
+      }
+
+      setUploadedFile(file);
+    }
+  };
+
   // Update loading state to consider student context
   if (!isForStudent && isAuthChecking) {
     return (
@@ -285,63 +308,109 @@ export default function CreateLessonPlan({
       // Get form data
       const formData = new FormData(event.currentTarget);
 
-      // Create a proper request object to send to the API
-      const requestData = {
-        subject: viewType === "teacher" ? formState.subject : undefined,
-        grade: viewType === "teacher" ? formState.classLevel : undefined,
-        board: viewType === "teacher" ? formState.board : undefined,
-        chapterTopic: formState.chapterTopic || formData.get("chapterTopic"),
-        classDuration: formState.classDuration || formData.get("classDuration"),
-        numberOfDays: formState.numberOfDays || formData.get("numberOfDays"),
-        learningObjectives: formState.learningObjectives || formData.get("learningObjectives"),
-        lessonObjectives: formState.lessonObjectives || formData.get("lessonObjectives"),
-        additionalInstructions: formState.additionalInstructions || formData.get("additionalInstructions") || "",
-        userEmail: targetEmail,
-        studentId: studentProps?.studentId || null,
-        createdByTeacher: isForStudent,
-        assessmentId: studentProps?.assessmentId || null,
-        selectedDocument: selectedDocument,
-      };
+      // Create request data based on view type
+      if (viewType === "professional") {
+        // For professional view, use FormData to handle file upload
+        const formDataToSend = new FormData();
+        
+        // Append file if uploaded
+        if (uploadedFile) {
+          formDataToSend.append('document', uploadedFile);
+        }
 
-      // Determine which API endpoint to use based on document selection
-      const apiEndpoint = selectedDocument ? "/api/ragLessonPlan" : "/api/generateLessonPlan";
-      console.log("Using API endpoint:", apiEndpoint);
-      console.log("Sending request to generate lesson plan:", requestData);
+        // Append other form fields
+        formDataToSend.append('chapterTopic', formState.chapterTopic);
+        formDataToSend.append('classDuration', formState.classDuration);
+        formDataToSend.append('numberOfDays', formState.numberOfDays);
+        formDataToSend.append('learningObjectives', formState.learningObjectives);
+        formDataToSend.append('lessonObjectives', formState.lessonObjectives);
+        formDataToSend.append('additionalInstructions', formState.additionalInstructions || '');
+        formDataToSend.append('userEmail', targetEmail);
+        formDataToSend.append('studentId', studentProps?.studentId || '');
+        formDataToSend.append('createdByTeacher', String(isForStudent));
+        formDataToSend.append('assessmentId', studentProps?.assessmentId || '');
 
-      const response = await fetch(apiEndpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(requestData),
-      });
+        const response = await fetch('/api/proLessonPlan', {
+          method: 'POST',
+          body: formDataToSend,
+        });
 
-      // Handle response
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to generate lesson plan");
+        // Handle response
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to generate lesson plan");
+        }
+
+        // Parse the response to get the lesson plan data
+        const lessonPlan = await response.json();
+
+        if (!lessonPlan || !lessonPlan.plan_data) {
+          throw new Error("Received empty or invalid lesson plan");
+        }
+
+        // Navigate to the output page with the lesson plan ID and assessment ID if it exists
+        const queryParams = new URLSearchParams();
+        queryParams.append("id", lessonPlan.id);
+
+        if (studentProps?.assessmentId) {
+          queryParams.append("assessmentId", studentProps.assessmentId);
+        }
+
+        router.push(`/tools/lesson-planner/output?${queryParams.toString()}`);
+      } else {
+        // Existing teacher view logic
+        const requestData = {
+          subject: viewType === "teacher" ? formState.subject : undefined,
+          grade: viewType === "teacher" ? formState.classLevel : undefined,
+          board: viewType === "teacher" ? formState.board : undefined,
+          chapterTopic: formState.chapterTopic || formData.get("chapterTopic"),
+          classDuration: formState.classDuration || formData.get("classDuration"),
+          numberOfDays: formState.numberOfDays || formData.get("numberOfDays"),
+          learningObjectives: formState.learningObjectives || formData.get("learningObjectives"),
+          lessonObjectives: formState.lessonObjectives || formData.get("lessonObjectives"),
+          additionalInstructions: formState.additionalInstructions || formData.get("additionalInstructions") || "",
+          userEmail: targetEmail,
+          studentId: studentProps?.studentId || null,
+          createdByTeacher: isForStudent,
+          assessmentId: studentProps?.assessmentId || null,
+          selectedDocument: selectedDocument,
+        };
+
+        const apiEndpoint = selectedDocument ? "/api/ragLessonPlan" : "/api/generateLessonPlan";
+        const response = await fetch(apiEndpoint, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        });
+
+        // Handle response
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || "Failed to generate lesson plan");
+        }
+
+        // Parse the response to get the lesson plan data
+        const lessonPlan = await response.json();
+
+        if (!lessonPlan || !lessonPlan.plan_data) {
+          throw new Error("Received empty or invalid lesson plan");
+        }
+
+        // Navigate to the output page with the lesson plan ID and assessment ID if it exists
+        const queryParams = new URLSearchParams();
+        queryParams.append("id", lessonPlan.id);
+
+        if (studentProps?.assessmentId) {
+          queryParams.append("assessmentId", studentProps.assessmentId);
+        }
+
+        router.push(`/tools/lesson-planner/output?${queryParams.toString()}`);
       }
-
-      // Parse the response to get the lesson plan data
-      const lessonPlan = await response.json();
-
-      if (!lessonPlan || !lessonPlan.plan_data) {
-        throw new Error("Received empty or invalid lesson plan");
-      }
-
-      // Navigate to the output page with the lesson plan ID and assessment ID if it exists
-      const queryParams = new URLSearchParams();
-      queryParams.append("id", lessonPlan.id);
-
-      if (studentProps?.assessmentId) {
-        queryParams.append("assessmentId", studentProps.assessmentId);
-      }
-
-      router.push(`/tools/lesson-planner/output?${queryParams.toString()}`);
     } catch (error) {
       console.error("Error generating lesson plan:", error);
-      const errorMessage =
-        error instanceof Error ? error.message : "An unknown error occurred";
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";
       toast.error(`Failed to generate lesson plan: ${errorMessage}`);
     } finally {
       setIsLoading(false);
@@ -495,31 +564,52 @@ export default function CreateLessonPlan({
               )}
 
               {/* Document Selection */}
-              <div className="mb-4">
-                <Label htmlFor="document-select">Select Document (Optional)</Label>
-                <Select
-                  value={selectedDocument || "_none"}
-                  onValueChange={(value) => {
-                    if (value === "_none") {
-                      handleReset();
-                    } else {
-                      handleDocumentSelect(value);
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select a document" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="_none">None (Input manually)</SelectItem>
-                    {documentFiles.map((doc) => (
-                      <SelectItem key={doc.id} value={doc.id}>
-                        {doc.subject} - Grade {doc.grade}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {viewType === "teacher" ? (
+                <div className="mb-4">
+                  <Label htmlFor="document-select">Select Document (Optional)</Label>
+                  <Select
+                    value={selectedDocument || "_none"}
+                    onValueChange={(value) => {
+                      if (value === "_none") {
+                        handleReset();
+                      } else {
+                        handleDocumentSelect(value);
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a document" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">None (Input manually)</SelectItem>
+                      {documentFiles.map((doc) => (
+                        <SelectItem key={doc.id} value={doc.id}>
+                          {doc.subject} - Grade {doc.grade}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              ) : (
+                <div className="mb-4">
+                  <Label htmlFor="document-upload">Upload Document (Optional)</Label>
+                  <Input
+                    id="document-upload"
+                    type="file"
+                    accept=".pdf"
+                    onChange={handleFileUpload}
+                    className="mt-2"
+                  />
+                  <p className="text-sm text-gray-500 mt-1">
+                    Maximum file size: 20MB. Accepted format: PDF only
+                  </p>
+                  {uploadedFile && (
+                    <p className="text-sm text-green-600 mt-1">
+                      File selected: {uploadedFile.name}
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="chapterTopic">Lesson Title</Label>

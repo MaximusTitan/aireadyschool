@@ -1,58 +1,78 @@
 import { NextResponse } from "next/server";
 
-// Function to caption image with Hugging Face's Salesforce/blip-image-captioning-base model
+// Function to caption image using Replicate API directly
 const captionImage = async (imageBase64: string) => {
   try {
-    // Remove data URL prefix to get just the base64 content
-    const base64Content = imageBase64.split(",")[1];
-    
-    // Call Hugging Face API - sending binary data directly
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base", 
-      {
-        method: "POST",
-        headers: {
-          // Send as binary data instead of JSON
-          "Content-Type": "application/octet-stream",
-          "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+    // Create prediction
+    const response = await fetch("https://api.replicate.com/v1/predictions", {
+      method: "POST",
+      headers: {
+        "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        version: "2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746",
+        input: {
+          image: imageBase64,
         },
-        // Send raw binary data instead of JSON
-        body: Buffer.from(base64Content, 'base64')
-      }
-    );
+      }),
+    });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Hugging Face API error: ${response.statusText}. Details: ${errorText}`);
+      throw new Error(`Replicate API error: ${response.statusText}`);
     }
 
-    // Get caption directly from response - Hugging Face returns the result immediately
-    const result = await response.json();
+    const prediction = await response.json();
     
-    // HF returns an array with a single caption string
+    // Poll for the result
+    const result = await pollPrediction(prediction.id);
     let caption = Array.isArray(result) ? result[0] : result;
-    
-    if (typeof caption === 'object' && caption !== null) {
-      // If response is an object with a generated_text property (sometimes happens)
-      caption = caption.generated_text || "I'm not sure what that is. Can you tell me?";
-    }
     
     if (!caption || typeof caption !== 'string') {
       caption = "I'm not sure what that is. Can you tell me?";
     }
     
-    // Format the caption to be more child-friendly
-    caption = formatCaption(caption);
-    
-    return caption;
+    return formatCaption(caption);
+
   } catch (error) {
     console.error("Caption error:", error);
     throw error;
   }
 };
 
+// Function to poll prediction result
+async function pollPrediction(id: string, maxAttempts = 30) {
+  const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(`https://api.replicate.com/v1/predictions/${id}`, {
+      headers: {
+        "Authorization": `Token ${process.env.REPLICATE_API_TOKEN}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to check prediction status');
+    }
+
+    const prediction = await response.json();
+    if (prediction.status === 'succeeded') {
+      return prediction.output;
+    } else if (prediction.status === 'failed') {
+      throw new Error('Image captioning failed');
+    }
+
+    await delay(1000);
+  }
+  
+  throw new Error('Timeout waiting for prediction');
+}
+
 // Make captions more child-friendly and concise
 const formatCaption = (caption: string): string => {
+  // Remove "Caption:" prefix
+  caption = caption.replace(/^Caption:\s*/i, "");
+  
   // Remove technical language
   caption = caption.replace(/a photograph of /i, "");
   caption = caption.replace(/an image of /i, "");
@@ -100,7 +120,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Process the image with HuggingFace model
     const caption = await captionImage(image);
 
     return NextResponse.json({ caption });

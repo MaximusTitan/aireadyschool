@@ -1,41 +1,23 @@
 import { NextResponse } from "next/server";
+import Replicate from "replicate";
 
-// Function to caption image with Hugging Face's Salesforce/blip-image-captioning-base model
+const replicate = new Replicate({
+  auth: process.env.REPLICATE_API_KEY,
+});
+
+// Function to caption image using Replicate's BLIP image captioning model
 const captionImage = async (imageBase64: string) => {
   try {
-    // Remove data URL prefix to get just the base64 content
-    const base64Content = imageBase64.split(",")[1];
-    
-    // Call Hugging Face API - sending binary data directly
-    const response = await fetch(
-      "https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base", 
+    const output = await replicate.run(
+      "salesforce/blip:2e1dddc8621f72155f24cf2e0adbde548458d3cab9f00c0139eea840d0ac4746",
       {
-        method: "POST",
-        headers: {
-          // Send as binary data instead of JSON
-          "Content-Type": "application/octet-stream",
-          "Authorization": `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+        input: {
+          image: imageBase64,
         },
-        // Send raw binary data instead of JSON
-        body: Buffer.from(base64Content, 'base64')
       }
     );
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Hugging Face API error: ${response.statusText}. Details: ${errorText}`);
-    }
-
-    // Get caption directly from response - Hugging Face returns the result immediately
-    const result = await response.json();
-    
-    // HF returns an array with a single caption string
-    let caption = Array.isArray(result) ? result[0] : result;
-    
-    if (typeof caption === 'object' && caption !== null) {
-      // If response is an object with a generated_text property (sometimes happens)
-      caption = caption.generated_text || "I'm not sure what that is. Can you tell me?";
-    }
+    let caption = Array.isArray(output) ? output[0] : output;
     
     if (!caption || typeof caption !== 'string') {
       caption = "I'm not sure what that is. Can you tell me?";
@@ -45,6 +27,7 @@ const captionImage = async (imageBase64: string) => {
     caption = formatCaption(caption);
     
     return caption;
+
   } catch (error) {
     console.error("Caption error:", error);
     throw error;
@@ -53,6 +36,9 @@ const captionImage = async (imageBase64: string) => {
 
 // Make captions more child-friendly and concise
 const formatCaption = (caption: string): string => {
+  // Remove "Caption:" prefix
+  caption = caption.replace(/^Caption:\s*/i, "");
+  
   // Remove technical language
   caption = caption.replace(/a photograph of /i, "");
   caption = caption.replace(/an image of /i, "");
@@ -100,7 +86,6 @@ export async function POST(request: Request) {
       );
     }
 
-    // Process the image with HuggingFace model
     const caption = await captionImage(image);
 
     return NextResponse.json({ caption });

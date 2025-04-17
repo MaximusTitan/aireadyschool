@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
 
     // Create a pending subscription record in the database
     const { data: dbSubscription, error: dbError } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .insert({
         user_id: user.id,
         plan_id: planId,

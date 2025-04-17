@@ -129,7 +129,7 @@ export async function POST(request: NextRequest) {
 
     // Update the subscription record to include order information
     const { error: updateError } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .update({
         razorpay_order_id: order.id,
         meta_data: {

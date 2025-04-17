@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
 
     // Verify user owns this subscription
     const { data: subscription, error: subscriptionError } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .select("*")
       .eq("razorpay_subscription_id", subscriptionId)
       .eq("user_id", user.id)
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
 
     // Update subscription record in database
     const { error: updateError } = await supabase
-      .from("user_subscriptions")
+      .from("user_subscriptions_rzp")
       .update({
         status: "cancelled",
         updated_at: new Date().toISOString(),

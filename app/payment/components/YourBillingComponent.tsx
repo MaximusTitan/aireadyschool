@@ -129,7 +129,7 @@
 
 //           // Fetch user's active subscription
 //           const { data: subscriptionData, error: subscriptionError } = await supabase
-//             .from("user_subscriptions")
+//             .from("user_subscriptions_rzp")
 //             .select(`
 //               *,
 //               plan:plan_id(
@@ -194,7 +194,7 @@
 //       // Store the payment success in Supabase for record-keeping
 //       const supabase = createClient();
 //       const { error: updateError } = await supabase
-//         .from("user_subscriptions")
+//         .from("user_subscriptions_rzp")
 //         .update({
 //           razorpay_payment_id: response.razorpay_payment_id,
 //           razorpay_signature: response.razorpay_signature,

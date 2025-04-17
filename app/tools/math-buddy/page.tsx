@@ -221,32 +221,82 @@ export default function MathBuddy() {
 
     // Save a message to the database
     const saveMessage = async (message: Message) => {
-        if (!currentChatId) {
-            // Create a new chat if none exists
-            await createNewChat();
-        }
-
         try {
-            const { data, error } = await supabase
-                .from('math_buddy_messages')
-                .insert([
-                    {
+            // If no current chat, create one and wait for it to complete
+            if (!currentChatId) {
+                try {
+                    const title = `Math Chat ${new Date().toLocaleString()}`;
+                    
+                    // Insert the new chat and get the ID
+                    const { data, error } = await supabase
+                        .from('math_buddy_chats')
+                        .insert([{ 
+                            title,
+                            updated_at: new Date().toISOString() 
+                        }])
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    if (data && data.length > 0) {
+                        const newChat = data[0];
+                        
+                        // Update the chats list and set the new chat as active
+                        setChatSessions(prev => [newChat, ...prev]);
+                        
+                        // Set the new chat as current
+                        setCurrentChatId(newChat.id);
+                        
+                        // Now save the message with the new chat ID
+                        const { error: msgError } = await supabase
+                            .from('math_buddy_messages')
+                            .insert([{
+                                ...message,
+                                chat_id: newChat.id
+                            }]);
+                            
+                        if (msgError) throw msgError;
+                        
+                        // Update the chat's updated_at timestamp
+                        await supabase
+                            .from('math_buddy_chats')
+                            .update({ updated_at: new Date().toISOString() })
+                            .eq('id', newChat.id);
+                        
+                        // Refresh the chat sessions list to ensure order is updated
+                        fetchChatSessions();
+                        
+                        return;
+                    }
+                } catch (chatError) {
+                    console.error('Error creating chat session:', chatError);
+                    toast({
+                        title: "Error",
+                        description: "Failed to create chat session",
+                        variant: "destructive",
+                    });
+                    throw chatError;
+                }
+            } else {
+                // We have a chat ID, save message as normal
+                const { error } = await supabase
+                    .from('math_buddy_messages')
+                    .insert([{
                         ...message,
                         chat_id: currentChatId
-                    }
-                ]);
+                    }]);
 
-            if (error) throw error;
+                if (error) throw error;
 
-            // Update the chat's updated_at timestamp
-            await supabase
-                .from('math_buddy_chats')
-                .update({ updated_at: new Date().toISOString() })
-                .eq('id', currentChatId);
+                // Update the chat's updated_at timestamp
+                await supabase
+                    .from('math_buddy_chats')
+                    .update({ updated_at: new Date().toISOString() })
+                    .eq('id', currentChatId);
 
-            // Refresh the chat sessions list to update the order
-            fetchChatSessions();
-
+                // Refresh the chat sessions list to update the order
+                fetchChatSessions();
+            }
         } catch (error) {
             console.error('Error saving message:', error);
             toast({
@@ -308,17 +358,61 @@ export default function MathBuddy() {
             // Get current message history for context
             const currentMessages = [...messages];
             
-            // Add the new user message to the UI immediately for better UX
+            // Create user message
             const userMessage: Message = { 
                 role: 'user', 
                 content: prompt 
             };
+
+            // Store the current chat ID or create a new one
+            let chatId = currentChatId;
             
-            // Update UI with the new message
+            // If no current chat exists, create one first
+            if (!chatId) {
+                try {
+                    const title = `Math Chat ${new Date().toLocaleString()}`;
+                    
+                    const { data, error } = await supabase
+                        .from('math_buddy_chats')
+                        .insert([{ 
+                            title,
+                            updated_at: new Date().toISOString() 
+                        }])
+                        .select();
+                    
+                    if (error) throw error;
+                    
+                    if (data && data.length > 0) {
+                        const newChat = data[0];
+                        chatId = newChat.id;
+                        
+                        // Update the chats list and set the new chat as active
+                        setChatSessions(prev => [newChat, ...prev]);
+                        setCurrentChatId(chatId);
+                    } else {
+                        throw new Error("Failed to create a new chat");
+                    }
+                } catch (chatError) {
+                    console.error('Error creating chat session:', chatError);
+                    throw chatError;
+                }
+            }
+            
+            // Add the new user message to the UI immediately for better UX
             setMessages([...currentMessages, userMessage]);
             
-            // Save the user message to database
-            await saveMessage(userMessage);
+            // Save the user message with the correct chat ID
+            const userMessageWithChatId = {
+                ...userMessage,
+                chat_id: chatId
+            };
+            
+            // Insert user message
+            const { error: userMsgError } = await supabase
+                .from('math_buddy_messages')
+                .insert([userMessageWithChatId]);
+
+            if (userMsgError) throw userMsgError;
             
             // Call the API route with the full conversation history
             const response = await fetch("/api/math-buddy", {
@@ -340,17 +434,35 @@ export default function MathBuddy() {
             const data = await response.json();
             const aiResponse = data.reply;
 
-            // Create assistant message
+            // Create assistant message with the same chat ID
             const assistantMessage: Message = { 
                 role: 'assistant', 
                 content: aiResponse
             };
 
+            // Add chat_id to the message if we have one
+            if (chatId) {
+                (assistantMessage as any).chat_id = chatId;
+            }
+
             // Add assistant message to UI
             setMessages([...currentMessages, userMessage, assistantMessage]);
             
             // Save assistant message to database
-            await saveMessage(assistantMessage);
+            const { error: assistantMsgError } = await supabase
+                .from('math_buddy_messages')
+                .insert([assistantMessage]);
+
+            if (assistantMsgError) throw assistantMsgError;
+            
+            // Update the chat's updated_at timestamp
+            await supabase
+                .from('math_buddy_chats')
+                .update({ updated_at: new Date().toISOString() })
+                .eq('id', chatId);
+            
+            // Refresh the chat sessions list to update the order
+            fetchChatSessions();
             
             // Clear input fields
             setInput('');

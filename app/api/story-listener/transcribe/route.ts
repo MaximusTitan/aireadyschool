@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     // Only accept POST requests
@@ -8,7 +11,8 @@ export async function POST(req: NextRequest) {
     }
 
     // Check if we have a valid API key
-    if (!process.env.DEEPGRAM_API_KEY) {
+    const apiKey = process.env.NEXT_PUBLIC_DEEPGRAM_API_KEY;
+    if (!apiKey) {
       console.error("Missing Deepgram API key");
       return NextResponse.json(
         { error: "Server configuration error" },
@@ -36,26 +40,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check file size (15MB max)
-    const maxSize = 15 * 1024 * 1024; // 15MB in bytes
+    // Set file size limit to 16MB
+    const maxSize = 16 * 1024 * 1024; // 16MB in bytes
     if (file.size > maxSize) {
       return NextResponse.json(
-        { error: "File too large. Maximum size is 15MB." },
+        { error: "File too large. Maximum size is 16MB." },
         { status: 400 }
       );
     }
 
-    // Convert the file to a buffer
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-
     try {
-      // Log for debugging
-      console.log("File type:", file.type);
-      console.log("File size:", file.size, "bytes");
+      // Convert the file to a buffer
+      const arrayBuffer = await file.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
       
-      // Use direct API call to Deepgram instead of the SDK
-      const apiKey = process.env.DEEPGRAM_API_KEY;
+      // Use direct API call to Deepgram
       const url = "https://api.deepgram.com/v1/listen?model=nova-2&language=en&smart_format=true&punctuate=true";
       
       const headers = {
@@ -70,7 +69,8 @@ export async function POST(req: NextRequest) {
       });
       
       if (!fetchResponse.ok) {
-        throw new Error(`Deepgram API error: ${fetchResponse.statusText}`);
+        const errorText = await fetchResponse.text();
+        throw new Error(`Deepgram API error: ${fetchResponse.statusText}. ${errorText}`);
       }
       
       const response = await fetchResponse.json();
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       const err = deepgramErr as Error;
       console.error("Deepgram API Error:", err);
       return NextResponse.json(
-        { error: `Deepgram API Error: ${err.message || 'Unknown error'}` },
+        { error: `Transcription failed: ${err.message || 'Unknown error'}` },
         { status: 500 }
       );
     }

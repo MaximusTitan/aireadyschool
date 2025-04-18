@@ -3,7 +3,7 @@ import { fal } from "@fal-ai/client";
 
 // Configure FAL client
 fal.config({
-  credentials: process.env.FAL_API_KEY,
+  credentials: process.env.FAL_KEY,
 });
 
 // Function to caption the doodle using Replicate's API directly
@@ -132,8 +132,8 @@ export async function POST(request: Request) {
     const { imageBase64, transformationStrength = 0.65 } = await request.json();
     
     // Validate API key
-    if (!process.env.FAL_API_KEY) {
-      console.error('Missing FAL_API_KEY environment variable');
+    if (!process.env.FAL_KEY) {
+      console.error('Missing FAL_KEY environment variable');
       return NextResponse.json(
         { error: 'Server configuration error: Missing API key' },
         { status: 500 }

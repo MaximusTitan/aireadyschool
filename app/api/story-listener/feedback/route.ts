@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { groq } from "@ai-sdk/groq";
 import { generateText } from "ai";
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function POST(req: NextRequest) {
   try {
     const { transcript } = await req.json();

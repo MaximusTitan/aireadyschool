@@ -23,6 +23,35 @@ function safeToISOString(timestamp: number | null): string | null {
   }
 }
 
+// Helper to ensure we get a clean customer ID string
+function getCleanCustomerId(customerId: any): string {
+  if (!customerId) return "";
+  
+  // If it's already a string, use it
+  if (typeof customerId === 'string') {
+    // If it's a JSON string, try to parse it
+    if (customerId.startsWith('{') && customerId.endsWith('}')) {
+      try {
+        const customerObj = JSON.parse(customerId);
+        if (customerObj && customerObj.id) {
+          return customerObj.id;
+        }
+      } catch (e) {
+        // If parsing fails, use the string as is
+      }
+    }
+    return customerId;
+  }
+  
+  // If it's an object with id, return the id
+  if (typeof customerId === 'object' && customerId && customerId.id) {
+    return customerId.id;
+  }
+  
+  // Fallback: stringify the object
+  return typeof customerId === 'object' ? JSON.stringify(customerId) : String(customerId);
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const headersList = await headers();
@@ -92,8 +121,8 @@ export async function POST(req: NextRequest) {
 
 // Combined function to handle subscription creation and updates
 async function processSubscriptionChange(subscription: Stripe.Subscription, supabase: any) {
-  // Get customer ID from the subscription
-  const customerId = subscription.customer as string;
+  // Get customer ID from the subscription and clean it
+  const customerId = getCleanCustomerId(subscription.customer);
   
   try {
     // Get customer details to find email
@@ -149,7 +178,7 @@ async function processSubscriptionChange(subscription: Stripe.Subscription, supa
       .upsert({
         user_id: userId,
         email: email,
-        stripe_customer_id: customerId,
+        stripe_customer_id: customerId, // Use the clean customer ID
         stripe_subscription_id: subscription.id,
         subscription_status: subscription.status,
         trial_start: trialStart,

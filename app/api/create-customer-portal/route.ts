@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
 import Stripe from "stripe";
 import { createClient } from "@/utils/supabase/server";
 
@@ -9,7 +8,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "", {
 
 export async function POST(req: Request) {
   try {
-    // Fixed: use cookies() properly
     const supabase = await createClient();
     
     const { data: { user } } = await supabase.auth.getUser();
@@ -35,10 +33,28 @@ export async function POST(req: Request) {
       );
     }
     
+    // Fix for customer ID issue - ensure it's a proper string, not a JSON object or string
+    let customerId = subscription.stripe_customer_id;
+    
+    // Handle if the customer ID is a JSON string
+    if (customerId.startsWith('{') && customerId.endsWith('}')) {
+      try {
+        // Try to parse it as JSON
+        const customerObj = JSON.parse(customerId);
+        if (customerObj && customerObj.id) {
+          customerId = customerObj.id;
+        }
+      } catch (parseError) {
+        console.error("Error parsing customer ID:", parseError);
+      }
+    }
+    
+    console.log("Using customer ID:", customerId);
+    
     // Create a Stripe customer portal session
     const session = await stripe.billingPortal.sessions.create({
-      customer: subscription.stripe_customer_id,
-      return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/account`,
+      customer: customerId,
+      return_url: `${process.env.NEXT_PUBLIC_BASE_URL}/payment`,
     });
     
     return NextResponse.json({ url: session.url });

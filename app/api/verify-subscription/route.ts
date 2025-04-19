@@ -18,6 +18,35 @@ function safeToISOString(timestamp: number | null): string | null {
   }
 }
 
+// Helper to ensure we get a clean customer ID string
+function getCleanCustomerId(customer: any): string {
+  if (!customer) return "";
+  
+  // If it's already a string, use it
+  if (typeof customer === 'string') {
+    // If it's a JSON string, try to parse it
+    if (customer.startsWith('{') && customer.endsWith('}')) {
+      try {
+        const customerObj = JSON.parse(customer);
+        if (customerObj && customerObj.id) {
+          return customerObj.id;
+        }
+      } catch (e) {
+        // If parsing fails, use the string as is
+      }
+    }
+    return customer;
+  }
+  
+  // If it's an object with id, return the id
+  if (typeof customer === 'object' && customer && customer.id) {
+    return customer.id;
+  }
+  
+  // Fallback: stringify the object
+  return typeof customer === 'object' ? JSON.stringify(customer) : String(customer);
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const sessionId = searchParams.get("session_id");
@@ -77,6 +106,13 @@ export async function GET(request: Request) {
       current_period_start: (subscription as any).current_period_start,
       current_period_end: (subscription as any).current_period_end,
     });
+
+    // Clean the customer ID
+    const customerId = getCleanCustomerId(session.customer);
+    
+    console.log("Customer ID type:", typeof session.customer);
+    console.log("Raw customer data:", session.customer);
+    console.log("Cleaned customer ID:", customerId);
     
     // Save the subscription details to our database
     const { error: updateError } = await supabase
@@ -84,7 +120,7 @@ export async function GET(request: Request) {
       .upsert({
         user_id: user.id,
         email: user.email || '',
-        stripe_customer_id: session.customer as string,
+        stripe_customer_id: customerId, // Use the clean customer ID
         stripe_subscription_id: subscription.id,
         subscription_status: subscription.status,
         trial_start: trialStart,

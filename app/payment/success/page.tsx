@@ -115,10 +115,10 @@ export default function SuccessPage() {
 
         <div className="mt-8">
           <Link
-            href="/dashboard"
+            href="/payment"
             className="inline-flex items-center justify-center px-5 py-2 bg-rose-500 text-white rounded-lg hover:bg-rose-600 transition-colors"
           >
-            Go to dashboard <ArrowRight className="ml-2 h-4 w-4" />
+            Go back <ArrowRight className="ml-2 h-4 w-4" />
           </Link>
         </div>
       </div>

@@ -19,14 +19,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { useRouter, useSearchParams } from 'next/navigation';
-import dynamic from 'next/dynamic';
-
-const StoryEditor = dynamic(
-  () => import('@/components/StoryEditor'),
-  { ssr: false }
-);
-
-import { OutputData } from '@editorjs/editorjs';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || '',
@@ -77,11 +69,6 @@ interface VideoResult {
   status: 'processing' | 'completed' | 'failed';
 }
 
-interface AudioResult {
-  url: string;
-  script: string;
-}
-
 interface Step {
   id: string;
   label: string;
@@ -124,19 +111,6 @@ interface StoryInputs {
   storyLocation: string;
   openingScene: string;
   storyDuration: '15' | '30' | '60';
-}
-
-interface EditorBlockData {
-  text: string;
-  level?: number;
-  caption?: string;
-  alignment?: 'left' | 'center' | 'right';
-  style?: 'normal' | 'thought' | 'flashback';
-}
-
-interface EditorBlock {
-  type: 'header' | 'paragraph' | 'quote' | 'delimiter';
-  data: EditorBlockData;
 }
 
 const genreOptions = [
@@ -850,52 +824,6 @@ const VideoContainer = memo(({
 
 VideoContainer.displayName = 'VideoContainer';
 
-const AudioBoard = memo(({ 
-  scenes,
-  generatedAudios,
-  onGenerateAudio,
-  setGeneratedAudios
-}: { 
-  scenes: Scene[];
-  generatedAudios: Record<string, AudioResult>;
-  onGenerateAudio: (sceneId: string) => Promise<void>;
-  setGeneratedAudios: React.Dispatch<React.SetStateAction<Record<string, AudioResult>>>;
-}) => {
-  return (
-    <div className="bg-white rounded-2xl shadow-xl p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-800">Audio Generation</h2>
-      </div>
-      <div className="space-y-6">
-        {scenes.map((scene) => (
-          <div key={scene.id} className="p-6 border rounded-lg">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold">Scene {scene.number}</h3>
-              <Button
-                onClick={() => onGenerateAudio(scene.id)}
-                disabled={!!generatedAudios[scene.id]}
-              >
-                {generatedAudios[scene.id] ? 'Generated' : 'Generate Audio'}
-              </Button>
-            </div>
-            {generatedAudios[scene.id] && (
-              <div className="space-y-4">
-                <audio controls className="w-full">
-                  <source src={generatedAudios[scene.id].url} type="audio/mpeg" />
-                  Your browser does not support the audio element.
-                </audio>
-                <p className="text-sm text-gray-600">{generatedAudios[scene.id].script}</p>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-});
-
-AudioBoard.displayName = 'AudioBoard';
-
 const VideoBoard = memo(({ 
   scenes,
   generatedVideos,
@@ -1124,68 +1052,275 @@ const StoryInputForm = memo(({ onSubmit, isLoading }: {
 
 StoryInputForm.displayName = 'StoryInputForm';
 
-const formatStory = (story: string, storyInputs?: StoryInputs | null): string => {
-  const titleMatch = story.match(/\*\*Title:\s*([^*]+)\*\*/);
-  const title = titleMatch ? titleMatch[1].trim() : '';
-  const mainText = story.replace(/\*\*Title:\s*[^*]+\*\*/, '').trim();
+const formatStory = (story: string) => {
+  // Clean the story text and ensure proper paragraph spacing
+  const cleanedStory = story
+    .trim()
+    .replace(/\n{3,}/g, '\n\n') // Replace multiple newlines with double newline
+    .split('\n\n')
+    .filter(paragraph => paragraph.trim())
+    .join('\n\n');
 
-  const characterNames: string[] = storyInputs?.mainCharacters
-    ?.split(',')
-    .map((char: string) => char.split('–')[0].trim())
-    .filter((name: string) => name) || [];
-
-  const blocks: EditorBlock[] = [
-    {
-      type: 'header',
-      data: {
-        text: title,
-        level: 1,
-        alignment: 'center'
-      }
-    }
-  ];
-
-  // Process paragraphs without scene breaks
-  const paragraphs = mainText.split(/\n\n/).filter(p => p.trim());
-  
-  paragraphs.forEach(para => {
-    if (!para.trim()) return;
-
-    // Handle dialogue
-    if (para.trim().startsWith('"')) {
-      const dialogueMatch = para.match(/"([^"]+)"\s*,?\s*([^\.]+)?\.?/);
-      if (dialogueMatch) {
-        const speakerName = dialogueMatch[2]?.trim() || '';
-        const dialogue = dialogueMatch[1];
-        
-        blocks.push({
-          type: 'paragraph',
-          data: {
-            text: `<i>${dialogue}</i>${speakerName ? `, ${speakerName}` : ''}`,
-            alignment: 'center'
-          }
-        });
-        return;
-      }
-    }
-
-    // Regular paragraphs with consistent formatting
-    let formattedText = para;
-    
-    // Handle thoughts in italics
-    formattedText = formattedText.replace(/\*(.*?)\*/g, '<i>$1</i>');
-
-    blocks.push({
-      type: 'paragraph',
-      data: {
-        text: formattedText.trim(),
-        alignment: 'center'
-      }
-    });
-  });
-
-  return JSON.stringify({ blocks });
+  return cleanedStory;
 };
+
+// Add new interfaces
+interface AudioResult {
+  url: string;
+  script: string;
+}
+
+interface AudioSceneInputs {
+  script: string;
+}
+
+// Add AudioContainer component
+const AudioContainer = memo(({ 
+  scene,
+  generatedAudio,
+  onGenerateAudio,
+  setGeneratedAudios 
+}: { 
+  scene: Scene;
+  generatedAudio?: AudioResult;
+  onGenerateAudio: (script: string) => Promise<void>;
+  setGeneratedAudios: React.Dispatch<React.SetStateAction<Record<string, AudioResult>>>;
+}) => {
+  const [isGeneratingScript, setIsGeneratingScript] = useState(false);
+  const [isGeneratingAudio, setIsGeneratingAudio] = useState(false);
+  const [scriptError, setScriptError] = useState<string | null>(null);
+  const [audioScript, setAudioScript] = useState<string | null>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const handleGenerateScript = async () => {
+    setIsGeneratingScript(true);
+    setScriptError(null);
+    try {
+      const response = await fetch('/api/generate-audio-script', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageDescription: scene.imagePrompt,
+          sceneDescription: scene.text
+        })
+      });
+
+      if (!response.ok) throw new Error('Failed to generate script');
+      
+      const data = await response.json();
+      setAudioScript(data.audioScript);
+    } catch (error) {
+      setScriptError('Failed to generate script');
+      console.error('Script generation error:', error);
+    } finally {
+      setIsGeneratingScript(false);
+    }
+  };
+
+  const handleGenerateAudio = async () => {
+    if (!audioScript) return;
+    setIsGeneratingAudio(true);
+    try {
+      await onGenerateAudio(audioScript);
+    } finally {
+      setIsGeneratingAudio(false);
+    }
+  };
+
+  const fetchExistingAudio = async () => {
+    try {
+      const { data: audioRecord } = await (await supabase)
+        .from('scene_audio')
+        .select('audio_url, script')
+        .eq('scene_id', scene.id)
+        .maybeSingle();
+
+      if (audioRecord) {
+        setGeneratedAudios(prev => ({
+          ...prev,
+          [scene.id]: {
+            url: audioRecord.audio_url,
+            script: audioRecord.script
+          }
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching existing audio:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchExistingAudio();
+  }, [scene.id]);
+
+  const handlePlayPause = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+      setIsPlaying(!isPlaying);
+    }
+  };
+
+  useEffect(() => {
+    const audioElement = audioRef.current;
+    if (audioElement) {
+      audioElement.onended = () => setIsPlaying(false);
+      audioElement.onpause = () => setIsPlaying(false);
+      audioElement.onplay = () => setIsPlaying(true);
+    }
+  }, []);
+
+  return (
+    <div className="bg-white rounded-lg shadow-lg p-6 mb-6 flex gap-6">
+      <div className="w-1/2 relative">
+        <video
+          controls
+          className="w-full aspect-video rounded-lg"
+          src={scene.videoUrl}
+        >
+          Your browser does not support video playback.
+        </video>
+      </div>
+
+      <div className="w-1/2 flex flex-col h-[400px]">
+        <div className="flex-1 space-y-4 overflow-y-auto pr-4 custom-scrollbar">
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+              <label className="block text-sm font-semibold text-gray-700">
+                Narration Script
+              </label>
+              <Button
+                onClick={handleGenerateScript}
+                disabled={isGeneratingScript}
+                className="px-3 py-1 text-sm bg-black/10 text-black rounded hover:bg-black/20 transition-colors"
+              >
+                {isGeneratingScript ? 'Generating...' : 'Generate Script'}
+              </Button>
+            </div>
+            {audioScript ? (
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">{audioScript}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                  {audioScript.length} characters
+                </p>
+              </div>
+            ) : (
+              <p className="text-sm text-gray-500 italic">
+                No script generated yet.
+              </p>
+            )}
+          </div>
+
+          {audioScript && (
+            <Button
+              onClick={handleGenerateAudio}
+              disabled={isGeneratingAudio || !audioScript}
+              className="w-full mt-4 px-4 py-2 bg-black text-white rounded-lg hover:bg-black/90 transition-colors disabled:opacity-50"
+            >
+              {isGeneratingAudio ? 'Generating Audio...' : 'Generate Audio'}
+            </Button>
+          )}
+
+          {generatedAudio?.script && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Audio Script
+              </label>
+              <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-4">
+                {generatedAudio.script}
+              </p>
+            </div>
+          )}
+
+          {generatedAudio?.url && (
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-gray-700">
+                Generated Audio
+              </label>
+              <div className="w-full">
+                <audio
+                  controls
+                  src={generatedAudio.url}
+                  className="w-full"
+                >
+                  Your browser does not support audio playback.
+                </audio>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+});
+
+AudioContainer.displayName = 'AudioContainer';
+
+// Add AudioBoard component
+const AudioBoard = memo(({ 
+  scenes,
+  generatedAudios,
+  onGenerateAudio,
+  setGeneratedAudios 
+}: { 
+  scenes: Scene[];
+  generatedAudios: Record<string, AudioResult>;
+  onGenerateAudio: (sceneId: string) => Promise<void>;
+  setGeneratedAudios: React.Dispatch<React.SetStateAction<Record<string, AudioResult>>>;
+}) => {
+  const router = useRouter();
+
+  const handleMergeAudioVideo = () => {
+    // Get all video and audio URLs in sequence
+    const mediaUrls = scenes.map(scene => ({
+      videoUrl: scene.videoUrl,
+      audioUrl: generatedAudios[scene.id]?.url
+    })).filter(urls => urls.videoUrl && urls.audioUrl);
+
+    // Encode URLs for passing as query parameter
+    const encodedUrls = encodeURIComponent(JSON.stringify(mediaUrls));
+    
+    // Navigate to video editor with both video and audio URLs
+    router.push(`/tools/video-editor?media=${encodedUrls}`);
+  };
+
+  const allAudiosGenerated = scenes.every(scene => generatedAudios[scene.id]?.url);
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl p-8">
+      <div className="flex justify-between items-center mb-6">
+        <h2 className="text-2xl font-bold text-gray-800">
+          Audio Generation Board
+        </h2>
+        {allAudiosGenerated && (
+          <Button
+            onClick={handleMergeAudioVideo}
+            className="bg-black text-white"
+          >
+            Merge Audio & Video
+          </Button>
+        )}
+      </div>
+      <div className="space-y-6">
+        {scenes.map((scene) => (
+          <AudioContainer
+            key={scene.id}
+            scene={scene}
+            generatedAudio={generatedAudios[scene.id]}
+            onGenerateAudio={(script) => onGenerateAudio(scene.id)}
+            setGeneratedAudios={setGeneratedAudios}
+          />
+        ))}
+      </div>
+    </div>
+  );
+});
+
+AudioBoard.displayName = 'AudioBoard';
 
 export default function VideoStoryGenerator() {
   const [story, setStory] = useState('')
@@ -1965,27 +2100,30 @@ Style: Professional cinematography with natural movement.`;
                     )}
                   </div>
                 </div>
-                
-                <div className="prose max-w-none pb-8">
-                  <StoryEditor
-                    data={formatStory(generatedStory, storyInputs)}
-                    onChange={(data: OutputData) => {
-                      // Convert EditorJS data back to string format
-                      const blocks = data.blocks.map(block => {
-                        if (block.type === 'header' && block.data.level === 1) {
-                          return `**Title: ${block.data.text}**\n\n`;
-                        }
-                        if (block.type === 'delimiter') {
-                          return '\n---\n\n';
-                        }
-                        return block.data.text;
-                      }).join('\n\n');
-                      
-                      setGeneratedStory(blocks);
-                    }}
-                    readOnly={!isEditing}
+                {isEditing ? (
+                  <Textarea
+                    value={generatedStory}
+                    onChange={(e) => setGeneratedStory(e.target.value)}
+                    className="w-full h-48 p-4 border-2 border-gray-200 rounded-xl focus:border-black focus:ring-2 focus:ring-black/10 transition-all duration-200"
                   />
-                </div>
+                ) : (
+                  <div className="prose max-w-none text-justify text-gray-700 leading-relaxed px-8">
+                    {!hasAnimationPlayed && currentStep === 'enhanced' ? (
+                      <Typewriter
+                        words={[formatStory(generatedStory)]}
+                        cursor={false}
+                        typeSpeed={1}
+                        onType={(step) => {
+                          if (step === generatedStory.length - 1) {
+                            setHasAnimationPlayed(true);
+                          }
+                        }}
+                      />
+                    ) : (
+                      formatStory(generatedStory)
+                    )}
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -2072,7 +2210,19 @@ Style: Professional cinematography with natural movement.`;
                             Regenerate
                           </Button>
                           
-                          
+                          <Button
+                            onClick={() => handleDeleteScene(scene.id)}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium 
+                              text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md 
+                              transition-colors"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" 
+                              />
+                            </svg>
+                            Delete
+                          </Button>
                         </div>
                       </div>
                     </motion.div>

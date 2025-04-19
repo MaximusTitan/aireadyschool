@@ -66,7 +66,7 @@ Requirements:
         }
       });
     } else {
-      // Enhanced story generation with better formatting
+      // Initial story generation with proper narrative structure
       const storyPrompt = `Create an engaging narrative story based on these elements:
 
 Title: "${inputs.storyTitle}"
@@ -76,50 +76,37 @@ Setting: ${inputs.storyLocation}
 Opening Scene: ${inputs.openingScene}
 
 Requirements:
-- Write a compelling short story with proper narrative structure
-- Use multiple paragraphs with clear breaks between scenes
-- Include descriptive language and sensory details
-- Start with a strong opening paragraph that sets the scene
-- Include character dialogue with proper formatting
-- Use transitional phrases between scenes
-- Create atmospheric descriptions
-- End with a satisfying conclusion
-- Format with proper spacing between paragraphs
-- Use varied sentence structures
-- Include emotional elements
-- Show character development
-- Write in an immersive, literary style
+- Write a complete, flowing narrative
+- Use proper paragraphs and story structure
+- Include character development
+- Create vivid descriptions
+- Maintain dramatic tension
+- Make it engaging and immersive
+- Focus on storytelling, not technical directions
+- Avoid screenplay format or scene markers
+- Don't mention camera angles or visual directions
+- Write it as a short story that could be read independently
 
-Style Guidelines:
-- Start new paragraphs for new scenes/speakers
-- Use quotation marks for dialogue
-- Add line breaks between major scene changes
-- Include internal character thoughts where appropriate
-- Balance description with action
-- Use strong verbs and vivid adjectives
-
-Length: Approximately 400-500 words
-Format: Literary prose with proper paragraph structure`;
+Length: Approximately 300-400 words
+Style: Professional creative writing`;
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ role: "user", content: storyPrompt }],
         temperature: 0.8,
-        max_tokens: 1500
+        max_tokens: 1000
       });
 
       const refinedStory = completion.choices[0].message.content;
 
-      // Format the story with proper spacing
-      const formattedStory = formatStory(refinedStory || '');
-
       return NextResponse.json({
         success: true,
-        refinedStory: formattedStory,
+        refinedStory,
         intendedDuration: inputs.storyDuration,
         numScenes: Math.floor(parseInt(inputs.storyDuration) / 5)
       });
     }
+
   } catch (error) {
     console.error('Error in video-story-generator:', error);
     return NextResponse.json({
@@ -157,23 +144,4 @@ function parseScenes(sceneText: string) {
   }
 
   return scenes.sort((a, b) => a.number - b.number);
-}
-
-function formatStory(story: string) {
-  return story
-    .trim()
-    // Ensure proper spacing around dialogue
-    .replace(/([.!?])"(\s*)([A-Z])/g, '$1"\n\n$3')
-    // Add spacing between scene breaks
-    .replace(/\n{3,}/g, '\n\n')
-    // Ensure proper paragraph spacing
-    .split('\n\n')
-    .filter(paragraph => paragraph.trim())
-    .join('\n\n')
-    // Add extra spacing around scene transitions
-    .replace(/([.!?])\s*(Meanwhile|Later|Suddenly|After|Before|The next|That evening|That morning|Days later)/g, '$1\n\n$2')
-    // Format dialogue paragraphs
-    .replace(/(".*?[.!?]")\s*/g, '$1\n')
-    // Clean up any remaining multiple spaces
-    .replace(/\s{2,}/g, ' ');
 }

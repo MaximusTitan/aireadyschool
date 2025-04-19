@@ -114,7 +114,11 @@ export function AppSidebar() {
           ]
         : [
             { title: "Agent Buddy", url: "/tools/gen-chat", icon: Bot },
-            { title: "Dashboard", url: "/dashboard", icon: Map },
+            {
+              title: "Dashboard",
+              url: userRole === "School" ? "/school" : "/dashboard",
+              icon: Map,
+            },
             { title: "Lesson Plan", url: "/tools/lesson-planner", icon: Book },
             {
               title: "AI Apps",
@@ -136,33 +140,33 @@ export function AppSidebar() {
 
       ...(userRole === "Teacher"
         ? [
-          {
-            title: "Knowledge Base",
-            url: "/knowledge-base",
-            icon: LibraryBig,
-          },
+            {
+              title: "Knowledge Base",
+              url: "/knowledge-base",
+              icon: LibraryBig,
+            },
           ]
         : []),
 
-        ...(userRole === "Admin"
-          ? [
-              {
-                title: "Document Vault",
-                url: "/document-vault",
-                icon: Folder,
-              },
-              {
-                title: "Schools",
-                url: "/school",
-                icon: School,
-              },
-              {
-                title: "Connect Database",
-                url: "/connect-database",
-                icon: Plugin,
-              },
-            ]
-          : []),
+      ...(userRole === "Admin"
+        ? [
+            {
+              title: "Document Vault",
+              url: "/document-vault",
+              icon: Folder,
+            },
+            {
+              title: "Schools",
+              url: "/school",
+              icon: School,
+            },
+            {
+              title: "Connect Database",
+              url: "/connect-database",
+              icon: Plugin,
+            },
+          ]
+        : []),
 
     ],
   };

@@ -27,16 +27,14 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
 
     try {
-        const { scenes, story } = await request.json();
+        const { prompt, imageUrl } = await request.json();
   
-        if (!scenes || scenes.length === 0 || !scenes[0].prompt) {
+        if (!prompt || !imageUrl) {
             return NextResponse.json(
-                { message: "Scene description and prompt are required" },
+                { message: "Image URL and prompt are required" },
                 { status: 400 }
             );
         }
-
-        const scene = scenes[0]; // We're processing one scene at a time
 
         const supabaseClient = await supabase;
         const { data: { user } } = await supabaseClient.auth.getUser();
@@ -55,8 +53,8 @@ export async function POST(request: Request): Promise<NextResponse> {
             .from('generated_videos')
             .insert({
                 user_id: user.id,
-                input_text: scene.prompt,
-                image_url: scene.imageUrl,
+                input_text: prompt,
+                image_url: imageUrl,
                 video_url: `pending_${Date.now()}`,
                 status: 'processing',
                 duration: 5
@@ -68,8 +66,8 @@ export async function POST(request: Request): Promise<NextResponse> {
 
         const imageToVideo = await client.imageToVideo.create({
             model: "gen3a_turbo",
-            promptImage: scene.imageUrl,
-            promptText: scene.prompt,
+            promptImage: imageUrl,
+            promptText: prompt,
             duration: 5,
             watermark: false,
             ratio: "1280:768",

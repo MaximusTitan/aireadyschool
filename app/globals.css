@@ -406,3 +406,238 @@ select {
   height: auto;
   min-height: min-content;
 }
+
+/* Editor.js Styles */
+.codex-editor {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.codex-editor__redactor {
+  padding-bottom: 100px !important;
+}
+
+.ce-block__content {
+  max-width: 850px;
+}
+
+.ce-toolbar__content {
+  max-width: 850px;
+}
+
+.cdx-block {
+  font-family: 'serif';
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+.ce-delimiter {
+  line-height: 1.6em;
+  width: 100%;
+  text-align: center;
+}
+
+.ce-delimiter:before {
+  display: inline-block;
+  content: "***";
+  letter-spacing: 0.2em;
+  color: #666;
+}
+
+.ce-header {
+  font-weight: bold;
+}
+
+.ce-header[contenteditable=true][data-placeholder]:empty:before {
+  opacity: 0.7;
+}
+
+.editor-readonly .ce-toolbar {
+  display: none;
+}
+
+.ce-paragraph {
+  font-size: 1.125rem;
+  line-height: 1.75;
+  text-align: justify;
+}
+
+.ce-block--selected .ce-block__content {
+  background: #f8f9fa;
+}
+
+.cdx-quote {
+  font-style: italic;
+  margin-left: 2rem;
+}
+
+.ce-delimiter {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.ce-delimiter:before {
+  content: "* * *";
+  color: #6b7280;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+}
+
+/* Editor.js Styles */
+.codex-editor {
+  font-family: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+.codex-editor__redactor {
+  padding-bottom: 100px !important;
+}
+
+.ce-block__content {
+  max-width: 850px;
+}
+
+.ce-toolbar__content {
+  max-width: 850px;
+}
+
+.cdx-block {
+  font-family: 'serif';
+  font-size: 1.125rem;
+  line-height: 1.75;
+}
+
+.ce-delimiter {
+  line-height: 1.6em;
+  width: 100%;
+  text-align: center;
+}
+
+.ce-delimiter:before {
+  display: inline-block;
+  content: "***";
+  letter-spacing: 0.2em;
+  color: #666;
+}
+
+.ce-header {
+  font-weight: bold;
+}
+
+.ce-header[contenteditable=true][data-placeholder]:empty:before {
+  opacity: 0.7;
+}
+
+.editor-readonly .ce-toolbar {
+  display: none;
+}
+
+.ce-paragraph {
+  font-size: 1.125rem;
+  line-height: 1.75;
+  text-align: justify;
+}
+
+.ce-block--selected .ce-block__content {
+  background: #f8f9fa;
+}
+
+.cdx-quote {
+  font-style: italic;
+  margin-left: 2rem;
+}
+
+.ce-delimiter {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.ce-delimiter:before {
+  content: "* * *";
+  color: #6b7280;
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+}
+
+/* Editor.js Custom Styles */
+.story-editor {
+  font-family: 'Georgia', serif;
+  line-height: 1.6;
+  color: #333;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.story-editor .ce-block {
+  margin-bottom: 2rem;  /* Increased spacing between blocks */
+}
+
+.story-editor .ce-paragraph {
+  text-align: center;
+  text-indent: 2em;    /* Default paragraph indent */
+  padding: 0 1rem;
+  margin: 1.5rem 0;    /* Increased vertical spacing */
+  position: relative;
+}
+
+/* Special handling for dialogue paragraphs */
+.story-editor .ce-paragraph[data-dialogue="true"] {
+  margin: 2rem 0;      /* Extra spacing for dialogues */
+  text-indent: 3rem;   /* Larger indent for dialogues */
+  font-style: italic;  /* Optional: makes dialogues stand out */
+}
+
+/* Ensure quotes are properly formatted */
+.story-editor .ce-paragraph i {
+  display: block;      /* Put each dialogue on new line */
+  margin: 1.5rem 0;   /* Spacing between dialogue lines */
+}
+
+/* Hide delimiters but maintain spacing */
+.story-editor .ce-delimiter {
+  display: none;
+  margin: 2rem 0;
+}
+
+/* Adjust quote styling */
+.story-editor .cdx-quote {
+  text-align: center;
+  font-style: italic;
+  margin: 2rem 0;
+  padding: 0 3rem;
+}
+
+/* Special heading style */
+.story-editor .ce-header {
+  text-align: center;
+  margin-bottom: 2rem;
+  font-family: 'Poppins', sans-serif;
+}
+
+.story-editor .ce-block {
+  @apply mb-3; /* Reduced from mb-6 */
+}
+
+.story-editor .ce-delimiter {
+  @apply my-4; /* Reduced from my-12 */
+}
+
+.story-editor .ce-delimiter:before {
+  @apply text-gray-400 text-sm; /* Made delimiter text smaller */
+  content: "***";
+}
+
+.story-editor .ce-paragraph {
+  @apply text-justify leading-relaxed mb-3; /* Added smaller margin bottom */
+}
+
+.story-editor .cdx-quote {
+  @apply pl-6 border-l-4 border-gray-300 italic my-4; /* Reduced from my-8 */
+}
+
+/* Additional styles for thoughts and flashbacks */
+.story-editor .ce-paragraph[data-type="thought"] {
+  @apply italic text-gray-600 pl-4;
+}
+
+.story-editor .ce-paragraph[data-type="flashback"] {
+  @apply italic bg-gray-50 p-4 rounded-lg;
+}

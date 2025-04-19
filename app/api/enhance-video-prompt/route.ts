@@ -2,41 +2,51 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+    apiKey: process.env.OPENAI_API_KEY
 });
 
-export async function POST(req: Request) {
-  try {
-    const { sceneText, visualDetails, currentPrompt } = await req.json();
+export async function POST(request: Request) {
+    try {
+        const { currentPrompt } = await request.json();
 
-    const prompt = `Given this scene description and visual details, create a cinematic motion prompt that describes:
-1. Camera movement (e.g., zoom, pan, dolly)
-2. Character motion
-3. Background effects or environment changes
+        const enhancementPrompt = `Convert this video motion description into a calm, safe, 
+        non-violent, and natural movement description suitable for AI video generation.
+        Focus on gentle movements, subtle transitions, and natural flow.
 
-Scene: ${sceneText}
-Visual Details: ${visualDetails}
-Current Motion Description: ${currentPrompt || 'None'}
+        Original description: "${currentPrompt}"
 
-Respond with a concise, detailed description focused on motion and cinematography.`;
+        Guidelines:
+        - Remove any references to violence, weapons, or combat
+        - Focus on natural movements and transitions
+        - Use neutral descriptive language
+        - Keep character descriptions generic
+        - Emphasize cinematic qualities
+        - Make it suitable for all audiences
+        - Keep the core creative intent but make it safe
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 200
-    });
+        Enhanced description:`;
 
-    return NextResponse.json({
-      success: true,
-      enhancedPrompt: completion.choices[0].message.content
-    });
+        const completion = await openai.chat.completions.create({
+            model: "gpt-4o",
+            messages: [{ role: "user", content: enhancementPrompt }],
+            temperature: 0.7,
+            max_tokens: 150
+        });
 
-  } catch (error) {
-    console.error('Error enhancing video prompt:', error);
-    return NextResponse.json(
-      { error: 'Failed to enhance video prompt' },
-      { status: 500 }
-    );
-  }
+        const enhancedPrompt = completion.choices[0].message.content;
+
+        return NextResponse.json({ 
+            success: true, 
+            enhancedPrompt 
+        });
+
+    } catch (error) {
+        console.error('Error enhancing video prompt:', error);
+        return NextResponse.json({ 
+            success: false, 
+            error: 'Failed to enhance prompt' 
+        }, { 
+            status: 500 
+        });
+    }
 }

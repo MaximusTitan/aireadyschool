@@ -1,21 +1,5 @@
 import { NextResponse } from 'next/server'
 import OpenAI from 'openai'
-import { createClient } from '@supabase/supabase-js'
-
-// Check if environment variables are set
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('Missing Supabase environment variables');
-}
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-  {
-    auth: {
-      persistSession: false
-    }
-  }
-);
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -23,61 +7,44 @@ const openai = new OpenAI({
 
 export async function POST(req: Request) {
   try {
-    const { inputs, generateScenes, numScenes, historyId } = await req.json();
-
-    // Add handling for history loading
-    if (historyId) {
-      const { data: historyData, error } = await supabase
-        .from('story_history')
-        .select('*')
-        .eq('id', historyId)
-        .single();
-
-      if (error) throw error;
-
-      return NextResponse.json({
-        success: true,
-        ...historyData
-      });
-    }
-
+    const { inputs, generateScenes, story } = await req.json();
+    
     if (generateScenes) {
-      const prompt = `Create exactly ${numScenes} scenes for a ${inputs.storyDuration}-second video storyboard.
-Genre: ${inputs.storyGenre}
-Setting: ${inputs.storyLocation}
-Characters: ${inputs.mainCharacters}
+      const numScenes = Math.floor(parseInt(inputs.storyDuration) / 5);
+      
+      const scenesPrompt = `Break down this story into exactly ${numScenes} scenes. Format each scene EXACTLY as shown:
 
-Story: ${inputs.story}
+Scene 1: [Main action in 5 seconds] | Visual: [camera angle, lighting, setting] | Focus: [key elements]
+Scene 2: [Main action in 5 seconds] | Visual: [camera angle, lighting, setting] | Focus: [key elements]
 
-Follow this EXACT format for each scene (maintain the exact symbols and spacing):
-Scene 1: [Main action happening] | Visual: [camera angle, lighting, setting details] | Focus: [key elements]
-...continue for all ${numScenes} scenes...
+Story: ${story}
 
-Make each scene approximately 5 seconds long and ensure they flow naturally.`;
+Requirements:
+- Create exactly ${numScenes} scenes
+- Each scene must be 5 seconds long
+- Each scene must follow the exact format shown above
+- Start each scene with "Scene [number]:"
+- Use "|" to separate sections
+- Include all three sections: main action, Visual, and Focus
+- Make each action clearly visualizable in 5 seconds
+- Number scenes sequentially (1 to ${numScenes})`;
 
-      console.log("Sending prompt to GPT:", prompt);
+      console.log("Sending prompt to GPT:", scenesPrompt);
 
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         messages: [{ 
           role: "user", 
-          content: prompt 
+          content: scenesPrompt 
         }],
         temperature: 0.7,
-        max_tokens: 1500,
-        presence_penalty: 0.3,
-        frequency_penalty: 0.3
+        max_tokens: 1500
       });
 
-      const sceneText = completion.choices[0]?.message?.content;
-      if (!sceneText) {
-        throw new Error('No content received from GPT');
-      }
-
+      const sceneText = completion.choices[0].message.content ?? '';
       console.log("Received scene text:", sceneText);
 
-      const scenes = parseScenes(sceneText);
-      console.log("Parsed scenes:", scenes);
+      const scenes = parseScenes(sceneText.trim());
 
       if (scenes.length === 0) {
         console.error("Scene parsing failed. Raw text:", sceneText);
@@ -92,54 +59,67 @@ Make each scene approximately 5 seconds long and ensure they flow naturally.`;
       return NextResponse.json({
         success: true,
         scenes,
+        numScenes,
         debug: {
           rawSceneText: sceneText,
           parsedSceneCount: scenes.length
         }
       });
-    }
+    } else {
+      // Enhanced story generation with better formatting
+      const storyPrompt = `Create an engaging narrative story based on these elements:
 
-    // Updated story generation prompt
-    const prompt = `Create an engaging ${inputs.storyDuration}-second story following these requirements:
-
-Title: ${inputs.storyTitle}
+Title: "${inputs.storyTitle}"
 Genre: ${inputs.storyGenre}
 Main Characters: ${inputs.mainCharacters}
 Setting: ${inputs.storyLocation}
 Opening Scene: ${inputs.openingScene}
 
-Write a complete, detailed story that:
-1. Has a clear beginning, middle, and end
-2. Fits the ${inputs.storyDuration}-second duration when told
-3. Focuses on character development and vivid descriptions
-4. Matches the ${inputs.storyGenre} genre style
-5. Incorporates all main characters meaningfully
-6. Uses rich, descriptive language
-7. Creates immersive scenes and atmosphere
-8. Avoids any screenplay formatting or dialogue markers
-9. Flows naturally as a narrative story
-10. Has approximately ${Math.floor(inputs.storyDuration * 4)} words (averaging 4 words per second)
+Requirements:
+- Write a compelling short story with proper narrative structure
+- Use multiple paragraphs with clear breaks between scenes
+- Include descriptive language and sensory details
+- Start with a strong opening paragraph that sets the scene
+- Include character dialogue with proper formatting
+- Use transitional phrases between scenes
+- Create atmospheric descriptions
+- End with a satisfying conclusion
+- Format with proper spacing between paragraphs
+- Use varied sentence structures
+- Include emotional elements
+- Show character development
+- Write in an immersive, literary style
 
-Write in a clear, engaging narrative style. Do not include any stage directions, camera angles, or screenplay elements.
-Format the story as continuous paragraphs with proper spacing.`;
+Style Guidelines:
+- Start new paragraphs for new scenes/speakers
+- Use quotation marks for dialogue
+- Add line breaks between major scene changes
+- Include internal character thoughts where appropriate
+- Balance description with action
+- Use strong verbs and vivid adjectives
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.7,
-      max_tokens: 2000, // Increased for longer stories
-    });
+Length: Approximately 400-500 words
+Format: Literary prose with proper paragraph structure`;
 
-    const refinedStory = completion.choices[0]?.message?.content;
-    if (!refinedStory) {
-      throw new Error('Failed to generate story content');
+      const completion = await openai.chat.completions.create({
+        model: "gpt-4o",
+        messages: [{ role: "user", content: storyPrompt }],
+        temperature: 0.8,
+        max_tokens: 1500
+      });
+
+      const refinedStory = completion.choices[0].message.content;
+
+      // Format the story with proper spacing
+      const formattedStory = formatStory(refinedStory || '');
+
+      return NextResponse.json({
+        success: true,
+        refinedStory: formattedStory,
+        intendedDuration: inputs.storyDuration,
+        numScenes: Math.floor(parseInt(inputs.storyDuration) / 5)
+      });
     }
-
-    return NextResponse.json({
-      success: true,
-      refinedStory
-    });
-
   } catch (error) {
     console.error('Error in video-story-generator:', error);
     return NextResponse.json({
@@ -154,7 +134,7 @@ Format the story as continuous paragraphs with proper spacing.`;
 
 function parseScenes(sceneText: string) {
   const scenes = [];
-  const sceneRegex = /Scene\s*(\d+)\s*:\s*([^|]+)\|\s*Visual:\s*([^|]+)\|\s*Focus:\s*([^\n]+)/g;
+  const sceneRegex = /Scene\s*(\d+)\s*:\s*([^|]+?)\s*\|\s*Visual:\s*([^|]+?)\s*\|\s*Focus:\s*([^\n]+)/gi;
   let match;
 
   while ((match = sceneRegex.exec(sceneText)) !== null) {
@@ -163,8 +143,7 @@ function parseScenes(sceneText: string) {
     const visualDetails = match[3].trim();
     const focusElements = match[4].trim();
 
-    // Updated manga-style prompt
-    const imagePrompt = `Professional line-art illustration of: ${description}. Scene details: ${visualDetails}. Style: Black and white line art, Grayscale Image.`;
+    const imagePrompt = `Professional cinematic illustration of: ${description}. Scene details: ${visualDetails}. Key focus: ${focusElements}. Style: high-quality cinematic frame, detailed composition, dramatic lighting, professional photography quality, 8K resolution, movie still aesthetic`;
 
     scenes.push({
       id: `scene-${sceneNumber}`,
@@ -172,10 +151,29 @@ function parseScenes(sceneText: string) {
       text: description,
       visualDetails,
       focusElements,
-      imagePrompt, // Add the constructed prompt
-      imageUrl: '' // Will be generated by SDXL
+      imagePrompt,
+      imageUrl: ''
     });
   }
 
   return scenes.sort((a, b) => a.number - b.number);
+}
+
+function formatStory(story: string) {
+  return story
+    .trim()
+    // Ensure proper spacing around dialogue
+    .replace(/([.!?])"(\s*)([A-Z])/g, '$1"\n\n$3')
+    // Add spacing between scene breaks
+    .replace(/\n{3,}/g, '\n\n')
+    // Ensure proper paragraph spacing
+    .split('\n\n')
+    .filter(paragraph => paragraph.trim())
+    .join('\n\n')
+    // Add extra spacing around scene transitions
+    .replace(/([.!?])\s*(Meanwhile|Later|Suddenly|After|Before|The next|That evening|That morning|Days later)/g, '$1\n\n$2')
+    // Format dialogue paragraphs
+    .replace(/(".*?[.!?]")\s*/g, '$1\n')
+    // Clean up any remaining multiple spaces
+    .replace(/\s{2,}/g, ' ');
 }
